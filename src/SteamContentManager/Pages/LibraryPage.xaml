@@ -310,7 +310,7 @@
                 <Border Style="{StaticResource HostPill}" x:Name="SourceRyuu" MouseLeftButtonUp="Source_Click" Tag="Ryuu"><TextBlock Text="Ryuu" FontSize="11" FontWeight="SemiBold" /></Border>
                 <Border Style="{StaticResource HostPill}" x:Name="SourceZaza" MouseLeftButtonUp="Source_Click" Tag="Zaza"><TextBlock Text="Zaza" FontSize="11" FontWeight="SemiBold" /></Border>
                 <Border Style="{StaticResource HostPill}" x:Name="SourceHubcap" MouseLeftButtonUp="Source_Click" Tag="Hubcap" IsEnabled="False" Opacity="0.35"><TextBlock Text="Hubcap" FontSize="11" FontWeight="SemiBold" /></Border>
-                <Border Style="{StaticResource HostPill}" x:Name="SourceResonance" MouseLeftButtonUp="Source_Click" Tag="Resonance" IsEnabled="False" Opacity="0.35" ToolTip="Repository is empty — no manifests available yet"><TextBlock Text="Resonance" FontSize="11" FontWeight="SemiBold" /></Border>
+                <Border Style="{StaticResource HostPill}" x:Name="SourceResonance" MouseLeftButtonUp="Source_Click" Tag="Resonance" ToolTip="Check the ResonanceManifests repository for this AppID"><TextBlock Text="Resonance" FontSize="11" FontWeight="SemiBold" /></Border>
               </WrapPanel>
               <TextBlock x:Name="SourceAvailabilityText" Text="" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
 
