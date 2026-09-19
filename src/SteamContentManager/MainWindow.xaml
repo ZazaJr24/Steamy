@@ -33,8 +33,7 @@
                         IsPaneToggleVisible="True"
                         IsFooterSeparatorVisible="True"
                         PaneTitle="SCM"
-                        Transition="FadeInWithSlide"
-                        TransitionDuration="260"
+                        Transition="None"
                         IsPaneOpen="True"
                         Background="{DynamicResource SidebarBackgroundBrush}">
         <ui:NavigationView.PaneHeader>
@@ -90,17 +89,13 @@
             </ui:NavigationViewItem.MenuItems>
           </ui:NavigationViewItem>
 
-          <ui:NavigationViewItem Content="Tools"
-                                 Icon="{ui:SymbolIcon Apps24}">
-            <ui:NavigationViewItem.MenuItems>
-              <ui:NavigationViewItem Content="Steamless"
-                                     Icon="{ui:ImageIcon '/SteamContentManager;component/Resources/steamless.png'}"
-                                     TargetPageType="{x:Type pages:SteamlessPage}" />
-              <ui:NavigationViewItem Content="Denuvo Activation"
-                                     Icon="{ui:SymbolIcon Document24}"
-                                     TargetPageType="{x:Type pages:DenuvoActivationPage}" />
-            </ui:NavigationViewItem.MenuItems>
-          </ui:NavigationViewItem>
+          <ui:NavigationViewItemHeader Text="TOOLS" />
+          <ui:NavigationViewItem Content="Steamless"
+                                 Icon="{ui:ImageIcon '/SteamContentManager;component/Resources/steamless.png'}"
+                                 TargetPageType="{x:Type pages:SteamlessPage}" />
+          <ui:NavigationViewItem Content="Denuvo Activation"
+                                 Icon="{ui:SymbolIcon Document24}"
+                                 TargetPageType="{x:Type pages:DenuvoActivationPage}" />
         </ui:NavigationView.MenuItems>
 
         <ui:NavigationView.FooterMenuItems>

@@ -58,16 +58,11 @@ public sealed class PageLayoutTests
     public void NavigationSurface_ContainsOnlyRequestedTopLevelAreas()
     {
         var navigation = File.ReadAllText(FindRepositoryFile("src/SteamContentManager/MainWindow.xaml"));
-        var toolsStart = navigation.IndexOf("Content=\"Tools\"", StringComparison.Ordinal);
-        var toolsEnd = navigation.IndexOf("</ui:NavigationViewItem>", toolsStart, StringComparison.Ordinal);
-        Assert.True(toolsStart >= 0 && toolsEnd > toolsStart);
-        var toolsSection = navigation[toolsStart..toolsEnd];
-        Assert.Contains("Content=\"Steamless\"", toolsSection, StringComparison.Ordinal);
-        Assert.Contains("Content=\"Denuvo Activation\"", toolsSection, StringComparison.Ordinal);
+        Assert.Contains("Text=\"TOOLS\"", navigation, StringComparison.Ordinal);
 
         Assert.Contains("Content=\"Games\"", navigation, StringComparison.Ordinal);
         Assert.Contains("Content=\"Fixes\"", navigation, StringComparison.Ordinal);
-        Assert.Contains("Content=\"Tools\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("Text=\"TOOLS\"", navigation, StringComparison.Ordinal);
         Assert.Contains("Content=\"Settings\"", navigation, StringComparison.Ordinal);
         Assert.Contains("Content=\"Denuvo Fixes\"", navigation, StringComparison.Ordinal);
         Assert.Contains("Content=\"Steamless\"", navigation, StringComparison.Ordinal);
