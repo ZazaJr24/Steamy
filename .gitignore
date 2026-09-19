@@ -1,0 +1,20 @@
+# .NET build output
+**/bin/
+**/obj/
+
+# IDE and local tooling
+.vs/
+.idea/
+.freebuff/
+
+# Local probes and generated diagnostics
+.probe-*/
+*.log
+
+# Local archives and temporary exports
+*.7z
+Etmp*.txt
+
+# User-specific runtime data
+src/SteamContentManager/Data/*.db
+src/SteamContentManager/Data/*.db-* 

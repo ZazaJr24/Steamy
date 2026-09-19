@@ -1,0 +1,27 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteamContentManager", "src\SteamContentManager\SteamContentManager.csproj", "{B7E8F8E9-2F48-46C3-BB34-70C53D2BB0E9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteamContentManager.Tests", "tests\SteamContentManager.Tests\SteamContentManager.Tests.csproj", "{A1A1C38C-78EC-4C94-8D0D-2E1C1B8F7F47}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B7E8F8E9-2F48-46C3-BB34-70C53D2BB0E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7E8F8E9-2F48-46C3-BB34-70C53D2BB0E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7E8F8E9-2F48-46C3-BB34-70C53D2BB0E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7E8F8E9-2F48-46C3-BB34-70C53D2BB0E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1A1C38C-78EC-4C94-8D0D-2E1C1B8F7F47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1A1C38C-78EC-4C94-8D0D-2E1C1B8F7F47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1A1C38C-78EC-4C94-8D0D-2E1C1B8F7F47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1A1C38C-78EC-4C94-8D0D-2E1C1B8F7F47}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

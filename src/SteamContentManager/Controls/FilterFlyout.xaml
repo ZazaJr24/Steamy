@@ -1,0 +1,79 @@
+<UserControl x:Class="SteamContentManager.Controls.FilterFlyout"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             SnapsToDevicePixels="True">
+  <Grid>
+    <ToggleButton x:Name="FilterToggle"
+                  Style="{StaticResource FilterToggleButtonStyle}"
+                  AutomationProperties.Name="Open filters">
+      <Grid Width="20" Height="20">
+        <ui:SymbolIcon Symbol="Filter24"
+                       FontSize="18"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" />
+        <Ellipse x:Name="ActiveDot"
+                 Width="6"
+                 Height="6"
+                 HorizontalAlignment="Right"
+                 VerticalAlignment="Top"
+                 Fill="{DynamicResource AccentBrush}"
+                 Stroke="{DynamicResource SurfaceElevatedBrush}"
+                 StrokeThickness="1.5"
+                 Visibility="Collapsed" />
+      </Grid>
+    </ToggleButton>
+
+    <Popup x:Name="FilterPopup"
+           IsOpen="{Binding IsChecked, ElementName=FilterToggle, Mode=TwoWay}"
+           PlacementTarget="{Binding ElementName=FilterToggle}"
+           Placement="Bottom"
+           StaysOpen="False"
+           AllowsTransparency="True"
+           PopupAnimation="Fade"
+           DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+      <Border Style="{StaticResource FilterFlyoutStyle}"
+              MinWidth="250"
+              MaxWidth="360"
+              MaxHeight="560">
+        <StackPanel>
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock Text="Filters"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="14"
+                         FontWeight="SemiBold" />
+              <TextBlock x:Name="SummaryText"
+                         Text="No filters applied"
+                         Foreground="{DynamicResource TextTertiaryBrush}"
+                         FontSize="10.5"
+                         Margin="0,3,0,0"
+                         TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <ui:Button Grid.Column="1"
+                       Icon="{ui:SymbolIcon Dismiss24}"
+                       Appearance="Secondary"
+                       Style="{StaticResource IconButtonStyle}"
+                       Width="30"
+                       Height="30"
+                       MinHeight="30"
+                       ToolTip="Close filters"
+                       Click="CloseButton_Click" />
+          </Grid>
+          <Separator Margin="0,0,0,12" />
+          <ScrollViewer VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled"
+                        MaxHeight="440">
+            <ContentControl x:Name="ContentHost" />
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
+    </Popup>
+  </Grid>
+</UserControl>

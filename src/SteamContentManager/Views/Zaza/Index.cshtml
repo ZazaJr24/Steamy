@@ -1,0 +1,83 @@
+@{ ViewData["Title"] = "ZazaHub"; }
+
+<h1>ZazaHub Games</h1>
+
+<div class="container">
+    <h2>Games</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>AppId</th>
+                <th>DepotId</th>
+                <th>ManifestId</th>
+                <th>Size</th>
+                <th>Branch</th>
+                <th>Download</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var game in Model.Games)
+            {
+                <tr>
+                    <td>@game.Name</td>
+                    <td>@game.AppId</td>
+                    <td>@game.DepotId</td>
+                    <td>@game.ManifestId</td>
+                    <td>@game.Size</td>
+                    <td>@game.Branch</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="startDepotDownload('@game.AppId', '@game.DepotId', '@game.ManifestId', '@game.Branch', '@game.Name')">
+                            Download
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h2>CMD Entries</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>AppId</th>
+                <th>DepotId</th>
+                <th>ManifestId</th>
+                <th>Size</th>
+                <th>Branch</th>
+                <th>Download</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in Model.CmdxEntries)
+            {
+                <tr>
+                    <td>@entry.Name</td>
+                    <td>@entry.AppId</td>
+                    <td>@entry.DepotId</td>
+                    <td>@entry.ManifestId</td>
+                    <td>@entry.Size</td>
+                    <td>@entry.Branch</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="startDepotDownload('@entry.AppId', '@entry.DepotId', '@entry.ManifestId', '@entry.Branch', '@entry.Name')">
+                            Download
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function startDepotDownload(appId, depotId, manifestId, branch, gameName) {
+        const targetFolder = prompt("Enter target folder path:", "D:\\\\SteamLibrary\\\\steamapps\\\\common\\\\" + gameName);
+        if (!targetFolder) return;
+
+        const cmd = `depotdownloadermod.exe -app ${appId} -depot ${depotId} -dir "${targetFolder}" -branch ${branch} -manifest ${manifestId} -remember-password`;
+        alert(`Running: ${cmd}`);
+
+        console.log(cmd);
+    }
+</script>

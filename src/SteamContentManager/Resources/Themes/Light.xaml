@@ -1,0 +1,33 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Cool, neutral light palette that mirrors the graphite dark theme: soft blue-greys,
+       a muted steel accent, no warm tint. -->
+  <SolidColorBrush x:Key="AppBackgroundBrush" Color="#EEF0F3" />
+  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F7F8FA" />
+  <SolidColorBrush x:Key="SidebarHoverBrush" Color="#E6E9EE" />
+  <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#DDE2EA" />
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#FBFCFD" />
+  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#EAEDF1" />
+  <SolidColorBrush x:Key="ControlHoverBrush" Color="#E1E5EB" />
+  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#D4D9E1" />
+  <SolidColorBrush x:Key="AccentBrush" Color="#5C6B84" />
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="#E2E7EE" />
+  <SolidColorBrush x:Key="SuccessBrush" Color="#1C8A63" />
+  <SolidColorBrush x:Key="SuccessSoftBrush" Color="#DCF1E8" />
+  <SolidColorBrush x:Key="WarningBrush" Color="#976619" />
+  <SolidColorBrush x:Key="WarningSoftBrush" Color="#F7EFDD" />
+  <SolidColorBrush x:Key="DangerBrush" Color="#C0454C" />
+  <SolidColorBrush x:Key="DangerSoftBrush" Color="#F8E4E5" />
+  <SolidColorBrush x:Key="TextPrimaryBrush" Color="#15181D" />
+  <SolidColorBrush x:Key="TextSecondaryBrush" Color="#4D545F" />
+  <SolidColorBrush x:Key="TextTertiaryBrush" Color="#78808C" />
+
+  <!-- Softly rounded Fluent controls. WPF-UI reads these theme keys for every control
+       template (buttons, text boxes, combo boxes, popups, content dialogs), so overriding
+       them here rounds the whole app at once. -->
+  <CornerRadius x:Key="ControlCornerRadius">12,12,12,12</CornerRadius>
+  <CornerRadius x:Key="PopupCornerRadius">14,14,14,14</CornerRadius>
+  <CornerRadius x:Key="DialogOverlayCornerRadius">20,20,20,20</CornerRadius>
+  <CornerRadius x:Key="DialogFooterCornerRadius">12,12,12,12</CornerRadius>
+</ResourceDictionary>

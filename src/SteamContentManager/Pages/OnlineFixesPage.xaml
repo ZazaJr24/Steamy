@@ -1,0 +1,232 @@
+<Page x:Class="SteamContentManager.Pages.OnlineFixesPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      ScrollViewer.CanContentScroll="False"
+      Background="{DynamicResource AppBackgroundBrush}">
+  <Page.Resources>
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+  </Page.Resources>
+  <Grid Margin="30,26,30,30">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <!-- Header -->
+    <Grid Grid.Row="0" Margin="0,0,0,20">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel>
+        <TextBlock Text="Online Fixes" Style="{StaticResource PageTitleStyle}" Margin="0"/>
+        <TextBlock Text="Search online-fix.me and open the match in your browser — no downloads, no credentials, nothing installed."
+                   Style="{StaticResource PageSubtitleStyle}" Margin="0,4,0,0"/>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <ui:Button Content="online-fix.me" Icon="{ui:SymbolIcon Open24}" Command="{Binding OpenSiteCommand}" Appearance="Secondary" ToolTip="Open online-fix.me in your browser"/>
+      </StackPanel>
+    </Grid>
+
+    <!-- Search bar: gray surface with accent button (matches the sidebar look) -->
+    <Border Grid.Row="1" Style="{StaticResource FilterBarStyle}" Margin="0,0,0,12">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <ui:TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                    PlaceholderText="Filter games…" Icon="{ui:SymbolIcon Search24}" VerticalAlignment="Center" MinWidth="220"/>
+        <ui:TextBox Grid.Column="1" Text="{Binding InstallLocation, UpdateSourceTrigger=PropertyChanged}"
+                    PlaceholderText="Install location (optional)" Icon="{ui:SymbolIcon Folder24}" Margin="10,0,0,0" VerticalAlignment="Center" MinWidth="240"/>
+        <ui:Button Grid.Column="2" Content="Browse…" Click="BrowseLocationButton_Click" Appearance="Secondary" Margin="10,0,0,0" VerticalAlignment="Center"/>
+        <ui:Button Grid.Column="3" Content="Open folder" Command="{Binding OpenLocationCommand}" Appearance="Secondary" Margin="8,0,0,0" VerticalAlignment="Center"/>
+      </Grid>
+    </Border>
+
+    <!-- Search action row -->
+    <Grid Grid.Row="2" Margin="0,0,0,12">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Orientation="Horizontal">
+        <ui:Button Content="Search online-fix.me" Icon="{ui:SymbolIcon Search24}" Command="{Binding SearchCommand}" Appearance="Primary"
+                   ToolTip="Search the public site for the selected game and open the best match"/>
+        <ui:Button Content="Open last result" Command="{Binding OpenLastResultCommand}" Appearance="Secondary" Margin="8,0,0,0"
+                   ToolTip="Re-open the last found page, or the pre-filled site search"/>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+        <ui:ProgressRing Width="22" Height="22" IsIndeterminate="{Binding IsSearching}"
+                         Visibility="{Binding IsSearching, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        <TextBlock Text="{Binding LastSearchSummary}" Style="{StaticResource MutedTextStyle}" FontSize="12"
+                   VerticalAlignment="Center" Margin="10,0,0,0" MaxWidth="520" TextTrimming="CharacterEllipsis"/>
+      </StackPanel>
+    </Grid>
+
+    <ScrollViewer Grid.Row="3" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,6,0">
+      <StackPanel>
+
+        <!-- Result card: honest found / not-found state -->
+        <Border Style="{StaticResource SurfaceCardStyle}" Margin="0,0,0,16"
+                Visibility="{Binding HasOpenResult, Converter={StaticResource BooleanToVisibilityConverter}}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Border Width="40" Height="40" CornerRadius="20" VerticalAlignment="Center">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding LastSearchFoundMatch}" Value="True">
+                      <Setter Property="Background" Value="#1F42D39A"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+            </Border>
+            <TextBlock FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Width="40">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="Text" Value="?"/>
+                  <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding LastSearchFoundMatch}" Value="True">
+                      <Setter Property="Text" Value="✓"/>
+                      <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,12,0">
+              <TextBlock FontSize="13" FontWeight="SemiBold">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Text" Value="Not found on online-fix.me"/>
+                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding LastSearchFoundMatch}" Value="True">
+                        <Setter Property="Text" Value="Match found"/>
+                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+              <TextBlock Text="{Binding OpenResult.Url}" Style="{StaticResource MutedTextStyle}" FontSize="11.5"
+                         Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Text="{Binding OpenResult.Source}" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,2,0,0"/>
+            </StackPanel>
+            <ui:Button Grid.Column="2" Content="Open in browser" Command="{Binding OpenLastResultCommand}" Appearance="Secondary" VerticalAlignment="Center"/>
+          </Grid>
+        </Border>
+
+        <!-- Installed games grid: click a card to select + search that game -->
+        <Grid Margin="0,0,0,8">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Text="Pick a game to search its fix" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,0" VerticalAlignment="Bottom"/>
+          <TextBlock Grid.Column="1" Text="{Binding GamesSummary}" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" VerticalAlignment="Bottom"/>
+        </Grid>
+        <ItemsControl ItemsSource="{Binding GameSearchResults}" Margin="0,4,0,0">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Style="{StaticResource CoverCardStyle}" Margin="0,4,12,12" Width="240" Height="124"
+                      ToolTip="Search online-fix.me for this game and open the match in your browser">
+                <Border.InputBindings>
+                  <MouseBinding Gesture="LeftClick"
+                                Command="{Binding DataContext.ApplyFixCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                CommandParameter="{Binding Game}"/>
+                </Border.InputBindings>
+                <Grid ClipToBounds="True">
+                  <Border Background="{Binding Game.CoverColor}"/>
+                  <Image Source="{Binding Game.HeaderImage}" Stretch="UniformToFill"/>
+                  <Rectangle Fill="{StaticResource CoverFadeBrush}"/>
+                  <ui:SymbolIcon Symbol="Games24" FontSize="34" Foreground="#35FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 Visibility="{Binding Game.IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                  <StackPanel Orientation="Vertical" VerticalAlignment="Bottom" Margin="12,8,86,10">
+                    <TextBlock Text="{Binding Game.Name}" Foreground="White" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Game.Name}"/>
+                    <TextBlock Text="{Binding Summary}" Foreground="#A9B1C0" FontSize="10.5" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                  </StackPanel>
+                  <Border CornerRadius="6" Padding="9,4" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10">
+                    <Border.Style>
+                      <Style TargetType="Border">
+                        <Setter Property="Background" Value="#CC10131B"/>
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding HasResult}" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </Border.Style>
+                    <TextBlock FontSize="10.5" FontWeight="SemiBold">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Text" Value="Search fix"/>
+                          <Setter Property="Foreground" Value="#E6E4FF"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasResult}" Value="True">
+                              <Setter Property="Text" Value="Fix found"/>
+                              <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                  </Border>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Text="Workflows" Style="{StaticResource SectionTitleStyle}"/>
+        <ItemsControl ItemsSource="{Binding FilteredFixes}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Style="{StaticResource SurfaceCardStyle}" Margin="0,0,0,10" Padding="15">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="{Binding Name}" Style="{StaticResource CardTitleStyle}"/>
+                      <TextBlock Text="  ·  " Foreground="{DynamicResource TextTertiaryBrush}"/>
+                      <TextBlock Text="{Binding GameName}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Description}" Style="{StaticResource MutedTextStyle}" FontSize="11.5" Margin="0,4,0,0"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Status}" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Right" FontSize="12"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                      <ui:Button Content="Multiplayer fix" Command="{Binding DataContext.SearchForGameCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Margin="0,0,6,0"/>
+                      <ui:Button Content="Validate" Command="{Binding DataContext.ValidateCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</Page>

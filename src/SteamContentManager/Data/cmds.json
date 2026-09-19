@@ -1,0 +1,26 @@
+[
+  {
+    "appId": 730,
+    "depotId": 730,
+    "manifestId": "184783902114",
+    "branch": "public",
+    "cmd": "-app 730 -depot 730 -dir \"<TARGET>\" -branch public -manifest 184783902114 -remember-password",
+    "executable": "depotdownloadermod.exe"
+  },
+  {
+    "appId": 1091500,
+    "depotId": 1091501,
+    "manifestId": "991091501001",
+    "branch": "public",
+    "cmd": "-app 1091500 -depot 1091501 -dir \"<TARGET>\" -branch public -manifest 991091501001 -remember-password",
+    "executable": "depotdownloadermod.exe"
+  },
+  {
+    "appId": 1245620,
+    "depotId": 1245621,
+    "manifestId": "991245621001",
+    "branch": "public",
+    "cmd": "-app 1245620 -depot 1245621 -dir \"<TARGET>\" -branch public -manifest 991245621001 -remember-password",
+    "executable": "depotdownloadermod.exe"
+  }
+]

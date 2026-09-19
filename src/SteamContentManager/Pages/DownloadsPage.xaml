@@ -1,0 +1,260 @@
+<Page x:Class="SteamContentManager.Pages.DownloadsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:SteamContentManager.Controls"
+      xmlns:models="clr-namespace:SteamContentManager.Models"
+      ScrollViewer.CanContentScroll="False"
+      Background="{DynamicResource AppBackgroundBrush}">
+  <Page.Resources>
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+  </Page.Resources>
+
+  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="28,24,28,40">
+    <StackPanel MaxWidth="1160" HorizontalAlignment="Stretch">
+      <!-- Header -->
+      <Grid Margin="0,0,0,6">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel Margin="0,0,20,0">
+          <TextBlock Text="Downloads" Style="{StaticResource PageTitleStyle}"/>
+          <TextBlock Text="Every job runs through your own DepotDownloader for content you are authorized to access. Without a configured tool nothing is downloaded — no progress is simulated." Style="{StaticResource PageSubtitleStyle}"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+          <ui:Button Content="Open games" Icon="{ui:SymbolIcon Apps24}" Command="{Binding NavigateLibraryCommand}" Margin="0,0,8,0"/>
+          <ui:Button Content="Refresh" Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding RefreshCommand}" Appearance="Secondary"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- Queue toolbar -->
+      <Border Style="{StaticResource FilterBarStyle}">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
+            <TextBlock Text="Queue" Style="{StaticResource SectionTitleStyle}" Margin="0" VerticalAlignment="Center"/>
+            <Border Style="{StaticResource AccentPillStyle}" Margin="10,0,0,0" VerticalAlignment="Center">
+              <TextBlock Text="{Binding TotalProgress}" Style="{StaticResource AccentPillTextStyle}"/>
+            </Border>
+          </StackPanel>
+          <ui:TextBox Grid.Column="1"
+                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                      PlaceholderText="Search games or App ID"
+                      Icon="{ui:SymbolIcon Search24}"
+                      Width="280"
+                      VerticalAlignment="Center" />
+          <controls:FilterFlyout Grid.Column="2"
+                                 Margin="8,0,0,0"
+                                 VerticalAlignment="Center"
+                                 FilterSummary="{Binding FilterSummary}"
+                                 HasActiveFilters="{Binding HasActiveFilters}">
+            <controls:FilterFlyout.FilterContent>
+              <StackPanel>
+                <TextBlock Text="Queue view" Style="{StaticResource FieldLabelStyle}" />
+                <ComboBox ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}" />
+              </StackPanel>
+            </controls:FilterFlyout.FilterContent>
+          </controls:FilterFlyout>
+        </Grid>
+      </Border>
+
+      <!-- Jobs -->
+      <ItemsControl ItemsSource="{Binding FilteredJobs}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Style="{StaticResource SurfaceCardStyle}" Margin="0,0,0,12" Padding="0" ClipToBounds="True">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Top row: cover + title + buttons -->
+                <Grid Margin="20,18,20,0">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+
+                  <!-- Game cover -->
+                  <Border Width="64" Height="64" CornerRadius="8" Background="{Binding CoverColor}" VerticalAlignment="Top" ClipToBounds="True">
+                    <Grid>
+                      <TextBlock Text="{Binding CoverGlyph}" FontSize="24" Foreground="#44FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                      <Image Source="{Binding CoverImageUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Grid>
+                  </Border>
+
+                  <!-- Title + meta -->
+                  <StackPanel Grid.Column="1" Margin="14,0,14,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding GameName}" Style="{StaticResource CardTitleStyle}" FontSize="14.5" MaxWidth="520" TextTrimming="CharacterEllipsis" ToolTip="{Binding GameName}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                      <TextBlock Text="{Binding AppLabel}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11"/>
+                      <TextBlock Text="  ·  " Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11"/>
+                      <TextBlock Text="{Binding DownloadMode}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Status}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11.5" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}"/>
+                  </StackPanel>
+
+                  <!-- Action buttons + state -->
+                  <StackPanel Grid.Column="2" VerticalAlignment="Top">
+                    <Border Style="{StaticResource StatePill}" HorizontalAlignment="Right" Margin="0,0,0,8">
+                      <TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}"/>
+                    </Border>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                      <ui:Button Content="Start" Icon="{ui:SymbolIcon Play24}" Style="{StaticResource StartButton}" Command="{Binding DataContext.StartCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Primary"/>
+                      <ui:Button Content="Pause" Icon="{ui:SymbolIcon Pause24}" Style="{StaticResource PauseButton}" Command="{Binding DataContext.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
+                      <ui:Button Content="Resume" Icon="{ui:SymbolIcon Play24}" Style="{StaticResource ResumeButton}" Command="{Binding DataContext.ResumeCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Primary"/>
+                      <ui:Button Content="Retry" Icon="{ui:SymbolIcon ArrowClockwise24}" Style="{StaticResource RetryButton}" Command="{Binding DataContext.RetryCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
+                      <ui:Button Content="Cancel" Style="{StaticResource CancelButton}" Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Danger"/>
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+
+                <!-- Progress bar + percentage -->
+                <Grid Grid.Row="1" Margin="20,14,20,0">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <controls:SmoothProgressBar SmoothValue="{Binding Progress}" Maximum="100" Height="5" Style="{StaticResource JobProgressBar}" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1" Text="{Binding ProgressLabel}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" Margin="14,0,0,0" MinWidth="42" TextAlignment="Right"/>
+                </Grid>
+
+                <!-- Stats row: size, speed, disk, eta -->
+                <Grid Grid.Row="2" Margin="20,10,20,0" Style="{StaticResource LiveStatsStyle}">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+
+                  <!-- Size -->
+                  <Border Grid.Column="0" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="6" Padding="10,7" Margin="0,0,4,0">
+                    <StackPanel>
+                      <TextBlock Text="SIZE" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="9.5" FontWeight="SemiBold"/>
+                      <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,2,0,0" TextTrimming="CharacterEllipsis">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="{Binding SizeSummary}"/>
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding SizeSummary}" Value="">
+                                <Setter Property="Text" Value="—"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </StackPanel>
+                  </Border>
+
+                  <!-- Network speed -->
+                  <Border Grid.Column="1" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="6" Padding="10,7" Margin="2,0,2,0">
+                    <StackPanel>
+                      <TextBlock Text="NETWORK" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="9.5" FontWeight="SemiBold"/>
+                      <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,2,0,0">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="{Binding Speed}"/>
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding Speed}" Value="">
+                                <Setter Property="Text" Value="—"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </StackPanel>
+                  </Border>
+
+                  <!-- Disk speed -->
+                  <Border Grid.Column="2" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="6" Padding="10,7" Margin="2,0,2,0">
+                    <StackPanel>
+                      <TextBlock Text="DISK" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="9.5" FontWeight="SemiBold"/>
+                      <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,2,0,0">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="{Binding DiskSpeed}"/>
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding DiskSpeed}" Value="">
+                                <Setter Property="Text" Value="—"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </StackPanel>
+                  </Border>
+
+                  <!-- ETA -->
+                  <Border Grid.Column="3" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="6" Padding="10,7" Margin="4,0,0,0">
+                    <StackPanel>
+                      <TextBlock Text="ETA" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="9.5" FontWeight="SemiBold"/>
+                      <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,2,0,0">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="{Binding Eta}"/>
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding Eta}" Value="">
+                                <Setter Property="Text" Value="—"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </StackPanel>
+                  </Border>
+                </Grid>
+
+                <!-- Current file + target folder -->
+                <StackPanel Grid.Row="3" Margin="20,10,20,16">
+                  <TextBlock Foreground="{DynamicResource TextTertiaryBrush}" FontSize="10.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding CurrentFile}" Margin="0,0,0,2">
+                    <TextBlock.Style>
+                      <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding CurrentFile}" Value="">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </TextBlock.Style>
+                    <Run Text="File:" FontWeight="Medium"/><Run Text=" "/><Run Text="{Binding CurrentFile, Mode=OneWay}"/>
+                  </TextBlock>
+                  <TextBlock Text="{Binding TargetFolder}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="10.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding TargetFolder}" Opacity="0.7"/>
+                  <Border Style="{StaticResource SubtlePanelStyle}" Padding="10,8" Margin="0,8,0,0"
+                          Visibility="{Binding DataContext.Settings.ShowDownloadLogs, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBox Text="{Binding ProcessLog, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="120" FontSize="10.5" FontFamily="Consolas" Background="Transparent" BorderThickness="0" Padding="0" VerticalScrollBarVisibility="Auto"/>
+                  </Border>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Border Padding="18">
+        <Border.Style>
+          <Style TargetType="Border" BasedOn="{StaticResource SubtlePanelStyle}">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding HasJobs}" Value="False">
+                <Setter Property="Visibility" Value="Visible" />
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Border.Style>
+        <StackPanel>
+          <TextBlock Text="Nothing in the queue" Style="{StaticResource CardTitleStyle}" />
+          <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,4,0,0" />
+        </StackPanel>
+      </Border>
+
+      <Border Style="{StaticResource SurfaceCardStyle}" Margin="0,18,0,0">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <StackPanel Margin="0,0,20,0">
+            <TextBlock Text="Download settings" Style="{StaticResource CardTitleStyle}"/>
+            <TextBlock Text="Queue limits come from Settings › Downloads and are applied to every job." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,4,0,0"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+            <TextBlock Text="{Binding DownloadToolStatus}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" HorizontalAlignment="Right"/>
+            <TextBlock Text="{Binding QueueLimits}" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" Margin="0,4,0,0" HorizontalAlignment="Right"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</Page>

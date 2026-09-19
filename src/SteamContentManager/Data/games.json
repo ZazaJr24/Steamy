@@ -1,0 +1,72 @@
+[
+  {
+    "appId": 730,
+    "name": "Counter-Strike 2",
+    "shortName": "CS2",
+    "depotId": 730,
+    "manifestId": "184783902114",
+    "branch": "public",
+    "size": "35.8 GB",
+    " depositoryDownloaderCmd": "-app 730 -depot 730 -dir \"<TARGET>\" -branch public -manifest 184783902114"
+  },
+  {
+    "appId": 1091500,
+    "name": "Lost Ark",
+    "shortName": "Lost Ark",
+    "depotId": 1091501,
+    "manifestId": "991091501001",
+    "branch": "public",
+    "size": "38.2 GB",
+    "depotDownloaderCmd": "-app 1091500 -depot 1091501 -dir \"<TARGET>\" -branch public -manifest 991091501001"
+  },
+  {
+    "appId": 1172470,
+    "name": "Apex Legends",
+    "shortName": "Apex",
+    "depotId": 1172471,
+    "manifestId": "991172471001",
+    "branch": "public",
+    "size": "30.5 GB",
+    "depotDownloaderCmd": "-app 1172470 -depot 1172471 -dir \"<TARGET>\" -branch public -manifest 991172471001"
+  },
+  {
+    "appId": 1245620,
+    "name": "Elden Ring",
+    "shortName": "Elden Ring",
+    "depotId": 1245621,
+    "manifestId": "991245621001",
+    "branch": "public",
+    "size": "52.4 GB",
+    "depotDownloaderCmd": "-app 1245620 -depot 1245621 -dir \"<TARGET>\" -branch public -manifest 991245621001"
+  },
+  {
+    "appId": 292030,
+    "name": "Dead by Daylight",
+    "shortName": "DbD",
+    "depotId": 292031,
+    "manifestId": "990292031001",
+    "branch": "public",
+    "size": "25.8 GB",
+    "depotDownloaderCmd": "-app 292030 -depot 292031 -dir \"<TARGET>\" -branch public -manifest 990292031001"
+  },
+  {
+    "appId": 1086940,
+    "name": "Baldur's Gate 3",
+    "shortName": "BG3",
+    "depotId": 1086941,
+    "manifestId": "991086941001",
+    "branch": "public",
+    "size": "142.8 GB",
+    "depotDownloaderCmd": "-app 1086940 -depot 1086941 -dir \"<TARGET>\" -branch public -manifest 991086941001"
+  },
+  {
+    "appId": 2321000,
+    "name": "Aliens: Fireteam Elite",
+    "shortName": "Aliens",
+    "depotId": 2321001,
+    "manifestId": "992321001001",
+    "branch": "public",
+    "size": "22.1 GB",
+    "depotDownloaderCmd": "-app 2321000 -depot 2321001 -dir \"<TARGET>\" -branch public -manifest 992321001001"
+  }
+]

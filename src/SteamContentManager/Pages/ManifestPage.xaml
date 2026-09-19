@@ -1,0 +1,64 @@
+<Page x:Class="SteamContentManager.Pages.ManifestPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:SteamContentManager.Controls"
+      ScrollViewer.CanContentScroll="False"
+      Background="{DynamicResource AppBackgroundBrush}">
+  <Grid Margin="30,26,30,30">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <Grid Margin="0,0,0,20">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <StackPanel>
+        <TextBlock Text="Manifest Manager" Style="{StaticResource PageTitleStyle}" />
+        <TextBlock Text="Inspect and validate local manifests for authorized content." Style="{StaticResource PageSubtitleStyle}" Margin="0" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <ui:Button Content="Import manifest" Click="ImportManifestButton_Click" Margin="0,0,8,0" />
+        <ui:Button Content="Refresh" Command="{Binding RefreshCommand}" Appearance="Secondary" />
+      </StackPanel>
+    </Grid>
+    <Border Grid.Row="1" Style="{StaticResource FilterBarStyle}">
+      <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <ui:TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                    PlaceholderText="Search filename, App ID or Depot ID"
+                    Width="340"
+                    HorizontalAlignment="Left" />
+        <TextBlock Grid.Column="1" Text="{Binding ImportStatus}" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="560" Margin="14,0,12,0" />
+        <controls:FilterFlyout Grid.Column="2" FilterSummary="{Binding FilterSummary}" HasActiveFilters="{Binding HasActiveFilters}">
+          <controls:FilterFlyout.FilterContent>
+            <TextBlock Text="Use the search field to narrow files by filename, App ID or Depot ID."
+                       Style="{StaticResource MutedTextStyle}"
+                       FontSize="11.5"
+                       TextWrapping="Wrap" />
+          </controls:FilterFlyout.FilterContent>
+        </controls:FilterFlyout>
+      </Grid>
+    </Border>
+    <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="14" Padding="4">
+      <DataGrid ItemsSource="{Binding FilteredManifests}" SelectedItem="{Binding SelectedManifest}" IsReadOnly="True" CanUserAddRows="False">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="2*"/>
+          <DataGridTextColumn Header="App ID" Binding="{Binding AppId}" Width="82"/>
+          <DataGridTextColumn Header="Depot ID" Binding="{Binding DepotId}" Width="92"/>
+          <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="82"/>
+          <DataGridTextColumn Header="Manifest ID" Binding="{Binding ManifestId}" Width="150"/>
+          <DataGridTextColumn Header="Hash" Binding="{Binding Hash}" Width="120"/>
+          <DataGridTextColumn Header="Validation" Binding="{Binding ValidationStatus}" Width="130"/>
+          <DataGridTextColumn Header="Imported" Binding="{Binding ImportedAtLabel}" Width="140"/>
+          <DataGridTemplateColumn Header="Actions" Width="160">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <StackPanel Orientation="Horizontal">
+                  <ui:Button Content="Validate" Command="{Binding DataContext.ValidateCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Margin="0,0,6,0" />
+                  <ui:Button Content="Delete" Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Danger" />
+                </StackPanel>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+        </DataGrid.Columns>
+      </DataGrid>
+    </Border>
+  </Grid>
+</Page>

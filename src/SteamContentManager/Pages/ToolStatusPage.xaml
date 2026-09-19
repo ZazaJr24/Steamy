@@ -1,0 +1,74 @@
+<Page x:Class="SteamContentManager.Pages.ToolStatusPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      ScrollViewer.CanContentScroll="False"
+      Background="{DynamicResource AppBackgroundBrush}">
+  <Page.Resources>
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+  </Page.Resources>
+  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="26,22,26,40">
+    <StackPanel MaxWidth="1100" MinWidth="700" HorizontalAlignment="Stretch">
+      <!-- Header -->
+      <Grid Margin="0,0,0,18">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel Margin="0,0,20,0">
+          <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleStyle}" Margin="0" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Subtitle}" Style="{StaticResource PageSubtitleStyle}" Margin="0,4,0,0" />
+        </StackPanel>
+        <ui:Button Grid.Column="1"
+                   Icon="{ui:SymbolIcon Info24}"
+                   Command="{Binding ToggleInfoCommand}"
+                   Appearance="Secondary"
+                   Style="{StaticResource IconButtonStyle}"
+                   ToolTip="Show tool information"
+                   VerticalAlignment="Top" />
+      </Grid>
+
+      <!-- Status strip -->
+      <Border Style="{StaticResource SurfaceCardStyle}" Padding="15" Margin="0,0,0,14">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <Border Style="{StaticResource IconBadgeStyle}">
+            <ui:SymbolIcon Symbol="Info24" FontSize="20" Foreground="{DynamicResource AccentBrush}" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding StatusTitle}" Style="{StaticResource CardTitleStyle}" FontSize="14" />
+            <TextBlock Text="{Binding StatusMessage}"
+                       Style="{StaticResource MutedTextStyle}"
+                       FontSize="12"
+                       Margin="0,4,0,0"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Info card -->
+      <Border Style="{StaticResource SurfaceCardStyle}"
+              Margin="0,0,0,14"
+              Visibility="{Binding IsInfoVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <StackPanel>
+          <TextBlock Text="Tool information" Style="{StaticResource CardTitleStyle}" FontSize="14" />
+          <TextBlock Text="{Binding InfoText}"
+                     Style="{StaticResource MutedTextStyle}"
+                     FontSize="12"
+                     Margin="0,6,0,0"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border Style="{StaticResource InfoPanelStyle}">
+        <TextBlock Text="This area is intentionally read-only until a safe, supported workflow is configured. No DRM, license, authentication or access controls are changed."
+                   Style="{StaticResource MutedTextStyle}"
+                   FontSize="11.5"
+                   TextWrapping="Wrap" />
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</Page>
