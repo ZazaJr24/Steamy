@@ -55,9 +55,10 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand NavigateLibraryCommand => new RelayCommand(() => Navigation.Navigate<LibraryPage>());
     public ICommand NavigateManifestsCommand => new RelayCommand(() => Navigation.Navigate<ManifestPage>());
     public ICommand NavigateSettingsCommand => new RelayCommand(() => Navigation.Navigate<SettingsPage>());
-    public ICommand NavigateFixesCommand => new RelayCommand(() => Navigation.Navigate<ModFixesPage>());
+    public ICommand NavigateFixesCommand => new RelayCommand(() => Navigation.Navigate<GameFixesPage>());
     public ICommand NavigateOnlineFixesCommand => new RelayCommand(() => Navigation.Navigate<OnlineFixesPage>());
-    public ICommand NavigateToolsCommand => new RelayCommand(() => Navigation.Navigate<GreenLumaPage>());
+    public ICommand NavigateDlcUnlockerCommand => new RelayCommand(() => Navigation.Navigate<CreamApiPage>());
+    public ICommand NavigateSteamlessCommand => new RelayCommand(() => Navigation.Navigate<SteamlessPage>());
     public ICommand NavigateDenuvoActivationCommand => new RelayCommand(() => Navigation.Navigate<DenuvoActivationPage>());
     public ICommand RefreshCommand => new RelayCommand(() => OnPropertyChanged(string.Empty));
 

@@ -8,7 +8,7 @@ namespace SteamContentManager.Services;
 
 public static class UiThemeService
 {
-    private const string PalettePackBase = "pack://application:,,,/SteamContentManager;component/Resources/Themes/";
+    private const string PalettePackBase = "pack://application:,,,/ResonanceTools;component/Resources/Themes/";
     private static readonly ResourceDictionary DarkPalette = new() { Source = new Uri(PalettePackBase + "Dark.xaml") };
     private static readonly ResourceDictionary LightPalette = new() { Source = new Uri(PalettePackBase + "Light.xaml") };
 

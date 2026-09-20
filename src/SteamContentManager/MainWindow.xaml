@@ -67,45 +67,30 @@
           <ui:NavigationViewItem Content="Dashboard"
                                  Icon="{ui:SymbolIcon Home24}"
                                  TargetPageType="{x:Type pages:DashboardPage}" />
-
           <ui:NavigationViewItem Content="Games"
                                  Icon="{ui:SymbolIcon Apps24}"
                                  TargetPageType="{x:Type pages:LibraryPage}" />
 
-          <ui:NavigationViewItem Content="Fixes"
-                                 Icon="{ui:SymbolIcon Wrench24}">
-            <ui:NavigationViewItem.MenuItems>
-              <ui:NavigationViewItem Content="Online Fixes"
-                                     Icon="{ui:SymbolIcon Cloud24}"
-                                     TargetPageType="{x:Type pages:OnlineFixesPage}" />
-              <ui:NavigationViewItem Content="Game Fixes"
-                                     Icon="{ui:SymbolIcon Shield24}"
-                                     TargetPageType="{x:Type pages:GameFixesPage}" />
-              <ui:NavigationViewItem Content="Denuvo Fixes"
-                                     Icon="{ui:SymbolIcon Shield24}">
-                <ui:NavigationViewItem.MenuItems>
-                  <ui:NavigationViewItem Content="HV Fixes"
-                                         Icon="{ui:SymbolIcon Shield24}"
-                                         TargetPageType="{x:Type pages:HvFixesPage}" />
-                </ui:NavigationViewItem.MenuItems>
-              </ui:NavigationViewItem>
-            </ui:NavigationViewItem.MenuItems>
-          </ui:NavigationViewItem>
+          <ui:NavigationViewItemSeparator />
 
-          <ui:NavigationViewItem Content="Tools"
-                                 Icon="{ui:SymbolIcon Toolbox24}">
-            <ui:NavigationViewItem.MenuItems>
-              <ui:NavigationViewItem Content="Steamless"
-                                     Icon="{ui:ImageIcon '/SteamContentManager;component/Resources/steamless.png'}"
-                                     TargetPageType="{x:Type pages:SteamlessPage}" />
-              <ui:NavigationViewItem Content="Denuvo Activation"
-                                     Icon="{ui:SymbolIcon Key24}"
-                                     TargetPageType="{x:Type pages:DenuvoActivationPage}" />
-              <ui:NavigationViewItem Content="DLC Unlocker"
-                                     Icon="{ui:SymbolIcon LockOpen24}"
-                                     TargetPageType="{x:Type pages:CreamApiPage}" />
-            </ui:NavigationViewItem.MenuItems>
-          </ui:NavigationViewItem>
+          <ui:NavigationViewItem Content="Steamless"
+                                 Icon="{ui:ImageIcon '/ResonanceTools;component/Resources/steamless.png'}"
+                                 TargetPageType="{x:Type pages:SteamlessPage}" />
+          <ui:NavigationViewItem Content="Denuvo Activation"
+                                 Icon="{ui:SymbolIcon Key24}"
+                                 TargetPageType="{x:Type pages:DenuvoActivationPage}" />
+          <ui:NavigationViewItem Content="DLC Unlocker"
+                                 Icon="{ui:SymbolIcon LockOpen24}"
+                                 TargetPageType="{x:Type pages:CreamApiPage}" />
+
+          <ui:NavigationViewItemSeparator />
+
+          <ui:NavigationViewItem Content="Online Fixes"
+                                 Icon="{ui:SymbolIcon Cloud24}"
+                                 TargetPageType="{x:Type pages:OnlineFixesPage}" />
+          <ui:NavigationViewItem Content="Game Fixes"
+                                 Icon="{ui:SymbolIcon Shield24}"
+                                 TargetPageType="{x:Type pages:GameFixesPage}" />
         </ui:NavigationView.MenuItems>
 
         <ui:NavigationView.FooterMenuItems>

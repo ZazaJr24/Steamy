@@ -28,7 +28,7 @@
         </Grid.ColumnDefinitions>
         <!-- Assembly-qualified pack URI: the mark lives in the application assembly, not in
              whatever assembly happens to host the page (which matters in tests as well). -->
-        <Image Source="pack://application:,,,/SteamContentManager;component/Resources/steamless.png"
+        <Image Source="pack://application:,,,/ResonanceTools;component/Resources/steamless.png"
                Height="42"
                Stretch="Uniform"
                VerticalAlignment="Center"

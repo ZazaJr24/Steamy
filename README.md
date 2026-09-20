@@ -43,7 +43,7 @@ Requires .NET 8 SDK and Windows 10/11.
 dotnet build src/SteamContentManager/SteamContentManager.csproj -c Release
 ```
 
-The output is in `src/SteamContentManager/bin/Release/net8.0-windows/`.
+The output (`ResonanceTools.exe`) is in `src/SteamContentManager/bin/Release/net8.0-windows/`.
 
 ## Project Structure
 
