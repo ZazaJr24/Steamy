@@ -83,6 +83,7 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public string[] Languages { get; } = { "System Default", "Deutsch", "English" };
     public string[] Appearances { get; } = { "System", "Light", "Dark" };
+    public string[] BackdropStyles { get; } = { "None", "Mica", "Acrylic", "Tabbed" };
     public string[] DnsModes { get; } = { "System resolver", "Cloudflare DoH", "Google DoH", "Quad9 DoH", "Custom DoH" };
 
     /// <summary>Bound to the password box; only ever written into the encrypted store.</summary>

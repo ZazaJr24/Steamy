@@ -63,6 +63,14 @@
             </StackPanel>
             <ComboBox Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Appearances}" SelectedItem="{Binding Settings.Appearance}" SelectionChanged="AppearanceComboBox_SelectionChanged" />
           </Grid>
+          <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Window Backdrop" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Mica, Acrylic or Tabbed translucent background effect (Windows 11). Applied immediately." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            </StackPanel>
+            <ComboBox Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding BackdropStyles}" SelectedItem="{Binding Settings.BackdropStyle}" SelectionChanged="BackdropComboBox_SelectionChanged" />
+          </Grid>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">

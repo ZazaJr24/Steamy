@@ -27,7 +27,7 @@ public partial class ManifestPage : Page
         {
             MessageBox.Show(
                 $"The manifest could not be imported.{Environment.NewLine}{exception.Message}",
-                "Steam Content Manager",
+                "ResonanceTools",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }

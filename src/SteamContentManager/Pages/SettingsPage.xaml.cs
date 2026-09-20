@@ -39,6 +39,15 @@ public partial class SettingsPage : Page
         UiThemeService.Apply(selection);
     }
 
+    private void BackdropComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.Count == 0 || e.AddedItems[0] is not string selection)
+            return;
+
+        ViewModel.Settings.BackdropStyle = selection;
+        UiThemeService.ApplyBackdrop(selection);
+    }
+
     private void DnsModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (e.AddedItems.Count == 0 || e.AddedItems[0] is not string selection)
@@ -120,7 +129,7 @@ public partial class SettingsPage : Page
         {
             MessageBox.Show(
                 $"The settings could not be exported.{Environment.NewLine}{exception.Message}",
-                "Steam Content Manager",
+                "ResonanceTools",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }

@@ -42,4 +42,10 @@
   <ItemGroup>
     <None Include="Tools\Steamless\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- CreamAPI replacement DLLs bundled for the DLC Unlocker (CreamAPI mode). -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\CreamAPI\steam_api.dll" LogicalName="CreamAPI.steam_api.dll" />
+    <EmbeddedResource Include="Resources\CreamAPI\steam_api64.dll" LogicalName="CreamAPI.steam_api64.dll" />
+  </ItemGroup>
 </Project>

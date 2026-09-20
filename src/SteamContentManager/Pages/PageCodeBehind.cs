@@ -78,7 +78,7 @@ public sealed partial class DenuvoGenerationPage : Page
         {
             MessageBox.Show(
                 $"The preview could not be exported.{Environment.NewLine}{exception.Message}",
-                "Steam Content Manager",
+                "ResonanceTools",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }

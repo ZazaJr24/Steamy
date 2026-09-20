@@ -12,8 +12,8 @@
       <Grid Margin="0,0,0,16">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel>
-          <TextBlock Text="Dashboard" Style="{StaticResource PageTitleStyle}" />
-          <TextBlock Text="Your library, downloads and provider health in one view." Style="{StaticResource PageSubtitleStyle}" Margin="0" />
+          <TextBlock Text="ResonanceTools" Style="{StaticResource PageTitleStyle}" />
+          <TextBlock Text="Library, downloads and tools at a glance." Style="{StaticResource PageSubtitleStyle}" Margin="0" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
           <Border Style="{StaticResource StatusPillStyle}" Margin="0,0,9,0">

@@ -3,7 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:pages="clr-namespace:SteamContentManager.Pages"
-                 Title="Steam Content Manager"
+                 Title="ResonanceTools"
                  Height="900"
                  Width="1440"
                  MinHeight="620"
@@ -19,7 +19,7 @@
     </Grid.RowDefinitions>
 
     <ui:TitleBar Grid.Row="0"
-                 Title="Steam Content Manager"
+                 Title="ResonanceTools"
                  Height="34"
                  Background="{DynamicResource AppBackgroundBrush}"
                  Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -32,10 +32,13 @@
                         IsBackButtonVisible="Collapsed"
                         IsPaneToggleVisible="True"
                         IsFooterSeparatorVisible="True"
-                        PaneTitle="SCM"
+                        PaneTitle="RT"
                         Transition="None"
                         IsPaneOpen="True"
                         Background="{DynamicResource SidebarBackgroundBrush}">
+        <ui:NavigationView.Header>
+          <Border Height="0" Visibility="Collapsed" />
+        </ui:NavigationView.Header>
         <ui:NavigationView.PaneHeader>
           <Border Margin="14,12,14,14"
                   Padding="10,9"
@@ -46,14 +49,14 @@
             <StackPanel Orientation="Horizontal">
               <Border Width="30" Height="30" CornerRadius="9"
                       Background="{DynamicResource AccentSoftBrush}">
-                <TextBlock Text="S" Foreground="{DynamicResource AccentBrush}"
+                <TextBlock Text="R" Foreground="{DynamicResource AccentBrush}"
                            FontSize="15" FontWeight="Bold"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Border>
               <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                <TextBlock Text="Steam Content" Foreground="{DynamicResource TextPrimaryBrush}"
+                <TextBlock Text="Resonance" Foreground="{DynamicResource TextPrimaryBrush}"
                            FontSize="12.5" FontWeight="SemiBold" />
-                <TextBlock Text="Manager" Foreground="{DynamicResource TextTertiaryBrush}"
+                <TextBlock Text="Tools" Foreground="{DynamicResource TextTertiaryBrush}"
                            FontSize="10.5" Margin="0,1,0,0" />
               </StackPanel>
             </StackPanel>
@@ -89,13 +92,20 @@
             </ui:NavigationViewItem.MenuItems>
           </ui:NavigationViewItem>
 
-          <ui:NavigationViewItemHeader Text="TOOLS" />
-          <ui:NavigationViewItem Content="Steamless"
-                                 Icon="{ui:ImageIcon '/SteamContentManager;component/Resources/steamless.png'}"
-                                 TargetPageType="{x:Type pages:SteamlessPage}" />
-          <ui:NavigationViewItem Content="Denuvo Activation"
-                                 Icon="{ui:SymbolIcon Document24}"
-                                 TargetPageType="{x:Type pages:DenuvoActivationPage}" />
+          <ui:NavigationViewItem Content="Tools"
+                                 Icon="{ui:SymbolIcon Toolbox24}">
+            <ui:NavigationViewItem.MenuItems>
+              <ui:NavigationViewItem Content="Steamless"
+                                     Icon="{ui:ImageIcon '/SteamContentManager;component/Resources/steamless.png'}"
+                                     TargetPageType="{x:Type pages:SteamlessPage}" />
+              <ui:NavigationViewItem Content="Denuvo Activation"
+                                     Icon="{ui:SymbolIcon Key24}"
+                                     TargetPageType="{x:Type pages:DenuvoActivationPage}" />
+              <ui:NavigationViewItem Content="DLC Unlocker"
+                                     Icon="{ui:SymbolIcon LockOpen24}"
+                                     TargetPageType="{x:Type pages:CreamApiPage}" />
+            </ui:NavigationViewItem.MenuItems>
+          </ui:NavigationViewItem>
         </ui:NavigationView.MenuItems>
 
         <ui:NavigationView.FooterMenuItems>

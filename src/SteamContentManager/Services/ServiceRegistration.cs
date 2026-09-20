@@ -94,6 +94,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<IRyuuSecureDownloadService>(),
             sp.GetRequiredService<IManifestSourceService>(),
             sp.GetRequiredService<ILoggingService>()));
+        services.AddSingleton<ICreamApiService>(sp => new CreamApiService(sp.GetRequiredService<ILoggingService>()));
+        services.AddSingleton<CreamApiViewModel>();
         services.AddSingleton<GameFixesViewModel>();
         services.AddSingleton<GreenLumaViewModel>();
         services.AddSingleton<GoldbergViewModel>();

@@ -13,8 +13,12 @@
 
 # Local archives and temporary exports
 *.7z
-Etmp*.txt
+Etmp*.txt
+
+# Backups and utility scripts
+backups/
+rename-to-resonancetools.bat
 
 # User-specific runtime data
 src/SteamContentManager/Data/*.db
-src/SteamContentManager/Data/*.db-* 
+src/SteamContentManager/Data/*.db-*

@@ -49,7 +49,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         new(ManifestSource.Ryuu, "Ryuu", "Ryuu Generator API (requires auth code)", "https://generator.ryuu.lol/", RequiresAuthCode: true),
         new(ManifestSource.Zaza, "Zaza", "ZazaJr24 Game-Files-UpdateR on GitHub", "https://raw.githubusercontent.com/ZazaJr24/Game-Files-UpdateR/main/", RequiresAuthCode: false),
         new(ManifestSource.Hubcap, "Hubcap", "Hubcap — coming soon", "https://hubcap.dev/", RequiresAuthCode: true, IsEnabled: false),
-        new(ManifestSource.Resonance, "Resonance", "ResonanceManifests on GitHub", "https://github.com/Dev12434/ResonanceManifests", RequiresAuthCode: false),
+        new(ManifestSource.Resonance, "Resonance", "ResonanceManifests on GitHub", "https://raw.githubusercontent.com/Dev12434/ResonanceManifests/main/", RequiresAuthCode: false),
     };
 
     private readonly ISettingsService _settings;

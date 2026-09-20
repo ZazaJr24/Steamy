@@ -123,7 +123,7 @@ public sealed class DenuvoGenerationViewModel : ViewModelBase
     {
         var payload = new
         {
-            generatedBy = "Steam Content Manager",
+            generatedBy = "ResonanceTools",
             generatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             template = template.Name,
             outputFormat = template.OutputFormat,

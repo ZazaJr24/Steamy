@@ -55,6 +55,8 @@ public partial class App : Application
         MainWindow = window;
         window.Show();
 
+        ApplySavedBackdrop();
+
         _ = RestoreDownloadQueueAsync();
     }
 
@@ -153,7 +155,7 @@ public partial class App : Application
 
         MessageBox.Show(
             $"{headline}:\n\n{details}\n{BuildStamp.Describe()}",
-            "Steam Content Manager",
+            "ResonanceTools",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
     }
@@ -209,12 +211,29 @@ public partial class App : Application
                 }
             }
         }
-        catch
-        {
-            // Appearance is optional and must never prevent the app from starting.
-        }
+        catch { }
 
-        // Always run once so the Fluent accent matches the app palette even without saved settings.
         UiThemeService.Apply(saved);
+    }
+
+    private static void ApplySavedBackdrop()
+    {
+        var saved = "Mica";
+        try
+        {
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SteamContentManager", "settings.json");
+            if (File.Exists(path))
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+                if (document.RootElement.TryGetProperty("BackdropStyle", out var backdrop)
+                    || document.RootElement.TryGetProperty("backdropStyle", out backdrop))
+                {
+                    saved = backdrop.GetString() ?? saved;
+                }
+            }
+        }
+        catch { }
+
+        UiThemeService.ApplyBackdrop(saved);
     }
 }

@@ -509,7 +509,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
         lines.AppendLine($"account_steamid={steamId}");
         lines.AppendLine($"ticket={ticket}");
         lines.AppendLine();
-        lines.AppendLine(string.Format("# Generiert durch Steam Content Manager – Denuvo Activation (AppID {0}).", appId));
+        lines.AppendLine(string.Format("# Generiert durch ResonanceTools – Denuvo Activation (AppID {0}).", appId));
 
         File.WriteAllText(path, lines.ToString(), Encoding.UTF8);
     }
