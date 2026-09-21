@@ -42,7 +42,6 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
     private bool _isSearching;
     private string _proxyDllName = "version.dll";
     private bool _isCapcomGame;
-    private string _customZipPath = string.Empty;
     private string _rawTicket = string.Empty;
     private string _rawSteamId = string.Empty;
 
@@ -81,7 +80,6 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
 
         GenerateCommand = new AsyncRelayCommand(GenerateAsync, () => CanGenerate);
         BrowseToolCommand = new RelayCommand(BrowseToolExecuted);
-        BrowseZipCommand = new RelayCommand(BrowseZipExecuted);
     }
 
     private string ColdLoaderCacheDir => Path.Combine(_baseCacheDir, "ColdLoader");
@@ -157,27 +155,12 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
         set => SetProperty(ref _isCapcomGame, value);
     }
 
-    public string CustomZipPath
-    {
-        get => _customZipPath;
-        set
-        {
-            if (SetProperty(ref _customZipPath, value))
-                OnPropertyChanged(nameof(CustomZipName));
-        }
-    }
-
-    public string CustomZipName => string.IsNullOrWhiteSpace(_customZipPath)
-        ? string.Empty
-        : Path.GetFileName(_customZipPath);
-
     public bool HasDownloadError => string.IsNullOrWhiteSpace(_toolExecutablePath) && !_isBusy;
 
     public bool CanGenerate => !IsBusy && _resolvedAppId > 0;
 
     public IAsyncRelayCommand GenerateCommand { get; }
     public ICommand BrowseToolCommand { get; }
-    public ICommand BrowseZipCommand { get; }
 
     // ── Init ────────────────────────────────────────────────────────
 
@@ -381,29 +364,59 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
 
             var ssDir = Path.Combine(tempDir, "steam_settings");
             Directory.CreateDirectory(ssDir);
+            Directory.CreateDirectory(Path.Combine(ssDir, "controller"));
+            Directory.CreateDirectory(Path.Combine(ssDir, "image"));
+            Directory.CreateDirectory(Path.Combine(ssDir, "sounds"));
 
+            // steam_appid.txt
             File.WriteAllText(Path.Combine(ssDir, "steam_appid.txt"),
                 appId.ToString(), Encoding.UTF8);
 
-            var ini = new StringBuilder();
-            ini.AppendLine("[user::general]");
-            ini.AppendLine($"account_steamid={_rawSteamId}");
-            ini.AppendLine($"ticket={_rawTicket}");
-            File.WriteAllText(Path.Combine(ssDir, "config.user.ini"),
-                ini.ToString(), Encoding.UTF8);
+            // configs.user.ini
+            var userIni = new StringBuilder();
+            userIni.AppendLine("[user::general]");
+            userIni.AppendLine("account_name=Player");
+            userIni.AppendLine($"account_steamid={_rawSteamId}");
+            userIni.AppendLine($"ticket={_rawTicket}");
+            userIni.AppendLine("language=english");
+            File.WriteAllText(Path.Combine(ssDir, "configs.user.ini"),
+                userIni.ToString(), Encoding.UTF8);
 
-            if (dlcs.Count > 0)
-            {
-                var dlcTxt = new StringBuilder();
-                foreach (var d in dlcs)
-                    dlcTxt.AppendLine($"{d.AppId}={d.Name}");
-                File.WriteAllText(Path.Combine(ssDir, "DLC.txt"),
-                    dlcTxt.ToString(), Encoding.UTF8);
-            }
+            // configs.app.ini — DLC list in [app::dlcs] format
+            var appIni = new StringBuilder();
+            appIni.AppendLine("[app::dlcs]");
+            appIni.AppendLine("unlock_all = 0");
+            foreach (var d in dlcs)
+                appIni.AppendLine($"{d.AppId} = DLC");
+            File.WriteAllText(Path.Combine(ssDir, "configs.app.ini"),
+                appIni.ToString(), Encoding.UTF8);
 
+            // configs.main.ini
+            File.WriteAllText(Path.Combine(ssDir, "configs.main.ini"),
+                "[main::connectivity]\r\ndisable_lan_only=1\r\n", Encoding.UTF8);
+
+            // configs.overlay.ini
+            File.WriteAllText(Path.Combine(ssDir, "configs.overlay.ini"),
+                "[overlay::general]\r\nenable_experimental_overlay = 1\r\n", Encoding.UTF8);
+
+            // depots.txt — fetch from SteamCMD API
+            Status = "Fetching depot info…";
+            var depots = await FetchDepotsAsync(appId, _cts.Token);
+            if (depots.Count > 0)
+                File.WriteAllText(Path.Combine(ssDir, "depots.txt"),
+                    string.Join(Environment.NewLine, depots) + Environment.NewLine, Encoding.UTF8);
+
+            // supported_languages.txt — fetch from Steam Store API
+            var languages = await FetchLanguagesAsync(appId, _cts.Token);
+            if (languages.Count > 0)
+                File.WriteAllText(Path.Combine(ssDir, "supported_languages.txt"),
+                    string.Join(Environment.NewLine, languages) + Environment.NewLine, Encoding.UTF8);
+
+            // Copy DLLs
             CopyCachedDlls(ColdLoaderCacheDir, tempDir, "coldloader");
             CopyProxyDll(ColdLoaderProxyCacheDir, tempDir, _proxyDllName);
 
+            // steam_stubbed goes into steam_settings
             if (_isCapcomGame)
             {
                 var loadDlls = Path.Combine(ssDir, "load_dlls");
@@ -412,13 +425,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             }
             else
             {
-                CopyCachedDlls(SteamStubbedCacheDir, tempDir, "steam_api");
-            }
-
-            if (!string.IsNullOrWhiteSpace(_customZipPath) && File.Exists(_customZipPath))
-            {
-                Status = "Extracting custom archive…";
-                ExtractArchive(_customZipPath, tempDir);
+                CopyCachedDlls(SteamStubbedCacheDir, ssDir, "steam_api");
             }
 
             Status = "Creating .zip…";
@@ -447,6 +454,80 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             _cts = null;
         }
     }
+
+    // ── Steam API helpers ──────────────────────────────────────────
+
+    private async Task<List<string>> FetchDepotsAsync(int appId, CancellationToken ct)
+    {
+        var depots = new List<string>();
+        try
+        {
+            var url = $"https://api.steamcmd.net/v1/info/{appId}";
+            using var resp = await _httpClient.GetAsync(url, ct);
+            if (!resp.IsSuccessStatusCode) return depots;
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty("data", out var data)
+                && data.TryGetProperty(appId.ToString(), out var appData)
+                && appData.TryGetProperty("depots", out var depotsEl))
+            {
+                foreach (var prop in depotsEl.EnumerateObject())
+                {
+                    if (int.TryParse(prop.Name, out _))
+                        depots.Add(prop.Name);
+                }
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { }
+        return depots;
+    }
+
+    private async Task<List<string>> FetchLanguagesAsync(int appId, CancellationToken ct)
+    {
+        var languages = new List<string>();
+        try
+        {
+            var url = $"https://store.steampowered.com/api/appdetails/?appids={appId}&cc=US";
+            using var resp = await _httpClient.GetAsync(url, ct);
+            if (!resp.IsSuccessStatusCode) return languages;
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty(appId.ToString(), out var entry)
+                && entry.TryGetProperty("data", out var appData)
+                && appData.TryGetProperty("supported_languages", out var langEl))
+            {
+                var raw = langEl.GetString() ?? "";
+                foreach (var part in raw.Split(','))
+                {
+                    var cleaned = Regex.Replace(part.Trim(), @"<[^>]+>", "").Trim().ToLowerInvariant();
+                    if (!string.IsNullOrWhiteSpace(cleaned))
+                    {
+                        var mapped = MapSteamLanguage(cleaned);
+                        if (!languages.Contains(mapped))
+                            languages.Add(mapped);
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { }
+        return languages;
+    }
+
+    private static string MapSteamLanguage(string lang) => lang switch
+    {
+        "simplified chinese" => "schinese",
+        "traditional chinese" => "tchinese",
+        "brazilian portuguese" => "brazilian",
+        "spanish - spain" => "spanish",
+        "spanish - latin america" => "latam",
+        _ => lang
+    };
 
     // ── GitHub download helpers ─────────────────────────────────────
 
@@ -565,39 +646,6 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             _toolExecutablePath = ofd.FileName;
             Status = "Generator selected.";
             OnPropertyChanged(nameof(HasDownloadError));
-        }
-    }
-
-    private void BrowseZipExecuted()
-    {
-        var ofd = new OpenFileDialog
-        {
-            Filter = "Archives|*.zip;*.7z;*.rar|ZIP|*.zip|7-Zip|*.7z|RAR|*.rar|All Files|*.*",
-            Title = "Select an archive to include in the package"
-        };
-        if (ofd.ShowDialog() == true)
-            CustomZipPath = ofd.FileName;
-    }
-
-    private static void ExtractArchive(string archivePath, string destDir)
-    {
-        var ext = Path.GetExtension(archivePath).ToLowerInvariant();
-        if (ext == ".zip")
-        {
-            ZipFile.ExtractToDirectory(archivePath, destDir, true);
-            return;
-        }
-
-        using var stream = File.OpenRead(archivePath);
-        using var archive = ArchiveFactory.Open(stream);
-        foreach (var entry in archive.Entries)
-        {
-            if (entry.IsDirectory) continue;
-            entry.WriteToDirectory(destDir, new ExtractionOptions
-            {
-                ExtractFullPath = true,
-                Overwrite = true
-            });
         }
     }
 

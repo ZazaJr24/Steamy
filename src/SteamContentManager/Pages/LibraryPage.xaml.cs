@@ -1,13 +1,17 @@
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
+using SharpCompress.Archives;
+using SharpCompress.Common;
 using SteamContentManager.Models;
 using SteamContentManager.Services;
 using SteamContentManager.ViewModels;
@@ -19,6 +23,7 @@ public partial class LibraryPage : Page
     private SteamCatalogItem? _selectedItem;
     private ManifestSource _selectedSource = ManifestSource.Ryuu;
     private string _downloadPath = string.Empty;
+    private string _customArchivePath = string.Empty;
     private CancellationTokenSource? _availabilityCts;
 
     private Brush ActiveChipBg => ThemeBrush("AccentSoftBrush");
@@ -66,12 +71,22 @@ public partial class LibraryPage : Page
         _selectedItem = item;
         _selectedSource = ManifestSource.Ryuu;
 
-        OverlayTitle.Text = $"Download: {item.Name}";
+        OverlayTitle.Text = item.Name;
         OverlayAppId.Text = $"App {item.AppId}";
         OverlayStatus.Text = "Choose a manifest source and download folder.";
 
+        try
+        {
+            var coverUrl = item.HeaderImage is not null ? null
+                : $"https://cdn.akamai.steamstatic.com/steam/apps/{item.AppId}/header.jpg";
+            OverlayCover.Source = item.HeaderImage ?? (coverUrl is not null
+                ? new BitmapImage(new Uri(coverUrl)) : null);
+        }
+        catch { OverlayCover.Source = null; }
+
         SetOptionState(SourceRyuu, true);
         SetOptionState(SourceZaza, false);
+        SetOptionState(SourceHubcap, false);
         SetOptionState(SourceResonance, false);
         SourceAvailabilityText.Text = "";
 
@@ -84,6 +99,9 @@ public partial class LibraryPage : Page
             : _downloadPath;
         DownloadPathText.Foreground = string.IsNullOrWhiteSpace(_downloadPath) ? TertiaryText : PrimaryText;
 
+        _customArchivePath = string.Empty;
+        CustomArchiveText.Text = "No archive selected";
+        CustomArchiveText.Foreground = TertiaryText;
         StartButton.Content = "Start download";
         StartButton.IsEnabled = true;
         OverlayGrid.Visibility = Visibility.Visible;
@@ -105,6 +123,7 @@ public partial class LibraryPage : Page
         _selectedSource = source;
         SetOptionState(SourceRyuu, source == ManifestSource.Ryuu);
         SetOptionState(SourceZaza, source == ManifestSource.Zaza);
+        SetOptionState(SourceHubcap, source == ManifestSource.Hubcap);
         SetOptionState(SourceResonance, source == ManifestSource.Resonance);
         var info = App.Services.GetRequiredService<IManifestSourceService>().Sources
             .FirstOrDefault(s => s.Source == source);
@@ -164,6 +183,42 @@ public partial class LibraryPage : Page
             _downloadPath = dialog.FolderName;
             DownloadPathText.Text = _downloadPath;
             DownloadPathText.Foreground = PrimaryText;
+        }
+    }
+
+    private void BrowseArchiveButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Select an archive to include",
+            Filter = "Archives|*.zip;*.7z;*.rar|ZIP|*.zip|7-Zip|*.7z|RAR|*.rar|All Files|*.*"
+        };
+        if (dialog.ShowDialog(Window.GetWindow(this)) == true)
+        {
+            _customArchivePath = dialog.FileName;
+            CustomArchiveText.Text = Path.GetFileName(dialog.FileName);
+            CustomArchiveText.Foreground = PrimaryText;
+        }
+    }
+
+    private static void ExtractArchive(string archivePath, string destDir)
+    {
+        var ext = Path.GetExtension(archivePath).ToLowerInvariant();
+        if (ext == ".zip")
+        {
+            ZipFile.ExtractToDirectory(archivePath, destDir, true);
+            return;
+        }
+        using var stream = File.OpenRead(archivePath);
+        using var archive = ArchiveFactory.Open(stream);
+        foreach (var entry in archive.Entries)
+        {
+            if (entry.IsDirectory) continue;
+            entry.WriteToDirectory(destDir, new ExtractionOptions
+            {
+                ExtractFullPath = true,
+                Overwrite = true
+            });
         }
     }
 
@@ -285,8 +340,19 @@ public partial class LibraryPage : Page
 
         try
         {
+            var archivePath = _customArchivePath;
             var result = await Task.Run(() =>
                 ryuuService.DownloadGameAsync(item.AppId, targetFolder, source, progress));
+
+            if (result.Succeeded && !string.IsNullOrEmpty(archivePath) && File.Exists(archivePath))
+            {
+                await Dispatcher.BeginInvoke(() =>
+                {
+                    job.Status = "Extracting custom archive...";
+                    if (_selectedItem == item) OverlayStatus.Text = job.Status;
+                });
+                await Task.Run(() => ExtractArchive(archivePath, targetFolder));
+            }
 
             await Dispatcher.BeginInvoke(() =>
             {

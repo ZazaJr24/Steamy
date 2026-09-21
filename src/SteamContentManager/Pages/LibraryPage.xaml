@@ -150,26 +150,24 @@
             <ItemsControl ItemsSource="{Binding PagedCatalogItems}" HorizontalAlignment="Stretch" Margin="-7,0,0,0">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                  <WrapPanel ItemWidth="186" ItemHeight="326" HorizontalAlignment="Left" />
+                  <WrapPanel ItemWidth="194" ItemHeight="336" HorizontalAlignment="Left" />
                 </ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Margin="7,4,7,10"
-                          Width="172"
-                          Height="312"
+                  <Border Margin="7,4,7,12"
+                          Width="180"
+                          Height="320"
                           Style="{StaticResource CoverCardStyle}"
                           MouseLeftButtonUp="GameCard_MouseLeftButtonUp"
                           Tag="{Binding}"
                           ToolTip="{Binding Name}">
-                    <!-- Rounded-rect clip so the cover image corners actually follow the card
-                         radius (a Border's CornerRadius does not clip its child on its own). -->
                     <Border.Clip>
-                      <RectangleGeometry Rect="0,0,172,312" RadiusX="12" RadiusY="12" />
+                      <RectangleGeometry Rect="0,0,180,320" RadiusX="14" RadiusY="14" />
                     </Border.Clip>
                     <Grid>
                       <Grid.RowDefinitions>
-                        <RowDefinition Height="252" />
+                        <RowDefinition Height="254" />
                         <RowDefinition Height="*" />
                       </Grid.RowDefinitions>
 
@@ -190,17 +188,17 @@
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
                                    Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <Rectangle VerticalAlignment="Bottom" Height="70" Fill="{StaticResource CoverFadeBrush}" />
+                        <Rectangle VerticalAlignment="Bottom" Height="80" Fill="{StaticResource CoverFadeBrush}" />
                         <Border Style="{StaticResource CoverBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
                           <TextBlock Text="{Binding TypeLabel}" Style="{StaticResource CoverBadgeTextStyle}" />
                         </Border>
                       </Grid>
 
                       <!-- Footer -->
-                      <StackPanel Grid.Row="1" Margin="11,8,11,0" VerticalAlignment="Center">
+                      <StackPanel Grid.Row="1" Margin="12,10,12,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Name}"
                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                   FontSize="12"
+                                   FontSize="12.5"
                                    FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis" />
                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -222,8 +220,12 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-              <!-- Pager scrolls with the grid, so it only appears once you reach the bottom -->
-              <Border Style="{StaticResource FilterBarStyle}" Margin="0,12,0,16" Padding="10,8">
+              <!-- Pager -->
+              <Border Margin="0,16,8,20" Padding="14,10"
+                      Background="{DynamicResource SurfaceElevatedBrush}"
+                      BorderBrush="{DynamicResource BorderSubtleBrush}"
+                      BorderThickness="1"
+                      CornerRadius="14">
                 <Grid>
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -231,7 +233,7 @@
                     <ColumnDefinition Width="*" />
                   </Grid.ColumnDefinitions>
                   <TextBlock Text="{Binding VisibleCountLabel}"
-                             Style="{StaticResource TertiaryTextStyle}"
+                             Foreground="{DynamicResource TextTertiaryBrush}"
                              FontSize="11.5"
                              VerticalAlignment="Center" />
                   <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
@@ -239,7 +241,7 @@
                                Command="{Binding PreviousPageCommand}"
                                Appearance="Secondary"
                                IsEnabled="{Binding CanGoPrevious}" />
-                    <Border Style="{StaticResource AccentPillStyle}" VerticalAlignment="Center" Margin="10,0">
+                    <Border Style="{StaticResource AccentPillStyle}" VerticalAlignment="Center" Margin="12,0">
                       <TextBlock Text="{Binding PageLabel}" Style="{StaticResource AccentPillTextStyle}" />
                     </Border>
                     <ui:Button Content="Next"
@@ -249,7 +251,7 @@
                   </StackPanel>
                   <TextBlock Grid.Column="2"
                              Text="{Binding UpdatedLabel}"
-                             Style="{StaticResource TertiaryTextStyle}"
+                             Foreground="{DynamicResource TextTertiaryBrush}"
                              FontSize="11"
                              HorizontalAlignment="Right"
                              VerticalAlignment="Center" />
@@ -262,7 +264,7 @@
 
     <!-- Download dialog overlay -->
     <Grid x:Name="OverlayGrid" Visibility="Collapsed">
-      <Border Background="#50000000" MouseLeftButtonUp="Overlay_Close" />
+      <Border Background="#60000000" MouseLeftButtonUp="Overlay_Close" />
       <Border x:Name="DialogPanel"
               HorizontalAlignment="Center"
               VerticalAlignment="Center"
@@ -270,10 +272,10 @@
               BorderBrush="{DynamicResource BorderSubtleBrush}"
               BorderThickness="1"
               CornerRadius="20"
-              Width="460"
-              MaxHeight="520">
+              Width="500"
+              MaxHeight="620">
         <Border.Effect>
-          <DropShadowEffect BlurRadius="40" ShadowDepth="10" Direction="270" Color="#000000" Opacity="0.5" />
+          <DropShadowEffect BlurRadius="50" ShadowDepth="12" Direction="270" Color="#000000" Opacity="0.55" />
         </Border.Effect>
         <Grid>
           <Grid.RowDefinitions>
@@ -282,17 +284,28 @@
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
-          <!-- Title -->
-          <Grid Grid.Row="0" Margin="22,18,18,0">
+          <!-- Header with game info -->
+          <Grid Grid.Row="0" Margin="24,20,20,0">
             <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
-              <TextBlock x:Name="OverlayTitle" Text="Download Game" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-              <TextBlock x:Name="OverlayAppId" Text="App 0" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,2,0,0" />
+            <!-- Game cover thumbnail -->
+            <Border Width="48" Height="48" CornerRadius="10" Margin="0,0,14,0"
+                    ClipToBounds="True" Background="#0B0C0F">
+              <Image x:Name="OverlayCover" Stretch="UniformToFill" />
+            </Border>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+              <TextBlock x:Name="OverlayTitle" Text="Download Game"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="15" FontWeight="SemiBold"
+                         TextTrimming="CharacterEllipsis" />
+              <TextBlock x:Name="OverlayAppId" Text="App 0"
+                         Foreground="{DynamicResource TextTertiaryBrush}"
+                         FontSize="11" Margin="0,2,0,0" />
             </StackPanel>
-            <ui:Button Grid.Column="1"
+            <ui:Button Grid.Column="2"
                        Style="{StaticResource IconButtonStyle}"
                        Icon="{ui:SymbolIcon Dismiss24}"
                        Appearance="Secondary"
@@ -301,50 +314,91 @@
                        ToolTip="Close"
                        Click="OverlayCloseButton_Click" />
           </Grid>
-          <Separator Grid.Row="0" Margin="22,14,22,0" VerticalAlignment="Bottom" />
+          <Separator Grid.Row="0" Margin="24,14,24,0" VerticalAlignment="Bottom" />
 
-          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="22,16,22,4">
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,18,24,6">
             <StackPanel>
+              <!-- SOURCE -->
               <TextBlock Text="SOURCE" Style="{StaticResource DialogSectionLabel}" />
               <WrapPanel Margin="0,0,0,2">
                 <Border Style="{StaticResource HostPill}" x:Name="SourceRyuu" MouseLeftButtonUp="Source_Click" Tag="Ryuu"><TextBlock Text="Ryuu" FontSize="11" FontWeight="SemiBold" /></Border>
                 <Border Style="{StaticResource HostPill}" x:Name="SourceZaza" MouseLeftButtonUp="Source_Click" Tag="Zaza"><TextBlock Text="Zaza" FontSize="11" FontWeight="SemiBold" /></Border>
-                <Border Style="{StaticResource HostPill}" x:Name="SourceHubcap" MouseLeftButtonUp="Source_Click" Tag="Hubcap" IsEnabled="False" Opacity="0.35"><TextBlock Text="Hubcap" FontSize="11" FontWeight="SemiBold" /></Border>
+                <Border Style="{StaticResource HostPill}" x:Name="SourceHubcap" MouseLeftButtonUp="Source_Click" Tag="Hubcap"><TextBlock Text="Hubcap" FontSize="11" FontWeight="SemiBold" /></Border>
                 <Border Style="{StaticResource HostPill}" x:Name="SourceResonance" MouseLeftButtonUp="Source_Click" Tag="Resonance" ToolTip="Check the ResonanceManifests repository for this AppID"><TextBlock Text="Resonance" FontSize="11" FontWeight="SemiBold" /></Border>
               </WrapPanel>
               <TextBlock x:Name="SourceAvailabilityText" Text="" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
 
-              <Separator Margin="0,6,0,14" />
+              <Separator Margin="0,8,0,16" />
+
+              <!-- DOWNLOAD LOCATION -->
               <TextBlock Text="DOWNLOAD LOCATION" Style="{StaticResource DialogSectionLabel}" />
-              <Grid Margin="0,0,0,8">
+              <Grid Margin="0,0,0,6">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="10" Padding="10,0" MinHeight="34">
-                  <TextBlock x:Name="DownloadPathText" Text="Select a folder…" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11.5" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                <Border Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        BorderThickness="1" CornerRadius="10" Padding="12,0" MinHeight="36">
+                  <TextBlock x:Name="DownloadPathText" Text="Select a folder…"
+                             Foreground="{DynamicResource TextTertiaryBrush}"
+                             FontSize="12" TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center" />
                 </Border>
-                <ui:Button Grid.Column="1" Content="Browse" Appearance="Secondary" Margin="6,0,0,0" Click="BrowseFolderButton_Click" />
+                <ui:Button Grid.Column="1" Content="Browse" Appearance="Secondary"
+                           Margin="8,0,0,0" Click="BrowseFolderButton_Click" />
               </Grid>
-              <TextBlock x:Name="OverlayStatus" Text="" Foreground="{DynamicResource AccentBrush}" FontSize="11.5" Margin="0,4,0,0" TextWrapping="Wrap" />
+
+              <Separator Margin="0,10,0,16" />
+
+              <!-- CUSTOM ARCHIVE -->
+              <TextBlock Text="CUSTOM ARCHIVE (OPTIONAL)" Style="{StaticResource DialogSectionLabel}" />
+              <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        BorderThickness="1" CornerRadius="10" Padding="12,0" MinHeight="36">
+                  <TextBlock x:Name="CustomArchiveText" Text="No archive selected"
+                             Foreground="{DynamicResource TextTertiaryBrush}"
+                             FontSize="12" TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center" />
+                </Border>
+                <ui:Button Grid.Column="1" Content="Browse" Appearance="Secondary"
+                           Margin="8,0,0,0" Click="BrowseArchiveButton_Click" />
+              </Grid>
+              <TextBlock Text="Extract a .zip / .7z / .rar into the download folder after the manifest download."
+                         Foreground="{DynamicResource TextTertiaryBrush}"
+                         FontSize="10" TextWrapping="Wrap" Margin="0,2,0,0" />
+
+              <!-- Status -->
+              <TextBlock x:Name="OverlayStatus" Text=""
+                         Foreground="{DynamicResource AccentBrush}"
+                         FontSize="11.5" Margin="0,14,0,0" TextWrapping="Wrap" />
             </StackPanel>
           </ScrollViewer>
 
           <!-- Footer -->
-          <Grid Grid.Row="2" Margin="22,10,22,18">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="Auto" />
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <ui:Button Content="Cancel" Appearance="Secondary" HorizontalAlignment="Left" Click="OverlayCloseButton_Click" />
-            <ui:Button Grid.Column="2"
-                       x:Name="StartButton"
-                       Content="Start download"
-                       Icon="{ui:SymbolIcon ArrowDownload24}"
-                       Appearance="Primary"
-                       Click="StartDownloadButton_Click" />
-          </Grid>
+          <Border Grid.Row="2" Padding="24,14,24,18"
+                  Background="{DynamicResource SurfaceBrush}"
+                  CornerRadius="0,0,20,20">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <ui:Button Content="Cancel" Appearance="Secondary" Click="OverlayCloseButton_Click" />
+              <ui:Button Grid.Column="2"
+                         x:Name="StartButton"
+                         Content="Start download"
+                         Icon="{ui:SymbolIcon ArrowDownload24}"
+                         Appearance="Primary"
+                         Click="StartDownloadButton_Click" />
+            </Grid>
+          </Border>
         </Grid>
       </Border>
     </Grid>

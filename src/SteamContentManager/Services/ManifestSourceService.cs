@@ -48,7 +48,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     {
         new(ManifestSource.Ryuu, "Ryuu", "Ryuu Generator API (requires auth code)", "https://generator.ryuu.lol/", RequiresAuthCode: true),
         new(ManifestSource.Zaza, "Zaza", "ZazaJr24 Game-Files-UpdateR on GitHub", "https://raw.githubusercontent.com/ZazaJr24/Game-Files-UpdateR/main/", RequiresAuthCode: false),
-        new(ManifestSource.Hubcap, "Hubcap", "Hubcap — coming soon", "https://hubcap.dev/", RequiresAuthCode: true, IsEnabled: false),
+        new(ManifestSource.Hubcap, "Hubcap", "Hubcap Manifest API (requires API key)", "https://hubcapmanifest.com/", RequiresAuthCode: true),
         new(ManifestSource.Resonance, "Resonance", "ResonanceManifests on GitHub", "https://raw.githubusercontent.com/Dev12434/ResonanceManifests/main/", RequiresAuthCode: false),
     };
 
@@ -87,7 +87,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             ManifestSource.Ryuu => true,
             ManifestSource.Zaza => await CheckGitHubAvailabilityAsync("ZazaJr24/Game-Files-UpdateR", appId, cancellationToken),
             ManifestSource.Resonance => await CheckGitHubAvailabilityAsync("Dev12434/ResonanceManifests", appId, cancellationToken),
-            ManifestSource.Hubcap => false,
+            ManifestSource.Hubcap => await CheckHubcapAvailabilityAsync(appId, cancellationToken),
             _ => false
         };
     }
@@ -130,7 +130,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             ManifestSource.Ryuu => await DownloadFromRyuuAsync(appId, progress, cancellationToken),
             ManifestSource.Zaza => await DownloadFromGitHubAsync(
                 "ZazaJr24/Game-Files-UpdateR", appId, progress, cancellationToken),
-            ManifestSource.Hubcap => new ManifestDownloadResult(false, "Hubcap source is not yet available."),
+            ManifestSource.Hubcap => await DownloadFromHubcapAsync(appId, progress, cancellationToken),
             ManifestSource.Resonance => await DownloadFromGitHubAsync(
                 "Dev12434/ResonanceManifests", appId, progress, cancellationToken),
             _ => new ManifestDownloadResult(false, $"Unknown source: {source}")
@@ -185,6 +185,96 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         catch (Exception ex)
         {
             return new ManifestDownloadResult(false, $"Failed to extract Ryuu archive: {ex.Message}");
+        }
+    }
+
+    private async Task<bool> CheckHubcapAvailabilityAsync(int appId, CancellationToken ct)
+    {
+        var key = await _credentials.ReadAsync("hubcap-api-key");
+        if (string.IsNullOrWhiteSpace(key)) return false;
+
+        try
+        {
+            var baseUrl = _settings.Load().HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";
+            using var req = new HttpRequestMessage(HttpMethod.Get,
+                $"{baseUrl}/api/v1/search?q={appId}&limit=1");
+            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
+            using var resp = await _httpClient.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode) return false;
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("results", out var results) && results.GetArrayLength() > 0)
+                return true;
+            if (root.TryGetProperty("games", out var games) && games.GetArrayLength() > 0)
+                return true;
+            return false;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { return false; }
+    }
+
+    private async Task<ManifestDownloadResult> DownloadFromHubcapAsync(
+        int appId, IProgress<string>? progress, CancellationToken ct)
+    {
+        var key = await _credentials.ReadAsync("hubcap-api-key");
+        if (string.IsNullOrWhiteSpace(key))
+            return new ManifestDownloadResult(false, "No Hubcap API key configured. Set it in Settings → Hubcap API Key.");
+
+        var baseUrl = _settings.Load().HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";
+        var appWorkDir = Path.Combine(_workFolder, "hubcap", appId.ToString(CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(appWorkDir);
+
+        progress?.Report("Downloading manifest from Hubcap...");
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get,
+                $"{baseUrl}/api/v1/manifest/{appId}");
+            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
+            using var resp = await _httpClient.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode)
+                return new ManifestDownloadResult(false,
+                    $"Hubcap returned HTTP {(int)resp.StatusCode} for App {appId}.");
+
+            var contentType = resp.Content.Headers.ContentType?.MediaType ?? "";
+            var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
+
+            if (contentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
+                || contentType.Contains("octet-stream", StringComparison.OrdinalIgnoreCase))
+            {
+                var zipPath = Path.Combine(appWorkDir, $"{appId}_hubcap.zip");
+                await File.WriteAllBytesAsync(zipPath, bytes, ct);
+
+                string? luaContent = null;
+                using var zip = ZipFile.OpenRead(zipPath);
+                foreach (var entry in zip.Entries)
+                {
+                    var ext = Path.GetExtension(entry.Name).ToLowerInvariant();
+                    if (ext is ".lua" or ".key" or ".manifest")
+                    {
+                        var destPath = Path.Combine(appWorkDir, entry.Name);
+                        entry.ExtractToFile(destPath, overwrite: true);
+                        if (ext == ".lua")
+                            using (var reader = new StreamReader(entry.Open()))
+                                luaContent = await reader.ReadToEndAsync(ct);
+                    }
+                }
+
+                if (luaContent is null)
+                    return new ManifestDownloadResult(false, $"No Lua script found in Hubcap archive for App {appId}.");
+
+                _logging.Add(Models.LogLevel.Info, "ManifestSource",
+                    $"Downloaded manifest from Hubcap for App {appId}.", appId);
+                return new ManifestDownloadResult(true, "Downloaded from Hubcap.", luaContent, appWorkDir);
+            }
+
+            return new ManifestDownloadResult(false, "Hubcap returned unexpected content type.");
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            return new ManifestDownloadResult(false, $"Hubcap download failed: {ex.Message}");
         }
     }
 
