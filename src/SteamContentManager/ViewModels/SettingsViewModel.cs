@@ -23,6 +23,7 @@ public sealed class SettingsViewModel : ViewModelBase
 
     private const string SteamApiKeyName = "steam-api-key";
     private const string RyuuAuthKeyName = "ryuu-auth-key";
+    private const string HubcapApiKeyName = "hubcap-api-key";
 
     private readonly ISettingsService _settingsService;
     private readonly ISecureCredentialService _credentials;
@@ -34,8 +35,12 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _status = "Changes are saved automatically.";
     private string _steamCredentialStatus = "Not configured";
     private string _ryuuCredentialStatus = "Not configured";
+    private string _hubcapCredentialStatus = "Not configured";
     private string _steamTestStatus = "Not checked yet.";
     private string _ryuuTestStatus = "Not checked yet.";
+    private string _hubcapTestStatus = "Not checked yet.";
+    private string _hubcapUsageInfo = string.Empty;
+    private double _hubcapUsagePercent;
     private string _dnsStatus = "App-only DNS diagnostics are ready.";
     private string _dnsAddresses = "—";
     private string _dnsLatency = "—";
@@ -71,6 +76,7 @@ public sealed class SettingsViewModel : ViewModelBase
         ResetCommand = new AsyncRelayCommand(ResetAsync);
         TestSteamCommand = new AsyncRelayCommand(TestSteamAsync);
         TestRyuuCommand = new AsyncRelayCommand(TestRyuuAsync);
+        TestHubcapCommand = new AsyncRelayCommand(TestHubcapAsync);
         TestDnsCommand = new AsyncRelayCommand(TestDnsAsync);
 
         _ = RefreshCredentialStatusAsync();
@@ -92,6 +98,9 @@ public sealed class SettingsViewModel : ViewModelBase
     /// <summary>Bound to the password box; only ever written into the encrypted store.</summary>
     public string RyuuAuthKeyInput { get; set; } = string.Empty;
 
+    /// <summary>Bound to the password box; only ever written into the encrypted store.</summary>
+    public string HubcapApiKeyInput { get; set; } = string.Empty;
+
     public string SteamCredentialStatus
     {
         get => _steamCredentialStatus;
@@ -102,6 +111,30 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         get => _ryuuCredentialStatus;
         private set => SetProperty(ref _ryuuCredentialStatus, value);
+    }
+
+    public string HubcapCredentialStatus
+    {
+        get => _hubcapCredentialStatus;
+        private set => SetProperty(ref _hubcapCredentialStatus, value);
+    }
+
+    public string HubcapTestStatus
+    {
+        get => _hubcapTestStatus;
+        private set => SetProperty(ref _hubcapTestStatus, value);
+    }
+
+    public string HubcapUsageInfo
+    {
+        get => _hubcapUsageInfo;
+        private set => SetProperty(ref _hubcapUsageInfo, value);
+    }
+
+    public double HubcapUsagePercent
+    {
+        get => _hubcapUsagePercent;
+        private set => SetProperty(ref _hubcapUsagePercent, value);
     }
 
     public string SteamTestStatus
@@ -233,6 +266,7 @@ public sealed class SettingsViewModel : ViewModelBase
     public IAsyncRelayCommand ResetCommand { get; }
     public IAsyncRelayCommand TestSteamCommand { get; }
     public IAsyncRelayCommand TestRyuuCommand { get; }
+    public IAsyncRelayCommand TestHubcapCommand { get; }
     public IAsyncRelayCommand TestDnsCommand { get; }
 
     // ---- saving ------------------------------------------------------------------------------
@@ -278,11 +312,17 @@ public sealed class SettingsViewModel : ViewModelBase
             storedSomething = true;
         }
 
+        if (!string.IsNullOrWhiteSpace(HubcapApiKeyInput))
+        {
+            await _credentials.SaveAsync(HubcapApiKeyName, HubcapApiKeyInput.Trim());
+            storedSomething = true;
+        }
+
         if (!storedSomething) return;
 
-        // The plain text is not kept around once it has been written to the encrypted store.
         SteamApiKeyInput = string.Empty;
         RyuuAuthKeyInput = string.Empty;
+        HubcapApiKeyInput = string.Empty;
         CredentialInputsCleared?.Invoke(this, EventArgs.Empty);
         await RefreshCredentialStatusAsync();
     }
@@ -291,9 +331,11 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         var steam = await _credentials.ReadAsync(SteamApiKeyName);
         var ryuu = await _credentials.ReadAsync(RyuuAuthKeyName);
+        var hubcap = await _credentials.ReadAsync(HubcapApiKeyName);
 
         SteamCredentialStatus = DescribeCredential(steam);
         RyuuCredentialStatus = DescribeCredential(ryuu);
+        HubcapCredentialStatus = DescribeCredential(hubcap);
 
         static string DescribeCredential(string? value)
             => string.IsNullOrWhiteSpace(value)
@@ -305,9 +347,11 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         await _credentials.DeleteAsync(SteamApiKeyName);
         await _credentials.DeleteAsync(RyuuAuthKeyName);
+        await _credentials.DeleteAsync(HubcapApiKeyName);
 
         SteamApiKeyInput = string.Empty;
         RyuuAuthKeyInput = string.Empty;
+        HubcapApiKeyInput = string.Empty;
         CredentialInputsCleared?.Invoke(this, EventArgs.Empty);
 
         await RefreshCredentialStatusAsync();
@@ -374,6 +418,55 @@ public sealed class SettingsViewModel : ViewModelBase
         catch (Exception exception)
         {
             RyuuTestStatus = $"The check failed: {exception.GetType().Name}.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task TestHubcapAsync()
+    {
+        IsBusy = true;
+        HubcapTestStatus = "Checking Hubcap API…";
+        HubcapUsageInfo = string.Empty;
+
+        try
+        {
+            var baseUrl = Settings.HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";
+            var key = await _credentials.ReadAsync(HubcapApiKeyName);
+
+            var healthResult = await _probe.ProbeAsync($"{baseUrl}/api/v1/health");
+            HubcapTestStatus = $"Health: {healthResult.Message} ({healthResult.ElapsedMilliseconds} ms)";
+
+            if (!string.IsNullOrWhiteSpace(key))
+            {
+                using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                http.DefaultRequestHeaders.UserAgent.ParseAdd("ResonanceTools/1.0");
+                http.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Bearer {key}");
+
+                var resp = await http.GetAsync($"{baseUrl}/api/v1/user/stats");
+                if (resp.IsSuccessStatusCode)
+                {
+                    var json = await resp.Content.ReadAsStringAsync();
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    var daily = root.TryGetProperty("daily_usage", out var du) ? du.GetInt32() : 0;
+                    var limit = root.TryGetProperty("daily_limit", out var dl) ? dl.GetInt32() : 0;
+                    HubcapUsageInfo = $"{daily} / {limit} requests today";
+                    HubcapUsagePercent = limit > 0 ? (double)daily / limit * 100.0 : 0;
+                    HubcapTestStatus += " · Key valid.";
+                }
+                else
+                    HubcapTestStatus += $" · Key check: HTTP {(int)resp.StatusCode}";
+            }
+            else
+                HubcapTestStatus += " · No API key stored.";
+        }
+        catch (Exception ex)
+        {
+            HubcapTestStatus = $"Check failed: {ex.GetType().Name}";
         }
         finally
         {

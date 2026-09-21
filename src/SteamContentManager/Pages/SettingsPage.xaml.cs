@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using SteamContentManager.Services;
@@ -12,6 +14,7 @@ public partial class SettingsPage : Page
 {
     public SettingsPage()
     {
+        Resources.Add("StringVis", new SettingsStringToVisibilityConverter());
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<SettingsViewModel>();
 
@@ -24,6 +27,7 @@ public partial class SettingsPage : Page
     {
         SteamApiKeyBox.Clear();
         RyuuAuthKeyBox.Clear();
+        HubcapApiKeyBox.Clear();
     }
 
     private void NumberBox_LostFocus(object sender, RoutedEventArgs e) => ViewModel.NormalizeNumberFields();
@@ -66,6 +70,12 @@ public partial class SettingsPage : Page
     {
         if (sender is PasswordBox passwordBox)
             ViewModel.RyuuAuthKeyInput = passwordBox.Password;
+    }
+
+    private void HubcapApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox passwordBox)
+            ViewModel.HubcapApiKeyInput = passwordBox.Password;
     }
 
     private void SteamLibraryBrowseButton_Click(object sender, RoutedEventArgs e)
@@ -151,4 +161,13 @@ public partial class SettingsPage : Page
 
         await ViewModel.ExportAsync(dialog.FileName);
     }
+}
+
+internal sealed class SettingsStringToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is string s && !string.IsNullOrWhiteSpace(s) ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
 }

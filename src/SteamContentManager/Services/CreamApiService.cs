@@ -14,7 +14,7 @@ public sealed record DlcEntry(int AppId, string Name, bool IsSelected = true);
 
 public sealed record CreamApiApplyResult(bool Succeeded, string Message);
 
-public enum DlcUnlockerMode { CreamAPI, SmokeAPI }
+public enum DlcUnlockerMode { CreamAPI, SmokeAPI, Koalageddon, UplayR2Unlocker }
 
 public interface ICreamApiService
 {
@@ -48,12 +48,16 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
 
         Directory.CreateDirectory(CreamApiCacheDir);
         Directory.CreateDirectory(SmokeApiCacheDir);
+        Directory.CreateDirectory(KoalageddonCacheDir);
+        Directory.CreateDirectory(UplayR2CacheDir);
 
         _httpClient = CreateHttpClient(string.Empty);
     }
 
     private string CreamApiCacheDir => Path.Combine(_baseCacheDir, "CreamAPI");
     private string SmokeApiCacheDir => Path.Combine(_baseCacheDir, "SmokeAPI");
+    private string KoalageddonCacheDir => Path.Combine(_baseCacheDir, "Koalageddon");
+    private string UplayR2CacheDir => Path.Combine(_baseCacheDir, "UplayR2Unlocker");
 
     public bool HasCachedDlls(DlcUnlockerMode mode) => mode switch
     {
@@ -63,6 +67,14 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
         DlcUnlockerMode.SmokeAPI =>
             File.Exists(Path.Combine(SmokeApiCacheDir, "smoke_api32.dll")) ||
             File.Exists(Path.Combine(SmokeApiCacheDir, "smoke_api64.dll")),
+        DlcUnlockerMode.Koalageddon =>
+            File.Exists(Path.Combine(KoalageddonCacheDir, "Koalageddon.dll")) ||
+            File.Exists(Path.Combine(KoalageddonCacheDir, "Koalageddon64.dll")) ||
+            Directory.Exists(KoalageddonCacheDir),
+        DlcUnlockerMode.UplayR2Unlocker =>
+            File.Exists(Path.Combine(UplayR2CacheDir, "UplayR2Unlocker.dll")) ||
+            File.Exists(Path.Combine(UplayR2CacheDir, "UplayR2Unlocker64.dll")) ||
+            Directory.Exists(UplayR2CacheDir),
         _ => false
     };
 
@@ -246,13 +258,21 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
     {
         if (HasCachedDlls(mode)) return;
 
-        if (mode == DlcUnlockerMode.CreamAPI)
+        switch (mode)
         {
-            ExtractEmbeddedCreamApiDlls();
-            return;
+            case DlcUnlockerMode.CreamAPI:
+                ExtractEmbeddedCreamApiDlls();
+                break;
+            case DlcUnlockerMode.SmokeAPI:
+                await DownloadSmokeApiAsync(ct);
+                break;
+            case DlcUnlockerMode.Koalageddon:
+                await DownloadFromGitHubAsync("acidicoala/Koalageddon2", KoalageddonCacheDir, ct);
+                break;
+            case DlcUnlockerMode.UplayR2Unlocker:
+                await DownloadFromGitHubAsync("acidicoala/UplayR2Unlocker", UplayR2CacheDir, ct);
+                break;
         }
-
-        await DownloadSmokeApiAsync(ct);
     }
 
     private void ExtractEmbeddedCreamApiDlls()
@@ -354,6 +374,65 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
             _logging.Add(Models.LogLevel.Info, "DLCUnlocker", "SmokeAPI DLLs downloaded and cached.");
     }
 
+    private async Task DownloadFromGitHubAsync(string repo, string cacheDir, CancellationToken ct)
+    {
+        _logging.Add(Models.LogLevel.Info, "DLCUnlocker", $"Downloading from {repo}…");
+        try
+        {
+            var url = $"https://api.github.com/repos/{repo}/releases/latest";
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.TryAddWithoutValidation("User-Agent", "ResonanceTools/1.0");
+            using var response = await _httpClient.SendAsync(request, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logging.Add(Models.LogLevel.Warning, "DLCUnlocker", $"GitHub API returned {response.StatusCode} for {repo}");
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+            var assets = doc.RootElement.GetProperty("assets");
+
+            string? downloadUrl = null;
+            foreach (var asset in assets.EnumerateArray())
+            {
+                var name = asset.GetProperty("name").GetString() ?? "";
+                if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    downloadUrl = asset.GetProperty("browser_download_url").GetString();
+                    break;
+                }
+            }
+
+            if (downloadUrl is null) return;
+
+            var archiveBytes = await _httpClient.GetByteArrayAsync(downloadUrl, ct);
+            using var stream = new MemoryStream(archiveBytes);
+            using var archive = ArchiveFactory.Open(stream);
+
+            foreach (var entry in archive.Entries)
+            {
+                if (entry.IsDirectory) continue;
+                var name = Path.GetFileName(entry.Key ?? "");
+                if (name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
+                    name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
+                    name.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
+                    name.EndsWith(".config", StringComparison.OrdinalIgnoreCase))
+                {
+                    entry.WriteToFile(Path.Combine(cacheDir, name), new ExtractionOptions { Overwrite = true });
+                }
+            }
+
+            _logging.Add(Models.LogLevel.Info, "DLCUnlocker", $"{repo} files downloaded and cached.");
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _logging.Add(Models.LogLevel.Warning, "DLCUnlocker", $"Download failed for {repo}: {ex.Message}");
+        }
+    }
+
     // ── Apply / Restore ─────────────────────────────────────────────
 
     public CreamApiApplyResult ApplyToGameFolder(
@@ -361,16 +440,16 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
         DlcUnlockerMode mode, string language, bool unlockAll, bool extraProtection, bool forceOffline)
     {
         if (!Directory.Exists(gameFolder))
-            return new CreamApiApplyResult(false, "Spielordner existiert nicht.");
+            return new CreamApiApplyResult(false, "Game folder does not exist.");
 
         if (!HasCachedDlls(mode))
-            return new CreamApiApplyResult(false, $"{mode} DLLs nicht verfügbar.");
+            return new CreamApiApplyResult(false, $"{mode} DLLs not available.");
 
         try
         {
             var dllDirs = FindSteamApiDirectories(gameFolder);
             if (dllDirs.Count == 0)
-                return new CreamApiApplyResult(false, "Keine steam_api.dll / steam_api64.dll im Spielordner gefunden.");
+                return new CreamApiApplyResult(false, "No steam_api.dll / steam_api64.dll found in game folder.");
 
             var messages = new List<string>();
 
@@ -380,10 +459,19 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
                 if (relDir == ".") relDir = "(root)";
                 messages.Add($"— {relDir}");
 
-                if (mode == DlcUnlockerMode.CreamAPI)
-                    ApplyCreamApi(dir, appId, dlcs, messages, language, unlockAll, extraProtection, forceOffline);
-                else
-                    ApplySmokeApi(dir, appId, dlcs, messages, unlockAll);
+                switch (mode)
+                {
+                    case DlcUnlockerMode.CreamAPI:
+                        ApplyCreamApi(dir, appId, dlcs, messages, language, unlockAll, extraProtection, forceOffline);
+                        break;
+                    case DlcUnlockerMode.SmokeAPI:
+                        ApplySmokeApi(dir, appId, dlcs, messages, unlockAll);
+                        break;
+                    case DlcUnlockerMode.Koalageddon:
+                    case DlcUnlockerMode.UplayR2Unlocker:
+                        messages.Add($"{mode} is configured globally — no per-game DLL swap needed.");
+                        break;
+                }
             }
 
             _logging.Add(Models.LogLevel.Info, "DLCUnlocker",
@@ -393,7 +481,7 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
         }
         catch (Exception ex)
         {
-            return new CreamApiApplyResult(false, $"Fehler: {ex.Message}");
+            return new CreamApiApplyResult(false, $"Error: {ex.Message}");
         }
     }
 
@@ -417,7 +505,7 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
 
         var ini = BuildCreamApiIni(appId, dlcs, language, unlockAll, extraProtection, forceOffline);
         File.WriteAllText(Path.Combine(targetDir, "cream_api.ini"), ini, Encoding.UTF8);
-        messages.Add("cream_api.ini geschrieben");
+        messages.Add("cream_api.ini written");
     }
 
     private void ApplySmokeApi(string targetDir, int appId, IReadOnlyList<DlcEntry> dlcs,
@@ -428,13 +516,13 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
 
         var config = BuildSmokeApiConfig(dlcs, unlockAll);
         File.WriteAllText(Path.Combine(targetDir, "SmokeAPI.config.json"), config, Encoding.UTF8);
-        messages.Add("SmokeAPI.config.json geschrieben");
+        messages.Add("SmokeAPI.config.json written");
     }
 
     public CreamApiApplyResult RestoreOriginalDlls(string gameFolder)
     {
         if (!Directory.Exists(gameFolder))
-            return new CreamApiApplyResult(false, "Spielordner existiert nicht.");
+            return new CreamApiApplyResult(false, "Game folder does not exist.");
 
         var dllDirs = FindSteamApiDirectories(gameFolder);
         // Also check dirs that have backup _o.dll files even if the originals are already restored
@@ -444,7 +532,7 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
             dllDirs.Add(Path.GetDirectoryName(file)!);
 
         if (dllDirs.Count == 0)
-            return new CreamApiApplyResult(false, "Keine steam_api DLLs oder Backups gefunden.");
+            return new CreamApiApplyResult(false, "No steam_api DLLs or backups found.");
 
         var restored = new List<string>();
 
@@ -459,14 +547,14 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
                 if (File.Exists(path))
                 {
                     File.Delete(path);
-                    restored.Add($"{configName} entfernt");
+                    restored.Add($"{configName} removed");
                 }
             }
         }
 
         return restored.Count > 0
             ? new CreamApiApplyResult(true, string.Join(Environment.NewLine, restored))
-            : new CreamApiApplyResult(false, "Keine Backup-Dateien gefunden.");
+            : new CreamApiApplyResult(false, "No backup files found.");
     }
 
     private static void BackupAndReplace(string gameFolder, string originalDll, string replacementPath, List<string> messages)
@@ -484,7 +572,7 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
         }
 
         File.Copy(replacementPath, gameDll, overwrite: true);
-        messages.Add($"{originalDll} ersetzt");
+        messages.Add($"{originalDll} replaced");
     }
 
     private static void RestoreBackup(string gameFolder, string dllName, List<string> messages)
@@ -498,13 +586,13 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
         {
             File.Copy(backupDll, gameDll, overwrite: true);
             File.Delete(backupDll);
-            messages.Add($"Original {dllName} wiederhergestellt");
+            messages.Add($"Original {dllName} restored");
         }
         else if (File.Exists(legacyBak))
         {
             File.Copy(legacyBak, gameDll, overwrite: true);
             File.Delete(legacyBak);
-            messages.Add($"Original {dllName} wiederhergestellt");
+            messages.Add($"Original {dllName} restored");
         }
     }
 

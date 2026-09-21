@@ -20,7 +20,7 @@ public partial class CreamApiPage : Page
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "Spielordner auswählen"
+            Title = "Select game folder"
         };
 
         if (dialog.ShowDialog() == true)
@@ -31,8 +31,8 @@ public partial class CreamApiPage : Page
     {
         var dialog = new OpenFileDialog
         {
-            Title = "DLL Release-Archiv auswählen",
-            Filter = "Archive|*.7z;*.zip|Alle Dateien|*.*"
+            Title = "Select DLL release archive",
+            Filter = "Archives|*.7z;*.zip|All Files|*.*"
         };
 
         if (dialog.ShowDialog() == true)
@@ -45,15 +45,4 @@ public partial class CreamApiPage : Page
             ViewModel.SelectedGame = game;
     }
 
-    private void CreamApiMode_Checked(object sender, System.Windows.RoutedEventArgs e)
-    {
-        if (ViewModel is not null)
-            ViewModel.SelectedMode = DlcUnlockerMode.CreamAPI;
-    }
-
-    private void SmokeApiMode_Checked(object sender, System.Windows.RoutedEventArgs e)
-    {
-        if (ViewModel is not null)
-            ViewModel.SelectedMode = DlcUnlockerMode.SmokeAPI;
-    }
 }

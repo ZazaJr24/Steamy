@@ -8,119 +8,83 @@
       Background="{DynamicResource AppBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolVis" />
-
-    <!-- Segmented toggle button style -->
-    <Style x:Key="SegmentButton" TargetType="RadioButton">
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="RadioButton">
-            <Border x:Name="Bg" Background="Transparent"
-                    CornerRadius="8" Padding="14,6" Cursor="Hand"
-                    SnapsToDevicePixels="True">
-              <TextBlock x:Name="Txt" Text="{TemplateBinding Content}"
-                         FontSize="12" FontWeight="SemiBold"
-                         Foreground="{DynamicResource TextTertiaryBrush}"
-                         HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Txt" Property="Foreground"
-                        Value="{DynamicResource TextSecondaryBrush}" />
-              </Trigger>
-              <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="Bg" Property="Background"
-                        Value="{DynamicResource AccentSoftBrush}" />
-                <Setter TargetName="Txt" Property="Foreground"
-                        Value="{DynamicResource AccentBrush}" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
   </Page.Resources>
 
-  <ScrollViewer Style="{StaticResource PageScrollHostStyle}"
-                HorizontalScrollBarVisibility="Disabled"
-                Padding="28,24,28,40">
-    <StackPanel MaxWidth="700" HorizontalAlignment="Stretch">
+  <Grid Margin="28,20,28,20">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
 
-      <!-- ═══════════════ HEADER ═══════════════ -->
-      <Grid Margin="0,0,0,6">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="*" />
-          <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
-        <Border Width="46" Height="46" CornerRadius="14"
-                Background="{DynamicResource AccentSoftBrush}"
-                VerticalAlignment="Center" Margin="0,0,14,0">
-          <TextBlock Text="&#x1F513;" FontSize="22"
-                     Foreground="{DynamicResource AccentBrush}"
-                     HorizontalAlignment="Center" VerticalAlignment="Center" />
-        </Border>
-        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-          <TextBlock Text="DLC Unlocker"
-                     Style="{StaticResource PageTitleStyle}" />
-          <TextBlock Text="Spiel auswählen, DLCs laden, anwenden. Fertig."
-                     Style="{StaticResource PageSubtitleStyle}" />
-        </StackPanel>
+    <!-- ═══ HEADER ═══ -->
+    <Grid Grid.Row="0" Margin="0,0,0,12">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <StackPanel VerticalAlignment="Center">
+        <TextBlock Text="DLC Unlocker" Style="{StaticResource PageTitleStyle}" Margin="0" />
+        <TextBlock Text="Select a game, pick a method, fetch DLCs, apply."
+                   Style="{StaticResource PageSubtitleStyle}" Margin="0,2,0,0" />
+      </StackPanel>
 
-        <!-- Segmented mode toggle + DLL pill -->
-        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-          <Border Background="{DynamicResource SurfaceSubtleBrush}"
-                  CornerRadius="10" Padding="3" Margin="0,0,12,0">
-            <StackPanel Orientation="Horizontal">
-              <RadioButton Content="CreamAPI" Style="{StaticResource SegmentButton}"
-                           GroupName="Mode"
-                           IsChecked="{Binding IsCreamApiMode, Mode=OneWay}"
-                           Checked="CreamApiMode_Checked" />
-              <RadioButton Content="SmokeAPI" Style="{StaticResource SegmentButton}"
-                           GroupName="Mode"
-                           IsChecked="{Binding IsSmokeApiMode, Mode=OneWay}"
-                           Checked="SmokeApiMode_Checked" />
-            </StackPanel>
-          </Border>
-          <Border Style="{StaticResource AccentPillStyle}"
-                  Visibility="{Binding HasDlls, Converter={StaticResource BoolVis}}">
-            <TextBlock Text="DLLs ✓" Style="{StaticResource AccentPillTextStyle}" />
-          </Border>
-        </StackPanel>
-      </Grid>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+        <TextBlock Text="Method:" FontSize="12"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   VerticalAlignment="Center" Margin="0,0,8,0" />
+        <ComboBox ItemsSource="{Binding AvailableModes}"
+                  SelectedItem="{Binding SelectedMode}"
+                  Width="160" Height="32" FontSize="12" />
+      </StackPanel>
 
-      <!-- ═══════════════ GAME PICKER ═══════════════ -->
-      <Border Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
-              BorderThickness="1" CornerRadius="14"
-              Padding="24,20" Margin="0,0,0,12">
-        <StackPanel>
-          <Grid Margin="0,0,0,10">
+      <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="11"
+                 Foreground="{DynamicResource TextTertiaryBrush}"
+                 VerticalAlignment="Center" MaxWidth="250"
+                 TextTrimming="CharacterEllipsis"
+                 ToolTip="{Binding Status}" />
+    </Grid>
+
+    <!-- ═══ TWO-COLUMN BODY ═══ -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="12" />
+        <ColumnDefinition Width="1.3*" />
+      </Grid.ColumnDefinitions>
+
+      <!-- LEFT: Game Picker -->
+      <Border Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" CornerRadius="14" Padding="14,12">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+          </Grid.RowDefinitions>
+
+          <!-- Title + Browse -->
+          <Grid Grid.Row="0" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="Auto" />
-              <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="INSTALLIERTE SPIELE"
-                       Style="{StaticResource FieldLabelStyle}"
-                       VerticalAlignment="Center" Margin="0" />
-            <Border Grid.Column="1" Style="{StaticResource StatusPillStyle}"
-                    Margin="10,0,0,0" VerticalAlignment="Center">
-              <TextBlock Text="{Binding GameCountLabel}"
-                         Style="{StaticResource PillTextStyle}" />
-            </Border>
-            <ui:Button Grid.Column="3" Content="Ordner wählen…" Click="BrowseGameFolder_Click"
-                       Appearance="Secondary" Height="30" FontSize="11" />
+            <TextBlock Text="{Binding GameCountLabel}" FontSize="12" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+            <ui:Button Grid.Column="1" Content="Browse…" Click="BrowseGameFolder_Click"
+                       Appearance="Secondary" Height="28" FontSize="11" />
           </Grid>
 
-          <ui:TextBox Text="{Binding GameSearchText, UpdateSourceTrigger=PropertyChanged}"
-                      PlaceholderText="Spiel suchen…"
-                      Height="36" FontSize="13" Margin="0,0,0,8" />
+          <!-- Search -->
+          <ui:TextBox Grid.Row="1"
+                      Text="{Binding GameSearchText, UpdateSourceTrigger=PropertyChanged}"
+                      PlaceholderText="Search games…"
+                      Height="32" FontSize="12" Margin="0,0,0,8" />
 
           <!-- Selected game info -->
-          <Border Background="{DynamicResource AccentSoftBrush}"
-                  CornerRadius="10" Padding="14,10"
-                  Margin="0,0,0,8"
+          <Border Grid.Row="2" Background="{DynamicResource SurfaceSubtleBrush}"
+                  CornerRadius="8" Padding="10,7" Margin="0,0,0,8"
                   Visibility="{Binding HasGameFolder, Converter={StaticResource BoolVis}}">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -129,38 +93,36 @@
               </Grid.ColumnDefinitions>
               <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="{Binding GameFolderDisplay}"
-                           FontFamily="Consolas" FontSize="11"
+                           FontFamily="Consolas" FontSize="10"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding DetectedDlls}"
-                           FontSize="10.5"
-                           Foreground="{DynamicResource TextTertiaryBrush}"
-                           Margin="0,2,0,0" />
+                <TextBlock Text="{Binding DetectedDlls}" FontSize="10"
+                           Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,1,0,0" />
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="AppID" Foreground="{DynamicResource TextTertiaryBrush}"
-                           FontSize="10.5" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <TextBlock Text="App" Foreground="{DynamicResource TextTertiaryBrush}"
+                           FontSize="10" VerticalAlignment="Center" Margin="0,0,4,0" />
                 <ui:TextBox Text="{Binding AppIdText, UpdateSourceTrigger=PropertyChanged}"
-                            Width="80" Height="28" FontFamily="Consolas"
-                            FontSize="13" FontWeight="SemiBold" TextAlignment="Center" />
+                            Width="68" Height="26" FontFamily="Consolas"
+                            FontSize="12" TextAlignment="Center" />
               </StackPanel>
             </Grid>
           </Border>
 
           <!-- Loading spinner -->
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
-                      Margin="0,8,0,8"
+          <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
                       Visibility="{Binding IsLoadingGames, Converter={StaticResource BoolVis}}">
             <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" />
-            <TextBlock Text="Spiele werden gesucht…"
-                       Style="{StaticResource MutedTextStyle}" FontSize="12"
-                       VerticalAlignment="Center" Margin="10,0,0,0" />
+            <TextBlock Text="Scanning…" FontSize="12"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
+                       VerticalAlignment="Center" Margin="8,0,0,0" />
           </StackPanel>
 
           <!-- Game list -->
-          <Border Background="{DynamicResource SurfaceSubtleBrush}"
-                  CornerRadius="10" Padding="4">
-            <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto">
+          <Border Grid.Row="3" Background="{DynamicResource SurfaceSubtleBrush}"
+                  CornerRadius="8" Padding="2">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
               <ItemsControl ItemsSource="{Binding FilteredGames}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
@@ -170,26 +132,20 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border x:Name="GameRow" Padding="12,9" Margin="2,1"
-                            CornerRadius="8" Background="Transparent"
-                            Cursor="Hand"
-                            MouseLeftButtonDown="GameRow_MouseDown">
+                    <Border x:Name="GameRow" Padding="8,6" Margin="1"
+                            CornerRadius="6" Background="Transparent"
+                            Cursor="Hand" MouseLeftButtonDown="GameRow_MouseDown">
                       <Grid>
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="Auto" />
                           <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Background="{DynamicResource AccentSoftBrush}"
-                                CornerRadius="4" Padding="7,3" Margin="0,0,10,0"
-                                VerticalAlignment="Center">
-                          <TextBlock Text="{Binding AppId}" FontFamily="Consolas" FontSize="11"
-                                     Foreground="{DynamicResource AccentBrush}" />
-                        </Border>
-                        <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                   FontSize="13"
+                        <TextBlock Text="{Binding AppId}" FontFamily="Consolas" FontSize="10"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
+                                   Width="52" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12"
                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                   VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" />
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                       </Grid>
                     </Border>
                     <DataTemplate.Triggers>
@@ -203,17 +159,19 @@
               </ItemsControl>
             </ScrollViewer>
           </Border>
-        </StackPanel>
+        </Grid>
       </Border>
 
-      <!-- ═══════════════ DLC LIST ═══════════════ -->
-      <Border Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
-              BorderThickness="1" CornerRadius="14"
-              Padding="24,20" Margin="0,0,0,12">
-        <StackPanel>
-          <!-- Header with status -->
-          <Grid Margin="0,0,0,12">
+      <!-- RIGHT: DLC List -->
+      <Border Grid.Column="2" Style="{StaticResource SurfaceCardStyle}" CornerRadius="14" Padding="14,12">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+          </Grid.RowDefinitions>
+
+          <!-- DLC header -->
+          <Grid Grid.Row="0" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />
@@ -221,37 +179,30 @@
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-              <TextBlock Text="{Binding DlcCountLabel}"
-                         Style="{StaticResource CardTitleStyle}" FontSize="14"
-                         VerticalAlignment="Center" />
+              <TextBlock Text="{Binding DlcCountLabel}" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
               <ui:ProgressRing Width="14" Height="14" IsIndeterminate="True"
-                               Margin="10,0,0,0"
+                               Margin="8,0,0,0"
                                Visibility="{Binding IsFetching, Converter={StaticResource BoolVis}}" />
             </StackPanel>
-            <ui:Button Grid.Column="1" Content="DLCs laden"
-                       Command="{Binding FetchDlcCommand}"
-                       Appearance="Secondary" Height="28" FontSize="11" Margin="0,0,8,0" />
-            <ui:Button Grid.Column="2" Content="Alle" Command="{Binding SelectAllCommand}"
+            <ui:Button Grid.Column="1" Content="Fetch" Command="{Binding FetchDlcCommand}"
                        Appearance="Secondary" Height="28" FontSize="11" Margin="0,0,4,0" />
-            <ui:Button Grid.Column="3" Content="Keine" Command="{Binding DeselectAllCommand}"
+            <ui:Button Grid.Column="2" Content="All" Command="{Binding SelectAllCommand}"
+                       Appearance="Secondary" Height="28" FontSize="11" Margin="0,0,4,0" />
+            <ui:Button Grid.Column="3" Content="None" Command="{Binding DeselectAllCommand}"
                        Appearance="Secondary" Height="28" FontSize="11" />
           </Grid>
 
-          <!-- Status line (shows below header when relevant) -->
-          <TextBlock Text="{Binding Status}"
-                     FontSize="11.5"
-                     Foreground="{DynamicResource TextTertiaryBrush}"
-                     Margin="0,0,0,10" TextWrapping="Wrap" />
-
-          <!-- DLC list or empty state -->
-          <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="10"
-                  Padding="4" MinHeight="80">
+          <!-- DLC list area -->
+          <Border Grid.Row="1" Background="{DynamicResource SurfaceSubtleBrush}"
+                  CornerRadius="8" Padding="2">
             <Grid>
-              <!-- Empty state (visible when no DLCs and not fetching) -->
-              <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                          Margin="0,20">
-                <StackPanel.Style>
-                  <Style TargetType="StackPanel">
+              <!-- Empty state -->
+              <TextBlock Text="Select a game to load its DLCs"
+                         Foreground="{DynamicResource TextTertiaryBrush}"
+                         FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
                     <Setter Property="Visibility" Value="Collapsed" />
                     <Style.Triggers>
                       <MultiDataTrigger>
@@ -263,31 +214,21 @@
                       </MultiDataTrigger>
                     </Style.Triggers>
                   </Style>
-                </StackPanel.Style>
-                <Border Width="40" Height="40" CornerRadius="20"
-                        Background="{DynamicResource AccentSoftBrush}"
-                        HorizontalAlignment="Center" Margin="0,0,0,10">
-                  <TextBlock Text="📦" FontSize="18"
-                             HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <TextBlock Text="Wähle ein Spiel um DLCs zu laden"
-                           Foreground="{DynamicResource TextTertiaryBrush}"
-                           FontSize="12" HorizontalAlignment="Center" />
-              </StackPanel>
+                </TextBlock.Style>
+              </TextBlock>
 
-              <!-- Fetching spinner (visible when fetching) -->
+              <!-- Fetching spinner -->
               <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                          Margin="0,24"
                           Visibility="{Binding IsFetching, Converter={StaticResource BoolVis}}">
-                <ui:ProgressRing Width="28" Height="28" IsIndeterminate="True"
-                                 HorizontalAlignment="Center" Margin="0,0,0,10" />
-                <TextBlock Text="DLCs werden geladen…"
+                <ui:ProgressRing Width="24" Height="24" IsIndeterminate="True"
+                                 HorizontalAlignment="Center" Margin="0,0,0,6" />
+                <TextBlock Text="Fetching DLCs…" FontSize="12"
                            Foreground="{DynamicResource TextTertiaryBrush}"
-                           FontSize="12" HorizontalAlignment="Center" />
+                           HorizontalAlignment="Center" />
               </StackPanel>
 
-              <!-- Actual DLC list -->
-              <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+              <!-- DLC items -->
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ScrollViewer.Style>
                   <Style TargetType="ScrollViewer" BasedOn="{StaticResource {x:Type ScrollViewer}}">
                     <Setter Property="Visibility" Value="Visible" />
@@ -301,8 +242,8 @@
                 <ItemsControl ItemsSource="{Binding DlcList}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Border x:Name="DlcRow" Padding="10,7" Margin="2,1"
-                              CornerRadius="8" Background="Transparent">
+                      <Border x:Name="DlcRow" Padding="6,5" Margin="1"
+                              CornerRadius="6" Background="Transparent">
                         <Grid>
                           <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -310,14 +251,11 @@
                             <ColumnDefinition Width="*" />
                           </Grid.ColumnDefinitions>
                           <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center"
-                                    Margin="0,0,8,0" />
-                          <Border Grid.Column="1" Background="{DynamicResource AccentSoftBrush}"
-                                  CornerRadius="4" Padding="6,2" Margin="0,0,8,0"
-                                  VerticalAlignment="Center">
-                            <TextBlock Text="{Binding AppId}" FontFamily="Consolas" FontSize="10.5"
-                                       Foreground="{DynamicResource AccentBrush}" />
-                          </Border>
-                          <TextBlock Grid.Column="2" Text="{Binding Name}" FontSize="12.5"
+                                    Margin="0,0,4,0" />
+                          <TextBlock Grid.Column="1" Text="{Binding AppId}" FontFamily="Consolas"
+                                     FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}"
+                                     Width="52" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2" Text="{Binding Name}" FontSize="12"
                                      Foreground="{DynamicResource TextPrimaryBrush}"
                                      VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </Grid>
@@ -334,207 +272,69 @@
               </ScrollViewer>
             </Grid>
           </Border>
-        </StackPanel>
+        </Grid>
       </Border>
+    </Grid>
 
-      <!-- ═══════════════ SETTINGS (expandable) ═══════════════ -->
-      <Border Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
-              BorderThickness="1" CornerRadius="14"
-              Padding="24,16" Margin="0,0,0,12">
-        <Expander IsExpanded="False">
+    <!-- ═══ BOTTOM BAR ═══ -->
+    <Border Grid.Row="2" Style="{StaticResource SurfaceCardStyle}" CornerRadius="12"
+            Padding="14,10" Margin="0,12,0,0">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Settings expander -->
+        <Expander IsExpanded="False" VerticalAlignment="Center">
           <Expander.Header>
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Text="⚙" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0" />
-              <TextBlock Text="Einstellungen" FontSize="13" FontWeight="SemiBold"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         VerticalAlignment="Center" />
-            </StackPanel>
+            <TextBlock Text="Settings" FontSize="12"
+                       Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
           </Expander.Header>
-          <StackPanel Margin="0,14,0,0">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="24" />
-                <ColumnDefinition Width="*" />
-              </Grid.ColumnDefinitions>
-
-              <StackPanel>
-                <TextBlock Text="SPRACHE" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,6" />
-                <ComboBox ItemsSource="{Binding Languages}"
-                          SelectedItem="{Binding SelectedLanguage}"
-                          Height="32" FontSize="12" Margin="0,0,0,14" />
-
-                <CheckBox IsChecked="{Binding UnlockAll}" Margin="0,0,0,5">
-                  <TextBlock Text="Alle DLCs freischalten" FontSize="12"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
-                </CheckBox>
-                <CheckBox IsChecked="{Binding ExtraProtection}" Margin="0,0,0,5">
-                  <TextBlock Text="Extra-Schutz umgehen" FontSize="12"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
-                </CheckBox>
-                <CheckBox IsChecked="{Binding ForceOffline}">
-                  <TextBlock Text="Offline-Modus erzwingen" FontSize="12"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
-                </CheckBox>
-              </StackPanel>
-
-              <StackPanel Grid.Column="2">
-                <TextBlock Text="PROXY (OPTIONAL)" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,6" />
-                <ui:TextBox Text="{Binding ProxyAddress, UpdateSourceTrigger=LostFocus}"
-                            PlaceholderText="http://proxy:port"
-                            Height="32" FontSize="12" Margin="0,0,0,3" />
-                <TextBlock Text="HTTP-Proxy für Steam Store API."
-                           Foreground="{DynamicResource TextTertiaryBrush}"
-                           FontSize="10.5" Margin="0,0,0,14" />
-
-                <TextBlock Text="DLLS MANUELL LADEN" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,6" />
-                <ui:Button Content="Archiv laden…" Click="BrowseCreamApiArchive_Click"
-                           Appearance="Secondary" Height="32" FontSize="12"
-                           HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-                <TextBlock Text="SmokeAPI .zip laden, falls Auto-Download fehlschlägt."
-                           Foreground="{DynamicResource TextTertiaryBrush}"
-                           FontSize="10.5" Margin="0,3,0,0" />
-              </StackPanel>
-            </Grid>
+          <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+            <StackPanel Margin="0,0,20,0">
+              <TextBlock Text="Language" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,3" />
+              <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}"
+                        Width="120" Height="28" FontSize="11" />
+            </StackPanel>
+            <StackPanel Margin="0,0,20,0">
+              <TextBlock Text="Proxy" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,3" />
+              <ui:TextBox Text="{Binding ProxyAddress, UpdateSourceTrigger=LostFocus}"
+                          PlaceholderText="http://proxy:port" Width="160" Height="28" FontSize="11" />
+            </StackPanel>
+            <StackPanel VerticalAlignment="Bottom">
+              <CheckBox IsChecked="{Binding UnlockAll}" Margin="0,0,0,2">
+                <TextBlock Text="Unlock all" FontSize="11" />
+              </CheckBox>
+              <CheckBox IsChecked="{Binding ExtraProtection}" Margin="0,0,0,2">
+                <TextBlock Text="Extra protection" FontSize="11" />
+              </CheckBox>
+              <CheckBox IsChecked="{Binding ForceOffline}">
+                <TextBlock Text="Force offline" FontSize="11" />
+              </CheckBox>
+            </StackPanel>
+            <ui:Button Content="Load archive…" Click="BrowseCreamApiArchive_Click"
+                       Appearance="Secondary" Height="28" FontSize="11" Margin="20,0,0,0"
+                       VerticalAlignment="Bottom" />
           </StackPanel>
         </Expander>
-      </Border>
 
-      <!-- ═══════════════ ACTION ═══════════════ -->
-      <Border Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
-              BorderThickness="1" CornerRadius="14"
-              Padding="24,20" Margin="0,0,0,12">
-        <StackPanel>
-          <ui:Button Content="Anwenden"
-                     Command="{Binding ApplyCommand}"
-                     Appearance="Primary"
-                     Height="48"
-                     FontSize="14" FontWeight="SemiBold"
-                     HorizontalAlignment="Stretch"
-                     HorizontalContentAlignment="Center" />
-          <Grid Margin="0,10,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="Backup → DLLs ersetzen → Config schreiben."
-                       Foreground="{DynamicResource TextTertiaryBrush}"
-                       FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
-            <ui:Button Grid.Column="1" Content="Wiederherstellen"
-                       Command="{Binding RestoreCommand}"
-                       Appearance="Secondary" Height="32" FontSize="11.5" />
-          </Grid>
-        </StackPanel>
-      </Border>
+        <!-- Result message -->
+        <TextBlock Grid.Column="1" Text="{Binding ResultMessage}" FontSize="11"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                   ToolTip="{Binding ResultMessage}" Margin="12,0"
+                   Visibility="{Binding ShowResult, Converter={StaticResource BoolVis}}" />
 
-      <!-- ═══════════════ RESULT CARD ═══════════════ -->
-      <Border Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderThickness="1.5" CornerRadius="14"
-              Padding="22" Margin="0,0,0,12"
-              Visibility="{Binding ShowResult, Converter={StaticResource BoolVis}}">
-        <Border.Style>
-          <Style TargetType="Border">
-            <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
-            <Style.Triggers>
-              <DataTrigger Binding="{Binding ResultSuccess}" Value="True">
-                <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
-              </DataTrigger>
-            </Style.Triggers>
-          </Style>
-        </Border.Style>
-        <StackPanel>
-          <Grid Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="Auto" />
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <Border Width="34" Height="34" CornerRadius="17"
-                    VerticalAlignment="Center">
-              <Border.Style>
-                <Style TargetType="Border">
-                  <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
-                  <Style.Triggers>
-                    <DataTrigger Binding="{Binding ResultSuccess}" Value="True">
-                      <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
-                    </DataTrigger>
-                  </Style.Triggers>
-                </Style>
-              </Border.Style>
-              <TextBlock FontSize="16" FontWeight="Bold"
-                         HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock.Style>
-                  <Style TargetType="TextBlock">
-                    <Setter Property="Text" Value="✕" />
-                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
-                    <Style.Triggers>
-                      <DataTrigger Binding="{Binding ResultSuccess}" Value="True">
-                        <Setter Property="Text" Value="✓" />
-                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
-                      </DataTrigger>
-                    </Style.Triggers>
-                  </Style>
-                </TextBlock.Style>
-              </TextBlock>
-            </Border>
-            <TextBlock Grid.Column="1"
-                       FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
-                       Foreground="{DynamicResource TextPrimaryBrush}" Margin="12,0,0,0">
-              <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                  <Setter Property="Text" Value="Fehlgeschlagen" />
-                  <Style.Triggers>
-                    <DataTrigger Binding="{Binding ResultSuccess}" Value="True">
-                      <Setter Property="Text" Value="Erfolgreich angewendet" />
-                    </DataTrigger>
-                  </Style.Triggers>
-                </Style>
-              </TextBlock.Style>
-            </TextBlock>
-            <Border Grid.Column="2" VerticalAlignment="Center">
-              <Border.Style>
-                <Style TargetType="Border">
-                  <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
-                  <Setter Property="CornerRadius" Value="12" />
-                  <Setter Property="Padding" Value="9,4" />
-                  <Style.Triggers>
-                    <DataTrigger Binding="{Binding ResultSuccess}" Value="True">
-                      <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
-                    </DataTrigger>
-                  </Style.Triggers>
-                </Style>
-              </Border.Style>
-              <TextBlock FontSize="11" FontWeight="SemiBold">
-                <TextBlock.Style>
-                  <Style TargetType="TextBlock">
-                    <Setter Property="Text" Value="FEHLER" />
-                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
-                    <Style.Triggers>
-                      <DataTrigger Binding="{Binding ResultSuccess}" Value="True">
-                        <Setter Property="Text" Value="ERFOLG" />
-                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
-                      </DataTrigger>
-                    </Style.Triggers>
-                  </Style>
-                </TextBlock.Style>
-              </TextBlock>
-            </Border>
-          </Grid>
-
-          <TextBlock Text="{Binding ResultMessage}"
-                     Style="{StaticResource MutedTextStyle}"
-                     FontSize="12" TextWrapping="Wrap" />
-
-          <ui:Button Content="Schließen"
-                     Command="{Binding DismissResultCommand}"
-                     Appearance="Secondary"
-                     HorizontalAlignment="Right"
-                     Margin="0,14,0,0" Height="30" FontSize="11" />
-        </StackPanel>
-      </Border>
-
-    </StackPanel>
-  </ScrollViewer>
+        <!-- Action buttons -->
+        <ui:Button Grid.Column="2" Content="Restore" Command="{Binding RestoreCommand}"
+                   Appearance="Secondary" Height="36" FontSize="12" Margin="0,0,8,0" />
+        <ui:Button Grid.Column="3" Content="Apply" Command="{Binding ApplyCommand}"
+                   Appearance="Primary" Height="36" FontSize="12" FontWeight="SemiBold"
+                   MinWidth="100" HorizontalContentAlignment="Center" />
+      </Grid>
+    </Border>
+  </Grid>
 </Page>

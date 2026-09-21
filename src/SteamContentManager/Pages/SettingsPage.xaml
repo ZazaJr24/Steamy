@@ -7,6 +7,7 @@
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
   </Page.Resources>
+  <!-- StringVis registered in code-behind -->
 
   <ScrollViewer Style="{StaticResource PageScrollHostStyle}"
                 HorizontalScrollBarVisibility="Disabled"
@@ -148,6 +149,58 @@
             <TextBlock Grid.Column="1" Text="{Binding RyuuTestStatus}" Style="{StaticResource MutedTextStyle}"
                        FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
           </Grid>
+        </StackPanel>
+      </Border>
+
+      <TextBlock Text="Hubcap Manifest" Style="{StaticResource SectionTitleStyle}" />
+      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+        <StackPanel>
+          <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
+            <TextBlock Text="Hubcap provides fast game search and manifest downloads for Denuvo Activation. An API key is required." Style="{StaticResource MutedTextStyle}" FontSize="12" />
+          </Border>
+          <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Base URL" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="The Hubcap manifest API endpoint." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            </StackPanel>
+            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.HubcapBaseUrl, UpdateSourceTrigger=PropertyChanged}" />
+          </Grid>
+          <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="API key" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="{Binding HubcapCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+            </StackPanel>
+            <PasswordBox x:Name="HubcapApiKeyBox" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="HubcapApiKeyBox_PasswordChanged"
+                         ToolTip="Type your Hubcap API key and save; encrypted with DPAPI, never exported." />
+          </Grid>
+          <TextBlock Text="Encrypted with DPAPI, never written into logs or exports. Empty means: keep the current key."
+                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,0,0,14" />
+          <Grid Margin="0,0,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <ui:Button Content="Test connection" Command="{Binding TestHubcapCommand}" Appearance="Secondary" />
+            <TextBlock Grid.Column="1" Text="{Binding HubcapTestStatus}" Style="{StaticResource MutedTextStyle}"
+                       FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
+          </Grid>
+          <!-- Usage info with progress bar -->
+          <Border Margin="0,12,0,0" Padding="14,10" CornerRadius="10"
+                  Background="{DynamicResource SurfaceSubtleBrush}"
+                  Visibility="{Binding HubcapUsageInfo, Converter={StaticResource StringVis}}">
+            <StackPanel>
+              <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBlock Text="Daily API Usage" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding HubcapUsageInfo}" FontSize="12"
+                           Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" />
+              </Grid>
+              <ProgressBar Height="6" Minimum="0" Maximum="100"
+                           Value="{Binding HubcapUsagePercent, Mode=OneWay}"
+                           Foreground="{DynamicResource AccentBrush}"
+                           Background="{DynamicResource ControlStrokeBrush}" />
+            </StackPanel>
+          </Border>
         </StackPanel>
       </Border>
 
@@ -347,7 +400,7 @@
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
           <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
             <TextBlock Text="Stored credentials" Style="{StaticResource CardTitleStyle}" />
-            <TextBlock Text="Deletes the encrypted Steam API key and the Ryuu auth key from this machine."
+            <TextBlock Text="Deletes the encrypted Steam API key, Ryuu auth key and Hubcap API key from this machine."
                        Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
           </StackPanel>
           <ui:Button Grid.Column="1" Content="Clear credentials" Command="{Binding ClearCredentialsCommand}"

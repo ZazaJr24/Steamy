@@ -60,6 +60,7 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand NavigateDlcUnlockerCommand => new RelayCommand(() => Navigation.Navigate<CreamApiPage>());
     public ICommand NavigateSteamlessCommand => new RelayCommand(() => Navigation.Navigate<SteamlessPage>());
     public ICommand NavigateDenuvoActivationCommand => new RelayCommand(() => Navigation.Navigate<DenuvoActivationPage>());
+    public ICommand NavigateGoldbergCommand => new RelayCommand(() => Navigation.Navigate<GoldbergPage>());
     public ICommand RefreshCommand => new RelayCommand(() => OnPropertyChanged(string.Empty));
 
     public override async Task OnNavigatedToAsync()

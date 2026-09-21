@@ -33,7 +33,7 @@ public sealed class CreamApiViewModel : ObservableObject
     private string _gameFolder = string.Empty;
     private string _appIdText = string.Empty;
     private string _gameSearchText = string.Empty;
-    private string _status = "Wähle ein Spiel oder browse manuell.";
+    private string _status = "Select a game or browse manually.";
     private string _proxyAddress = string.Empty;
     private string _selectedLanguage = "english";
     private bool _unlockAll = true;
@@ -89,17 +89,17 @@ public sealed class CreamApiViewModel : ObservableObject
             return;
         }
 
-        Status = $"{_selectedMode} DLLs werden bereitgestellt…";
+        Status = $"Preparing {_selectedMode} DLLs…";
         try
         {
             await _creamApi.EnsureDllsAvailableAsync(_selectedMode);
             HasDlls = _creamApi.HasCachedDlls(_selectedMode);
             if (HasDlls)
-                Status = "Bereit.";
+                Status = "Ready.";
         }
         catch
         {
-            Status = $"{_selectedMode} DLLs konnten nicht geladen werden.";
+            Status = $"Failed to load {_selectedMode} DLLs.";
         }
     }
 
@@ -119,7 +119,9 @@ public sealed class CreamApiViewModel : ObservableObject
     public DlcUnlockerMode[] AvailableModes { get; } =
     {
         DlcUnlockerMode.CreamAPI,
-        DlcUnlockerMode.SmokeAPI
+        DlcUnlockerMode.SmokeAPI,
+        DlcUnlockerMode.Koalageddon,
+        DlcUnlockerMode.UplayR2Unlocker
     };
 
     public DlcUnlockerMode SelectedMode
@@ -146,7 +148,7 @@ public sealed class CreamApiViewModel : ObservableObject
             if (!SetProperty(ref _selectedGame, value) || value is null) return;
             GameFolder = value.InstallPath;
             AppIdText = value.AppId.ToString();
-            Status = $"{value.Name} ausgewählt — DLCs werden geladen…";
+            Status = $"{value.Name} selected — loading DLCs…";
             _ = FetchDlcAsync();
         }
     }
@@ -176,7 +178,7 @@ public sealed class CreamApiViewModel : ObservableObject
         }
     }
 
-    public string GameFolderDisplay => string.IsNullOrWhiteSpace(GameFolder) ? "Kein Ordner ausgewählt" : GameFolder;
+    public string GameFolderDisplay => string.IsNullOrWhiteSpace(GameFolder) ? "No folder selected" : GameFolder;
     public bool HasGameFolder => !string.IsNullOrWhiteSpace(GameFolder) && Directory.Exists(GameFolder);
 
     public string DetectedDlls
@@ -192,7 +194,7 @@ public sealed class CreamApiViewModel : ObservableObject
                 foreach (var f in Directory.EnumerateFiles(GameFolder, "steam_api64.dll", SearchOption.AllDirectories))
                     locations.Add(Path.GetDirectoryName(f)!);
 
-                if (locations.Count == 0) return "Keine steam_api DLL gefunden";
+                if (locations.Count == 0) return "No steam_api DLL found";
 
                 var parts = locations.Select(dir =>
                 {
@@ -204,7 +206,7 @@ public sealed class CreamApiViewModel : ObservableObject
                 });
                 return string.Join(", ", parts);
             }
-            catch { return "Fehler beim Scannen"; }
+            catch { return "Scan error"; }
         }
     }
 
@@ -318,12 +320,12 @@ public sealed class CreamApiViewModel : ObservableObject
     }
 
     public string GameCountLabel => FilteredGames.Count == 0
-        ? "Keine Spiele gefunden"
-        : $"{FilteredGames.Count} Spiele";
+        ? "No games found"
+        : $"{FilteredGames.Count} games";
 
     public string DlcCountLabel => DlcList.Count == 0
-        ? "Keine DLCs geladen"
-        : $"{DlcList.Count(d => d.IsSelected)} / {DlcList.Count} DLCs ausgewählt";
+        ? "No DLCs loaded"
+        : $"{DlcList.Count(d => d.IsSelected)} / {DlcList.Count} DLCs selected";
 
     public bool CanFetch => !IsFetching && int.TryParse(AppIdText, out var id) && id > 0;
     public bool CanApply => !IsFetching && !IsApplying && HasGameFolder && DlcList.Count > 0 && int.TryParse(AppIdText, out _);
@@ -342,7 +344,7 @@ public sealed class CreamApiViewModel : ObservableObject
         InstalledGames.Clear();
         FilteredGames.Clear();
         OnPropertyChanged(nameof(GameCountLabel));
-        Status = "Spiele werden gesucht…";
+        Status = "Scanning for games…";
 
         try
         {
@@ -356,12 +358,12 @@ public sealed class CreamApiViewModel : ObservableObject
 
             OnPropertyChanged(nameof(GameCountLabel));
             Status = InstalledGames.Count > 0
-                ? $"{InstalledGames.Count} installierte Spiele gefunden."
-                : "Keine Spiele gefunden. Manuell browsen.";
+                ? $"Found {InstalledGames.Count} installed games."
+                : "No games found. Try browsing manually.";
         }
         catch
         {
-            Status = "Spiele konnten nicht geladen werden.";
+            Status = "Failed to load games.";
         }
         finally
         {
@@ -389,10 +391,10 @@ public sealed class CreamApiViewModel : ObservableObject
 
     public async Task LoadCreamApiDllsAsync(string archivePath)
     {
-        Status = "DLLs werden extrahiert…";
+        Status = "Extracting DLLs…";
         var ok = await _creamApi.ExtractDllsFromArchiveAsync(archivePath);
         HasDlls = _creamApi.HasCachedDlls(_selectedMode);
-        Status = ok ? "DLLs bereit." : "Fehler beim Extrahieren.";
+        Status = ok ? "DLLs ready." : "Extraction failed.";
     }
 
     private async Task FetchDlcAsync()
@@ -404,7 +406,7 @@ public sealed class CreamApiViewModel : ObservableObject
         IsFetching = true;
         DlcList.Clear();
         OnPropertyChanged(nameof(DlcCountLabel));
-        Status = $"DLCs werden geladen für App {appId}…";
+        Status = $"Fetching DLCs for App {appId}…";
 
         try
         {
@@ -414,16 +416,16 @@ public sealed class CreamApiViewModel : ObservableObject
                 DlcList.Add(new CreamApiDlcItem { AppId = dlc.AppId, Name = dlc.Name });
 
             Status = DlcList.Count > 0
-                ? $"{DlcList.Count} DLCs gefunden."
-                : $"Keine DLCs für App {appId} gefunden.";
+                ? $"Found {DlcList.Count} DLCs."
+                : $"No DLCs found for App {appId}.";
         }
         catch (OperationCanceledException)
         {
-            Status = "Abgebrochen.";
+            Status = "Cancelled.";
         }
         catch (Exception ex)
         {
-            Status = $"Fehler beim Laden: {ex.Message}";
+            Status = $"Fetch error: {ex.Message}";
         }
         finally
         {
@@ -440,7 +442,7 @@ public sealed class CreamApiViewModel : ObservableObject
         if (!int.TryParse(AppIdText, out var appId)) return;
 
         IsApplying = true;
-        Status = $"{_selectedMode} wird angewendet…";
+        Status = $"Applying {_selectedMode}…";
 
         try
         {
@@ -458,8 +460,8 @@ public sealed class CreamApiViewModel : ObservableObject
                 ResultMessage = result.Message;
                 ShowResult = true;
                 Status = result.Succeeded
-                    ? $"{_selectedMode} erfolgreich angewendet!"
-                    : $"Fehlgeschlagen: {result.Message}";
+                    ? $"{_selectedMode} applied successfully!"
+                    : $"Failed: {result.Message}";
             });
         }
         catch (Exception ex)
@@ -467,7 +469,7 @@ public sealed class CreamApiViewModel : ObservableObject
             ResultSuccess = false;
             ResultMessage = ex.Message;
             ShowResult = true;
-            Status = $"Fehler: {ex.Message}";
+            Status = $"Error: {ex.Message}";
         }
         finally
         {
@@ -483,7 +485,7 @@ public sealed class CreamApiViewModel : ObservableObject
         ResultSuccess = result.Succeeded;
         ResultMessage = result.Message;
         ShowResult = true;
-        Status = result.Succeeded ? "Original-DLLs wiederhergestellt." : result.Message;
+        Status = result.Succeeded ? "Original DLLs restored." : result.Message;
     }
 
     private void SetAll(bool selected)
