@@ -26,6 +26,37 @@
         </StackPanel>
       </Grid>
 
+      <!-- Summary stats -->
+      <Grid Margin="0,8,0,12">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="10" Padding="14,10" Margin="0,0,4,0">
+          <StackPanel>
+            <TextBlock Text="ACTIVE" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="9.5" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding ActiveCount}" Foreground="{DynamicResource AccentBrush}" FontSize="18" FontWeight="Bold" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="1" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="10" Padding="14,10" Margin="2,0,2,0">
+          <StackPanel>
+            <TextBlock Text="QUEUED" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="9.5" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding QueuedJobCount}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="18" FontWeight="Bold" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="10" Padding="14,10" Margin="2,0,2,0">
+          <StackPanel>
+            <TextBlock Text="COMPLETED" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="9.5" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding CompletedCount}" Foreground="{DynamicResource SuccessBrush}" FontSize="18" FontWeight="Bold" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="3" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="10" Padding="14,10" Margin="4,0,0,0">
+          <StackPanel>
+            <TextBlock Text="FAILED" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="9.5" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding FailedCount}" Foreground="{DynamicResource DangerBrush}" FontSize="18" FontWeight="Bold" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+
       <!-- Queue toolbar -->
       <Border Style="{StaticResource FilterBarStyle}">
         <Grid>
@@ -103,7 +134,10 @@
                       <ui:Button Content="Pause" Icon="{ui:SymbolIcon Pause24}" Style="{StaticResource PauseButton}" Command="{Binding DataContext.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
                       <ui:Button Content="Resume" Icon="{ui:SymbolIcon Play24}" Style="{StaticResource ResumeButton}" Command="{Binding DataContext.ResumeCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Primary"/>
                       <ui:Button Content="Retry" Icon="{ui:SymbolIcon ArrowClockwise24}" Style="{StaticResource RetryButton}" Command="{Binding DataContext.RetryCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
+                      <ui:Button Content="Verify" Icon="{ui:SymbolIcon ShieldCheckmark24}" Style="{StaticResource CompletedOnlyButton}" Command="{Binding DataContext.VerifyCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
+                      <ui:Button Content="Open" Icon="{ui:SymbolIcon FolderOpen24}" Style="{StaticResource CompletedOnlyButton}" Command="{Binding DataContext.OpenFolderCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
                       <ui:Button Content="Cancel" Style="{StaticResource CancelButton}" Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Danger"/>
+                      <ui:Button Content="Remove" Icon="{ui:SymbolIcon Dismiss24}" Style="{StaticResource RemoveButton}" Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
                     </StackPanel>
                   </StackPanel>
                 </Grid>

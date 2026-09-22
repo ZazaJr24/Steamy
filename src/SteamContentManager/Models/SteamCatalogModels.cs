@@ -312,7 +312,7 @@ public static class SteamCatalogQuery
             "Popular (AAA)" => query
                 .OrderByDescending(item => PopularityLookup.GetScore(item.AppId))
                 .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
-            "App ID" => query.OrderBy(item => item.AppId).ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
+            "App ID" => query.OrderByDescending(item => item.AppId).ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
             "Type" => query.OrderBy(item => item.TypeLabel, StringComparer.OrdinalIgnoreCase).ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
             "Installed first" => query.OrderByDescending(item => item.IsInstalled).ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
             "Name A–Z" => query.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ThenBy(item => item.AppId).ToArray(),

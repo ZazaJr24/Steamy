@@ -362,13 +362,24 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
             Directory.CreateDirectory(tempDir);
 
+            // steam_appid.txt in root (ColdLoader reads it here)
+            File.WriteAllText(Path.Combine(tempDir, "steam_appid.txt"),
+                appId.ToString(), Encoding.UTF8);
+
+            // coldloader.ini in root
+            var clIni = new StringBuilder();
+            clIni.AppendLine("[coldloader]");
+            clIni.AppendLine($"appid={appId}");
+            File.WriteAllText(Path.Combine(tempDir, "coldloader.ini"),
+                clIni.ToString(), Encoding.UTF8);
+
             var ssDir = Path.Combine(tempDir, "steam_settings");
             Directory.CreateDirectory(ssDir);
             Directory.CreateDirectory(Path.Combine(ssDir, "controller"));
             Directory.CreateDirectory(Path.Combine(ssDir, "image"));
             Directory.CreateDirectory(Path.Combine(ssDir, "sounds"));
 
-            // steam_appid.txt
+            // steam_appid.txt also in steam_settings
             File.WriteAllText(Path.Combine(ssDir, "steam_appid.txt"),
                 appId.ToString(), Encoding.UTF8);
 
@@ -382,12 +393,10 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             File.WriteAllText(Path.Combine(ssDir, "configs.user.ini"),
                 userIni.ToString(), Encoding.UTF8);
 
-            // configs.app.ini — DLC list in [app::dlcs] format
+            // configs.app.ini — unlock all DLCs
             var appIni = new StringBuilder();
             appIni.AppendLine("[app::dlcs]");
-            appIni.AppendLine("unlock_all = 0");
-            foreach (var d in dlcs)
-                appIni.AppendLine($"{d.AppId} = DLC");
+            appIni.AppendLine("unlock_all = 1");
             File.WriteAllText(Path.Combine(ssDir, "configs.app.ini"),
                 appIni.ToString(), Encoding.UTF8);
 
@@ -416,17 +425,14 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             CopyCachedDlls(ColdLoaderCacheDir, tempDir, "coldloader");
             CopyProxyDll(ColdLoaderProxyCacheDir, tempDir, _proxyDllName);
 
-            // steam_stubbed goes into steam_settings
+            // steam_stubbed DLLs (steam_api*.dll + steamclient*.dll) go into steam_settings
+            var stubbedDest = ssDir;
             if (_isCapcomGame)
             {
-                var loadDlls = Path.Combine(ssDir, "load_dlls");
-                Directory.CreateDirectory(loadDlls);
-                CopyCachedDlls(SteamStubbedCacheDir, loadDlls, "steam_api");
+                stubbedDest = Path.Combine(ssDir, "load_dlls");
+                Directory.CreateDirectory(stubbedDest);
             }
-            else
-            {
-                CopyCachedDlls(SteamStubbedCacheDir, ssDir, "steam_api");
-            }
+            CopyAllDlls(SteamStubbedCacheDir, stubbedDest);
 
             Status = "Creating .zip…";
             var desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
@@ -614,6 +620,13 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
         var first = Directory.EnumerateFiles(cacheDir, "*.dll").FirstOrDefault();
         if (first is not null)
             File.Copy(first, Path.Combine(destDir, Path.GetFileName(first)), true);
+    }
+
+    private static void CopyAllDlls(string cacheDir, string destDir)
+    {
+        if (!Directory.Exists(cacheDir)) return;
+        foreach (var f in Directory.EnumerateFiles(cacheDir, "*.dll"))
+            File.Copy(f, Path.Combine(destDir, Path.GetFileName(f)), true);
     }
 
     private static void CopyProxyDll(string cacheDir, string destDir, string targetName)

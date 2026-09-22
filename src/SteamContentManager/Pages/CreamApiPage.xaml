@@ -15,6 +15,7 @@
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
     <!-- ═══ HEADER ═══ -->
@@ -31,8 +32,8 @@
       </StackPanel>
 
       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-        <TextBlock Text="Method:" FontSize="12"
-                   Foreground="{DynamicResource TextSecondaryBrush}"
+        <TextBlock Text="Method" FontSize="11"
+                   Foreground="{DynamicResource TextTertiaryBrush}"
                    VerticalAlignment="Center" Margin="0,0,8,0" />
         <ComboBox ItemsSource="{Binding AvailableModes}"
                   SelectedItem="{Binding SelectedMode}"
@@ -62,6 +63,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
           <!-- Title + Browse -->
@@ -80,26 +82,32 @@
           <ui:TextBox Grid.Row="1"
                       Text="{Binding GameSearchText, UpdateSourceTrigger=PropertyChanged}"
                       PlaceholderText="Search games…"
-                      Height="32" FontSize="12" Margin="0,0,0,8" />
+                      FontSize="13" Padding="12,10" Margin="0,0,0,8" />
 
           <!-- Selected game info -->
-          <Border Grid.Row="2" Background="{DynamicResource SurfaceSubtleBrush}"
-                  CornerRadius="8" Padding="10,7" Margin="0,0,0,8"
+          <Border Grid.Row="2" Background="{DynamicResource SuccessSoftBrush}"
+                  CornerRadius="10" Padding="12,9" Margin="0,0,0,8"
                   Visibility="{Binding HasGameFolder, Converter={StaticResource BoolVis}}">
             <Grid>
               <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
-              <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="&#x2714;" FontSize="13" Foreground="{DynamicResource SuccessBrush}"
+                         VerticalAlignment="Center" Margin="0,0,8,0" />
+              <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="{Binding SelectedGame.Name, FallbackValue='Manual folder'}"
+                           FontSize="13" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
                 <TextBlock Text="{Binding GameFolderDisplay}"
-                           FontFamily="Consolas" FontSize="10"
+                           FontSize="10"
                            Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextTrimming="CharacterEllipsis" />
+                           TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
                 <TextBlock Text="{Binding DetectedDlls}" FontSize="10"
                            Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,1,0,0" />
               </StackPanel>
-              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="App" Foreground="{DynamicResource TextTertiaryBrush}"
                            FontSize="10" VerticalAlignment="Center" Margin="0,0,4,0" />
                 <ui:TextBox Text="{Binding AppIdText, UpdateSourceTrigger=PropertyChanged}"
@@ -121,7 +129,7 @@
 
           <!-- Game list -->
           <Border Grid.Row="3" Background="{DynamicResource SurfaceSubtleBrush}"
-                  CornerRadius="8" Padding="2">
+                  CornerRadius="10" Padding="3">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
               <ItemsControl ItemsSource="{Binding FilteredGames}">
                 <ItemsControl.ItemsPanel>
@@ -132,18 +140,22 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border x:Name="GameRow" Padding="8,6" Margin="1"
-                            CornerRadius="6" Background="Transparent"
+                    <Border x:Name="GameRow" Padding="12,9" Margin="2,1"
+                            CornerRadius="8" Background="Transparent"
                             Cursor="Hand" MouseLeftButtonDown="GameRow_MouseDown">
                       <Grid>
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="Auto" />
                           <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding AppId}" FontFamily="Consolas" FontSize="10"
-                                   Foreground="{DynamicResource TextTertiaryBrush}"
-                                   Width="52" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12"
+                        <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                CornerRadius="6" Padding="8,3" VerticalAlignment="Center"
+                                Margin="0,0,10,0" MinWidth="58">
+                          <TextBlock Text="{Binding AppId}" FontFamily="Consolas" FontSize="11"
+                                     Foreground="{DynamicResource TextSecondaryBrush}"
+                                     HorizontalAlignment="Center" />
+                        </Border>
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13"
                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                       </Grid>
@@ -159,6 +171,12 @@
               </ItemsControl>
             </ScrollViewer>
           </Border>
+
+          <!-- Refresh link -->
+          <ui:Button Grid.Row="4" Content="Rescan" Command="{Binding RefreshGamesCommand}"
+                     Appearance="Transparent" FontSize="10" Height="22" Margin="0,6,0,0"
+                     HorizontalAlignment="Right"
+                     Foreground="{DynamicResource TextTertiaryBrush}" />
         </Grid>
       </Border>
 
@@ -195,7 +213,7 @@
 
           <!-- DLC list area -->
           <Border Grid.Row="1" Background="{DynamicResource SurfaceSubtleBrush}"
-                  CornerRadius="8" Padding="2">
+                  CornerRadius="10" Padding="3">
             <Grid>
               <!-- Empty state -->
               <TextBlock Text="Select a game to load its DLCs"
@@ -242,8 +260,8 @@
                 <ItemsControl ItemsSource="{Binding DlcList}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Border x:Name="DlcRow" Padding="6,5" Margin="1"
-                              CornerRadius="6" Background="Transparent">
+                      <Border x:Name="DlcRow" Padding="10,7" Margin="2,1"
+                              CornerRadius="8" Background="Transparent">
                         <Grid>
                           <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -251,11 +269,15 @@
                             <ColumnDefinition Width="*" />
                           </Grid.ColumnDefinitions>
                           <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center"
-                                    Margin="0,0,4,0" />
-                          <TextBlock Grid.Column="1" Text="{Binding AppId}" FontFamily="Consolas"
-                                     FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}"
-                                     Width="52" VerticalAlignment="Center" />
-                          <TextBlock Grid.Column="2" Text="{Binding Name}" FontSize="12"
+                                    Margin="0,0,6,0" />
+                          <Border Grid.Column="1" Background="{DynamicResource SurfaceSubtleBrush}"
+                                  CornerRadius="6" Padding="8,3" VerticalAlignment="Center"
+                                  Margin="0,0,10,0" MinWidth="58">
+                            <TextBlock Text="{Binding AppId}" FontFamily="Consolas"
+                                       FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       HorizontalAlignment="Center" />
+                          </Border>
+                          <TextBlock Grid.Column="2" Text="{Binding Name}" FontSize="13"
                                      Foreground="{DynamicResource TextPrimaryBrush}"
                                      VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </Grid>
@@ -276,8 +298,54 @@
       </Border>
     </Grid>
 
+    <!-- ═══ RESULT BANNER ═══ -->
+    <Border Grid.Row="2" CornerRadius="10" Padding="12,9" Margin="0,12,0,0"
+            Visibility="{Binding ShowResult, Converter={StaticResource BoolVis}}">
+      <Border.Style>
+        <Style TargetType="Border">
+          <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding ResultSuccess}" Value="True">
+              <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </Border.Style>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <TextBlock FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Text" Value="&#x2718;" />
+              <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding ResultSuccess}" Value="True">
+                  <Setter Property="Text" Value="&#x2714;" />
+                  <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+        <TextBlock Grid.Column="1" Text="{Binding ResultMessage}"
+                   FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   TextTrimming="CharacterEllipsis" ToolTip="{Binding ResultMessage}" />
+        <ui:Button Grid.Column="2" Command="{Binding DismissResultCommand}"
+                   Appearance="Transparent" Height="24" Width="24"
+                   VerticalAlignment="Center" Padding="0"
+                   Foreground="{DynamicResource TextTertiaryBrush}">
+          <ui:SymbolIcon Symbol="Dismiss24" FontSize="12" />
+        </ui:Button>
+      </Grid>
+    </Border>
+
     <!-- ═══ BOTTOM BAR ═══ -->
-    <Border Grid.Row="2" Style="{StaticResource SurfaceCardStyle}" CornerRadius="12"
+    <Border Grid.Row="3" Style="{StaticResource SurfaceCardStyle}" CornerRadius="12"
             Padding="14,10" Margin="0,12,0,0">
       <Grid>
         <Grid.ColumnDefinitions>
@@ -295,12 +363,14 @@
           </Expander.Header>
           <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
             <StackPanel Margin="0,0,20,0">
-              <TextBlock Text="Language" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,3" />
+              <TextBlock Text="Language" FontSize="11"
+                         Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,4" />
               <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}"
                         Width="120" Height="28" FontSize="11" />
             </StackPanel>
             <StackPanel Margin="0,0,20,0">
-              <TextBlock Text="Proxy" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,3" />
+              <TextBlock Text="Proxy" FontSize="11"
+                         Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,4" />
               <ui:TextBox Text="{Binding ProxyAddress, UpdateSourceTrigger=LostFocus}"
                           PlaceholderText="http://proxy:port" Width="160" Height="28" FontSize="11" />
             </StackPanel>
@@ -321,19 +391,15 @@
           </StackPanel>
         </Expander>
 
-        <!-- Result message -->
-        <TextBlock Grid.Column="1" Text="{Binding ResultMessage}" FontSize="11"
-                   Foreground="{DynamicResource TextSecondaryBrush}"
-                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                   ToolTip="{Binding ResultMessage}" Margin="12,0"
-                   Visibility="{Binding ShowResult, Converter={StaticResource BoolVis}}" />
+        <!-- Spacer -->
+        <Border Grid.Column="1" />
 
         <!-- Action buttons -->
         <ui:Button Grid.Column="2" Content="Restore" Command="{Binding RestoreCommand}"
                    Appearance="Secondary" Height="36" FontSize="12" Margin="0,0,8,0" />
         <ui:Button Grid.Column="3" Content="Apply" Command="{Binding ApplyCommand}"
-                   Appearance="Primary" Height="36" FontSize="12" FontWeight="SemiBold"
-                   MinWidth="100" HorizontalContentAlignment="Center" />
+                   Appearance="Primary" Height="48" FontSize="15" FontWeight="SemiBold"
+                   MinWidth="160" HorizontalContentAlignment="Center" />
       </Grid>
     </Border>
   </Grid>

@@ -28,7 +28,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
     public const string AppListUrl = "https://api.steampowered.com/ISteamApps/GetAppList/v2/";
     public const string GithubAppIdsUrl = "https://raw.githubusercontent.com/Dev12434/AppID-List/refs/heads/main/appids.txt";
     private const string DetailsUrl = "https://store.steampowered.com/api/appdetails?appids={0}&l=english&cc=us";
-    private static readonly TimeSpan CatalogLifetime = TimeSpan.FromHours(24);
+    private static readonly TimeSpan CatalogLifetime = TimeSpan.FromHours(1);
     private static readonly TimeSpan DetailsLifetime = TimeSpan.FromHours(12);
     private readonly HttpClient _httpClient;
     private readonly string _cacheDirectory;

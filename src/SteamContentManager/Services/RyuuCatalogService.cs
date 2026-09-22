@@ -20,7 +20,7 @@ public interface IRyuuCatalogService
 
 public sealed class RyuuCatalogService : IRyuuCatalogService, IDisposable
 {
-    private static readonly TimeSpan CacheLifetime = TimeSpan.FromHours(12);
+    private static readonly TimeSpan CacheLifetime = TimeSpan.FromHours(1);
 
     private readonly ISettingsService _settings;
     private readonly HttpClient _httpClient;
