@@ -43,6 +43,7 @@ public static class ServiceRegistration
         services.AddSingleton<IArtworkService>(_ => new SteamArtworkService());
         services.AddSingleton<ISteamCatalogService>(_ => new SteamCatalogService());
         services.AddSingleton<IRyuuCatalogService>(sp => new RyuuCatalogService(sp.GetRequiredService<ISettingsService>()));
+        services.AddSingleton<IHubcapCatalogService>(sp => new HubcapCatalogService(sp.GetRequiredService<ISettingsService>(), sp.GetRequiredService<ISecureCredentialService>()));
         services.AddSingleton<ZazaRepositoryService>(_ => new ZazaRepositoryService());
         services.AddSingleton<IDepotDownloaderCheckService>(_ => new DepotDownloaderCheckService());
 
