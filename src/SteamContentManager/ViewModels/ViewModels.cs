@@ -72,8 +72,8 @@ public sealed class DashboardViewModel : ViewModelBase
 
 public sealed class DownloadsViewModel : ViewModelBase
 {
-    private readonly IDownloadManager _manager; private readonly ISettingsService _settings; private string _search = ""; private string _filter = "All downloads";
-    public DownloadsViewModel(IAppDataStore s, INavigationService n, ILoggingService l, IDownloadManager m, ISettingsService settings) : base(s,n,l) { _manager=m; _settings=settings; Settings=settings.Load(); Jobs=s.Downloads; RefreshFilter(); }
+    private readonly IDownloadManager _manager; private readonly IRyuuGameDownloadService _ryuu; private readonly ISettingsService _settings; private string _search = ""; private string _filter = "All downloads";
+    public DownloadsViewModel(IAppDataStore s, INavigationService n, ILoggingService l, IDownloadManager m, IRyuuGameDownloadService ryuu, ISettingsService settings) : base(s,n,l) { _manager=m; _ryuu=ryuu; _settings=settings; Settings=settings.Load(); Jobs=s.Downloads; RefreshFilter(); }
     public AppSettings Settings { get; private set; }
     public ObservableCollection<DownloadJob> Jobs { get; }
     public ObservableCollection<DownloadJob> FilteredJobs { get; } = new();
@@ -88,7 +88,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     public string DownloadToolStatus => string.IsNullOrWhiteSpace(_settings.Load().DepotDownloaderPath) ? "DepotDownloader: configure it in Settings" : "DepotDownloader: ready for authorized downloads";
     public string QueueLimits => $"{_settings.Load().ParallelDownloads} parallel job(s) · {_settings.Load().RetryCount} retries";
     public ICommand PauseCommand => new AsyncRelayCommand<DownloadJob>(x=>x is null?Task.CompletedTask:_manager.PauseAsync(x));
-    public ICommand ResumeCommand => new AsyncRelayCommand<DownloadJob>(StartAsync);
+    public ICommand ResumeCommand => new AsyncRelayCommand<DownloadJob>(ResumeAsync);
     public ICommand CancelCommand => new AsyncRelayCommand<DownloadJob>(x=>x is null?Task.CompletedTask:_manager.CancelAsync(x));
     public ICommand RetryCommand => new AsyncRelayCommand<DownloadJob>(x=>x is null?Task.CompletedTask:_manager.RetryAsync(x));
     public ICommand StartCommand => new AsyncRelayCommand<DownloadJob>(StartAsync);
@@ -98,6 +98,40 @@ public sealed class DownloadsViewModel : ViewModelBase
     public ICommand RefreshCommand => new RelayCommand(RefreshFilter);
     public ICommand NavigateLibraryCommand => new RelayCommand(()=>Navigation.Navigate<LibraryPage>());
     private async Task StartAsync(DownloadJob? job) { if(job is null)return; await _manager.StartAsync(job); RefreshFilter(); }
+    private async Task ResumeAsync(DownloadJob? job)
+    {
+        if (job is null) return;
+        var mode = job.DownloadMode ?? "";
+        if (mode.Contains("Ryuu", StringComparison.OrdinalIgnoreCase) || mode.Contains("Hubcap", StringComparison.OrdinalIgnoreCase))
+        {
+            job.State = DownloadJobState.Preparing;
+            job.Status = "Resuming — loading cached manifests";
+            var progress = new Progress<string>(msg => System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
+            {
+                if (msg.StartsWith("PROGRESS|", StringComparison.Ordinal))
+                {
+                    var p = msg.Split('|');
+                    if (p.Length >= 10 && double.TryParse(p[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pct))
+                    {
+                        job.State = DownloadJobState.Downloading;
+                        job.Progress = pct;
+                        if (!string.IsNullOrWhiteSpace(p[5])) job.Downloaded = p[5];
+                        if (!string.IsNullOrWhiteSpace(p[6])) job.TotalSize = p[6];
+                        if (!string.IsNullOrWhiteSpace(p[7])) job.Speed = p[7];
+                        if (!string.IsNullOrWhiteSpace(p[8])) job.Eta = p[8];
+                        job.Status = $"Downloading depot {p[2]}/{p[3]} — {pct:0.#}%";
+                    }
+                }
+                else { job.Status = msg; }
+            }));
+            var result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress));
+            job.State = result.Succeeded ? DownloadJobState.Completed : DownloadJobState.Failed;
+            job.Status = result.Message;
+            if (result.Succeeded) { job.Progress = 100; job.Finished = DateTime.Now; }
+        }
+        else { await _manager.StartAsync(job); }
+        RefreshFilter();
+    }
     public int ActiveCount => Jobs.Count(x=>x.IsActive);
     public int CompletedCount => Jobs.Count(x=>x.State==DownloadJobState.Completed);
     public int QueuedJobCount => Jobs.Count(x=>x.State==DownloadJobState.Queued);

@@ -156,11 +156,15 @@
                              TextAlignment="Right" VerticalAlignment="Center"/>
                 </Grid>
 
-                <!-- Stats line — separate TextBlocks so bindings update reliably -->
-                <StackPanel Orientation="Horizontal" Margin="60,5,0,0">
+                <!-- Stats: size left, speed + ETA right -->
+                <Grid Margin="60,5,0,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
                   <TextBlock Text="{Binding SizeSummary}"
                              Foreground="{DynamicResource TextSecondaryBrush}"
-                             FontSize="11.5">
+                             FontSize="12" VerticalAlignment="Center">
                     <TextBlock.Style>
                       <Style TargetType="TextBlock">
                         <Setter Property="Visibility" Value="Visible"/>
@@ -172,88 +176,50 @@
                       </Style>
                     </TextBlock.Style>
                   </TextBlock>
-                  <TextBlock Text="  ·  " Foreground="{DynamicResource TextTertiaryBrush}"
-                             FontSize="11.5">
-                    <TextBlock.Style>
-                      <Style TargetType="TextBlock">
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding Speed}" Value="">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </TextBlock.Style>
-                  </TextBlock>
-                  <TextBlock Foreground="{DynamicResource AccentBrush}"
-                             FontSize="11.5" FontWeight="SemiBold">
-                    <TextBlock.Style>
-                      <Style TargetType="TextBlock">
-                        <Setter Property="Text" Value="{Binding Speed}"/>
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding Speed}" Value="">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </TextBlock.Style>
-                  </TextBlock>
-                  <TextBlock Text="  ·  " Foreground="{DynamicResource TextTertiaryBrush}"
-                             FontSize="11.5">
-                    <TextBlock.Style>
-                      <Style TargetType="TextBlock">
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding DiskSpeed}" Value="">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </TextBlock.Style>
-                  </TextBlock>
-                  <TextBlock Foreground="{DynamicResource TextTertiaryBrush}"
-                             FontSize="11.5">
-                    <TextBlock.Style>
-                      <Style TargetType="TextBlock">
-                        <Setter Property="Text" Value="{Binding DiskSpeed}"/>
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding DiskSpeed}" Value="">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </TextBlock.Style>
-                  </TextBlock>
-                  <TextBlock Text="  ·  " Foreground="{DynamicResource TextTertiaryBrush}"
-                             FontSize="11.5">
-                    <TextBlock.Style>
-                      <Style TargetType="TextBlock">
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding Eta}" Value="">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </TextBlock.Style>
-                  </TextBlock>
-                  <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
-                             FontSize="11.5">
-                    <TextBlock.Style>
-                      <Style TargetType="TextBlock">
-                        <Setter Property="Text" Value="{Binding Eta}"/>
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding Eta}" Value="">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </TextBlock.Style>
-                  </TextBlock>
-                </StackPanel>
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Foreground="{DynamicResource AccentBrush}"
+                               FontSize="12" FontWeight="SemiBold">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Text" Value="{Binding Speed}"/>
+                          <Setter Property="Visibility" Value="Visible"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding Speed}" Value="">
+                              <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="  ·  " Foreground="{DynamicResource TextTertiaryBrush}"
+                               FontSize="12">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Visibility" Value="Visible"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding Eta}" Value="">
+                              <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="12">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Text" Value="{Binding Eta}"/>
+                          <Setter Property="Visibility" Value="Visible"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding Eta}" Value="">
+                              <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                  </StackPanel>
+                </Grid>
 
                 <!-- Status text (depot info) -->
                 <TextBlock Text="{Binding Status}" Margin="60,2,0,0"
@@ -277,17 +243,6 @@
                            Foreground="{DynamicResource TextTertiaryBrush}"
                            FontSize="10.5" TextTrimming="CharacterEllipsis"
                            ToolTip="{Binding TargetFolder}" Opacity="0.5"/>
-
-                <!-- Process log (optional) -->
-                <Border Style="{StaticResource SubtlePanelStyle}"
-                        Padding="10,8" Margin="60,6,0,0"
-                        Visibility="{Binding DataContext.Settings.ShowDownloadLogs, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolVis}}">
-                  <TextBox Text="{Binding ProcessLog, Mode=OneWay}"
-                           IsReadOnly="True" TextWrapping="Wrap" MaxHeight="80"
-                           FontSize="10" FontFamily="Consolas"
-                           Background="Transparent" BorderThickness="0"
-                           Padding="0" VerticalScrollBarVisibility="Auto"/>
-                </Border>
 
                 <!-- Separator -->
                 <Border Height="1" Margin="0,14,0,0"

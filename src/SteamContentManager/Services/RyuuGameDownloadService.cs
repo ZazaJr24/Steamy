@@ -30,6 +30,12 @@ public interface IRyuuGameDownloadService
         ManifestSource source,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default);
+
+    Task<RyuuGameDownloadResult> ResumeDownloadAsync(
+        int appId,
+        string targetFolder,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposable
@@ -287,6 +293,31 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         var keyFilePath = Path.Combine(appWorkDir, $"{appId}.key");
         var keyLines = depots.Select(d => $"{d.DepotId};{d.DecryptionKey}");
         await File.WriteAllLinesAsync(keyFilePath, keyLines, cancellationToken);
+
+        Directory.CreateDirectory(targetFolder);
+        return await RunDepotDownloaderModAsync(ddPath, appId, depots, appWorkDir, targetFolder, progress, cancellationToken);
+    }
+
+    public async Task<RyuuGameDownloadResult> ResumeDownloadAsync(
+        int appId, string targetFolder,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var ddPath = await EnsureDepotDownloaderModAsync(progress, cancellationToken);
+        if (ddPath is null)
+            return new RyuuGameDownloadResult(false, "Could not find DepotDownloaderMod.");
+
+        var appWorkDir = Path.Combine(_workFolder, appId.ToString(CultureInfo.InvariantCulture));
+        if (!Directory.Exists(appWorkDir))
+            return new RyuuGameDownloadResult(false, "No cached manifests found — start a fresh download.");
+
+        var depots = BuildDepotsFromDirectory(string.Empty, appWorkDir);
+        if (depots.Count == 0)
+            return new RyuuGameDownloadResult(false, "No cached depots found — start a fresh download.");
+
+        _logging.Add(Models.LogLevel.Info, "GameDownload",
+            $"Resuming with {depots.Count} cached depot(s) for App {appId}.", appId);
+        progress?.Report($"Resuming — found {depots.Count} cached depot(s)");
 
         Directory.CreateDirectory(targetFolder);
         return await RunDepotDownloaderModAsync(ddPath, appId, depots, appWorkDir, targetFolder, progress, cancellationToken);
