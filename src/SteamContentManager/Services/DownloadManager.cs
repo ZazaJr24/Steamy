@@ -21,6 +21,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _cancellations = new();
     private readonly ConcurrentDictionary<Guid, bool> _pauseRequested = new();
     private readonly ConcurrentDictionary<Guid, Task> _running = new();
+    private readonly ConcurrentDictionary<Guid, long> _lastProgressTick = new();
 
     public DownloadManager(
         IAppDataStore store,
@@ -137,6 +138,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
 
             var attempts = command.Interactive ? 1 : Math.Clamp(settings.RetryCount, 0, 10) + 1;
             DepotDownloaderRunResult result = new(null, false, false, string.Empty, string.Empty);
+            var monitorTask = MonitorFolderAsync(job, linked.Token);
 
             for (var attempt = 1; attempt <= attempts; attempt++)
             {
@@ -219,6 +221,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             _cancellations.TryRemove(job.Id, out _);
             _pauseRequested.TryRemove(job.Id, out _);
             _running.TryRemove(job.Id, out _);
+            _lastProgressTick.TryRemove(job.Id, out _);
             await _queueStore.SaveAsync(job).ConfigureAwait(false);
             linked.Dispose();
         }
@@ -343,15 +346,22 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     private static string QuoteArgument(string argument) =>
         argument.Any(char.IsWhiteSpace) ? $"\"{argument}\"" : argument;
 
-    private static void ApplyProgress(DownloadJob job, DepotDownloaderProgress update)
+    private void ApplyProgress(DownloadJob job, DepotDownloaderProgress update)
     {
+        if (!string.IsNullOrWhiteSpace(update.RawLine)) job.AppendLog(update.RawLine);
+
+        var now = Environment.TickCount64;
+        var last = _lastProgressTick.GetOrAdd(job.Id, 0L);
+        if (now - last < 150 && update.Percent is not null && Math.Abs(update.Percent.Value - job.Progress) < 2)
+            return;
+        _lastProgressTick[job.Id] = now;
+
         if (update.Percent is not null) job.Progress = update.Percent.Value;
         if (!string.IsNullOrWhiteSpace(update.CurrentFile)) job.CurrentFile = update.CurrentFile;
         if (!string.IsNullOrWhiteSpace(update.Downloaded)) job.Downloaded = update.Downloaded;
         if (!string.IsNullOrWhiteSpace(update.Total)) job.TotalSize = update.Total;
         if (!string.IsNullOrWhiteSpace(update.Speed)) job.Speed = update.Speed;
         if (!string.IsNullOrWhiteSpace(update.Eta)) job.Eta = update.Eta;
-        if (!string.IsNullOrWhiteSpace(update.RawLine)) job.AppendLog(update.RawLine);
     }
 
     private void SetFailure(DownloadJob job, string status)
@@ -361,6 +371,74 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         job.Finished = DateTime.Now;
         ClearLiveStats(job);
     }
+
+    private static async Task MonitorFolderAsync(DownloadJob job, CancellationToken ct)
+    {
+        var folder = job.TargetFolder;
+        if (string.IsNullOrWhiteSpace(folder)) return;
+
+        long lastSize = 0;
+        var lastTick = Environment.TickCount64;
+
+        while (!ct.IsCancellationRequested)
+        {
+            try { await Task.Delay(2000, ct).ConfigureAwait(false); } catch { break; }
+
+            try
+            {
+                if (!Directory.Exists(folder)) continue;
+                var currentSize = new DirectoryInfo(folder)
+                    .EnumerateFiles("*", SearchOption.AllDirectories)
+                    .Sum(f => { try { return f.Length; } catch { return 0L; } });
+                var now = Environment.TickCount64;
+                var elapsed = (now - lastTick) / 1000.0;
+
+                job.Downloaded = FormatBytes(currentSize);
+
+                if (elapsed > 0.5 && lastSize > 0)
+                {
+                    var bytesPerSec = (long)((currentSize - lastSize) / elapsed);
+                    if (bytesPerSec > 0)
+                    {
+                        job.Speed = FormatBytes(bytesPerSec) + "/s";
+
+                        if (job.Progress > 0.5)
+                        {
+                            var estimatedTotal = (long)(currentSize / (job.Progress / 100.0));
+                            job.TotalSize = FormatBytes(estimatedTotal);
+                            var remaining = estimatedTotal - currentSize;
+                            var etaSec = remaining / (double)bytesPerSec;
+                            job.Eta = etaSec < 1 ? "" : FormatEta(etaSec);
+                        }
+                    }
+                    else
+                    {
+                        job.Speed = string.Empty;
+                    }
+                }
+
+                lastSize = currentSize;
+                lastTick = now;
+            }
+            catch (OperationCanceledException) { break; }
+            catch { }
+        }
+    }
+
+    private static string FormatBytes(long bytes) => bytes switch
+    {
+        < 1024L => $"{bytes} B",
+        < 1024L * 1024 => $"{bytes / 1024.0:0.#} KB",
+        < 1024L * 1024 * 1024 => $"{bytes / (1024.0 * 1024):0.#} MB",
+        _ => $"{bytes / (1024.0 * 1024 * 1024):0.##} GB"
+    };
+
+    private static string FormatEta(double seconds) => seconds switch
+    {
+        < 60 => $"{seconds:0}s",
+        < 3600 => $"{(int)(seconds / 60)}:{(int)(seconds % 60):D2}",
+        _ => $"{(int)(seconds / 3600)}:{(int)(seconds % 3600 / 60):D2}:{(int)(seconds % 60):D2}"
+    };
 
     private static void ClearLiveStats(DownloadJob job)
     {
