@@ -24,7 +24,7 @@ public sealed class HubcapCatalogService : IHubcapCatalogService, IDisposable
     {
         _settings = settings;
         _credentials = credentials;
-        _httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("SteamContentManager/1.0");
 
         var dir = Path.Combine(

@@ -45,13 +45,15 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         ArgumentNullException.ThrowIfNull(job);
         if (!_running.TryAdd(job.Id, Task.CompletedTask)) return false;
 
+        var isResume = job.State == DownloadJobState.Paused;
+
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _cancellations[job.Id] = linked;
         _pauseRequested.TryRemove(job.Id, out _);
         SetGameState(job, DownloadJobState.Preparing);
-        job.Started = DateTime.Now;
+        if (!isResume) job.Started = DateTime.Now;
         job.Finished = null;
-        job.Status = "Preparing download";
+        job.Status = isResume ? "Resuming download — continuing from existing files" : "Preparing download";
 
         try
         {
@@ -115,12 +117,10 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
                 return false;
             }
 
-            // The exact command line (arguments only, never credentials) is logged so the user
-            // can see what actually ran.
             var command = DepotDownloaderArgumentBuilder.Build(request);
             var commandLine = $"\"{command.FileName}\" {string.Join(' ', command.Arguments.Select(QuoteArgument))}";
-            job.AppendLog(commandLine);
-            _logging.Add(LogLevel.Info, "DownloadManager", $"Authorized DepotDownloader job started: {commandLine}", job.AppId, job.Id);
+            job.AppendLog(isResume ? $"[Resume] {commandLine}" : commandLine);
+            _logging.Add(LogLevel.Info, "DownloadManager", isResume ? $"Resumed DepotDownloader job: {commandLine}" : $"Authorized DepotDownloader job started: {commandLine}", job.AppId, job.Id);
 
             if (!string.IsNullOrWhiteSpace(settings.SteamUsername) && !settings.InteractiveToolConsole)
             {
@@ -151,6 +151,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
                 SetGameState(job, DownloadJobState.Downloading);
                 job.Status = command.Interactive
                     ? "Downloading — follow DepotDownloader's own console window"
+                    : isResume && attempt == 1 ? "Resuming with DepotDownloader"
                     : attempts == 1 ? "Downloading with DepotDownloader" : $"Downloading with DepotDownloader (attempt {attempt} of {attempts})";
                 var progress = new Progress<DepotDownloaderProgress>(update => ApplyProgress(job, update));
                 result = await _depotDownloader.DownloadAsync(request, progress, linked.Token).ConfigureAwait(false);
@@ -164,7 +165,8 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             if (result.WasPaused || _pauseRequested.ContainsKey(job.Id))
             {
                 SetGameState(job, DownloadJobState.Paused);
-                job.Status = "Paused — resume will reuse the existing target folder";
+                job.Status = "Paused — resume will continue from existing files";
+                ClearLiveStats(job);
                 _logging.Add(LogLevel.Info, "DownloadManager", "DepotDownloader job paused.", job.AppId, job.Id);
                 return false;
             }
@@ -173,6 +175,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             {
                 SetGameState(job, DownloadJobState.Cancelled);
                 job.Status = "Download cancelled";
+                ClearLiveStats(job);
                 _logging.Add(LogLevel.Warning, "DownloadManager", "DepotDownloader job cancelled.", job.AppId, job.Id);
                 return false;
             }
@@ -191,10 +194,11 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         }
         catch (OperationCanceledException)
         {
+            ClearLiveStats(job);
             if (_pauseRequested.ContainsKey(job.Id))
             {
                 SetGameState(job, DownloadJobState.Paused);
-                job.Status = "Paused — resume available";
+                job.Status = "Paused — resume will continue from existing files";
                 return false;
             }
 
@@ -294,6 +298,8 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
 
     private async Task<bool> CompleteAsync(DownloadJob job, bool verifyAfterDownload)
     {
+        ClearLiveStats(job);
+
         if (verifyAfterDownload && !string.IsNullOrWhiteSpace(job.TargetFolder) && Directory.Exists(job.TargetFolder))
         {
             var verified = await VerifyAsync(job).ConfigureAwait(false);
@@ -353,6 +359,14 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         SetGameState(job, DownloadJobState.Failed);
         job.Status = status;
         job.Finished = DateTime.Now;
+        ClearLiveStats(job);
+    }
+
+    private static void ClearLiveStats(DownloadJob job)
+    {
+        job.Speed = string.Empty;
+        job.DiskSpeed = string.Empty;
+        job.Eta = string.Empty;
     }
 
     private void SetGameState(DownloadJob job, DownloadJobState state)
