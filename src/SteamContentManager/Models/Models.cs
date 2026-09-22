@@ -239,7 +239,10 @@ public sealed class DownloadJob : UiObservableObject
         }
     }
 
-    public string SizeSummary => string.IsNullOrWhiteSpace(Downloaded) || Downloaded == "—" ? TotalSize : $"{Downloaded} / {TotalSize}";
+    public string SizeSummary =>
+        string.IsNullOrWhiteSpace(Downloaded) || Downloaded == "—"
+            ? (string.IsNullOrWhiteSpace(TotalSize) ? string.Empty : TotalSize)
+            : string.IsNullOrWhiteSpace(TotalSize) ? Downloaded : $"{Downloaded} / {TotalSize}";
     public string AppLabel => $"App {AppId}";
     public string DepotLabel => DepotId is null ? "App depot set" : $"Depot {DepotId}";
     public string ExitCodeLabel => ExitCode is null ? "—" : ExitCode.Value.ToString();

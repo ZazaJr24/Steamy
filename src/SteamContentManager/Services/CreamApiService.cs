@@ -504,7 +504,7 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
         BackupAndReplace(targetDir, "steam_api64.dll", Path.Combine(CreamApiCacheDir, "steam_api64.dll"), messages);
 
         var ini = BuildCreamApiIni(appId, dlcs, language, unlockAll, extraProtection, forceOffline);
-        File.WriteAllText(Path.Combine(targetDir, "cream_api.ini"), ini, Encoding.UTF8);
+        File.WriteAllText(Path.Combine(targetDir, "cream_api.ini"), ini, new UTF8Encoding(false));
         messages.Add("cream_api.ini written");
     }
 
@@ -515,7 +515,7 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
         BackupAndReplace(targetDir, "steam_api64.dll", Path.Combine(SmokeApiCacheDir, "smoke_api64.dll"), messages);
 
         var config = BuildSmokeApiConfig(dlcs, unlockAll);
-        File.WriteAllText(Path.Combine(targetDir, "SmokeAPI.config.json"), config, Encoding.UTF8);
+        File.WriteAllText(Path.Combine(targetDir, "SmokeAPI.config.json"), config, new UTF8Encoding(false));
         messages.Add("SmokeAPI.config.json written");
     }
 
