@@ -25,11 +25,6 @@ public sealed class DenuvoFixesPage : ToolStatusPage
     }
 }
 
-public sealed class SteamAutoCrackerToolPage : ToolRunnerPage
-{
-    public SteamAutoCrackerToolPage() : base(App.Services.GetRequiredService<SteamAutoCrackViewModel>()) { }
-}
-
 public sealed class HvFixesPage : ToolRunnerPage
 {
     public HvFixesPage() : base(App.Services.GetRequiredService<HvFixesViewModel>()) { }
@@ -43,14 +38,4 @@ public sealed class UnsteamPage : ToolRunnerPage
 public sealed class ScreamApiPage : ToolRunnerPage
 {
     public ScreamApiPage() : base(App.Services.GetRequiredService<ScreamApiViewModel>()) { }
-}
-
-public sealed class GoldbergPage : ToolRunnerPage
-{
-    public GoldbergPage() : base(App.Services.GetRequiredService<GoldbergViewModel>()) { }
-}
-
-public sealed class ColddloaderPage : ToolRunnerPage
-{
-    public ColddloaderPage() : base(App.Services.GetRequiredService<ColddloaderViewModel>()) { }
 }

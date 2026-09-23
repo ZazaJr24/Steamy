@@ -296,13 +296,16 @@ public partial class LibraryPage : Page
                 {
                     var depotIndex = parts[2];
                     var totalDepots = parts[3];
-                    job.Progress = pct;
+                    if (int.TryParse(depotIndex, out var dIdx) && int.TryParse(totalDepots, out var dTotal) && dTotal > 0)
+                        job.Progress = ((dIdx - 1) * 100.0 + pct) / dTotal;
+                    else
+                        job.Progress = pct;
                     if (!string.IsNullOrWhiteSpace(parts[5])) job.Downloaded = parts[5];
                     if (!string.IsNullOrWhiteSpace(parts[6])) job.TotalSize = parts[6];
                     if (!string.IsNullOrWhiteSpace(parts[7])) job.Speed = parts[7];
                     if (!string.IsNullOrWhiteSpace(parts[8])) job.Eta = parts[8];
                     if (!string.IsNullOrWhiteSpace(parts[9])) job.CurrentFile = parts[9];
-                    job.Status = $"Downloading depot {depotIndex}/{totalDepots} — {pct:0.#}%";
+                    job.Status = $"Downloading depot {depotIndex}/{totalDepots} — {job.Progress:0.#}%";
 
                     var currentBytes = ParseBytesValue(parts[5]);
                     var now = DateTime.UtcNow;

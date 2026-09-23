@@ -521,12 +521,9 @@ public sealed class AppSettings : ObservableObject
     private string _ryuuApiKey = string.Empty;
     private string _denuvoGeneratorPath = string.Empty;
     private string _denuvoSteamApiHint = string.Empty;
-    private string _goldbergPath = string.Empty;
     private string _unsteamPath = string.Empty;
-    private string _coldLoaderPath = string.Empty;
     private string _screamApiPath = string.Empty;
     private string _hvFixesPath = string.Empty;
-    private string _steamAutoCrackPath = string.Empty;
     private string _creamApiProxy = string.Empty;
     private string _backdropStyle = "Mica";
     private string _hubcapBaseUrl = "https://hubcapmanifest.com";
@@ -559,12 +556,9 @@ public sealed class AppSettings : ObservableObject
     public string XStoreUnlockerPath { get => _xStoreUnlockerPath; set => SetProperty(ref _xStoreUnlockerPath, value); }
     public string DenuvoGeneratorPath { get => _denuvoGeneratorPath; set => SetProperty(ref _denuvoGeneratorPath, value); }
     public string DenuvoSteamApiHint { get => _denuvoSteamApiHint; set => SetProperty(ref _denuvoSteamApiHint, value); }
-    public string GoldbergPath { get => _goldbergPath; set => SetProperty(ref _goldbergPath, value); }
     public string UnsteamPath { get => _unsteamPath; set => SetProperty(ref _unsteamPath, value); }
-    public string ColdLoaderPath { get => _coldLoaderPath; set => SetProperty(ref _coldLoaderPath, value); }
     public string ScreamApiPath { get => _screamApiPath; set => SetProperty(ref _screamApiPath, value); }
     public string HvFixesPath { get => _hvFixesPath; set => SetProperty(ref _hvFixesPath, value); }
-    public string SteamAutoCrackPath { get => _steamAutoCrackPath; set => SetProperty(ref _steamAutoCrackPath, value); }
 
     /// <summary>Optional Steam account name passed to the tool as <c>-username</c>. Never a password.</summary>
     public string SteamUsername { get => _steamUsername; set => SetProperty(ref _steamUsername, value); }

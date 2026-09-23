@@ -6,18 +6,6 @@ public static class ToolDefinitions
         "FroggMaster", "CreamInstaller", "CreamInstaller", "CreamInstaller.exe",
         name => name.Equals("CreamInstaller.exe", StringComparison.OrdinalIgnoreCase));
 
-    public static readonly GitHubToolDefinition Goldberg = new(
-        "Detanup01", "gbe_fork", "Goldberg", "generate_interfaces_file.exe",
-        name =>
-        {
-            var lower = name.ToLowerInvariant();
-            return lower.Contains("win") && lower.Contains("release") && lower.EndsWith(".7z") && !lower.Contains("debug");
-        });
-
-    public static readonly GitHubToolDefinition SteamAutoCrack = new(
-        "oureveryday", "Steam-auto-crack", "SteamAutoCrack", "SteamAutoCracker.exe",
-        name => name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
-
     // No working GitHub repo with releases — manual browse only.
     public static readonly GitHubToolDefinition? GreenLuma2024 = null;
 
