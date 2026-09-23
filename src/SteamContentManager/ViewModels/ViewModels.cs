@@ -60,7 +60,6 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand NavigateDlcUnlockerCommand => new RelayCommand(() => Navigation.Navigate<CreamApiPage>());
     public ICommand NavigateSteamlessCommand => new RelayCommand(() => Navigation.Navigate<SteamlessPage>());
     public ICommand NavigateDenuvoActivationCommand => new RelayCommand(() => Navigation.Navigate<DenuvoActivationPage>());
-    public ICommand NavigateGoldbergCommand => new RelayCommand(() => Navigation.Navigate<GoldbergPage>());
     public ICommand RefreshCommand => new RelayCommand(() => OnPropertyChanged(string.Empty));
 
     public override async Task OnNavigatedToAsync()
@@ -114,12 +113,15 @@ public sealed class DownloadsViewModel : ViewModelBase
                     if (p.Length >= 10 && double.TryParse(p[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pct))
                     {
                         job.State = DownloadJobState.Downloading;
-                        job.Progress = pct;
+                        if (int.TryParse(p[2], out var dIdx) && int.TryParse(p[3], out var dTotal) && dTotal > 0)
+                            job.Progress = ((dIdx - 1) * 100.0 + pct) / dTotal;
+                        else
+                            job.Progress = pct;
                         if (!string.IsNullOrWhiteSpace(p[5])) job.Downloaded = p[5];
                         if (!string.IsNullOrWhiteSpace(p[6])) job.TotalSize = p[6];
                         if (!string.IsNullOrWhiteSpace(p[7])) job.Speed = p[7];
                         if (!string.IsNullOrWhiteSpace(p[8])) job.Eta = p[8];
-                        job.Status = $"Downloading depot {p[2]}/{p[3]} — {pct:0.#}%";
+                        job.Status = $"Downloading depot {p[2]}/{p[3]} — {job.Progress:0.#}%";
                     }
                 }
                 else { job.Status = msg; }
@@ -158,7 +160,7 @@ public sealed class LibraryViewModel : ViewModelBase
     public string CatalogCountLabel => $"{CatalogItems.Count:N0} games"; public string VisibleCountLabel=>$"Showing {PagedCatalogItems.Count} of {FilteredCatalogCount:N0}"; public string PageLabel=>$"Page {_page} of {TotalPages}"; public string UpdatedLabel { get; private set; }="Not loaded"; public int FilteredCatalogCount { get; private set; } public int TotalPages=>Math.Max(1,(FilteredCatalogCount+PageSize-1)/PageSize); public bool CanGoPrevious=>_page>1; public bool CanGoNext=>_page<TotalPages; public bool HasCatalogItems=>PagedCatalogItems.Count>0; public bool HasGames=>FilteredGames.Count>0;    public bool HasActiveFilters=>!string.IsNullOrWhiteSpace(SearchText)||SelectedSort!="Popular (AAA)"||PageSize!=24||NsfwScope==LibraryNsfwScope.Show; public string FilterSummary=>HasActiveFilters?"Active filters":"No filters applied"; public string EmptyStateMessage=>"No games match this search.";
     public ICommand LoadCatalogCommand=>new AsyncRelayCommand(()=>LoadAsync(false)); public ICommand RefreshCatalogCommand=>new AsyncRelayCommand(async()=>{ try{_librarySync.Refresh(); RefreshLocalPage();}catch{} await LoadAsync(false); }); public ICommand ScanLibraryCommand=>new RelayCommand(()=>{ try{_librarySync.Refresh();}catch{} RefreshLocalPage(); }); public ICommand FirstPageCommand=>new RelayCommand(()=>SetPage(1)); public ICommand PreviousPageCommand=>new RelayCommand(()=>SetPage(_page-1)); public ICommand NextPageCommand=>new RelayCommand(()=>SetPage(_page+1)); public ICommand LastPageCommand=>new RelayCommand(()=>SetPage(TotalPages)); public ICommand RefreshCommand=>new RelayCommand(RefreshPage); public ICommand OpenDownloadsCommand=>new RelayCommand(()=>Navigation.Navigate<DownloadsPage>()); public ICommand OpenFolderCommand=>new RelayCommand<Game>(_=>{}); public ICommand RefreshLocalCommand=>new RelayCommand(()=>{}); public ICommand OpenStoreCommand=>new RelayCommand(()=>{}); public IAsyncRelayCommand LoadScreenshotsCommand=>new AsyncRelayCommand(()=>Task.CompletedTask);
     // Home dashboard shortcuts + quick stats shown on the Games landing page.
-    public ICommand OpenOnlineFixesCommand=>new RelayCommand(()=>Navigation.Navigate<OnlineFixesPage>()); public ICommand OpenGameFixesCommand=>new RelayCommand(()=>Navigation.Navigate<GameFixesPage>()); public ICommand OpenSteamlessCommand=>new RelayCommand(()=>Navigation.Navigate<SteamlessPage>()); public ICommand OpenGoldbergCommand=>new RelayCommand(()=>Navigation.Navigate<GoldbergPage>()); public ICommand OpenCreamInstallerCommand=>new RelayCommand(()=>Navigation.Navigate<CreamInstallerPage>()); public ICommand OpenDenuvoCommand=>new RelayCommand(()=>Navigation.Navigate<DenuvoGenerationPage>()); public ICommand OpenSettingsCommand=>new RelayCommand(()=>Navigation.Navigate<SettingsPage>());
+    public ICommand OpenOnlineFixesCommand=>new RelayCommand(()=>Navigation.Navigate<OnlineFixesPage>()); public ICommand OpenGameFixesCommand=>new RelayCommand(()=>Navigation.Navigate<GameFixesPage>());    public ICommand OpenSteamlessCommand=>new RelayCommand(()=>Navigation.Navigate<SteamlessPage>()); public ICommand OpenCreamInstallerCommand=>new RelayCommand(()=>Navigation.Navigate<CreamInstallerPage>()); public ICommand OpenDenuvoCommand=>new RelayCommand(()=>Navigation.Navigate<DenuvoGenerationPage>()); public ICommand OpenSettingsCommand=>new RelayCommand(()=>Navigation.Navigate<SettingsPage>());
     public int InstalledCount=>Games.Count(g=>g.InstallState==GameInstallState.Installed); public int LocalCount=>Games.Count; public int ActiveDownloadCount=>Store.Downloads.Count(x=>x.IsActive); public int QueuedCount=>Store.Downloads.Count(x=>x.State==DownloadJobState.Queued); public string TotalCatalogCount=>$"{CatalogItems.Count:N0}"; public string LocalLibraryLabel=>Games.Count==1?"1 installed app":$"{Games.Count:N0} installed apps"; public string DownloadsSummary=>ActiveDownloadCount>0?$"{ActiveDownloadCount} active · {QueuedCount} queued":QueuedCount>0?$"{QueuedCount} queued":"Queue empty";
     public override async Task OnNavigatedToAsync(){ try{_librarySync.Refresh();}catch{} RefreshLocalPage(); await LoadAsync(false); OnPropertyChanged(nameof(InstalledCount)); OnPropertyChanged(nameof(LocalCount)); OnPropertyChanged(nameof(ActiveDownloadCount)); OnPropertyChanged(nameof(QueuedCount)); OnPropertyChanged(nameof(TotalCatalogCount)); OnPropertyChanged(nameof(LocalLibraryLabel)); OnPropertyChanged(nameof(DownloadsSummary)); }
     private static async Task<T> WithTimeout<T>(Task<T> task, T fallback, int ms=20000){try{using var cts=new CancellationTokenSource(ms); var delay=Task.Delay(ms,cts.Token); if(await Task.WhenAny(task,delay)==task){cts.Cancel(); return await task;} return fallback;}catch{return fallback;}}

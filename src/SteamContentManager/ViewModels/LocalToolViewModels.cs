@@ -21,24 +21,6 @@ public sealed class XStoreUnlockerViewModel : ToolRunnerViewModel
     { }
 }
 
-public sealed class GoldbergViewModel : ToolRunnerViewModel
-{
-    public GoldbergViewModel(ILocalToolRunner runner, ISettingsService settings, IGitHubToolDownloadService dl)
-        : base(
-            runner, settings,
-            pageKey: "goldberg",
-            title: "Goldberg Emulator",
-            subtitle: "Steam emulator — auto-downloads from GitHub.",
-            expectedFileNameHint: "generate_interfaces_file.exe",
-            infoText: "Goldberg Steam Emulator replaces the game's steam_api.dll. Run the interface generator against your game .exe. Downloaded automatically from GitHub.",
-            downloadUrl: "https://github.com/Detanup01/gbe_fork",
-            readPath: s => s.GoldbergPath,
-            writePath: (s, v) => s.GoldbergPath = v,
-            downloadService: dl,
-            toolDefinition: ToolDefinitions.Goldberg)
-    { }
-}
-
 public sealed class UnsteamViewModel : ToolRunnerViewModel
 {
     public UnsteamViewModel(ILocalToolRunner runner, ISettingsService settings)
@@ -53,20 +35,6 @@ public sealed class UnsteamViewModel : ToolRunnerViewModel
             showWindow: true,
             readPath: s => s.UnsteamPath,
             writePath: (s, v) => s.UnsteamPath = v)
-    { }
-}
-
-public sealed class ColddloaderViewModel : ToolRunnerViewModel
-{
-    public ColddloaderViewModel(ILocalToolRunner runner, ISettingsService settings)
-        : base(
-            runner, settings,
-            pageKey: "coldloader",
-            title: "ColdLoader",
-            subtitle: "Steam process emulation — launches games outside Steam.",
-            expectedFileNameHint: "ColdClientLoader.exe",
-            infoText: "ColdLoader emulates the Steam client process so games can launch without Steam running.",
-            downloadUrl: "https://github.com")
     { }
 }
 
@@ -102,21 +70,3 @@ public sealed class HvFixesViewModel : ToolRunnerViewModel
     { }
 }
 
-public sealed class SteamAutoCrackViewModel : ToolRunnerViewModel
-{
-    public SteamAutoCrackViewModel(ILocalToolRunner runner, ISettingsService settings, IGitHubToolDownloadService dl)
-        : base(
-            runner, settings,
-            pageKey: "steamautocrack",
-            title: "SteamAutoCracker",
-            subtitle: "GUI auto-crack configurator — auto-downloads from GitHub.",
-            expectedFileNameHint: "SteamAutoCracker.exe",
-            infoText: "SteamAutoCracker automatically configures Steam emulators (Goldberg, SmartSteamEmu, etc.) for a game. Launches its own GUI.",
-            downloadUrl: "https://github.com/oureveryday/Steam-auto-crack",
-            showWindow: true,
-            readPath: s => s.SteamAutoCrackPath,
-            writePath: (s, v) => s.SteamAutoCrackPath = v,
-            downloadService: dl,
-            toolDefinition: ToolDefinitions.SteamAutoCrack)
-    { }
-}

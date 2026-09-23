@@ -99,12 +99,18 @@ public static class ServiceRegistration
         services.AddSingleton<CreamApiViewModel>();
         services.AddSingleton<GameFixesViewModel>();
         services.AddSingleton<GreenLumaViewModel>();
-        services.AddSingleton<GoldbergViewModel>();
+        services.AddSingleton<FamilyShareViewModel>(sp => new FamilyShareViewModel(
+            sp.GetRequiredService<IAppDataStore>(),
+            sp.GetRequiredService<INavigationService>(),
+            sp.GetRequiredService<ILoggingService>(),
+            sp.GetRequiredService<ISettingsService>(),
+            sp.GetRequiredService<ISecureCredentialService>(),
+            sp.GetRequiredService<IDownloadQueueStore>(),
+            sp.GetRequiredService<IRyuuGameDownloadService>(),
+            sp.GetRequiredService<IRyuuSecureDownloadService>()));
         services.AddSingleton<UnsteamViewModel>();
-        services.AddSingleton<ColddloaderViewModel>();
         services.AddSingleton<ScreamApiViewModel>();
         services.AddSingleton<HvFixesViewModel>();
-        services.AddSingleton<SteamAutoCrackViewModel>();
 
         return services;
     }

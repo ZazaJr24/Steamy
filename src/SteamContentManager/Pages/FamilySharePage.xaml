@@ -1,0 +1,318 @@
+<Page x:Class="SteamContentManager.Pages.FamilySharePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      ScrollViewer.CanContentScroll="False"
+      Background="{DynamicResource AppBackgroundBrush}">
+  <Page.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolVis" />
+  </Page.Resources>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                Padding="0,0,8,0">
+    <StackPanel Margin="36,28,36,28" MaxWidth="680" HorizontalAlignment="Left">
+
+      <!-- Header -->
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <TextBlock Text="GreenLuma" Style="{StaticResource PageTitleStyle}"/>
+        <Border Margin="14,2,0,0" Padding="10,4" CornerRadius="8" VerticalAlignment="Center">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding GreenLumaReady}" Value="False">
+                  <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <TextBlock FontSize="11" FontWeight="SemiBold">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Text" Value="Ready"/>
+                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding GreenLumaReady}" Value="False">
+                    <Setter Property="Text" Value="Not installed"/>
+                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+        </Border>
+      </StackPanel>
+
+      <!-- Setup card — only when GL missing -->
+      <Border Margin="0,14,0,0" Padding="16,14" CornerRadius="12"
+              Background="{DynamicResource SurfaceElevatedBrush}"
+              BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+              Visibility="{Binding GreenLumaMissing, Converter={StaticResource BoolVis}}">
+        <StackPanel>
+          <TextBlock FontSize="12.5" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap">
+            <Run FontWeight="SemiBold" Text="GreenLuma not found."/>
+            <Run Text="Put GL files in your Downloads folder or pick the path manually."/>
+          </TextBlock>
+          <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <ui:Button Content="Install from zip…" Command="{Binding InstallGreenLumaCommand}"
+                       Appearance="Primary" Height="32" FontSize="12"/>
+            <ui:Button Content="Browse folder…" Command="{Binding BrowseGlPathCommand}"
+                       Appearance="Secondary" Height="32" FontSize="12" Margin="8,0,0,0"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Installing -->
+      <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
+                  Visibility="{Binding IsInstalling, Converter={StaticResource BoolVis}}">
+        <ui:ProgressRing Width="14" Height="14" IsIndeterminate="True" Margin="0,0,8,0"/>
+        <TextBlock Text="Extracting…" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+      </StackPanel>
+
+      <!-- Paths (compact, always visible) -->
+      <StackPanel Margin="0,14,0,0">
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Text="Steam" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}"
+                     Width="68" VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding SteamPath}" FontSize="10.5" FontFamily="Consolas"
+                     Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+          <TextBlock Text="GL" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}"
+                     Width="68" VerticalAlignment="Center"/>
+          <TextBlock FontSize="10.5" FontFamily="Consolas" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Text" Value="{Binding GlPath}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding HasGlPath}" Value="False">
+                    <Setter Property="Text" Value="—"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Search -->
+      <Grid Margin="0,20,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <ui:TextBox x:Name="SearchBox"
+                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                    PlaceholderText="Game name or AppID…"
+                    FontSize="13" Padding="12,10"
+                    KeyDown="SearchBox_KeyDown"/>
+        <ui:Button Grid.Column="1" Content="Add" Click="AddButton_Click"
+                   Appearance="Primary" Margin="6,0,0,0" Height="42" FontSize="12.5" Padding="16,0"/>
+        <ui:Button Grid.Column="2" Content="Paste" Command="{Binding PasteCommand}"
+                   Appearance="Secondary" Margin="4,0,0,0" Height="42" FontSize="12" Padding="12,0"/>
+      </Grid>
+
+      <!-- Suggestions dropdown -->
+      <Border x:Name="SuggestionsPanel" Margin="0,2,0,0" CornerRadius="10"
+              Background="{DynamicResource SurfaceElevatedBrush}"
+              BorderBrush="{DynamicResource BorderSubtleBrush}"
+              BorderThickness="1" MaxHeight="240" Visibility="Collapsed">
+        <Border.Effect>
+          <DropShadowEffect Color="#000000" Opacity="0.15" BlurRadius="12" ShadowDepth="3" Direction="270"/>
+        </Border.Effect>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding Suggestions}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border x:Name="SugRow" Padding="10,7" Cursor="Hand" Background="Transparent"
+                        MouseLeftButtonDown="Suggestion_Click">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="5"
+                            Padding="7,2" Margin="0,0,8,0" VerticalAlignment="Center" MinWidth="50">
+                      <TextBlock Text="{Binding AppId}" FontFamily="Consolas" FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12.5"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                  </Grid>
+                </Border>
+                <DataTemplate.Triggers>
+                  <Trigger SourceName="SugRow" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="SugRow" Property="Background"
+                            Value="{DynamicResource SurfaceSubtleBrush}"/>
+                  </Trigger>
+                </DataTemplate.Triggers>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+
+      <StackPanel Orientation="Horizontal" Margin="0,4,0,0"
+                  Visibility="{Binding IsSearching, Converter={StaticResource BoolVis}}">
+        <ui:ProgressRing Width="12" Height="12" IsIndeterminate="True" Margin="0,0,6,0"/>
+        <TextBlock Text="Searching…" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}"/>
+      </StackPanel>
+
+      <!-- Game list header -->
+      <Grid Margin="0,18,0,4">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center">
+          <Run Text="APPLIST"/>
+          <Run Text="·"/>
+          <Run Text="{Binding GameCountLabel, Mode=OneWay}"/>
+        </TextBlock>
+        <ui:Button Grid.Column="2" Content="Clear all" Command="{Binding ClearAllCommand}"
+                   Appearance="Secondary" Height="22" FontSize="10" Padding="8,1"
+                   Visibility="{Binding HasGames, Converter={StaticResource BoolVis}}"/>
+      </Grid>
+
+      <!-- Game list -->
+      <Border CornerRadius="10" MinHeight="40">
+        <Border.Style>
+          <Style TargetType="Border">
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding HasGames}" Value="False">
+                <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Border.Style>
+        <Grid>
+          <TextBlock Text="No games added yet." FontSize="11.5"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,10">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Visibility" Value="Collapsed"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding HasGames}" Value="False">
+                    <Setter Property="Visibility" Value="Visible"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+
+          <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="320"
+                        Visibility="{Binding HasGames, Converter={StaticResource BoolVis}}">
+            <ItemsControl ItemsSource="{Binding Games}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border x:Name="Row" Padding="8,6" CornerRadius="8" Background="Transparent">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="32"/>
+                        <ColumnDefinition Width="62"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Text="{Binding FileLabel}" FontFamily="Consolas" FontSize="10"
+                                 Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="1" Text="{Binding AppId}" FontFamily="Consolas" FontSize="11"
+                                 Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="2" Text="{Binding Name}" FontSize="12"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                      <StackPanel Grid.Column="3" Orientation="Horizontal" x:Name="Actions" Opacity="0">
+                        <Button Cursor="Hand" Background="Transparent" BorderThickness="0"
+                                Padding="6,3" ToolTip="Download game"
+                                Command="{Binding DataContext.DownloadGameCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                CommandParameter="{Binding AppId}">
+                          <ui:SymbolIcon Symbol="ArrowDownload20" FontSize="14"
+                                        Foreground="{DynamicResource AccentBrush}"/>
+                        </Button>
+                        <Button Cursor="Hand" Background="Transparent" BorderThickness="0"
+                                Padding="6,3" ToolTip="Remove"
+                                Command="{Binding DataContext.RemoveGameCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                CommandParameter="{Binding AppId}">
+                          <ui:SymbolIcon Symbol="Dismiss20" FontSize="13"
+                                        Foreground="{DynamicResource TextTertiaryBrush}"/>
+                        </Button>
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                  <DataTemplate.Triggers>
+                    <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                      <Setter TargetName="Row" Property="Background"
+                              Value="{DynamicResource SurfaceSubtleBrush}"/>
+                      <Setter TargetName="Actions" Property="Opacity" Value="1"/>
+                    </Trigger>
+                  </DataTemplate.Triggers>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+
+      <!-- Actions -->
+      <Grid Margin="0,20,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <ui:Button Content="Generate + Launch"
+                   Appearance="Primary" Height="46" FontSize="14" FontWeight="SemiBold"
+                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                   Click="GenerateAndLaunch_Click"/>
+        <ui:Button Grid.Column="1" ToolTip="Launch GreenLuma only" Command="{Binding LaunchCommand}"
+                   Appearance="Secondary" Height="46" Width="46" Margin="6,0,0,0"
+                   Padding="0" HorizontalContentAlignment="Center">
+          <ui:SymbolIcon Symbol="Rocket24" FontSize="18"/>
+        </ui:Button>
+        <ui:Button Grid.Column="2" ToolTip="Restart Steam" Command="{Binding RestartSteamCommand}"
+                   Appearance="Secondary" Height="46" Width="46" Margin="4,0,0,0"
+                   Padding="0" HorizontalContentAlignment="Center">
+          <ui:SymbolIcon Symbol="ArrowSync24" FontSize="18"/>
+        </ui:Button>
+      </Grid>
+
+      <!-- Options row -->
+      <Grid Margin="0,12,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <ui:ToggleSwitch IsChecked="{Binding StealthMode}" Content="Stealth mode" FontSize="12"/>
+        <ui:Button Grid.Column="1" Content="Clean" Command="{Binding CleanCommand}"
+                   Appearance="Secondary" Height="28" FontSize="10.5" Padding="10,2"/>
+        <ui:Button Grid.Column="2" Content="Wipe traces" Command="{Binding CleanTracesCommand}"
+                   Appearance="Danger" Height="28" FontSize="10.5" Padding="10,2" Margin="4,0,0,0"/>
+      </Grid>
+
+      <!-- Status -->
+      <TextBlock Text="{Binding ActionStatus}" FontSize="11" Margin="0,10,0,0"
+                 FontFamily="Consolas" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap">
+        <TextBlock.Style>
+          <Style TargetType="TextBlock">
+            <Setter Property="Visibility" Value="Visible"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding ActionStatus}" Value="">
+                <Setter Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </TextBlock.Style>
+      </TextBlock>
+
+    </StackPanel>
+  </ScrollViewer>
+</Page>

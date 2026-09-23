@@ -84,15 +84,9 @@
               <ui:NavigationViewItem Content="DLC Unlocker"
                                      Icon="{ui:SymbolIcon LockOpen24}"
                                      TargetPageType="{x:Type pages:CreamApiPage}" />
-              <ui:NavigationViewItem Content="Goldberg"
-                                     Icon="{ui:SymbolIcon Desktop24}"
-                                     TargetPageType="{x:Type pages:GoldbergPage}" />
-              <ui:NavigationViewItem Content="SteamAutoCrack"
-                                     Icon="{ui:SymbolIcon Flash24}"
-                                     TargetPageType="{x:Type pages:SteamAutoCrackerToolPage}" />
-              <ui:NavigationViewItem Content="ColdLoader"
-                                     Icon="{ui:SymbolIcon Play24}"
-                                     TargetPageType="{x:Type pages:ColddloaderPage}" />
+              <ui:NavigationViewItem Content="GreenLuma"
+                                     Icon="{ui:SymbolIcon People24}"
+                                     TargetPageType="{x:Type pages:FamilySharePage}" />
             </ui:NavigationViewItem.MenuItems>
           </ui:NavigationViewItem>
 
