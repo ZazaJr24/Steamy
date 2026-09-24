@@ -10,13 +10,27 @@ namespace SteamContentManager.Pages;
 
 public partial class DashboardPage : Page
 {
-    public DashboardPage() { InitializeComponent(); DataContext = App.Services.GetRequiredService<DashboardViewModel>(); }
+    public DashboardPage()
+    {
+        InitializeComponent();
+        DataContext = App.Services.GetRequiredService<DashboardViewModel>();
+        Loaded += (_, _) => _ = ((DashboardViewModel)DataContext).RefreshAsync(force: false);
+    }
+
+    private void GameCover_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: Models.Game game }) OpenInLibrary(game.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
 
     // Enter in the dashboard search box carries the query into the Games grid and switches to it.
     private void DashboardSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key != System.Windows.Input.Key.Enter) return;
-        var query = DashboardSearch.Text?.Trim() ?? string.Empty;
+        OpenInLibrary(DashboardSearch.Text?.Trim() ?? string.Empty);
+    }
+
+    private static void OpenInLibrary(string query)
+    {
         App.Services.GetRequiredService<LibraryViewModel>().SearchText = query;
         App.Services.GetRequiredService<INavigationService>().Navigate<LibraryPage>();
     }

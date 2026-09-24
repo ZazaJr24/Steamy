@@ -29,45 +29,6 @@ public abstract class ViewModelBase : ObservableObject, INavigationAware
     public virtual Task OnNavigatedFromAsync() => Task.CompletedTask;
 }
 
-public sealed class DashboardViewModel : ViewModelBase
-{
-    private readonly IDiskSpaceService _diskSpace;
-    private string _diskSpaceText = "Checking…";
-
-    public DashboardViewModel(IAppDataStore s, INavigationService n, ILoggingService l, IArtworkService _, ILibrarySyncService __, IDiskSpaceService diskSpace, ISettingsService ____) : base(s,n,l) { _diskSpace = diskSpace; }
-    public IReadOnlyList<Game> RecentGames => Store.Games.Take(12).ToArray();
-    public string InstalledSummary => Store.Games.Count == 1 ? "1 game installed" : $"{Store.Games.Count} games installed";
-    public Game? FeaturedGame => Store.Games.FirstOrDefault();
-    public string LibraryCount => Store.Games.Count.ToString();
-    public string ActiveDownloads => Store.Downloads.Count(x => x.IsActive).ToString();
-    public string QueueCount => Store.Downloads.Count(x => x.State == DownloadJobState.Queued).ToString();
-    public string QueueSummary => $"{QueueCount} queued next";
-    public string CurrentSpeed => Store.Downloads.FirstOrDefault(x => x.IsActive)?.Speed ?? "—";
-    public string DiskSpace { get => _diskSpaceText; private set => SetProperty(ref _diskSpaceText, value); }
-    public string LibraryMessage => Store.Games.Count == 0 ? "No local Steam library found." : "Local library ready.";
-    public string LibraryStatus => "LOCAL STEAM LIBRARY";
-    public IReadOnlyList<ContentProvider> Providers => Store.Providers.ToArray();
-    public string ProviderHealthSummary => $"{Store.Providers.Count(x => x.State == ProviderConnectionState.Healthy)} of {Store.Providers.Count} providers usable";
-    public string DepotDownloaderStatus => "Configured in Settings";
-    public string DepotDownloaderDetail => "Downloads run through the configured local DepotDownloader.";
-    public string FeaturedSummary => FeaturedGame?.Size ?? "No game selected";
-    public ICommand NavigateDownloadsCommand => new RelayCommand(() => Navigation.Navigate<DownloadsPage>());
-    public ICommand NavigateLibraryCommand => new RelayCommand(() => Navigation.Navigate<LibraryPage>());
-    public ICommand NavigateManifestsCommand => new RelayCommand(() => Navigation.Navigate<ManifestPage>());
-    public ICommand NavigateSettingsCommand => new RelayCommand(() => Navigation.Navigate<SettingsPage>());
-    public ICommand NavigateFixesCommand => new RelayCommand(() => Navigation.Navigate<GameFixesPage>());
-    public ICommand NavigateDlcUnlockerCommand => new RelayCommand(() => Navigation.Navigate<CreamApiPage>());
-    public ICommand NavigateSteamlessCommand => new RelayCommand(() => Navigation.Navigate<SteamlessPage>());
-    public ICommand NavigateDenuvoActivationCommand => new RelayCommand(() => Navigation.Navigate<DenuvoActivationPage>());
-    public ICommand RefreshCommand => new RelayCommand(() => OnPropertyChanged(string.Empty));
-
-    public override async Task OnNavigatedToAsync()
-    {
-        try { DiskSpace = await _diskSpace.GetAvailableAsync(Path.GetTempPath()); }
-        catch { DiskSpace = "Unknown"; }
-    }
-}
-
 public sealed class DownloadsViewModel : ViewModelBase
 {
     private readonly IDownloadManager _manager; private readonly IRyuuGameDownloadService _ryuu; private readonly ISettingsService _settings; private string _search = ""; private string _filter = "All downloads";
