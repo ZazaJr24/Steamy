@@ -196,7 +196,6 @@
             <ui:Button Content="Steamless" Command="{Binding NavigateSteamlessCommand}" Margin="0,0,8,8" />
             <ui:Button Content="Denuvo Activation" Command="{Binding NavigateDenuvoActivationCommand}" Appearance="Secondary" Margin="0,0,8,8" />
             <ui:Button Content="DLC Unlocker" Command="{Binding NavigateDlcUnlockerCommand}" Appearance="Secondary" Margin="0,0,8,8" />
-            <ui:Button Content="Online Fixes" Command="{Binding NavigateOnlineFixesCommand}" Appearance="Secondary" Margin="0,0,8,8" />
             <ui:Button Content="Game Fixes" Command="{Binding NavigateFixesCommand}" Appearance="Secondary" Margin="0,0,8,8" />
             <ui:Button Content="Downloads" Command="{Binding NavigateDownloadsCommand}" Appearance="Secondary" Margin="0,0,8,8" />
             <ui:Button Content="Settings" Command="{Binding NavigateSettingsCommand}" Appearance="Secondary" Margin="0,0,8,8" />

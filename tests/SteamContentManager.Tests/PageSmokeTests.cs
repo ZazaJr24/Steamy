@@ -27,7 +27,6 @@ public sealed class PageSmokeTests
         typeof(DepotDownloaderPage),
         typeof(ModFixesPage),
         typeof(GameFixesPage),
-        typeof(OnlineFixesPage),
         typeof(DenuvoGenerationPage),
         typeof(DenuvoActivationPage),
         typeof(DenuvoFixesPage),
@@ -382,7 +381,7 @@ public sealed class PageSmokeTests
     public void NoPageOpensASecondWindow()
     {
         var offenders = new List<string>();
-        var allowed = new[] { "OnlineFixSearchService.cs", "DepotDownloaderService.cs", "LocalToolRunnerService.cs" };
+        var allowed = new[] { "DepotDownloaderService.cs", "LocalToolRunnerService.cs" };
 
         foreach (var file in Directory.EnumerateFiles(SourceRoot(), "*.cs", SearchOption.AllDirectories))
         {

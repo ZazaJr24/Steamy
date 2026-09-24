@@ -19,7 +19,7 @@ public sealed class LayoutCrashProbe
         {
             typeof(DashboardPage), typeof(LibraryPage), typeof(DownloadsPage),
             typeof(DepotDownloaderPage), typeof(ModFixesPage), typeof(GameFixesPage),
-            typeof(OnlineFixesPage), typeof(DenuvoGenerationPage), typeof(DenuvoFixesPage),
+            typeof(DenuvoGenerationPage), typeof(DenuvoFixesPage),
             typeof(HvFixesPage), typeof(SteamlessPage),
             typeof(AchievementsPage), typeof(DepotsPage), typeof(ManifestPage),
             typeof(BranchesPage), typeof(HubPage), typeof(LogsPage), typeof(SettingsPage)

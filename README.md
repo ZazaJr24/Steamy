@@ -130,8 +130,7 @@ Complete integration of [gbe_fork](https://github.com/Detanup01/gbe_fork) — th
 
 | | |
 |---|---|
-| **Online Fixes** | Browse and download community game fixes from multiple sources |
-| **Game Fixes** | View and manage all fixes applied to your installed games |
+| **Game Fixes** | Browse fixes from your own fixes source (a GitHub repository) and apply them to a game folder |
 
 <br/>
 
@@ -255,6 +254,14 @@ src/SteamContentManager/
 | [Goldberg Emulator](https://github.com/Detanup01/gbe_fork) | Detanup01 | Steam emulation (gbe_fork) |
 | [GreenLuma 2026](https://cs.rin.ru) | Steam006 | Family Share bypass |
 | [WPF-UI](https://github.com/lepoco/wpfui) | lepo.co | Fluent Design framework |
+
+<br/>
+
+## 📄 License
+
+ResonanceTools' own code is released under the [MIT License](LICENSE).
+Bundled third-party tools keep their own licenses and are not covered by it — Steamless is
+CC BY-NC-ND 4.0 (see `src/SteamContentManager/Tools/Steamless/`).
 
 <br/>
 

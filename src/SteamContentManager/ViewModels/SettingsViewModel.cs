@@ -24,7 +24,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private const string SteamApiKeyName = "steam-api-key";
     private const string RyuuAuthKeyName = "ryuu-auth-key";
     private const string HubcapApiKeyName = "hubcap-api-key";
-    private const string MirrorTokenName = "fix-mirror-token";
+    private const string MirrorTokenName = FixSource.TokenCredentialName;
 
     private readonly ISettingsService _settingsService;
     private readonly ISecureCredentialService _credentials;
@@ -508,34 +508,46 @@ public sealed class SettingsViewModel : ViewModelBase
     private async Task TestMirrorAsync()
     {
         IsBusy = true;
-        MirrorTestStatus = "Checking the mirror…";
+        MirrorTestStatus = "Checking the fixes source…";
 
         try
         {
-            var mirrorUrl = Settings.FixMirrorUrl?.TrimEnd('/');
-            if (string.IsNullOrWhiteSpace(mirrorUrl))
+            var source = FixSource.Resolve(Settings.FixMirrorUrl);
+            if (source is null)
             {
-                MirrorTestStatus = "No mirror URL is configured.";
+                MirrorTestStatus = "Enter a GitHub repository URL (https://github.com/owner/repo) or a web folder URL.";
                 return;
             }
 
-            var feedUrl = mirrorUrl + "/fixes.json";
-            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            if (!string.IsNullOrWhiteSpace(MirrorTokenInput))
+                await SaveCredentialsAsync();
+
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("ResonanceTools/1.0");
-
             var token = await _credentials.ReadAsync(MirrorTokenName);
-            using var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Head, feedUrl);
             if (!string.IsNullOrWhiteSpace(token))
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("token", token);
-            request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
+                http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("token", token);
 
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            using var response = await http.SendAsync(request);
-            sw.Stop();
+            using var feedResponse = await http.GetAsync(source.FeedUrl);
+            if (!feedResponse.IsSuccessStatusCode)
+            {
+                MirrorTestStatus = $"fixes.json: HTTP {(int)feedResponse.StatusCode} — check the URL and token.";
+                return;
+            }
 
-            MirrorTestStatus = response.IsSuccessStatusCode
-                ? $"Mirror OK ({sw.ElapsedMilliseconds} ms). fixes.json is reachable."
-                : $"HTTP {(int)response.StatusCode} — check the URL and token.";
+            using var catalog = JsonDocument.Parse(await feedResponse.Content.ReadAsStringAsync());
+            var games = catalog.RootElement.ValueKind == JsonValueKind.Array ? catalog.RootElement.GetArrayLength() : 0;
+            var sample = FirstFixEntry(catalog.RootElement);
+            if (sample is null)
+            {
+                MirrorTestStatus = $"fixes.json OK ({games:N0} games), but it lists no archives.";
+                return;
+            }
+
+            using var archiveResponse = await http.GetAsync(source.FileUrl(sample), System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+            MirrorTestStatus = archiveResponse.IsSuccessStatusCode
+                ? $"Source OK · {games:N0} games · archive downloads work."
+                : $"fixes.json OK ({games:N0} games), but archives return HTTP {(int)archiveResponse.StatusCode}.";
         }
         catch (Exception ex)
         {
@@ -545,6 +557,23 @@ public sealed class SettingsViewModel : ViewModelBase
         {
             IsBusy = false;
         }
+    }
+
+    private static FixEntry? FirstFixEntry(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Array) return null;
+        foreach (var game in root.EnumerateArray())
+        {
+            if (!game.TryGetProperty("fixes", out var fixes) || fixes.ValueKind != JsonValueKind.Array) continue;
+            foreach (var fix in fixes.EnumerateArray())
+            {
+                var path = fix.TryGetProperty("path", out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
+                var file = fix.TryGetProperty("filename", out var f) && f.ValueKind == JsonValueKind.String ? f.GetString() : null;
+                if (!string.IsNullOrWhiteSpace(path) || !string.IsNullOrWhiteSpace(file))
+                    return new FixEntry { Path = path ?? string.Empty, Filename = file ?? string.Empty };
+            }
+        }
+        return null;
     }
 
     private async Task TestDnsAsync()

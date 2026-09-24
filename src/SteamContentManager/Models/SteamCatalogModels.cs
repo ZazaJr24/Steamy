@@ -378,21 +378,18 @@ public static class SteamCatalogPaging
     }
 }
 
-/// <summary>
-/// Remote Ryuu generator feed entry for a single game's available fixes.
-/// Mirrors <c>&lt;base&gt;/files/fixes.json</c> as fetched from <c>generator.ryuu.lol</c>.
-/// It is feed metadata only; local workflow state lives in <see cref="GameFixItem"/>.
-/// </summary>
-public sealed class RyuuFixGame
+/// <summary>One game in the fixes catalog (<c>fixes.json</c>) of the configured fixes source.</summary>
+public sealed class FixGame
 {
     public string AppId { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
-    public IReadOnlyList<RyuuFixEntry> Fixes { get; init; } = Array.Empty<RyuuFixEntry>();
+    public IReadOnlyList<FixEntry> Fixes { get; init; } = Array.Empty<FixEntry>();
 }
 
-public sealed class RyuuFixEntry
+public sealed class FixEntry
 {
-    public string Href { get; init; } = string.Empty;
+    /// <summary>Archive location relative to the source root, e.g. <c>fixes/449800/1.zip</c>.</summary>
+    public string Path { get; init; } = string.Empty;
     public string Filename { get; init; } = string.Empty;
     public string Size { get; init; } = string.Empty;
     public IReadOnlyList<string> Badges { get; init; } = Array.Empty<string>();

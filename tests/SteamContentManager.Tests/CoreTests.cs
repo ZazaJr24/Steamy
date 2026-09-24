@@ -17,7 +17,6 @@ public sealed class CoreTests
         Assert.NotEmpty(store.Games);
         Assert.NotEmpty(store.Downloads);
         Assert.Contains(store.Providers, provider => provider.Name == "Steam Web API" && provider.State == ProviderConnectionState.NotConfigured);
-        Assert.NotEmpty(store.OnlineFixes);
         Assert.NotEmpty(store.GenerationTemplates);
     }
 

@@ -37,7 +37,6 @@ public static class ServiceRegistration
         services.AddSingleton<IManifestService, LocalManifestService>();
         services.AddSingleton<IProviderHealthService, DemoProviderHealthService>();
         services.AddSingleton<IRyuuGeneratorService, DemoRyuuGeneratorService>();
-        services.AddSingleton<IOnlineFixSearchService>(_ => new OnlineFixSearchService());
         services.AddSingleton<IDiskSpaceService, SystemDiskSpaceService>();
         services.AddSingleton<INotificationService, LoggingNotificationService>();
         services.AddSingleton<IArtworkService>(_ => new SteamArtworkService());
@@ -67,7 +66,6 @@ public static class ServiceRegistration
             sp.GetRequiredService<IDepotDownloaderCheckService>()
             ));
         services.AddSingleton<ModFixesViewModel>();
-        services.AddSingleton<OnlineFixesViewModel>();
         services.AddSingleton<LogsViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<DepotDownloaderViewModel>();
@@ -80,7 +78,7 @@ public static class ServiceRegistration
         services.AddSingleton<CreamInstallerViewModel>();
         services.AddSingleton<XStoreUnlockerViewModel>();
         services.AddSingleton<IGameFixProvider, DemoGameFixProvider>();
-        services.AddSingleton<IRyuuFixesService>(sp => new RyuuFixesService(sp.GetRequiredService<ISettingsService>()));
+        services.AddSingleton<IFixCatalogService>(sp => new FixCatalogService(sp.GetRequiredService<ISettingsService>(), sp.GetRequiredService<ISecureCredentialService>()));
         services.AddSingleton<IGameFixDownloadService, GameFixDownloadService>();
         services.AddSingleton<WebView2DownloadService>();
         services.AddSingleton<IRyuuSecureDownloadService, RyuuSecureDownloadService>();
