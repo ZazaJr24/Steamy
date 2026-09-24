@@ -124,10 +124,10 @@ public sealed class HubcapCatalogService : IHubcapCatalogService, IDisposable
                         AppId = id,
                         Name = name,
                         AppType = SteamCatalogAppType.Game,
-                        HeaderImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{id}/header.jpg",
-                        CapsuleImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{id}/capsule_616x353.jpg",
-                        PortraitImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{id}/library_600x900_2x.jpg",
-                        LibraryImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{id}/library_600x900_2x.jpg"
+                        HeaderImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{id}/header.jpg",
+                        CapsuleImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{id}/capsule_616x353.jpg",
+                        PortraitImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{id}/library_600x900_2x.jpg",
+                        LibraryImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{id}/library_600x900_2x.jpg"
                     };
                 }
             }
@@ -159,10 +159,10 @@ public sealed class HubcapCatalogService : IHubcapCatalogService, IDisposable
                     AppId = e.AppId,
                     Name = e.Name ?? $"App {e.AppId}",
                     AppType = SteamCatalogAppType.Game,
-                    HeaderImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{e.AppId}/header.jpg",
-                    CapsuleImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{e.AppId}/capsule_616x353.jpg",
-                    PortraitImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{e.AppId}/library_600x900_2x.jpg",
-                    LibraryImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{e.AppId}/library_600x900_2x.jpg"
+                    HeaderImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{e.AppId}/header.jpg",
+                    CapsuleImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{e.AppId}/capsule_616x353.jpg",
+                    PortraitImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{e.AppId}/library_600x900_2x.jpg",
+                    LibraryImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{e.AppId}/library_600x900_2x.jpg"
                 });
             }
             return items.Count > 0;

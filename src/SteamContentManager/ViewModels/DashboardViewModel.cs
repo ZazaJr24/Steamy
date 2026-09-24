@@ -433,7 +433,7 @@ public sealed class DashboardViewModel : ViewModelBase
         {
             var image = new BitmapImage();
             image.BeginInit();
-            image.UriSource = new Uri($"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/{file}");
+            image.UriSource = new Uri($"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/{file}");
             image.DecodePixelWidth = 1600;
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.EndInit();

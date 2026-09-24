@@ -139,11 +139,11 @@ public sealed class RyuuCatalogService : IRyuuCatalogService, IDisposable
                     // Real header from the feed; portrait/library covers come from Steam's CDN by
                     // app id, which the artwork loader already falls back through.
                     HeaderImageUrl = string.IsNullOrWhiteSpace(game.HeaderImage)
-                        ? $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/header.jpg"
+                        ? $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/header.jpg"
                         : game.HeaderImage,
-                    CapsuleImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/capsule_616x353.jpg",
-                    PortraitImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/library_600x900_2x.jpg",
-                    LibraryImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/library_600x900_2x.jpg"
+                    CapsuleImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/capsule_616x353.jpg",
+                    PortraitImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/library_600x900_2x.jpg",
+                    LibraryImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/library_600x900_2x.jpg"
                 });
             }
         }

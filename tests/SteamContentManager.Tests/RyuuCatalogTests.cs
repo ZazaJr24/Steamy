@@ -39,7 +39,7 @@ public sealed class RyuuCatalogTests
 
         // A blank header falls back to the app-id derived Steam header.
         var dota = Assert.Single(snapshot.Items, item => item.AppId == 570);
-        Assert.Equal("https://cdn.akamai.steamstatic.com/steam/apps/570/header.jpg", dota.HeaderImageUrl);
+        Assert.Equal("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/570/header.jpg", dota.HeaderImageUrl);
 
         var software = Assert.Single(snapshot.Items, item => item.AppId == 730);
         Assert.Equal(SteamCatalogAppType.Software, software.AppType);
