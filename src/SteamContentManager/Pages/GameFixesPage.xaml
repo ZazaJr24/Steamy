@@ -25,7 +25,6 @@
       <Setter Property="FontWeight" Value="Bold" />
       <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
       <Setter Property="Margin" Value="0,0,0,8" />
-      <Setter Property="CharacterSpacing" Value="60" />
     </Style>
     <LinearGradientBrush x:Key="HeroBannerFade" StartPoint="0,0" EndPoint="0,1">
       <GradientStop Color="#00000000" Offset="0.0" />
