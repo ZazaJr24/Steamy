@@ -26,7 +26,6 @@ public static class Program
         // Registered before App.OnStartup adds its own handlers, so a crash is written out instead of
         // waiting on the app's modal crash dialog forever.
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Fail("AppDomain", e.ExceptionObject as Exception);
-        Application.ResourceAssembly = typeof(App).Assembly;
         var app = new App();
         app.DispatcherUnhandledException += (_, e) => Fail("Dispatcher", e.Exception);
         app.InitializeComponent();
