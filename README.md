@@ -1,7 +1,7 @@
 <p align="center">
   <a href="https://github.com/ZazaJr24/ResonanceTools/releases"><img src="https://img.shields.io/github/v/release/ZazaJr24/ResonanceTools?include_prereleases&style=for-the-badge&color=ff6b6b&label=Download&cacheSeconds=600" /></a>
   &nbsp;
-  <a href="https://github.com/ZazaJr24/ResonanceTools/stargazers"><img src="https://img.shields.io/github/stars/ZazaJr24/ResonanceTools?style=for-the-badge&color=f59e0b&logo=github" /></a>
+  <a href="https://github.com/ZazaJr24/ResonanceTools/stargazers"><img src="https://img.shields.io/github/stars/ZazaJr24/ResonanceTools?style=for-the-badge&color=f59e0b&logo=github&cacheSeconds=60" /></a>
   &nbsp;
   <a href="https://github.com/ZazaJr24/ResonanceTools/releases"><img src="https://img.shields.io/github/downloads/ZazaJr24/ResonanceTools/total?style=for-the-badge&color=22c55e&label=Downloads" /></a>
   &nbsp;
@@ -273,5 +273,5 @@ Bundled third-party components keep their own licenses and are not covered by it
 <p align="center">
   <strong>ResonanceTools</strong><br/>
   <sub>No bloat. No telemetry. No nonsense.</sub><br/><br/>
-  <img src="https://img.shields.io/github/stars/ZazaJr24/ResonanceTools?style=social" />
+  <img src="https://img.shields.io/github/stars/ZazaJr24/ResonanceTools?style=social&cacheSeconds=60" />
 </p>
