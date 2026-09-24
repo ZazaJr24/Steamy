@@ -16,8 +16,8 @@
       <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="12" />
-      <Setter Property="Padding" Value="14,12" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="16,14" />
       <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
     <Style x:Key="DialogSectionLabel" TargetType="TextBlock">
@@ -25,6 +25,20 @@
       <Setter Property="FontWeight" Value="Bold" />
       <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
       <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="CharacterSpacing" Value="60" />
+    </Style>
+    <LinearGradientBrush x:Key="HeroBannerFade" StartPoint="0,0" EndPoint="0,1">
+      <GradientStop Color="#00000000" Offset="0.0" />
+      <GradientStop Color="#90000000" Offset="0.55" />
+      <GradientStop Color="#E8000000" Offset="1.0" />
+    </LinearGradientBrush>
+    <Style x:Key="FixIconBadge" TargetType="Border">
+      <Setter Property="Width" Value="38" />
+      <Setter Property="Height" Value="38" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,14,0" />
     </Style>
   </Page.Resources>
 
@@ -213,12 +227,18 @@
               BorderBrush="{DynamicResource BorderSubtleBrush}"
               BorderThickness="1"
               CornerRadius="20"
-              Width="520"
-              MaxHeight="680"
+              Width="560"
+              MaxHeight="720"
               UseLayoutRounding="True"
               SnapsToDevicePixels="True"
               RenderTransformOrigin="0.5,0.5">
+        <Border.Effect>
+          <DropShadowEffect BlurRadius="40" ShadowDepth="8" Direction="270" Color="#000000" Opacity="0.5" />
+        </Border.Effect>
         <Border.RenderTransform><ScaleTransform x:Name="DialogScale" ScaleX="1" ScaleY="1" /></Border.RenderTransform>
+        <Border.Clip>
+          <RectangleGeometry Rect="0,0,560,720" RadiusX="20" RadiusY="20" />
+        </Border.Clip>
         <Grid>
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -226,74 +246,106 @@
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
-          <!-- Title -->
-          <Grid Grid.Row="0" Margin="22,18,18,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-              <TextBlock x:Name="OverlayTitle" Text="Game Fixes" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-              <TextBlock x:Name="OverlayAppId" Text="App 0" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,2,0,0" />
+          <!-- Hero banner with game artwork -->
+          <Grid Grid.Row="0" Height="140" ClipToBounds="True">
+            <Grid Background="#0B0C0F">
+              <Image x:Name="OverlayHeroImage" Stretch="UniformToFill" VerticalAlignment="Center" Opacity="0.85" />
+            </Grid>
+            <Border Background="{StaticResource HeroBannerFade}" />
+            <!-- Close button over the hero -->
+            <ui:Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12"
+                       Style="{StaticResource IconButtonStyle}"
+                       Icon="{ui:SymbolIcon Dismiss24}"
+                       Width="32" Height="32" MinHeight="32"
+                       ToolTip="Close"
+                       Click="OverlayCloseButton_Click">
+              <ui:Button.Foreground>
+                <SolidColorBrush Color="White" />
+              </ui:Button.Foreground>
+            </ui:Button>
+            <!-- Title over the hero -->
+            <StackPanel VerticalAlignment="Bottom" Margin="24,0,56,16">
+              <TextBlock x:Name="OverlayTitle" Text="Game Fixes"
+                         Foreground="White" FontSize="18" FontWeight="Bold"
+                         TextTrimming="CharacterEllipsis">
+                <TextBlock.Effect>
+                  <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.6" />
+                </TextBlock.Effect>
+              </TextBlock>
+              <TextBlock x:Name="OverlayAppId" Text="App 0"
+                         Foreground="#B0FFFFFF" FontSize="11.5" Margin="0,3,0,0">
+                <TextBlock.Effect>
+                  <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.5" />
+                </TextBlock.Effect>
+              </TextBlock>
             </StackPanel>
-            <ui:Button Grid.Column="1"
-                     Style="{StaticResource IconButtonStyle}"
-                     Icon="{ui:SymbolIcon Dismiss24}"
-                     Appearance="Secondary"
-                     Width="30" Height="30" MinHeight="30"
-                     VerticalAlignment="Top"
-                     ToolTip="Close"
-                     Click="OverlayCloseButton_Click" />
           </Grid>
-          <Separator Grid.Row="0" Margin="22,14,22,0" VerticalAlignment="Bottom" />
 
-          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="22,16,22,4">
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,18,24,6">
             <StackPanel>
               <!-- Game folder -->
               <TextBlock Text="GAME FOLDER" Style="{StaticResource DialogSectionLabel}" />
-              <Grid Margin="0,0,0,12">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="10" Padding="10,0" MinHeight="34">
-                  <TextBlock x:Name="FolderPathText" Text="Select the game folder…" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11.5" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                </Border>
-                <ui:Button Grid.Column="1" Content="Browse" Appearance="Secondary" Margin="6,0,0,0" Click="BrowseFolderButton_Click" />
-              </Grid>
+              <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="12" Padding="4" Margin="0,0,0,18">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <Border Width="34" Height="34" CornerRadius="8" Background="{DynamicResource SurfaceSubtleBrush}" Margin="4,0,12,0" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Folder24" FontSize="16" Foreground="{DynamicResource TextTertiaryBrush}" />
+                  </Border>
+                  <TextBlock Grid.Column="1" x:Name="FolderPathText" Text="Select the game folder…"
+                             Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                  <ui:Button Grid.Column="2" Content="Browse" Appearance="Secondary"
+                             Margin="8,0,2,0" Click="BrowseFolderButton_Click" />
+                </Grid>
+              </Border>
 
               <!-- Fixes list -->
               <TextBlock Text="AVAILABLE FIXES" Style="{StaticResource DialogSectionLabel}" />
               <StackPanel x:Name="FixesList" />
 
               <!-- Status -->
-              <TextBlock x:Name="OverlayStatus" Text="" Foreground="{DynamicResource AccentBrush}" FontSize="11.5" Margin="0,8,0,0" TextWrapping="Wrap" />
+              <Border x:Name="StatusBorder" Background="{DynamicResource AccentSoftBrush}" CornerRadius="10" Padding="14,10" Margin="0,6,0,0" Visibility="Collapsed">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <ui:SymbolIcon x:Name="StatusIcon" Symbol="Info24" FontSize="16" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Top" Margin="0,1,10,0" />
+                  <TextBlock Grid.Column="1" x:Name="OverlayStatus" Text="" Foreground="{DynamicResource AccentBrush}" FontSize="12" TextWrapping="Wrap" />
+                </Grid>
+              </Border>
             </StackPanel>
           </ScrollViewer>
 
           <!-- Footer -->
-          <Grid Grid.Row="2" Margin="22,10,22,18">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="Auto" />
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <ui:Button Content="Close" Appearance="Secondary" Click="OverlayCloseButton_Click" />
-            <ui:Button Grid.Column="2"
-                     Content="Apply ZIP"
-                     Icon="{ui:SymbolIcon FolderOpen24}"
-                     Appearance="Secondary"
-                     Margin="0,0,8,0"
-                     ToolTip="Select a ZIP you already downloaded"
-                     Click="ApplyZipButton_Click" />
-            <ui:Button Grid.Column="3"
-                     x:Name="ApplyAllButton"
-                     Content="Download &amp; Apply All"
-                     Icon="{ui:SymbolIcon ArrowDownload24}"
-                     Appearance="Primary"
-                     Click="ApplyAllButton_Click" />
-          </Grid>
+          <Border Grid.Row="2" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,1,0,0">
+            <Grid Margin="24,14,24,18">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <ui:Button Content="Close" Appearance="Secondary" Click="OverlayCloseButton_Click" />
+              <ui:Button Grid.Column="2"
+                       Content="Apply ZIP"
+                       Icon="{ui:SymbolIcon FolderOpen24}"
+                       Appearance="Secondary"
+                       Margin="0,0,8,0"
+                       ToolTip="Select a ZIP you already downloaded"
+                       Click="ApplyZipButton_Click" />
+              <ui:Button Grid.Column="3"
+                       x:Name="ApplyAllButton"
+                       Content="Download &amp; Apply All"
+                       Icon="{ui:SymbolIcon ArrowDownload24}"
+                       Appearance="Primary"
+                       Click="ApplyAllButton_Click" />
+            </Grid>
+          </Border>
         </Grid>
       </Border>
     </Grid>

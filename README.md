@@ -5,7 +5,7 @@
   &nbsp;
   <a href="https://github.com/ZazaJr24/ResonanceTools/releases"><img src="https://img.shields.io/github/downloads/ZazaJr24/ResonanceTools/total?style=for-the-badge&color=22c55e&label=Downloads" /></a>
   &nbsp;
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-6366f1?style=for-the-badge" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Custom-6366f1?style=for-the-badge" /></a>
 </p>
 
 <p align="center">
@@ -259,7 +259,8 @@ src/SteamContentManager/
 
 ## 📄 License
 
-ResonanceTools' own code is released under the [MIT License](LICENSE).
+ResonanceTools' own code is released under the [ResonanceTools License](LICENSE).
+Sharing and forking are welcome; rebranding or commercial redistribution requires permission.
 Bundled third-party components keep their own licenses and are not covered by it — see
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Both files are included in every release ZIP.
 
