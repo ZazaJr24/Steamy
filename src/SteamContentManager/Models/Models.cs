@@ -79,8 +79,8 @@ public sealed class Game : UiObservableObject
     public string AppIdLabel => $"App ID {AppId}";
     public string AppLabel => $"APP {AppId}";
     public string AchievementLabel => $"{AchievementPercent}% achievements";
-    public string ArtworkUrl => $"https://cdn.akamai.steamstatic.com/steam/apps/{AppId}/library_600x900_2x.jpg";
-    public string HeaderArtworkUrl => $"https://cdn.akamai.steamstatic.com/steam/apps/{AppId}/header.jpg";
+    public string ArtworkUrl => $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{AppId}/library_600x900_2x.jpg";
+    public string HeaderArtworkUrl => $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{AppId}/header.jpg";
 
     public BitmapImage? ArtworkImage
     {
@@ -247,7 +247,7 @@ public sealed class DownloadJob : UiObservableObject
     public string AppLabel => $"App {AppId}";
     public string DepotLabel => DepotId is null ? "App depot set" : $"Depot {DepotId}";
     public string ExitCodeLabel => ExitCode is null ? "—" : ExitCode.Value.ToString();
-    public string? PortraitArtUrl => AppId > 0 ? $"https://cdn.akamai.steamstatic.com/steam/apps/{AppId}/library_600x900.jpg" : null;
+    public string? PortraitArtUrl => AppId > 0 ? $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{AppId}/library_600x900.jpg" : null;
     public bool IsPaused => State == DownloadJobState.Paused;
     public bool IsTerminal => State is DownloadJobState.Completed or DownloadJobState.Failed or DownloadJobState.Cancelled;
 

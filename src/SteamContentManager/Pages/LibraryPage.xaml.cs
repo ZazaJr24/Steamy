@@ -267,7 +267,7 @@ public partial class LibraryPage : Page
         {
             AppId = item.AppId,
             GameName = item.Name,
-            CoverImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{item.AppId}/header.jpg",
+            CoverImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{item.AppId}/header.jpg",
             TargetFolder = targetFolder,
             Started = DateTime.Now,
             DownloadMode = $"DepotDownloaderMod ({_selectedSource})",

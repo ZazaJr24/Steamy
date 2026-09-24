@@ -263,11 +263,15 @@ public sealed class SteamCatalogService : ISteamCatalogService
         {
             item.PortraitImageUrl,
             item.LibraryImageUrl,
+            $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{item.AppId}/library_600x900_2x.jpg",
             $"https://cdn.akamai.steamstatic.com/steam/apps/{item.AppId}/library_600x900_2x.jpg",
+            $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{item.AppId}/library_600x900.jpg",
             $"https://cdn.akamai.steamstatic.com/steam/apps/{item.AppId}/library_600x900.jpg",
             item.CapsuleImageUrl,
+            $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{item.AppId}/capsule_616x353.jpg",
             $"https://cdn.akamai.steamstatic.com/steam/apps/{item.AppId}/capsule_616x353.jpg",
             item.HeaderImageUrl,
+            $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{item.AppId}/header.jpg",
             $"https://cdn.akamai.steamstatic.com/steam/apps/{item.AppId}/header.jpg"
         }.Where(url => !string.IsNullOrWhiteSpace(url)).Distinct(StringComparer.OrdinalIgnoreCase);
 
@@ -401,7 +405,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
         var type = data.TryGetProperty("type", out var typeElement) ? ParseType(typeElement.GetString()) : SteamCatalogAppType.Unknown;
         var header = GetString(data, "header_image") ?? string.Empty;
         var capsule = GetString(data, "capsule_image") ?? header;
-        var portrait = GetString(data, "library_capsule") ?? $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/library_600x900_2x.jpg";
+        var portrait = GetString(data, "library_capsule") ?? $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/library_600x900_2x.jpg";
         var description = GetString(data, "short_description") ?? string.Empty;
         var developers = GetStringArray(data, "developers");
         var publishers = GetStringArray(data, "publishers");
@@ -478,10 +482,10 @@ public sealed class SteamCatalogService : ISteamCatalogService
         AppId = entry.AppId,
         Name = entry.Name,
         AppType = SteamCatalogAppType.Unknown,
-        HeaderImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{entry.AppId}/header.jpg",
-        CapsuleImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{entry.AppId}/capsule_616x353.jpg",
-        PortraitImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{entry.AppId}/library_600x900_2x.jpg",
-        LibraryImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{entry.AppId}/library_600x900_2x.jpg"
+        HeaderImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/header.jpg",
+        CapsuleImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/capsule_616x353.jpg",
+        PortraitImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/library_600x900_2x.jpg",
+        LibraryImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/library_600x900_2x.jpg"
     }).ToList();
 
     private static async Task<T?> ReadJsonAsync<T>(string path, CancellationToken cancellationToken)

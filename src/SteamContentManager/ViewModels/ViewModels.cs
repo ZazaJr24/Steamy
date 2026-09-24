@@ -317,7 +317,7 @@ public sealed class GameFixGameCard : UiObservableObject
 
     public string Summary => $"{FixCount} fix(es)";
     public string AppLabel => $"App {AppId}";
-    public string ArtworkUrl => $"https://cdn.akamai.steamstatic.com/steam/apps/{AppId}/library_600x900_2x.jpg";
+    public string ArtworkUrl => $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{AppId}/library_600x900_2x.jpg";
 
     public System.Windows.Media.Imaging.BitmapImage? ArtworkImage
     {
