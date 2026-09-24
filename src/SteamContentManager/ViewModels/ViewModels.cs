@@ -106,7 +106,7 @@ public enum LibraryNsfwScope { Hide, Show }
 
 public sealed class LibraryViewModel : ViewModelBase
 {
-    private readonly ISteamCatalogService _catalog; private readonly IRyuuCatalogService _ryuu; private readonly IHubcapCatalogService _hubcap; private readonly ILibrarySyncService _librarySync;    private string _search=""; private string _sort="App ID"; private string _typeFilter="All games"; private int _page=1; private int _pageSize=48; private LibraryNsfwScope _nsfwScope=LibraryNsfwScope.Hide;
+    private readonly ISteamCatalogService _catalog; private readonly IRyuuCatalogService _ryuu; private readonly IHubcapCatalogService _hubcap; private readonly ILibrarySyncService _librarySync;    private string _search=""; private string _sort="Popular (AAA)"; private string _typeFilter="All games"; private int _page=1; private int _pageSize=48; private LibraryNsfwScope _nsfwScope=LibraryNsfwScope.Hide;
     public const string RyuuSource="Available (Ryuu)";
     public LibraryViewModel(IAppDataStore s, INavigationService n, ILoggingService l, ISteamCatalogService c, IRyuuCatalogService ryuu, IArtworkService _, ILibrarySyncService sync, IHubcapCatalogService hubcap) : base(s,n,l) { _catalog=c; _ryuu=ryuu; _hubcap=hubcap; _librarySync=sync; }
     public ObservableCollection<Game> Games => Store.Games; public ObservableCollection<SteamCatalogItem> CatalogItems { get; }=new(); public ObservableCollection<SteamCatalogItem> PagedCatalogItems { get; }=new(); public ObservableCollection<Game> FilteredGames { get; }=new(); public ObservableCollection<Game> PagedGames { get; }=new();

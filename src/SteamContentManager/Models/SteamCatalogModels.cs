@@ -358,7 +358,24 @@ public static class PopularityLookup
         [1174370] = 70, // Star Wars Jedi
     };
 
-    public static int GetScore(int appId) => Scores.GetValueOrDefault(appId, 0);
+    public static int GetScore(int appId)
+    {
+        if (Scores.TryGetValue(appId, out var score)) return score;
+        return appId switch
+        {
+            < 50_000 => 10,
+            < 200_000 => 9,
+            < 500_000 => 8,
+            < 1_000_000 => 7,
+            < 1_500_000 => 6,
+            < 2_000_000 => 5,
+            < 2_500_000 => 4,
+            < 3_000_000 => 3,
+            < 4_000_000 => 2,
+            < 5_000_000 => 1,
+            _ => 0
+        };
+    }
 }
 
 public static class SteamCatalogPaging
