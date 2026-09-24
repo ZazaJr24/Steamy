@@ -37,7 +37,8 @@ public partial class SettingsPage : Page
 
     private void AppearanceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (e.AddedItems.Count == 0 || e.AddedItems[0] is not string selection)
+        // The first event comes from filling in the saved value when the page is built, not from the user.
+        if (e.RemovedItems.Count == 0 || e.AddedItems.Count == 0 || e.AddedItems[0] is not string selection)
             return;
 
         ViewModel.Settings.Appearance = selection;
@@ -46,7 +47,7 @@ public partial class SettingsPage : Page
 
     private void BackdropComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (e.AddedItems.Count == 0 || e.AddedItems[0] is not string selection)
+        if (e.RemovedItems.Count == 0 || e.AddedItems.Count == 0 || e.AddedItems[0] is not string selection)
             return;
 
         ViewModel.Settings.BackdropStyle = selection;
@@ -55,7 +56,7 @@ public partial class SettingsPage : Page
 
     private void DnsModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (e.AddedItems.Count == 0 || e.AddedItems[0] is not string selection)
+        if (e.RemovedItems.Count == 0 || e.AddedItems.Count == 0 || e.AddedItems[0] is not string selection)
             return;
 
         ViewModel.ApplyDnsMode(selection);
