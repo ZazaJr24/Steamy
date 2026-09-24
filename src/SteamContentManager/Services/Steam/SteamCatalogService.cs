@@ -278,8 +278,14 @@ public sealed class SteamCatalogService : ISteamCatalogService
         var cachePath = Path.Combine(_cacheDirectory, "artwork", $"{item.AppId}_portrait_v2.jpg");
         foreach (var url in urls)
         {
-            // Cards render ~200px wide; decoding the 1200px library art per card is what made scrolling stutter
             var image = await LoadImageAsync(url, cachePath, cancellationToken, decodeWidth: 400).ConfigureAwait(false);
+            if (image is not null) return image;
+        }
+
+        var storeImageUrl = await FetchStoreImageUrlAsync(item.AppId, cancellationToken).ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(storeImageUrl))
+        {
+            var image = await LoadImageAsync(storeImageUrl, cachePath, cancellationToken, decodeWidth: 400).ConfigureAwait(false);
             if (image is not null) return image;
         }
         return null;
@@ -332,6 +338,31 @@ public sealed class SteamCatalogService : ISteamCatalogService
             Path.Combine(_cacheDirectory, "screenshots", $"{appId}_{index}.jpg"),
             cancellationToken).ConfigureAwait(false);
         screenshot.Image = image;
+    }
+
+    private async Task<string?> FetchStoreImageUrlAsync(int appId, CancellationToken cancellationToken)
+    {
+        if (appId <= 0) return null;
+        try
+        {
+            using var response = await SendWithRetryAsync(
+                () => new HttpRequestMessage(HttpMethod.Get, string.Format(CultureInfo.InvariantCulture, DetailsUrl, appId)),
+                cancellationToken).ConfigureAwait(false);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.TryGetProperty(appId.ToString(CultureInfo.InvariantCulture), out var envelope)
+                && envelope.TryGetProperty("success", out var success) && success.GetBoolean()
+                && envelope.TryGetProperty("data", out var data))
+            {
+                return GetString(data, "header_image")
+                    ?? GetString(data, "capsule_image")
+                    ?? GetString(data, "capsule_imagev5");
+            }
+        }
+        catch (Exception exception) when (IsNetworkException(exception) || exception is IOException)
+        {
+        }
+        return null;
     }
 
     private async Task<BitmapImage?> LoadImageAsync(string url, string cachePath, CancellationToken cancellationToken, int decodeWidth = 0)
