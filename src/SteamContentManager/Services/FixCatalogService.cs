@@ -28,11 +28,11 @@ public sealed record FixFeedSnapshot(
 public sealed record FixSource(string FeedUrl, string FilesBaseUrl)
 {
     public const string TokenCredentialName = "fix-mirror-token";
+    public const string DefaultUrl = "https://github.com/ZazaJr24/Fix";
 
     public static FixSource? Resolve(string? configured)
     {
-        if (string.IsNullOrWhiteSpace(configured)) return null;
-        var text = configured.Trim();
+        var text = string.IsNullOrWhiteSpace(configured) ? DefaultUrl : configured.Trim();
         if (!text.Contains("://", StringComparison.Ordinal)) text = "https://" + text;
         if (!Uri.TryCreate(text, UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
@@ -99,7 +99,7 @@ public sealed class FixCatalogService : IFixCatalogService, IDisposable
     {
         var source = FixSource.Resolve(_settings.Load().FixMirrorUrl);
         if (source is null)
-            return FixFeedSnapshot.Failure("No fixes source is set. Add it in Settings → Fixes source.");
+            return FixFeedSnapshot.Failure("The fixes source URL in Settings is not valid. Clear it to use the built-in source.");
 
         if (!forceRefresh && TryGetCache(out var cachedAt) && DateTimeOffset.UtcNow - cachedAt < CacheLifetime)
         {

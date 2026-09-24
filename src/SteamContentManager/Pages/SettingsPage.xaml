@@ -156,15 +156,15 @@
       <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
         <StackPanel>
           <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
-            <TextBlock Text="Where the Game Fixes page loads its catalog (fixes.json) and archives from. Paste a GitHub repository URL; private repositories need an access token." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
+            <TextBlock Text="Where the Game Fixes page loads its catalog (fixes.json) and archives from. Leave the URL empty to use the built-in source; private repositories need an access token." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
           </Border>
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
               <TextBlock Text="Source URL" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="GitHub repository URL, or a web folder that contains fixes.json." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              <TextBlock Text="Empty uses the built-in source. Or paste another GitHub repository / web folder." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
             </StackPanel>
-            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.FixMirrorUrl, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="https://github.com/owner/repo" />
+            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.FixMirrorUrl, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="https://github.com/ZazaJr24/Fix (built-in)" />
           </Grid>
           <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>

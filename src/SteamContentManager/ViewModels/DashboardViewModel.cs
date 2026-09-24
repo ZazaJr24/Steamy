@@ -411,8 +411,9 @@ public sealed class DashboardViewModel : ViewModelBase
 
         var fixSource = FixSource.Resolve(settings.FixMirrorUrl);
         var fixes = fixSource is null
-            ? new DashboardStatusItem("Fixes source", "Not set — Game Fixes has nothing to load.", false, "Set up", NavigateSettingsCommand)
-            : new DashboardStatusItem("Fixes source", DescribeSource(settings.FixMirrorUrl), true, "Settings", NavigateSettingsCommand);
+            ? new DashboardStatusItem("Fixes source", "The URL in Settings is not valid.", false, "Set up", NavigateSettingsCommand)
+            : new DashboardStatusItem("Fixes source",
+                DescribeSource(string.IsNullOrWhiteSpace(settings.FixMirrorUrl) ? FixSource.DefaultUrl : settings.FixMirrorUrl), true, "Settings", NavigateSettingsCommand);
 
         StatusItems = new[] { library, depot, fixes };
         OnPropertyChanged(nameof(StatusSummary));
