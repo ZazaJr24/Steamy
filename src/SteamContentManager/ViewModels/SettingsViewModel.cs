@@ -24,6 +24,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private const string SteamApiKeyName = "steam-api-key";
     private const string RyuuAuthKeyName = "ryuu-auth-key";
     private const string HubcapApiKeyName = "hubcap-api-key";
+    private const string MirrorTokenName = "fix-mirror-token";
 
     private readonly ISettingsService _settingsService;
     private readonly ISecureCredentialService _credentials;
@@ -36,6 +37,8 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _steamCredentialStatus = "Not configured";
     private string _ryuuCredentialStatus = "Not configured";
     private string _hubcapCredentialStatus = "Not configured";
+    private string _mirrorCredentialStatus = "Not configured";
+    private string _mirrorTestStatus = "Not checked yet.";
     private string _steamTestStatus = "Not checked yet.";
     private string _ryuuTestStatus = "Not checked yet.";
     private string _hubcapTestStatus = "Not checked yet.";
@@ -78,6 +81,7 @@ public sealed class SettingsViewModel : ViewModelBase
         TestRyuuCommand = new AsyncRelayCommand(TestRyuuAsync);
         TestHubcapCommand = new AsyncRelayCommand(TestHubcapAsync);
         TestDnsCommand = new AsyncRelayCommand(TestDnsAsync);
+        TestMirrorCommand = new AsyncRelayCommand(TestMirrorAsync);
 
         _ = RefreshCredentialStatusAsync();
     }
@@ -101,6 +105,9 @@ public sealed class SettingsViewModel : ViewModelBase
     /// <summary>Bound to the password box; only ever written into the encrypted store.</summary>
     public string HubcapApiKeyInput { get; set; } = string.Empty;
 
+    /// <summary>Bound to the password box; only ever written into the encrypted store.</summary>
+    public string MirrorTokenInput { get; set; } = string.Empty;
+
     public string SteamCredentialStatus
     {
         get => _steamCredentialStatus;
@@ -117,6 +124,18 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         get => _hubcapCredentialStatus;
         private set => SetProperty(ref _hubcapCredentialStatus, value);
+    }
+
+    public string MirrorCredentialStatus
+    {
+        get => _mirrorCredentialStatus;
+        private set => SetProperty(ref _mirrorCredentialStatus, value);
+    }
+
+    public string MirrorTestStatus
+    {
+        get => _mirrorTestStatus;
+        private set => SetProperty(ref _mirrorTestStatus, value);
     }
 
     public string HubcapTestStatus
@@ -268,6 +287,7 @@ public sealed class SettingsViewModel : ViewModelBase
     public IAsyncRelayCommand TestRyuuCommand { get; }
     public IAsyncRelayCommand TestHubcapCommand { get; }
     public IAsyncRelayCommand TestDnsCommand { get; }
+    public IAsyncRelayCommand TestMirrorCommand { get; }
 
     // ---- saving ------------------------------------------------------------------------------
 
@@ -318,11 +338,18 @@ public sealed class SettingsViewModel : ViewModelBase
             storedSomething = true;
         }
 
+        if (!string.IsNullOrWhiteSpace(MirrorTokenInput))
+        {
+            await _credentials.SaveAsync(MirrorTokenName, MirrorTokenInput.Trim());
+            storedSomething = true;
+        }
+
         if (!storedSomething) return;
 
         SteamApiKeyInput = string.Empty;
         RyuuAuthKeyInput = string.Empty;
         HubcapApiKeyInput = string.Empty;
+        MirrorTokenInput = string.Empty;
         CredentialInputsCleared?.Invoke(this, EventArgs.Empty);
         await RefreshCredentialStatusAsync();
     }
@@ -332,10 +359,12 @@ public sealed class SettingsViewModel : ViewModelBase
         var steam = await _credentials.ReadAsync(SteamApiKeyName);
         var ryuu = await _credentials.ReadAsync(RyuuAuthKeyName);
         var hubcap = await _credentials.ReadAsync(HubcapApiKeyName);
+        var mirror = await _credentials.ReadAsync(MirrorTokenName);
 
         SteamCredentialStatus = DescribeCredential(steam);
         RyuuCredentialStatus = DescribeCredential(ryuu);
         HubcapCredentialStatus = DescribeCredential(hubcap);
+        MirrorCredentialStatus = DescribeCredential(mirror);
 
         static string DescribeCredential(string? value)
             => string.IsNullOrWhiteSpace(value)
@@ -348,10 +377,12 @@ public sealed class SettingsViewModel : ViewModelBase
         await _credentials.DeleteAsync(SteamApiKeyName);
         await _credentials.DeleteAsync(RyuuAuthKeyName);
         await _credentials.DeleteAsync(HubcapApiKeyName);
+        await _credentials.DeleteAsync(MirrorTokenName);
 
         SteamApiKeyInput = string.Empty;
         RyuuAuthKeyInput = string.Empty;
         HubcapApiKeyInput = string.Empty;
+        MirrorTokenInput = string.Empty;
         CredentialInputsCleared?.Invoke(this, EventArgs.Empty);
 
         await RefreshCredentialStatusAsync();
@@ -467,6 +498,48 @@ public sealed class SettingsViewModel : ViewModelBase
         catch (Exception ex)
         {
             HubcapTestStatus = $"Check failed: {ex.GetType().Name}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task TestMirrorAsync()
+    {
+        IsBusy = true;
+        MirrorTestStatus = "Checking the mirror…";
+
+        try
+        {
+            var mirrorUrl = Settings.FixMirrorUrl?.TrimEnd('/');
+            if (string.IsNullOrWhiteSpace(mirrorUrl))
+            {
+                MirrorTestStatus = "No mirror URL is configured.";
+                return;
+            }
+
+            var feedUrl = mirrorUrl + "/fixes.json";
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("ResonanceTools/1.0");
+
+            var token = await _credentials.ReadAsync(MirrorTokenName);
+            using var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Head, feedUrl);
+            if (!string.IsNullOrWhiteSpace(token))
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("token", token);
+            request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            using var response = await http.SendAsync(request);
+            sw.Stop();
+
+            MirrorTestStatus = response.IsSuccessStatusCode
+                ? $"Mirror OK ({sw.ElapsedMilliseconds} ms). fixes.json is reachable."
+                : $"HTTP {(int)response.StatusCode} — check the URL and token.";
+        }
+        catch (Exception ex)
+        {
+            MirrorTestStatus = $"Check failed: {ex.GetType().Name}";
         }
         finally
         {

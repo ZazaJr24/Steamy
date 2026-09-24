@@ -527,10 +527,12 @@ public sealed class AppSettings : ObservableObject
     private string _creamApiProxy = string.Empty;
     private string _backdropStyle = "Mica";
     private string _hubcapBaseUrl = "https://hubcapmanifest.com";
+    private string _fixMirrorUrl = string.Empty;
 
     public string CreamApiProxy { get => _creamApiProxy; set => SetProperty(ref _creamApiProxy, value); }
     public string BackdropStyle { get => _backdropStyle; set => SetProperty(ref _backdropStyle, value); }
     public string HubcapBaseUrl { get => _hubcapBaseUrl; set => SetProperty(ref _hubcapBaseUrl, value); }
+    public string FixMirrorUrl { get => _fixMirrorUrl; set => SetProperty(ref _fixMirrorUrl, value); }
 
     public string RyuuApiKey { get => _ryuuApiKey; set => SetProperty(ref _ryuuApiKey, value); }
 
