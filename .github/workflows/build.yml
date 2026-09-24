@@ -1,0 +1,40 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. 0.0.2)'
+        required: true
+        default: '0.0.2'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish self-contained
+        run: |
+          dotnet publish src/SteamContentManager/SteamContentManager.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained `
+            -p:PublishSingleFile=true `
+            -p:Version=${{ github.event.inputs.version }} `
+            -o publish
+
+      - name: Zip release
+        run: Compress-Archive -Path publish/* -DestinationPath ResonanceTools-v${{ github.event.inputs.version }}.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: ResonanceTools v${{ github.event.inputs.version }}
+          files: ResonanceTools-v${{ github.event.inputs.version }}.zip
+          generate_release_notes: true
