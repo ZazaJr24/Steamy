@@ -43,7 +43,7 @@
     unmodified and keep their own license (see NOTICE.md in the same folder).
   -->
   <ItemGroup>
-    <None Include="Tools\Steamless\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Tools\Steamless\**\*" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
   <!-- CreamAPI replacement DLLs bundled for the DLC Unlocker (CreamAPI mode). -->
