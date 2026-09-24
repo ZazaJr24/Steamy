@@ -1,11 +1,11 @@
 <p align="center">
-  <a href="https://github.com/ZazaJr24/ResonanceTools/releases"><img src="https://img.shields.io/github/v/release/ZazaJr24/ResonanceTools?include_prereleases&style=for-the-badge&color=ff6b6b&label=Download" /></a>
+  <a href="https://github.com/ZazaJr24/ResonanceTools/releases"><img src="https://img.shields.io/github/v/release/ZazaJr24/ResonanceTools?include_prereleases&style=for-the-badge&color=ff6b6b&label=Download&cacheSeconds=600" /></a>
   &nbsp;
   <a href="https://github.com/ZazaJr24/ResonanceTools/stargazers"><img src="https://img.shields.io/github/stars/ZazaJr24/ResonanceTools?style=for-the-badge&color=f59e0b&logo=github" /></a>
   &nbsp;
   <a href="https://github.com/ZazaJr24/ResonanceTools/releases"><img src="https://img.shields.io/github/downloads/ZazaJr24/ResonanceTools/total?style=for-the-badge&color=22c55e&label=Downloads" /></a>
   &nbsp;
-  <img src="https://img.shields.io/github/license/ZazaJr24/ResonanceTools?style=for-the-badge&color=6366f1" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-6366f1?style=for-the-badge" /></a>
 </p>
 
 <p align="center">
