@@ -56,7 +56,6 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand NavigateManifestsCommand => new RelayCommand(() => Navigation.Navigate<ManifestPage>());
     public ICommand NavigateSettingsCommand => new RelayCommand(() => Navigation.Navigate<SettingsPage>());
     public ICommand NavigateFixesCommand => new RelayCommand(() => Navigation.Navigate<GameFixesPage>());
-    public ICommand NavigateOnlineFixesCommand => new RelayCommand(() => Navigation.Navigate<OnlineFixesPage>());
     public ICommand NavigateDlcUnlockerCommand => new RelayCommand(() => Navigation.Navigate<CreamApiPage>());
     public ICommand NavigateSteamlessCommand => new RelayCommand(() => Navigation.Navigate<SteamlessPage>());
     public ICommand NavigateDenuvoActivationCommand => new RelayCommand(() => Navigation.Navigate<DenuvoActivationPage>());
@@ -160,7 +159,7 @@ public sealed class LibraryViewModel : ViewModelBase
     public string CatalogCountLabel => $"{CatalogItems.Count:N0} games"; public string VisibleCountLabel=>$"Showing {PagedCatalogItems.Count} of {FilteredCatalogCount:N0}"; public string PageLabel=>$"Page {_page} of {TotalPages}"; public string UpdatedLabel { get; private set; }="Not loaded"; public int FilteredCatalogCount { get; private set; } public int TotalPages=>Math.Max(1,(FilteredCatalogCount+PageSize-1)/PageSize); public bool CanGoPrevious=>_page>1; public bool CanGoNext=>_page<TotalPages; public bool HasCatalogItems=>PagedCatalogItems.Count>0; public bool HasGames=>FilteredGames.Count>0;    public bool HasActiveFilters=>!string.IsNullOrWhiteSpace(SearchText)||SelectedSort!="Popular (AAA)"||PageSize!=24||NsfwScope==LibraryNsfwScope.Show; public string FilterSummary=>HasActiveFilters?"Active filters":"No filters applied"; public string EmptyStateMessage=>"No games match this search.";
     public ICommand LoadCatalogCommand=>new AsyncRelayCommand(()=>LoadAsync(false)); public ICommand RefreshCatalogCommand=>new AsyncRelayCommand(async()=>{ try{_librarySync.Refresh(); RefreshLocalPage();}catch{} await LoadAsync(false); }); public ICommand ScanLibraryCommand=>new RelayCommand(()=>{ try{_librarySync.Refresh();}catch{} RefreshLocalPage(); }); public ICommand FirstPageCommand=>new RelayCommand(()=>SetPage(1)); public ICommand PreviousPageCommand=>new RelayCommand(()=>SetPage(_page-1)); public ICommand NextPageCommand=>new RelayCommand(()=>SetPage(_page+1)); public ICommand LastPageCommand=>new RelayCommand(()=>SetPage(TotalPages)); public ICommand RefreshCommand=>new RelayCommand(RefreshPage); public ICommand OpenDownloadsCommand=>new RelayCommand(()=>Navigation.Navigate<DownloadsPage>()); public ICommand OpenFolderCommand=>new RelayCommand<Game>(_=>{}); public ICommand RefreshLocalCommand=>new RelayCommand(()=>{}); public ICommand OpenStoreCommand=>new RelayCommand(()=>{}); public IAsyncRelayCommand LoadScreenshotsCommand=>new AsyncRelayCommand(()=>Task.CompletedTask);
     // Home dashboard shortcuts + quick stats shown on the Games landing page.
-    public ICommand OpenOnlineFixesCommand=>new RelayCommand(()=>Navigation.Navigate<OnlineFixesPage>()); public ICommand OpenGameFixesCommand=>new RelayCommand(()=>Navigation.Navigate<GameFixesPage>());    public ICommand OpenSteamlessCommand=>new RelayCommand(()=>Navigation.Navigate<SteamlessPage>()); public ICommand OpenCreamInstallerCommand=>new RelayCommand(()=>Navigation.Navigate<CreamInstallerPage>()); public ICommand OpenDenuvoCommand=>new RelayCommand(()=>Navigation.Navigate<DenuvoGenerationPage>()); public ICommand OpenSettingsCommand=>new RelayCommand(()=>Navigation.Navigate<SettingsPage>());
+    public ICommand OpenGameFixesCommand=>new RelayCommand(()=>Navigation.Navigate<GameFixesPage>());    public ICommand OpenSteamlessCommand=>new RelayCommand(()=>Navigation.Navigate<SteamlessPage>()); public ICommand OpenCreamInstallerCommand=>new RelayCommand(()=>Navigation.Navigate<CreamInstallerPage>()); public ICommand OpenDenuvoCommand=>new RelayCommand(()=>Navigation.Navigate<DenuvoGenerationPage>()); public ICommand OpenSettingsCommand=>new RelayCommand(()=>Navigation.Navigate<SettingsPage>());
     public int InstalledCount=>Games.Count(g=>g.InstallState==GameInstallState.Installed); public int LocalCount=>Games.Count; public int ActiveDownloadCount=>Store.Downloads.Count(x=>x.IsActive); public int QueuedCount=>Store.Downloads.Count(x=>x.State==DownloadJobState.Queued); public string TotalCatalogCount=>$"{CatalogItems.Count:N0}"; public string LocalLibraryLabel=>Games.Count==1?"1 installed app":$"{Games.Count:N0} installed apps"; public string DownloadsSummary=>ActiveDownloadCount>0?$"{ActiveDownloadCount} active · {QueuedCount} queued":QueuedCount>0?$"{QueuedCount} queued":"Queue empty";
     public override async Task OnNavigatedToAsync(){ try{_librarySync.Refresh();}catch{} RefreshLocalPage(); await LoadAsync(false); OnPropertyChanged(nameof(InstalledCount)); OnPropertyChanged(nameof(LocalCount)); OnPropertyChanged(nameof(ActiveDownloadCount)); OnPropertyChanged(nameof(QueuedCount)); OnPropertyChanged(nameof(TotalCatalogCount)); OnPropertyChanged(nameof(LocalLibraryLabel)); OnPropertyChanged(nameof(DownloadsSummary)); }
     private static async Task<T> WithTimeout<T>(Task<T> task, T fallback, int ms=20000){try{using var cts=new CancellationTokenSource(ms); var delay=Task.Delay(ms,cts.Token); if(await Task.WhenAny(task,delay)==task){cts.Cancel(); return await task;} return fallback;}catch{return fallback;}}
@@ -178,78 +177,28 @@ public sealed class AchievementsViewModel : ViewModelBase { private string _sear
 public sealed class LogsViewModel : ViewModelBase { public LogsViewModel(IAppDataStore s,INavigationService n,ILoggingService l):base(s,n,l){Logs=s.Logs;FilteredLogs=new();RefreshFilter();} public ObservableCollection<LogEntry> Logs{get;} public ObservableCollection<LogEntry> FilteredLogs{get;} public string SearchText{get;set;}=""; public string SelectedLevel{get;set;}="All levels"; public string[] Levels{get;}={"All levels","Info","Warning","Error","Debug"}; public bool HasActiveFilters=>false; public string FilterSummary=>"No filters applied"; public ICommand ClearCommand=>new RelayCommand(()=>{Logs.Clear();RefreshFilter();}); public ICommand RefreshCommand=>new RelayCommand(RefreshFilter); private void RefreshFilter(){FilteredLogs.Clear();foreach(var x in Logs)FilteredLogs.Add(x);}}
 
 
-public sealed class OnlineFixesViewModel : ViewModelBase
-{
-    private readonly IOnlineFixSearchService _search;
-    public OnlineFixesViewModel() : base(new AppDataStore(), new LocalNavigation(), new LocalLogging()) { _search = new OnlineFixSearchService(); Games = Store.Games; }
-    public OnlineFixesViewModel(IAppDataStore s, INavigationService n, ILoggingService l, IOnlineFixSearchService search) : base(s,n,l) { _search=search; Games=s.Games; }
-    public ObservableCollection<Game> Games { get; }
-    public ObservableCollection<OnlineFix> FilteredFixes { get; } = new();
-    public ObservableCollection<OnlineFixSearchResult> GameSearchResults { get; } = new();
-    public string SearchText { get; set; } = string.Empty;
-    public string InstallLocation { get; set; } = string.Empty;
-    public bool IsSearching { get; private set; }
-    public bool HasOpenResult { get; private set; }
-    public bool LastSearchFoundMatch { get; private set; }
-    public string LastSearchSummary { get; private set; } = "Ready";
-    public OnlineFixSearchResult? OpenResult { get; private set; }
-    public string GamesSummary => $"{Games.Count} games";
-    public ICommand OpenSiteCommand => new RelayCommand(()=>OpenUrl("https://online-fix.me"));
-    public ICommand OpenLocationCommand => new RelayCommand(()=>{ });
-    public ICommand SearchCommand => new AsyncRelayCommand(SearchAsync);
-    public ICommand OpenLastResultCommand => new RelayCommand(()=>{ if(OpenResult is not null) OpenUrl(OpenResult.Url); });
-    public ICommand ApplyFixCommand => new AsyncRelayCommand<Game>(async game=>{ if(game is not null){ SearchText=game.Name; await SearchAsync(); } });
-    public ICommand SearchForGameCommand => new AsyncRelayCommand<OnlineFix>(async fix=>{ if(fix is not null){ SearchText=fix.GameName; await SearchAsync(); } });
-    public ICommand ValidateCommand => new RelayCommand<OnlineFix>(_=>{ });
-    private async Task SearchAsync(){ if(IsSearching)return; IsSearching=true; try { var game=Games.FirstOrDefault(x=>x.Name.Contains(SearchText,StringComparison.OrdinalIgnoreCase)); var result=await _search.SearchAsync(SearchText,game?.AppId??0); OpenResult=result; HasOpenResult=!string.IsNullOrWhiteSpace(result.Url); LastSearchFoundMatch=HasOpenResult; LastSearchSummary=HasOpenResult?"Match found":"No public match found"; } catch(Exception ex){LastSearchSummary=$"Search failed: {ex.GetType().Name}";} finally{IsSearching=false;OnPropertyChanged(string.Empty);} }
-    private static void OpenUrl(string url){ try{Process.Start(new ProcessStartInfo(url){UseShellExecute=true});}catch{} }
-}
-sealed class LocalNavigation : INavigationService { public void Attach(Action<Type> navigate){} public void Detach(){} public void Navigate<TPage>(){} }
-sealed class LocalLogging : ILoggingService { public void Add(LogLevel level,string component,string message,int? appId=null,Guid? jobId=null){} }
 public sealed class ModFixesViewModel { public ObservableCollection<ModFix> Fixes{get;}=new(); public ModFix? SelectedFix{get;set;} public ICommand RefreshCommand=>new RelayCommand(()=>{}); public ICommand ValidateCommand=>new RelayCommand<ModFix>(_=>{}); public ICommand BackupCommand=>new RelayCommand<ModFix>(_=>{}); public ICommand ApplyCommand=>new RelayCommand<ModFix>(_=>{}); public ICommand ResetCommand=>new RelayCommand<ModFix>(_=>{}); }
 public sealed class GameFixesViewModel : ViewModelBase
 {
-    private readonly IRyuuFixesService _fixesService;
-    private readonly IGameFixDownloadService _downloadService;
-    private readonly IRyuuSecureDownloadService _ryuuSecure;
-    private readonly ISettingsService _settings;
-    private readonly ILoggingService _logging;
-    private readonly INavigationService _navigation;
+    private const int PageSize = 48;
 
+    private readonly IFixCatalogService _fixesService;
+    private readonly List<GameFixGameCard> _allCards = new();
     private string _searchText = string.Empty;
-    private bool _isLoading;
-    private RyuuFixGame? _selectedGame;
-    private string _installFolder = string.Empty;
-    private string _statusMessage = "Fetch the available fixes to begin.";
     private string _lastFetchSummary = "Not loaded yet.";
-    private int _selectedCount;
-    private IReadOnlyList<GameFixItem> _items = Array.Empty<GameFixItem>();
+    private bool _isLoading;
     private int _page = 1;
-    private int _pageSize = 48;
-    private List<GameFixGameCard> _allCards = new();
 
     public GameFixesViewModel(
         IAppDataStore store,
         INavigationService navigation,
         ILoggingService logging,
-        IRyuuFixesService fixesService,
-        IGameFixDownloadService downloadService,
-        IRyuuSecureDownloadService ryuuSecureDownloadService,
-        ISettingsService settings) : base(store, navigation, logging)
+        IFixCatalogService fixesService) : base(store, navigation, logging)
     {
         _fixesService = fixesService;
-        _downloadService = downloadService;
-        _ryuuSecure = ryuuSecureDownloadService;
-        _settings = settings;
-        _logging = logging;
-        _navigation = navigation;
-
-        Games = new ObservableCollection<GameFixGameCard>();
-        FilteredItems = new ObservableCollection<GameFixItem>();
     }
 
-    public ObservableCollection<GameFixGameCard> Games { get; }
-    public ObservableCollection<GameFixItem> FilteredItems { get; }
+    public ObservableCollection<GameFixGameCard> PagedGames { get; } = new();
 
     public string SearchText
     {
@@ -260,7 +209,6 @@ public sealed class GameFixesViewModel : ViewModelBase
             {
                 _page = 1;
                 RefreshPage();
-                RefreshFilteredItems();
             }
         }
     }
@@ -271,111 +219,29 @@ public sealed class GameFixesViewModel : ViewModelBase
         private set => SetProperty(ref _isLoading, value);
     }
 
-    public RyuuFixGame? SelectedGame
-    {
-        get => _selectedGame;
-        set
-        {
-            if (SetProperty(ref _selectedGame, value))
-            {
-                _items = value is null ? Array.Empty<GameFixItem>() : BuildItemLookup(value);
-                ItemsSource = value;
-                RefreshFilteredItems();
-                UpdateSelectedGameSummary();
-            }
-        }
-    }
-
-    public string InstallFolder
-    {
-        get => _installFolder;
-        set
-        {
-            if (SetProperty(ref _installFolder, value))
-                OnPropertyChanged(nameof(HasInstallFolder));
-        }
-    }
-
-    public bool HasInstallFolder => !string.IsNullOrWhiteSpace(InstallFolder) && Directory.Exists(InstallFolder);
-    public bool IsSelectedGameSet => SelectedGame is not null;
-
-    public string StatusMessage
-    {
-        get => _statusMessage;
-        private set => SetProperty(ref _statusMessage, value);
-    }
-
-    public string LastFetchSummary
-    {
-        get => _lastFetchSummary;
-        private set => SetProperty(ref _lastFetchSummary, value);
-    }
-
-    public int SelectedCount
-    {
-        get; private set;
-    }
-
-    public bool HasSelectedItems => SelectedCount > 0;
-    public bool CanFetch => !IsLoading;
-    public bool CanDownloadSelected => HasSelectedItems && FilteredItems.Any(i => i.Selected && !i.IsDownloaded) && SelectedGame is not null;
-    public bool CanApplySelected => HasSelectedItems && FilteredItems.Any(i => i.Selected && i.IsDownloaded && !i.IsApplied) && HasInstallFolder;
-    public bool CanResetSelected => HasSelectedItems;
-
-    public string SelectedGameLabel => SelectedGame is null ? "—" : $"{SelectedGame.Name}  ·  App ID {SelectedGame.AppId}";
-    public string ItemsCountLabel => $"{FilteredItems.Count:N0} fixes";
-    public string SelectedCountLabel => SelectedCount == 0 ? "No fixes selected" : $"{SelectedCount} selected";
-    public string DownloadFolderLabel => _downloadService.DefaultDownloadFolder;
-    public bool IsFolderPickerEnabled => SelectedGame is not null;
-
-    public string[] Filters { get; } = { "All", "Not downloaded", "Downloaded", "Applied" };
-    public string SelectedFilter { get; set; } = "All";
-
-    public ObservableCollection<GameFixGameCard> PagedGames => Games;
-    public int FilteredCount => _allCards.Count(c =>
-    {
-        var s = _searchText?.Trim();
-        return string.IsNullOrEmpty(s) || c.Name.Contains(s, StringComparison.OrdinalIgnoreCase) || c.AppId.Contains(s, StringComparison.OrdinalIgnoreCase);
-    });
-    public int TotalPages => Math.Max(1, (FilteredCount + _pageSize - 1) / _pageSize);
+    public int FilteredCount => FilteredCards().Count();
+    public int TotalPages => Math.Max(1, (FilteredCount + PageSize - 1) / PageSize);
     public string CatalogCountLabel => $"{FilteredCount:N0} games";
     public string PageLabel => $"{_page} / {TotalPages}";
-    public bool HasGames => Games.Count > 0;
-    public string EmptyStateMessage => IsLoading ? "Loading…" : "No games found. Try a different search or refresh.";
-    public string VisibleCountLabel => $"{Games.Count:N0} shown";
+    public bool HasGames => PagedGames.Count > 0;
+    public string EmptyStateMessage => IsLoading
+        ? "Loading…"
+        : _allCards.Count == 0 ? _lastFetchSummary : "No games found. Try a different search.";
+    public string VisibleCountLabel => $"{PagedGames.Count:N0} shown";
     public string LastFetchLabel => _lastFetchSummary;
     public bool CanGoPrevious => _page > 1;
     public bool CanGoNext => _page < TotalPages;
 
-    public ICommand FetchCommand => new AsyncRelayCommand(FetchAsync, () => CanFetch);
-    public ICommand RefreshCommand => new AsyncRelayCommand(FetchAsync, () => CanFetch);
+    public ICommand FetchCommand => new AsyncRelayCommand(FetchAsync, () => !IsLoading);
     public ICommand PreviousPageCommand => new RelayCommand(() => { _page--; RefreshPage(); }, () => CanGoPrevious);
     public ICommand NextPageCommand => new RelayCommand(() => { _page++; RefreshPage(); }, () => CanGoNext);
-    public ICommand SelectAllShownCommand => new RelayCommand(SelectAllShown, () => FilteredItems.Count > 0);
-    public ICommand ClearSelectionCommand => new RelayCommand(ClearSelection, () => FilteredItems.Count > 0);
-    public ICommand DownloadSelectedCommand => new AsyncRelayCommand(DownloadSelectedAsync, () => CanDownloadSelected);
-    public ICommand ApplySelectedCommand => new AsyncRelayCommand(ApplySelectedAsync, () => CanApplySelected);
-    public ICommand ResetSelectedCommand => new AsyncRelayCommand(ResetSelectedAsync, () => CanResetSelected);
-    public ICommand BrowseFolderCommand => new RelayCommand(BrowseFolder, () => IsFolderPickerEnabled);
-    public ICommand OpenFolderCommand => new RelayCommand(OpenFolder, () => HasInstallFolder);
-    public ICommand ClearInstallFolderCommand => new RelayCommand(ClearInstallFolder, () => IsFolderPickerEnabled);
-    public ICommand GoToDownloadsCommand => new RelayCommand(() => _navigation.Navigate<DownloadsPage>());
 
-    public override async Task OnNavigatedToAsync()
-    {
-        await RefreshAsync();
-    }
-
-    private async Task RefreshAsync()
-    {
-        await FetchAsync();
-    }
+    public override Task OnNavigatedToAsync() => FetchAsync();
 
     private async Task FetchAsync()
     {
         if (IsLoading) return;
         IsLoading = true;
-        StatusMessage = "Fetching available fixes from the Ryuu generator…";
         try
         {
             var snapshot = await _fixesService.GetFixesAsync(forceRefresh: true, cancellationToken: CancellationToken.None);
@@ -392,307 +258,29 @@ public sealed class GameFixesViewModel : ViewModelBase
                 });
             }
 
-            LastFetchSummary = snapshot.Succeeded
-                ? $"Loaded {_allCards.Count:N0} games from the Ryuu generator."
-                : snapshot.Message;
-            StatusMessage = snapshot.Succeeded
-                ? $"{_allCards.Count:N0} games available. Pick a game to see its fixes."
-                : snapshot.Message;
-
+            _lastFetchSummary = snapshot.Message;
             _page = 1;
             RefreshPage();
         }
         catch (Exception exception)
         {
-            StatusMessage = $"The fixes feed could not be loaded: {exception.GetType().Name}.";
-            LastFetchSummary = StatusMessage;
+            _lastFetchSummary = $"The fixes catalog could not be loaded: {exception.GetType().Name}.";
         }
         finally
         {
             IsLoading = false;
-            OnPropertyChanged(nameof(DownloadFolderLabel));
             OnPropertyChanged(string.Empty);
         }
     }
 
-    private static string MakeKey(string appId, RyuuFixEntry entry)
+    private IEnumerable<GameFixGameCard> FilteredCards()
     {
-        var safeName = string.IsNullOrWhiteSpace(entry.Filename) ? entry.Href : entry.Filename;
-        return $"{appId}\\{safeName}";
-    }
-
-    private IReadOnlyList<GameFixItem> BuildItemLookup(RyuuFixGame game)
-    {
-        var items = new List<GameFixItem>(game.Fixes.Count);
-        foreach (var entry in game.Fixes)
-        {
-            var id = MakeKey(game.AppId, entry);
-            items.Add(new GameFixItem
-            {
-                Id = id,
-                GameName = game.Name,
-                AppId = int.TryParse(game.AppId, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var aid) ? aid : 0,
-                Source = "Ryuu generator",
-                Type = PickFixType(entry),
-                Name = PickFixName(entry, game.Name),
-                Description = BuildFixDescription(entry),
-                Version = string.Empty,
-                FileName = entry.Filename,
-                DownloadUrl = entry.Href,
-                Size = entry.Size,
-                Status = "Not downloaded"
-            });
-        }
-        return items;
-    }
-
-    private void RefreshFilteredItems()
-    {
-        FilteredItems.Clear();
-        if (ItemsSource is null) return;
-
-        IEnumerable<RyuuFixEntry> query = ItemsSource.Fixes;
-        var search = _searchText?.Trim();
-        if (!string.IsNullOrEmpty(search))
-        {
-            query = query.Where(f =>
-                f.Filename.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                f.Href.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                f.Size.Contains(search, StringComparison.OrdinalIgnoreCase));
-        }
-
-        var entries = query.ToList();
-        var items = new List<GameFixItem>(entries.Count);
-        for (var i = 0; i < entries.Count; i++)
-            items.Add(_items[i]);
-
-        items = SelectedFilter switch
-        {
-            "Not downloaded" => items.Where(i => i.Status is "Not downloaded").ToList(),
-            "Downloaded" => items.Where(i => i.Status is "Downloaded").ToList(),
-            "Applied" => items.Where(i => i.Status is "Applied").ToList(),
-            _ => items
-        };
-
-        foreach (var item in items)
-            FilteredItems.Add(item);
-
-        RecomputeSelection();
-        OnPropertyChanged(nameof(ItemsCountLabel));
-        OnPropertyChanged(nameof(CanDownloadSelected));
-        OnPropertyChanged(nameof(CanApplySelected));
-        OnPropertyChanged(nameof(CanResetSelected));
-    }
-
-    private RyuuFixGame? ItemsSource { get; set; }
-
-    private void RecomputeSelection()
-    {
-        SelectedCount = FilteredItems.Count(i => i.Selected);
-        OnPropertyChanged(nameof(HasSelectedItems));
-        OnPropertyChanged(nameof(SelectedCountLabel));
-    }
-
-    private void SelectAllShown()
-    {
-        foreach (var item in FilteredItems)
-            item.Selected = true;
-        RecomputeSelection();
-    }
-
-    private void ClearSelection()
-    {
-        foreach (var item in FilteredItems)
-            item.Selected = false;
-        RecomputeSelection();
-    }
-
-    private async Task DownloadSelectedAsync()
-    {
-        if (SelectedGame is null) return;
-        int.TryParse(SelectedGame.AppId, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var appIdInt);
-
-        var settings = _settings.Load();
-        var authCode = settings.RyuuApiKey;
-        if (string.IsNullOrWhiteSpace(authCode))
-        {
-            StatusMessage = "Set your Ryuu auth code in Settings before downloading.";
-            return;
-        }
-
-        var toDownload = FilteredItems.Where(i => i.Selected && !i.IsDownloaded).ToList();
-        if (toDownload.Count == 0)
-        {
-            StatusMessage = "No new fixes to download.";
-            return;
-        }
-
-        StatusMessage = $"Downloading Ryuu archive for {SelectedGame.Name}…";
-
-        var downloadProgress = new Progress<RyuuSecureDownloadProgress>(p =>
-        {
-            StatusMessage = $"Ryuu download: {p.Percent:0}% · {p.Downloaded} / {p.Total} · {p.Speed} · {p.Eta}";
-            OnPropertyChanged(nameof(StatusMessage));
-        });
-
-        var ryuuResult = await _ryuuSecure.DownloadAsync(
-            appIdInt,
-            authCode,
-            SelectedGame.Name,
-            downloadProgress).ConfigureAwait(false);
-
-        if (!ryuuResult.Succeeded)
-        {
-            StatusMessage = $"Ryuu download failed: {ryuuResult.Message}";
-            _logging.Add(LogLevel.Warning, "GameFixes", $"Ryuu download failed for {SelectedGame.Name} (App ID {SelectedGame.AppId}): {ryuuResult.Message}", appIdInt);
-            return;
-        }
-
-        foreach (var item in toDownload)
-        {
-            item.LocalPath = ryuuResult.ArchivePath;
-            item.Status = "Downloaded";
-        }
-
-        _logging.Add(LogLevel.Info, "GameFixes", $"Ryuu archive downloaded for {SelectedGame.Name} (App ID {SelectedGame.AppId}) to {ryuuResult.ArchivePath}.", appIdInt);
-        RefreshFilteredItems();
-        StatusMessage = "Ryuu archive ready. Choose the game folder, then Apply to extract the fixes.";
-        OnPropertyChanged(nameof(CanApplySelected));
-    }
-
-    private async Task ApplySelectedAsync()
-    {
-        if (!HasInstallFolder) return;
-        if (SelectedGame is null) return;
-        int.TryParse(SelectedGame.AppId, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var appIdInt);
-
-        var toApply = FilteredItems.Where(i => i.Selected && i.IsDownloaded && !i.IsApplied).ToList();
-        if (toApply.Count == 0)
-        {
-            StatusMessage = "No downloaded fixes selected to apply.";
-            return;
-        }
-
-        var archivePath = toApply.FirstOrDefault()?.LocalPath;
-        if (string.IsNullOrWhiteSpace(archivePath) || !File.Exists(archivePath))
-        {
-            StatusMessage = "No Ryuu archive found for this game. Download it first.";
-            return;
-        }
-
-        StatusMessage = $"Applying Ryuu fixes for {SelectedGame.Name} into {InstallFolder}…";
-
-        var progress = new Progress<string>(m =>
-        {
-            StatusMessage = m;
-            OnPropertyChanged(nameof(StatusMessage));
-        });
-
-        var applyResult = await _downloadService.ApplyArchiveAsync(
-            archivePath,
-            InstallFolder,
-            progress).ConfigureAwait(false);
-
-        if (applyResult.Succeeded)
-        {
-            foreach (var item in toApply)
-            {
-                item.LocalPath = applyResult.ExtractionRoot;
-                item.Status = "Applied";
-            }
-
-            _logging.Add(LogLevel.Info, "GameFixes", $"Ryuu fixes applied for {SelectedGame.Name} (App ID {SelectedGame.AppId}) into {InstallFolder}.", appIdInt);
-            RefreshFilteredItems();
-            StatusMessage = $"Done. Ryuu fixes applied into {InstallFolder}.";
-        }
-        else
-        {
-            foreach (var item in toApply)
-            {
-                item.Status = applyResult.Message.Length <= 60 ? applyResult.Message : $"{applyResult.Message.Substring(0, 57)}…";
-            }
-
-            _logging.Add(LogLevel.Warning, "GameFixes", $"Apply failed for {SelectedGame.Name} (App ID {SelectedGame.AppId}): {applyResult.Message}", appIdInt);
-            RefreshFilteredItems();
-            StatusMessage = $"Apply failed: {applyResult.Message}";
-        }
-
-        OnPropertyChanged(nameof(CanApplySelected));
-        OnPropertyChanged(nameof(CanResetSelected));
-    }
-
-    private async Task ResetSelectedAsync()
-    {
-        if (!HasInstallFolder) return;
-
-        var toReset = FilteredItems.Where(i => i.Selected && i.IsApplied).ToList();
-        if (toReset.Count == 0)
-        {
-            StatusMessage = "No applied fixes selected to reset.";
-            return;
-        }
-
-        var anyReset = false;
-        foreach (var item in toReset)
-        {
-            if (await _downloadService.ResetArchiveAsync(InstallFolder, CancellationToken.None).ConfigureAwait(false))
-            {
-                item.LocalPath = string.Empty;
-                item.Status = "Not downloaded";
-                anyReset = true;
-            }
-            else
-            {
-                item.Status = "Reset failed";
-            }
-        }
-
-        if (anyReset)
-            StatusMessage = $"Done. Applied fixes removed from {InstallFolder}.";
-        else
-            StatusMessage = "Reset failed. Check the status on each item.";
-
-        RefreshFilteredItems();
-        OnPropertyChanged(nameof(CanApplySelected));
-        OnPropertyChanged(nameof(CanResetSelected));
-    }
-
-    private void BrowseFolder()
-    {
-        var dialog = new OpenFolderDialog
-        {
-            Title = SelectedGame is null
-                ? "Select game folder"
-                : $"Select {SelectedGame.Name} folder",
-            Multiselect = false,
-            ValidateNames = true
-        };
-
-        if (dialog.ShowDialog(Application.Current.MainWindow) == true)
-            InstallFolder = dialog.FolderName;
-    }
-
-    private void OpenFolder()
-    {
-        if (!HasInstallFolder) return;
-        try
-        {
-            Process.Start(InstallFolder);
-        }
-        catch { }
-    }
-
-    private void ClearInstallFolder()
-    {
-        InstallFolder = string.Empty;
-    }
-
-    private void UpdateSelectedGameSummary()
-    {
-        OnPropertyChanged(nameof(SelectedGameLabel));
-        OnPropertyChanged(nameof(IsFolderPickerEnabled));
-        OnPropertyChanged(nameof(IsSelectedGameSet));
-        RefreshFilteredItems();
+        var search = _searchText.Trim();
+        return string.IsNullOrEmpty(search)
+            ? _allCards
+            : _allCards.Where(c =>
+                c.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                c.AppId.Contains(search, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string PickGlyph(string appId)
@@ -706,59 +294,20 @@ public sealed class GameFixesViewModel : ViewModelBase
             2 => "★",
             3 => "☽",
             4 => "△",
-            5 => "✧",
-            _ => "◆"
+            _ => "✧"
         };
-    }
-
-    private static string PickFixType(RyuuFixEntry entry)
-    {
-        var lower = entry.Filename.ToLowerInvariant();
-        return lower.Contains("bypass") || lower.Contains("crack") || lower.Contains("unlock") || lower.Contains("denuvo")
-            ? "Bypass"
-            : lower.Contains("online") || lower.Contains("multiplayer") || lower.Contains("fix") || lower.Contains("voices") || lower.Contains("patch")
-                ? "Fix"
-                : "Archive";
-    }
-
-    private static string PickFixName(RyuuFixEntry entry, string gameName)
-    {
-        if (!string.IsNullOrWhiteSpace(entry.Filename))
-            return Path.GetFileNameWithoutExtension(entry.Filename);
-        if (!string.IsNullOrWhiteSpace(entry.Href))
-            return Path.GetFileNameWithoutExtension(entry.Href);
-        return $"{gameName} fix";
-    }
-
-    private static string BuildFixDescription(RyuuFixEntry entry)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(entry.Size))
-            parts.Add(entry.Size);
-        if (entry.Badges.Count > 0)
-            parts.Add(string.Join(", ", entry.Badges));
-        return parts.Count > 0 ? string.Join(" · ", parts) : "Available from the Ryuu generator.";
     }
 
     private void RefreshPage()
     {
-        var search = _searchText.Trim();
-        var filtered = string.IsNullOrEmpty(search)
-            ? _allCards
-            : _allCards.Where(c =>
-                c.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                c.AppId.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+        var filtered = FilteredCards().ToList();
+        _page = Math.Clamp(_page, 1, Math.Max(1, (filtered.Count + PageSize - 1) / PageSize));
 
-        var filteredCount = filtered.Count;
-        _page = Math.Clamp(_page, 1, Math.Max(1, (filteredCount + _pageSize - 1) / _pageSize));
-
-        Games.Clear();
-        var pageCards = filtered.Skip((_page - 1) * _pageSize).Take(_pageSize).ToList();
+        PagedGames.Clear();
+        var pageCards = filtered.Skip((_page - 1) * PageSize).Take(PageSize).ToList();
         foreach (var card in pageCards)
-            Games.Add(card);
+            PagedGames.Add(card);
 
-        OnPropertyChanged(nameof(Games));
-        OnPropertyChanged(nameof(PagedGames));
         OnPropertyChanged(nameof(HasGames));
         OnPropertyChanged(nameof(EmptyStateMessage));
         OnPropertyChanged(nameof(CatalogCountLabel));
@@ -771,7 +320,7 @@ public sealed class GameFixesViewModel : ViewModelBase
         _ = LoadVisibleArtworkAsync(pageCards);
     }
 
-    private async Task LoadVisibleArtworkAsync(List<GameFixGameCard> cards)
+    private static async Task LoadVisibleArtworkAsync(List<GameFixGameCard> cards)
     {
         var semaphore = new SemaphoreSlim(4);
         var tasks = cards.Where(c => c.ArtworkImage is null).Select(async card =>
@@ -803,7 +352,7 @@ public sealed class GameFixGameCard : UiObservableObject
     public string Name { get; init; } = string.Empty;
     public int FixCount { get; init; }
     public string CoverGlyph { get; init; } = "◆";
-    public RyuuFixGame? Game { get; init; }
+    public FixGame? Game { get; init; }
 
     public string Summary => $"{FixCount} fix(es)";
     public string AppLabel => $"App {AppId}";

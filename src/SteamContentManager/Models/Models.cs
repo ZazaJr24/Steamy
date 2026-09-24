@@ -406,23 +406,6 @@ public sealed class ModFix : ObservableObject
     public string BackupFolder { get => _backupFolder; set => SetProperty(ref _backupFolder, value); }
 }
 
-public sealed class OnlineFix : ObservableObject
-{
-    private string _status = string.Empty;
-
-    public int AppId { get; init; }
-    public string GameName { get; init; } = string.Empty;
-    public string Name { get; init; } = string.Empty;
-    public string Provider { get; init; } = string.Empty;
-    public string Version { get; init; } = string.Empty;
-    public string Description { get; init; } = string.Empty;
-    public string Compatibility { get; init; } = string.Empty;
-    public string Updated { get; init; } = string.Empty;
-    public string AppLabel => $"App {AppId}";
-    public bool RequiresConfiguration { get; init; }
-    public string Status { get => _status; set => SetProperty(ref _status, value); }
-}
-
 public sealed class GenerationTemplate : ObservableObject
 {
     private string _status = string.Empty;

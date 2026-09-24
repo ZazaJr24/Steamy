@@ -95,9 +95,6 @@
 
           <ui:NavigationViewItem Content="Fixes" Icon="{ui:SymbolIcon Shield24}">
             <ui:NavigationViewItem.MenuItems>
-              <ui:NavigationViewItem Content="Online Fixes"
-                                     Icon="{ui:SymbolIcon Cloud24}"
-                                     TargetPageType="{x:Type pages:OnlineFixesPage}" />
               <ui:NavigationViewItem Content="Game Fixes"
                                      Icon="{ui:SymbolIcon ShieldTask24}"
                                      TargetPageType="{x:Type pages:GameFixesPage}" />

@@ -50,7 +50,7 @@ public partial class GameFixesPage : Page
         await ShowOverlayAsync();
     }
 
-    private void BuildFixRows(RyuuFixGame game)
+    private void BuildFixRows(FixGame game)
     {
         FixesList.Children.Clear();
         foreach (var fix in game.Fixes)
@@ -114,7 +114,7 @@ public partial class GameFixesPage : Page
 
     private async void ApplySingleFix_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Wpf.Ui.Controls.Button btn || btn.Tag is not RyuuFixEntry fix) return;
+        if (sender is not Wpf.Ui.Controls.Button btn || btn.Tag is not FixEntry fix) return;
         if (string.IsNullOrWhiteSpace(_folderPath)) { OverlayStatus.Text = "Select the game folder first."; return; }
         if (_isApplying) return;
 
@@ -160,7 +160,7 @@ public partial class GameFixesPage : Page
         finally { _isApplying = false; }
     }
 
-    private async Task DownloadAndApplyFixAsync(RyuuFixEntry fix)
+    private async Task DownloadAndApplyFixAsync(FixEntry fix)
     {
         var downloadService = App.Services.GetRequiredService<IGameFixDownloadService>();
         var logging = App.Services.GetRequiredService<ILoggingService>();
@@ -170,39 +170,14 @@ public partial class GameFixesPage : Page
         if (_selectedCard is not null)
             int.TryParse(_selectedCard.AppId, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out appId);
 
-        var mirrorUrl = settings.FixMirrorUrl;
-        var credentials = App.Services.GetRequiredService<ISecureCredentialService>();
-        var isMirrorDownload = false;
-        string url;
-
-        if (!string.IsNullOrWhiteSpace(mirrorUrl))
-        {
-            if (!mirrorUrl.EndsWith('/')) mirrorUrl += "/";
-            url = mirrorUrl + fix.Filename;
-            isMirrorDownload = true;
-        }
-        else
-        {
-            var authCode = settings.RyuuApiKey;
-            if (string.IsNullOrWhiteSpace(authCode))
-                authCode = await credentials.ReadAsync("ryuu-auth-key") ?? string.Empty;
-
-            url = fix.Href;
-            if (!string.IsNullOrWhiteSpace(authCode))
-            {
-                var separator = url.Contains('?') ? "&" : "?";
-                url = $"{url}{separator}auth_code={Uri.EscapeDataString(authCode)}";
-            }
-        }
-
-        string? authToken = null;
-        if (isMirrorDownload)
-            authToken = await credentials.ReadAsync("fix-mirror-token");
+        var source = FixSource.Resolve(settings.FixMirrorUrl)
+            ?? throw new InvalidOperationException("No fixes source is set. Add it in Settings → Fixes source.");
+        var token = await App.Services.GetRequiredService<ISecureCredentialService>().ReadAsync(FixSource.TokenCredentialName);
 
         OverlayStatus.Text = $"Downloading {fix.Filename}…";
         var dlProgress = new Progress<GameFixDownloadProgress>(p =>
             Dispatcher.BeginInvoke(() => OverlayStatus.Text = $"Downloading {fix.Filename}… {p.Downloaded} / {p.Total} ({p.Percent:F0}%)"));
-        var dlResult = await downloadService.DownloadAsync(url, fix.Filename, gameName, appId, dlProgress, default, authToken);
+        var dlResult = await downloadService.DownloadAsync(source.FileUrl(fix), fix.Filename, gameName, appId, dlProgress, default, token);
 
         if (!dlResult.Succeeded)
         {

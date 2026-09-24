@@ -7,8 +7,8 @@ namespace SteamContentManager.Services;
 
 /// <summary>
 /// Downloads a single game-fix archive from a remote URL and, when told to, extracts it into
-/// a chosen game folder. It performs read-only HTTP GET requests, never authenticates, never
-/// stores credentials and only ever writes into the folder the user selected — it does not touch
+/// a chosen game folder. It performs read-only HTTP GET requests, never stores credentials and
+/// only ever writes into the folder the user selected — it does not touch
 /// anything else on disk. Downloads land in the application's download folder (or a local fallback
 /// temp folder), and extractions go into a subfolder named after the archive file so that a failed
 /// run leaves its own folder rather than clobbering unrelated game files.
@@ -56,12 +56,6 @@ public interface IGameFixDownloadService
         string targetFolder,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Removes the extracted folder created by an earlier <see cref="ApplyArchiveAsync"/> call
-    /// for the given target folder. Returns true when the folder existed and was removed.
-    /// </summary>
-    Task<bool> ResetArchiveAsync(string targetFolder, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the application-local folder used for downloads when no explicit download folder is
@@ -149,7 +143,7 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
         if (File.Exists(localPath))
         {
             var existing = new FileInfo(localPath);
-            if (existing.Length > 0)
+            if (existing.Length > 0 && !IsLfsPointer(localPath))
                 return new GameFixDownloadResult(true, localPath, $"Already downloaded: {FormatSize(existing.Length)}");
         }
 
@@ -205,10 +199,18 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
                     etaLabel));
             }
 
-            if (fileStream.Length == 0)
+            var written = fileStream.Length;
+            await fileStream.DisposeAsync().ConfigureAwait(false);
+            if (written == 0)
             {
                 TryDelete(localPath);
                 return new GameFixDownloadResult(false, string.Empty, "Download finished but no data was written.");
+            }
+
+            if (IsLfsPointer(localPath))
+            {
+                TryDelete(localPath);
+                return new GameFixDownloadResult(false, string.Empty, "The source returned a Git LFS pointer instead of the archive. Use the GitHub repository URL as the fixes source.");
             }
 
             progress?.Report(new GameFixDownloadProgress(100, archiveFileName, FormatSize(totalRead), FormatSize(totalRead), "—", "Done"));
@@ -314,11 +316,11 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
 
         var archiveFileName = Path.GetFileName(archivePath);
         if (string.IsNullOrWhiteSpace(archiveFileName))
-            archiveFileName = "ryuu.zip";
+            archiveFileName = "fix.zip";
 
         var baseName = Path.GetFileNameWithoutExtension(archiveFileName);
         if (string.IsNullOrWhiteSpace(baseName))
-            baseName = "ryuu";
+            baseName = "fix";
 
         var extractionRoot = Path.Combine(targetFolder, EscapeFileName(baseName));
 
@@ -356,18 +358,18 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
         }
     }
 
-    public async Task<bool> ResetArchiveAsync(string targetFolder, CancellationToken cancellationToken = default)
+    private static bool IsLfsPointer(string path)
     {
-        if (string.IsNullOrWhiteSpace(targetFolder))
+        try
+        {
+            var info = new FileInfo(path);
+            if (info.Length > 1024) return false;
+            return File.ReadAllText(path).StartsWith("version https://git-lfs.github.com/spec/", StringComparison.Ordinal);
+        }
+        catch
+        {
             return false;
-
-        // Remove the Ryuu extraction subfolder inside the target folder.
-        var ryuuFolder = Path.Combine(targetFolder, "ryuu");
-        if (!Directory.Exists(ryuuFolder))
-            return false;
-
-        await Task.Run(() => TryDeleteDirectory(ryuuFolder), cancellationToken).ConfigureAwait(false);
-        return !Directory.Exists(ryuuFolder);
+        }
     }
 
     private static string EscapeFileName(string name)

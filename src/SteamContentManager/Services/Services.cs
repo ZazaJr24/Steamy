@@ -31,7 +31,6 @@ public interface IAppDataStore
     ObservableCollection<Achievement> Achievements { get; }
     ObservableCollection<ContentProvider> Providers { get; }
     ObservableCollection<ModFix> ModFixes { get; }
-    ObservableCollection<OnlineFix> OnlineFixes { get; }
     ObservableCollection<GenerationTemplate> GenerationTemplates { get; }
     ObservableCollection<LogEntry> Logs { get; }
 }
@@ -102,13 +101,6 @@ public sealed class DemoDataStore : IAppDataStore
         new ModFix { Id = "local-shader-003", Name = "Shader cache cleanup", GameAppId = 1172470, Version = "2.1.1", Description = "Safely identify stale local shader cache files.", Compatibility = "Apex Legends current", Status = "Available", BackupRequired = false }
     };
 
-    public ObservableCollection<OnlineFix> OnlineFixes { get; } = new()
-    {
-        new OnlineFix { AppId = 730, GameName = "Counter-Strike 2", Name = "Network configuration check", Provider = "Local diagnostics", Version = "1.0", Description = "Review local network settings and produce a reversible report.", Compatibility = "Windows current", Updated = "Today", RequiresConfiguration = false, Status = "Ready" },
-        new OnlineFix { AppId = 1245620, GameName = "Elden Ring", Name = "Connectivity profile", Provider = "Authorized provider", Version = "0.4", Description = "Preview an authorized connectivity profile without changing authentication or game files.", Compatibility = "Provider not configured", Updated = "Yesterday", RequiresConfiguration = true, Status = "Not configured" },
-        new OnlineFix { AppId = 1172470, GameName = "Apex Legends", Name = "Connection report", Provider = "Local diagnostics", Version = "1.1", Description = "Generate a local, read-only connection report for troubleshooting.", Compatibility = "Windows current", Updated = "Mar 05", RequiresConfiguration = false, Status = "Available" }
-    };
-
     public ObservableCollection<GenerationTemplate> GenerationTemplates { get; } = new()
     {
         new GenerationTemplate { Name = "Achievement UI preview", Type = "Test data", Description = "Generate local mock achievement metadata for UI and developer tests.", OutputFormat = "JSON", IsMockOnly = true, LastGenerated = "Never", Status = "Ready" },
@@ -146,7 +138,6 @@ public sealed class AppDataStore : IAppDataStore
     };
 
     public ObservableCollection<ModFix> ModFixes { get; } = new();
-    public ObservableCollection<OnlineFix> OnlineFixes { get; } = new();
     public ObservableCollection<GenerationTemplate> GenerationTemplates { get; } = new();
     public ObservableCollection<LogEntry> Logs { get; } = new();
 }
