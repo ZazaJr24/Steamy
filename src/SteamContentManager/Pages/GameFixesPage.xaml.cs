@@ -35,11 +35,14 @@ public partial class GameFixesPage : Page
 
         _selectedCard = card;
         _folderPath = string.Empty;
+        _isApplying = false;
         OverlayTitle.Text = card.Name;
         OverlayAppId.Text = $"App {card.AppId}  ·  {card.FixCount} fix(es)";
         OverlayStatus.Text = "Select the game folder, then download and apply fixes.";
         FolderPathText.Text = "Select the game folder…";
         FolderPathText.Foreground = TertiaryText;
+        ApplyAllButton.Content = "Download & Apply All";
+        ApplyAllButton.IsEnabled = true;
 
         BuildFixRows(card.Game);
 
