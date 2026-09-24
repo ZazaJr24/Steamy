@@ -8,6 +8,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>SteamContentManager</RootNamespace>
     <AssemblyName>ResonanceTools</AssemblyName>
+    <Version>0.0.2</Version>
+    <FileVersion>0.0.2</FileVersion>
+    <AssemblyVersion>0.0.2</AssemblyVersion>
     <ApplicationIcon />
     <Platforms>AnyCPU</Platforms>
     <LangVersion>latest</LangVersion>
