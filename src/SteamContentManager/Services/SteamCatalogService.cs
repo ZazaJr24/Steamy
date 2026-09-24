@@ -274,7 +274,8 @@ public sealed class SteamCatalogService : ISteamCatalogService
         var cachePath = Path.Combine(_cacheDirectory, "artwork", $"{item.AppId}_portrait_v2.jpg");
         foreach (var url in urls)
         {
-            var image = await LoadImageAsync(url, cachePath, cancellationToken).ConfigureAwait(false);
+            // Cards render ~200px wide; decoding the 1200px library art per card is what made scrolling stutter
+            var image = await LoadImageAsync(url, cachePath, cancellationToken, decodeWidth: 400).ConfigureAwait(false);
             if (image is not null) return image;
         }
         return null;
@@ -329,21 +330,21 @@ public sealed class SteamCatalogService : ISteamCatalogService
         screenshot.Image = image;
     }
 
-    private async Task<BitmapImage?> LoadImageAsync(string url, string cachePath, CancellationToken cancellationToken)
+    private async Task<BitmapImage?> LoadImageAsync(string url, string cachePath, CancellationToken cancellationToken, int decodeWidth = 0)
     {
         if (string.IsNullOrWhiteSpace(url)) return null;
         try
         {
             if (File.Exists(cachePath))
             {
-                var cached = Decode(await File.ReadAllBytesAsync(cachePath, cancellationToken).ConfigureAwait(false));
+                var cached = Decode(await File.ReadAllBytesAsync(cachePath, cancellationToken).ConfigureAwait(false), decodeWidth);
                 if (cached is not null) return cached;
             }
 
             using var response = await SendWithRetryAsync(
                 () => new HttpRequestMessage(HttpMethod.Get, url), cancellationToken).ConfigureAwait(false);
             var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-            var image = Decode(bytes);
+            var image = Decode(bytes, decodeWidth);
             if (image is null) return null;
             Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
             await File.WriteAllBytesAsync(cachePath, bytes, cancellationToken).ConfigureAwait(false);
@@ -622,7 +623,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
     private static bool IsNetworkException(Exception exception) =>
         exception is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException;
 
-    private static BitmapImage? Decode(byte[] bytes)
+    private static BitmapImage? Decode(byte[] bytes, int decodeWidth = 0)
     {
         if (bytes.Length == 0) return null;
         try
@@ -631,6 +632,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
+            if (decodeWidth > 0) image.DecodePixelWidth = decodeWidth;
             image.StreamSource = stream;
             image.EndInit();
             image.Freeze();
