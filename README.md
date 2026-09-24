@@ -1,113 +1,206 @@
 <p align="center">
+  <img src="https://img.shields.io/badge/v0.0.1-beta-ff6b6b?style=for-the-badge" />
   <img src="https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
   <img src="https://img.shields.io/badge/WPF--UI-4.2-0078D4?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Windows-10%2F11-0078D6?style=for-the-badge&logo=windows11&logoColor=white" />
-  <img src="https://img.shields.io/badge/License-MIT-2dd4bf?style=for-the-badge" />
 </p>
 
-<h1 align="center">ResonanceTools</h1>
+<h1 align="center">
+  <br/>
+  ResonanceTools
+  <br/>
+</h1>
+
+<h3 align="center">
+  The only Steam modding toolkit you'll ever need.
+</h3>
 
 <p align="center">
-  <strong>All-in-one Steam game modding toolkit</strong><br/>
-  <sub>Built with WPF, .NET 8, Fluent Design — dark, fast, modern.</sub>
+  <em>One app. Every tool. Zero bloat.</em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/ZazaJr24/ResonanceTools/releases">Download</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#-tools">Features</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#%EF%B8%8F-build-from-source">Build</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#-credits">Credits</a>
 </p>
 
 ---
 
-## Overview
+<br/>
 
-ResonanceTools is a desktop application that brings together every tool you need for Steam game modding into one clean interface. No command lines, no scattered utilities — just one app with everything wired up and ready to go.
+## What is ResonanceTools?
+
+ResonanceTools replaces your folder full of scattered `.exe` files, batch scripts, and half-working tools with **one clean, modern desktop app**. Built with Fluent Design, it looks and feels like it belongs on Windows 11 — dark mode, Mica backdrop, smooth animations.
+
+Every tool is wired up, configured, and ready to go. No command lines. No README hunting. No "which version do I need?"
+
+<br/>
 
 ---
 
-## Tools
+<br/>
 
-### Steamless
-Strip Steam DRM stubs from game executables. All plugins are bundled — works out of the box without downloading anything extra.
+## 🔧 Tools
 
-### Denuvo Activation
-Fetch Denuvo activation tickets for games you own. Pick a game, grab the ticket, write the config. Three steps, done.
+<br/>
 
-### DLC Unlocker
-Unlock DLCs using **CreamAPI** or **SmokeAPI** — switch between both with a single click.
+<details>
+<summary><strong>⚡ Steamless</strong> — Remove Steam DRM</summary>
+<br/>
 
-- Auto-detects all installed Steam games across every library folder
+Strip Steam DRM stubs from game executables. All plugins are bundled and ship with the app — works instantly without downloading anything extra.
+
+- Supports all known Steam stub variants
+- Bundled CLI with automatic plugin loading
+- One-click process with status feedback
+
+</details>
+
+<details>
+<summary><strong>🔑 Denuvo Activation</strong> — Fetch activation tickets</summary>
+<br/>
+
+Grab Denuvo activation tickets for games you own. Pick a game, fetch the ticket, write the config. Three steps. Done.
+
+- Auto-detects installed Denuvo games
+- Clean ticket retrieval workflow
+- Writes config files automatically
+
+</details>
+
+<details>
+<summary><strong>🔓 DLC Unlocker</strong> — CreamAPI + SmokeAPI</summary>
+<br/>
+
+Unlock DLCs using **CreamAPI** or **SmokeAPI** — switch between both modes with a single click.
+
+- Auto-detects all Steam games across every library folder
 - Fetches complete DLC lists with concurrent name resolution
-- Deep-scans game folders for `steam_api.dll` / `steam_api64.dll`
-- Handles backups, apply, and restore automatically
+- Deep-scans game directories for `steam_api.dll` / `steam_api64.dll`
+- Select individual DLCs or unlock all
+- Automatic backups with one-click restore
 
-### GreenLuma 2026
-Steam Family Share bypass. Unlocks games in your shared library without buying them.
+</details>
 
-- Auto-installs from a downloaded zip (password-protected archives supported)
+<details>
+<summary><strong>👥 GreenLuma 2026</strong> — Family Share bypass</summary>
+<br/>
+
+Bypass Steam Family Sharing restrictions. Play shared library games without limits.
+
+- Auto-installs from downloaded zip (password-protected archives supported)
 - Generates slot-based `AppList.ini` in the correct format
-- Stealth mode to avoid detection
+- Stealth mode for reduced detection
 - One-click Generate + Launch with DLLInjector
-- Full uninstall and trace cleanup
+- Full uninstall with trace cleanup
 
-### Goldberg Emulator
-Full integration of the [gbe_fork](https://github.com/Detanup01/gbe_fork) Steam emulator by Detanup01.
+</details>
 
-- **Auto-downloads** the latest release from GitHub on first use
-- **Normal Mode** — replaces `steam_api(64).dll` with Goldberg's version
-- **ColdClient Mode** — uses the SteamClient loader (no DLL replacement)
-- **Full configuration** — DLC unlock, overlay, achievements, offline mode, LAN only, custom Steam ID, country, language
-- **Achievement support** — fetches schemas from Steam API, popup notifications
-- **Windows Defender detection** — warns if DLLs get quarantined
-- One-click Apply, Restore, and Launch
+<details>
+<summary><strong>🎮 Goldberg Emulator</strong> — Full Steam emulator</summary>
+<br/>
+
+Complete integration of [gbe_fork](https://github.com/Detanup01/gbe_fork) — the most advanced open-source Steam emulator.
+
+- **Auto-downloads** the latest release from GitHub
+- **Normal Mode** — seamless DLL replacement
+- **ColdClient Mode** — loader-based, no file replacement needed
+- **Everything configurable** — DLC unlock, overlay, achievements, offline, LAN, custom Steam ID, country, language
+- **Achievement support** — fetches schemas from Steam API with popup notifications
+- **Defender-aware** — detects quarantined DLLs and guides you through exclusions
+
+</details>
+
+<br/>
 
 ---
 
-## Fixes
+<br/>
+
+## 🛡️ Fixes
 
 | | |
 |---|---|
 | **Online Fixes** | Browse and download community game fixes from multiple sources |
-| **Game Fixes** | View and manage fixes applied to your installed games |
+| **Game Fixes** | View and manage all fixes applied to your installed games |
+
+<br/>
 
 ---
 
-## Games Library
+<br/>
 
-Browse your entire Steam library in a responsive grid with cover art. Search, filter, paginate — all games auto-detected from every Steam library folder.
+## 📚 Games Library
 
----
+Your entire Steam library in a responsive grid with cover art. Search, filter, sort, paginate — every game auto-detected from all Steam library folders. Smooth scrolling, no lag.
 
-## Downloads
-
-Full download manager with pause/resume, live progress stats, integrity verification, and file management.
+<br/>
 
 ---
 
-## Settings
+<br/>
 
-| Setting | Options |
-|---|---|
-| Window effect | Mica / Acrylic |
-| Theme | Dark / Light |
-| Language | Configurable per tool |
-| Network | HTTP proxy support |
-| Sources | Multiple manifest sources |
-| Security | Encrypted API key storage (DPAPI) |
+## 📥 Downloads
+
+Full-featured download manager built in.
+
+- Pause / Resume / Cancel
+- Live speed and progress stats
+- Integrity verification
+- Open in Explorer / Remove
+
+<br/>
 
 ---
 
-## Tech Stack
+<br/>
+
+## ⚙️ Settings
 
 | | |
 |---|---|
-| **Framework** | WPF on .NET 8 |
-| **UI Library** | [WPF-UI 4.2](https://github.com/lepoco/wpfui) — Fluent Design with Mica/Acrylic backdrop |
-| **Architecture** | MVVM — [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) |
-| **DI** | Microsoft.Extensions.DependencyInjection |
-| **Compression** | SharpCompress 0.39 (7z / zip / rar) |
-| **Security** | DPAPI-encrypted credential storage |
+| **Window** | Mica or Acrylic backdrop |
+| **Theme** | Dark / Light |
+| **Language** | Per-tool configuration |
+| **Network** | HTTP proxy support |
+| **Sources** | Multiple manifest providers |
+| **Security** | DPAPI-encrypted API key storage |
+
+<br/>
 
 ---
 
-## Build from Source
+<br/>
 
-> Requires **.NET 8 SDK** and **Windows 10/11**
+## 🏗️ Tech Stack
+
+| | |
+|---|---|
+| **Runtime** | .NET 8 (Windows Desktop) |
+| **UI** | [WPF-UI 4.2](https://github.com/lepoco/wpfui) — Fluent Design, Mica/Acrylic |
+| **Pattern** | MVVM — [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) |
+| **DI** | Microsoft.Extensions.DependencyInjection |
+| **Compression** | SharpCompress 0.39 — 7z, zip, rar |
+| **Security** | Windows DPAPI encrypted credential store |
+
+<br/>
+
+---
+
+<br/>
+
+## ⬇️ Download
+
+Grab the latest release from the [**Releases**](https://github.com/ZazaJr24/ResonanceTools/releases) page.
+
+> **Requirements:** Windows 10/11 with .NET 8 Desktop Runtime
+
+<br/>
+
+---
+
+<br/>
+
+## 🛠️ Build from Source
 
 ```powershell
 git clone https://github.com/ZazaJr24/ResonanceTools.git
@@ -115,38 +208,52 @@ cd ResonanceTools
 dotnet build src/SteamContentManager/SteamContentManager.csproj -c Release
 ```
 
-Output: `src/SteamContentManager/bin/Release/net8.0-windows/ResonanceTools.exe`
+> Output: `src/SteamContentManager/bin/Release/net8.0-windows/ResonanceTools.exe`
+
+<br/>
 
 ---
 
-## Project Structure
+<br/>
+
+## 📁 Project Structure
 
 ```
 src/SteamContentManager/
-  Pages/           UI pages (Dashboard, Games, all tool pages, Settings)
-  ViewModels/      MVVM ViewModels
-  Services/        Business logic (CreamAPI, Goldberg, GameLocator, ...)
-  Models/          Data models and enums
-  Controls/        Custom controls (AdaptiveGridPanel, ...)
-  Resources/       Styles, themes, bundled DLLs
-  Tools/           Bundled Steamless CLI + plugins
+├── Pages/           UI pages — Dashboard, Games, Tools, Settings
+├── ViewModels/      MVVM ViewModels
+├── Services/        Core logic — CreamAPI, Goldberg, GameLocator, ...
+├── Models/          Data models and enums
+├── Controls/        Custom controls — AdaptiveGridPanel, ...
+├── Resources/       Styles, themes, bundled DLLs
+└── Tools/           Bundled Steamless CLI + plugins
 ```
 
----
-
-## Credits
-
-| Project | Author |
-|---|---|
-| [Steamless](https://github.com/atom0s/Steamless) | atom0s |
-| [CreamInstaller](https://github.com/FroggMaster/CreamInstaller) | FroggMaster |
-| [SmokeAPI](https://github.com/acidicoala/SmokeAPI) | acidicoala |
-| [Goldberg Emulator (gbe_fork)](https://github.com/Detanup01/gbe_fork) | Detanup01 |
-| [GreenLuma 2026](https://cs.rin.ru) | Steam006 |
-| [WPF-UI](https://github.com/lepoco/wpfui) | lepo.co |
+<br/>
 
 ---
+
+<br/>
+
+## 🙏 Credits
+
+| Project | Author | Used for |
+|---|---|---|
+| [Steamless](https://github.com/atom0s/Steamless) | atom0s | DRM removal engine |
+| [CreamInstaller](https://github.com/FroggMaster/CreamInstaller) | FroggMaster | CreamAPI DLLs (v5.3.0.0) |
+| [SmokeAPI](https://github.com/acidicoala/SmokeAPI) | acidicoala | Alternative DLC unlocker |
+| [Goldberg Emulator](https://github.com/Detanup01/gbe_fork) | Detanup01 | Steam emulation (gbe_fork) |
+| [GreenLuma 2026](https://cs.rin.ru) | Steam006 | Family Share bypass |
+| [WPF-UI](https://github.com/lepoco/wpfui) | lepo.co | Fluent Design framework |
+
+<br/>
+
+---
+
+<br/>
 
 <p align="center">
-  <sub>Made with purpose. No bloat, no telemetry, no nonsense.</sub>
+  <strong>ResonanceTools</strong><br/>
+  <sub>No bloat. No telemetry. No nonsense.</sub><br/><br/>
+  <img src="https://img.shields.io/github/stars/ZazaJr24/ResonanceTools?style=social" />
 </p>
