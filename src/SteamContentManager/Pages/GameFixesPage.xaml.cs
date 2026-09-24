@@ -171,7 +171,7 @@ public partial class GameFixesPage : Page
             int.TryParse(_selectedCard.AppId, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out appId);
 
         var source = FixSource.Resolve(settings.FixMirrorUrl)
-            ?? throw new InvalidOperationException("No fixes source is set. Add it in Settings → Fixes source.");
+            ?? throw new InvalidOperationException("The fixes source URL in Settings is not valid. Clear it to use the built-in source.");
         var token = await App.Services.GetRequiredService<ISecureCredentialService>().ReadAsync(FixSource.TokenCredentialName);
 
         OverlayStatus.Text = $"Downloading {fix.Filename}…";

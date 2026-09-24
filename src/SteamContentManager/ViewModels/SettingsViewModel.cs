@@ -515,7 +515,7 @@ public sealed class SettingsViewModel : ViewModelBase
             var source = FixSource.Resolve(Settings.FixMirrorUrl);
             if (source is null)
             {
-                MirrorTestStatus = "Enter a GitHub repository URL (https://github.com/owner/repo) or a web folder URL.";
+                MirrorTestStatus = "That URL is not valid. Use a GitHub repository URL (https://github.com/owner/repo) or leave it empty for the built-in source.";
                 return;
             }
 
