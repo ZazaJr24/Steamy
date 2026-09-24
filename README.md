@@ -1,8 +1,18 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/v0.0.1-beta-ff6b6b?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
-  <img src="https://img.shields.io/badge/WPF--UI-4.2-0078D4?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Windows-10%2F11-0078D6?style=for-the-badge&logo=windows11&logoColor=white" />
+  <a href="https://github.com/ZazaJr24/ResonanceTools/releases"><img src="https://img.shields.io/github/v/release/ZazaJr24/ResonanceTools?include_prereleases&style=for-the-badge&color=ff6b6b&label=Download" /></a>
+  &nbsp;
+  <a href="https://github.com/ZazaJr24/ResonanceTools/stargazers"><img src="https://img.shields.io/github/stars/ZazaJr24/ResonanceTools?style=for-the-badge&color=f59e0b&logo=github" /></a>
+  &nbsp;
+  <a href="https://github.com/ZazaJr24/ResonanceTools/releases"><img src="https://img.shields.io/github/downloads/ZazaJr24/ResonanceTools/total?style=for-the-badge&color=22c55e&label=Downloads" /></a>
+  &nbsp;
+  <img src="https://img.shields.io/github/license/ZazaJr24/ResonanceTools?style=for-the-badge&color=6366f1" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet&logoColor=white" />
+  <img src="https://img.shields.io/badge/WPF--UI-4.2-0078D4?style=flat-square" />
+  <img src="https://img.shields.io/badge/Windows-10%2F11-0078D6?style=flat-square&logo=windows11&logoColor=white" />
+  <img src="https://img.shields.io/badge/C%23-12-239120?style=flat-square&logo=csharp&logoColor=white" />
 </p>
 
 <h1 align="center">
@@ -20,7 +30,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ZazaJr24/ResonanceTools/releases">Download</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#-tools">Features</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#%EF%B8%8F-build-from-source">Build</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#-credits">Credits</a>
+  <a href="https://github.com/ZazaJr24/ResonanceTools/releases/latest"><b>Download Latest</b></a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#-tools">Features</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#%EF%B8%8F-build-from-source">Build</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#-credits">Credits</a>
 </p>
 
 ---
