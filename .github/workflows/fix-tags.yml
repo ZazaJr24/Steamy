@@ -1,0 +1,35 @@
+name: Fix Tags
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Delete old releases and tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for tag in v0.0.1-beta v0.0.2 v0.0.3 v0.0.4; do
+            echo "Deleting release $tag..."
+            gh release delete "$tag" --yes --cleanup-tag 2>/dev/null || echo "No release for $tag"
+          done
+
+      - name: Recreate tags on correct commits
+        run: |
+          git config user.name "ZazaJr24"
+          git config user.email "kaanleon2462@gmail.com"
+          git tag -f v0.0.1-beta a219bfb
+          git tag -f v0.0.2 3eed68d
+          git tag -f v0.0.3 600f711
+          git tag -f v0.0.4 dceb5e5
+
+      - name: Push updated tags
+        run: git push --force origin v0.0.1-beta v0.0.2 v0.0.3 v0.0.4
