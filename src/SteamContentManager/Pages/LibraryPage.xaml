@@ -77,191 +77,170 @@
   </Page.Resources>
 
   <Grid>
-    <Grid x:Name="MainContentGrid">
-        <Grid Margin="26,26,20,0" HorizontalAlignment="Stretch">
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-          </Grid.RowDefinitions>
+    <Grid x:Name="MainContentGrid" Margin="32,26,24,0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
 
-          <!-- Compact toolbar: search, count, filter, refresh -->
-          <Border Grid.Row="0" Margin="0,0,8,16"
-                  Background="{DynamicResource SurfaceElevatedBrush}"
-                  BorderBrush="{DynamicResource BorderSubtleBrush}"
-                  BorderThickness="1"
-                  CornerRadius="14"
-                  Padding="8,7">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-              </Grid.ColumnDefinitions>
-              <ui:TextBox Grid.Column="0"
-                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                          PlaceholderText="Search games…"
-                          Icon="{ui:SymbolIcon Search24}"
-                          FontSize="13"
-                          Background="{DynamicResource SurfaceBrush}"
-                          HorizontalAlignment="Stretch"
-                          MinHeight="38"
-                          VerticalAlignment="Center" />
-              <Border Grid.Column="1" Style="{StaticResource AccentPillStyle}" Margin="10,0,0,0" VerticalAlignment="Center">
-                <TextBlock Text="{Binding CatalogCountLabel}" Style="{StaticResource AccentPillTextStyle}" />
-              </Border>
-              <controls:FilterFlyout Grid.Column="2"
-                                     Margin="8,0,0,0"
-                                     VerticalAlignment="Center"
-                                     FilterSummary="{Binding FilterSummary}"
-                                     HasActiveFilters="{Binding HasActiveFilters}">
-                <controls:FilterFlyout.FilterContent>
-                  <StackPanel>
-                    <TextBlock Text="Show" Style="{StaticResource FieldLabelStyle}" />
-                    <ComboBox ItemsSource="{Binding TypeFilters}" SelectedItem="{Binding SelectedTypeFilter}" Margin="0,0,0,12" />
-                    <TextBlock Text="Sort" Style="{StaticResource FieldLabelStyle}" />
-                    <ComboBox ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" Margin="0,0,0,12" />
-                    <TextBlock Text="Cards per page" Style="{StaticResource FieldLabelStyle}" />
-                    <ComboBox ItemsSource="{Binding PageSizes}" SelectedItem="{Binding PageSize}" />
-                    <CheckBox Content="Include adult games (NSFW)" IsChecked="{Binding NsfwScope, Converter={StaticResource EnumTo_ShowBoolConverter}, ConverterParameter=Show}" Margin="0,12,0,0" />
-                    <TextBlock Text="NSFW games will show with the adult label." Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" FontSize="10" />
-                    <TextBlock Text="NSFW games are hidden by default. Turn this on only if you want to browse them." Style="{StaticResource MutedTextStyle}" Margin="0,2,0,0" FontSize="10" />
-                  </StackPanel>
-                </controls:FilterFlyout.FilterContent>
-              </controls:FilterFlyout>
-              <ui:Button Grid.Column="3"
-                         Style="{StaticResource IconButtonStyle}"
-                         Icon="{ui:SymbolIcon ArrowClockwise24}"
-                         Command="{Binding RefreshCatalogCommand}"
-                         Appearance="Secondary"
-                         Margin="8,0,0,0"
-                         VerticalAlignment="Center"
-                         ToolTip="Refresh list" />
-            </Grid>
-          </Border>
+      <!-- Header: title left, search + filter + refresh right -->
+      <Grid Grid.Row="0" Margin="0,0,8,14">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="Games" Style="{StaticResource PageTitleStyle}" Margin="0" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding CatalogCountLabel}" Margin="12,6,0,0" FontSize="12.5"
+                     Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+        </StackPanel>
+        <ui:TextBox Grid.Column="2"
+                    Width="300"
+                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                    PlaceholderText="Search games…"
+                    Icon="{ui:SymbolIcon Search24}"
+                    FontSize="13"
+                    MinHeight="38"
+                    VerticalAlignment="Center" />
+        <controls:FilterFlyout Grid.Column="3"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"
+                               FilterSummary="{Binding FilterSummary}"
+                               HasActiveFilters="{Binding HasActiveFilters}">
+          <controls:FilterFlyout.FilterContent>
+            <StackPanel>
+              <TextBlock Text="Show" Style="{StaticResource FieldLabelStyle}" />
+              <ComboBox ItemsSource="{Binding TypeFilters}" SelectedItem="{Binding SelectedTypeFilter}" Margin="0,0,0,12" />
+              <TextBlock Text="Sort" Style="{StaticResource FieldLabelStyle}" />
+              <ComboBox ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" Margin="0,0,0,12" />
+              <TextBlock Text="Cards per page" Style="{StaticResource FieldLabelStyle}" />
+              <ComboBox ItemsSource="{Binding PageSizes}" SelectedItem="{Binding PageSize}" />
+              <CheckBox Content="Include adult games (NSFW)" IsChecked="{Binding NsfwScope, Converter={StaticResource EnumTo_ShowBoolConverter}, ConverterParameter=Show}" Margin="0,12,0,0" />
+              <TextBlock Text="NSFW games are hidden by default and show with the adult label." Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" FontSize="10" TextWrapping="Wrap" />
+            </StackPanel>
+          </controls:FilterFlyout.FilterContent>
+        </controls:FilterFlyout>
+        <ui:Button Grid.Column="4"
+                   Style="{StaticResource IconButtonStyle}"
+                   Icon="{ui:SymbolIcon ArrowClockwise24}"
+                   Command="{Binding RefreshCatalogCommand}"
+                   Appearance="Secondary"
+                   Margin="8,0,0,0"
+                   VerticalAlignment="Center"
+                   ToolTip="Refresh list" />
+      </Grid>
 
-          <!-- Everything scrolls together; the pager only shows at the end -->
-          <ScrollViewer Grid.Row="1" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,8,0">
-              <StackPanel>
-            <!-- Gallery -->
-            <ProgressBar IsIndeterminate="True" Height="3" Margin="0,0,0,6"
-                         Visibility="{Binding IsCatalogLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
-            <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource GalleryEmptyStateStyle}" />
-            <ItemsControl ItemsSource="{Binding PagedCatalogItems}" HorizontalAlignment="Stretch" Margin="-7,0,0,0">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <WrapPanel ItemWidth="194" ItemHeight="336" HorizontalAlignment="Left" />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Border Margin="7,4,7,12"
-                          Width="180"
-                          Height="320"
-                          Style="{StaticResource CoverCardStyle}"
-                          MouseLeftButtonUp="GameCard_MouseLeftButtonUp"
-                          Tag="{Binding}"
-                          ToolTip="{Binding Name}">
-                    <Border.Clip>
-                      <RectangleGeometry Rect="0,0,180,320" RadiusX="14" RadiusY="14" />
-                    </Border.Clip>
-                    <Grid>
-                      <Grid.RowDefinitions>
-                        <RowDefinition Height="254" />
-                        <RowDefinition Height="*" />
-                      </Grid.RowDefinitions>
+      <ProgressBar Grid.Row="1" IsIndeterminate="True" Height="2" Margin="0,0,8,8"
+                   Visibility="{Binding IsCatalogLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-                      <!-- Cover -->
-                      <Grid ClipToBounds="True" Background="#0B0C0F">
-                        <Image Source="{Binding ArtworkImage}" Stretch="UniformToFill" />
-                        <Border Background="{DynamicResource SurfaceSubtleBrush}"
-                                Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-                          <StackPanel VerticalAlignment="Center">
-                            <Rectangle Height="10" Margin="34,0,34,12" RadiusX="5" RadiusY="5" Fill="{DynamicResource ControlHoverBrush}" />
-                            <Rectangle Height="10" Margin="24,0,24,0" RadiusX="5" RadiusY="5" Fill="{DynamicResource ControlHoverBrush}" />
-                          </StackPanel>
+      <ScrollViewer Grid.Row="2" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,8,0">
+        <StackPanel>
+          <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource GalleryEmptyStateStyle}" />
+
+          <ItemsControl ItemsSource="{Binding PagedCatalogItems}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <controls:AdaptiveGridPanel MinItemWidth="176" Spacing="16" CoverRatio="1.5" FooterHeight="54" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border x:Name="Card"
+                        CornerRadius="12"
+                        Background="{DynamicResource SurfaceElevatedBrush}"
+                        BorderBrush="Transparent"
+                        BorderThickness="1"
+                        Cursor="Hand"
+                        SnapsToDevicePixels="True"
+                        MouseLeftButtonUp="GameCard_MouseLeftButtonUp"
+                        Tag="{Binding}"
+                        ToolTip="{Binding Name}">
+                  <Grid>
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="*" />
+                      <RowDefinition Height="53" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Cover: rounded via brush instead of a clip geometry (cheaper, scales with the card) -->
+                    <Border CornerRadius="11,11,0,0" Background="#0B0C0F">
+                      <Grid>
+                        <Border CornerRadius="11,11,0,0">
+                          <Border.Background>
+                            <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
+                          </Border.Background>
                         </Border>
-                        <TextBlock Text="STEAM"
-                                   Foreground="#3A3E47"
-                                   FontSize="15"
-                                   FontWeight="Bold"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
+                        <Border CornerRadius="11,11,0,0" Background="{DynamicResource SurfaceSubtleBrush}"
+                                Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <TextBlock Text="STEAM" Foreground="#3A3E47" FontSize="15" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <Rectangle VerticalAlignment="Bottom" Height="80" Fill="{StaticResource CoverFadeBrush}" />
+                        <Border x:Name="Shine" CornerRadius="11,11,0,0" Background="#FFFFFF" Opacity="0" />
                         <Border Style="{StaticResource CoverBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
                           <TextBlock Text="{Binding TypeLabel}" Style="{StaticResource CoverBadgeTextStyle}" />
                         </Border>
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"
+                                Style="{StaticResource CoverBadgeStyle}" ToolTip="Installed"
+                                Visibility="{Binding IsInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                          <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBlock Text="Installed" Style="{StaticResource CoverBadgeTextStyle}" />
+                          </StackPanel>
+                        </Border>
                       </Grid>
-
-                      <!-- Footer -->
-                      <StackPanel Grid.Row="1" Margin="12,10,12,0" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Name}"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"
-                                   FontSize="12.5"
-                                   FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" />
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                          <Ellipse Width="6" Height="6"
-                                   Fill="{DynamicResource SuccessBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,5,0"
-                                   ToolTip="Installed"
-                                   Visibility="{Binding IsInstalled, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                          <TextBlock Text="{Binding AppLabel}"
-                                     Foreground="{DynamicResource TextTertiaryBrush}"
-                                     FontSize="10.5"
-                                     TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                      </StackPanel>
-                    </Grid>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-              <!-- Pager -->
-              <Border Margin="0,16,8,20" Padding="14,10"
-                      Background="{DynamicResource SurfaceElevatedBrush}"
-                      BorderBrush="{DynamicResource BorderSubtleBrush}"
-                      BorderThickness="1"
-                      CornerRadius="14">
-                <Grid>
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                  </Grid.ColumnDefinitions>
-                  <TextBlock Text="{Binding VisibleCountLabel}"
-                             Foreground="{DynamicResource TextTertiaryBrush}"
-                             FontSize="11.5"
-                             VerticalAlignment="Center" />
-                  <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
-                    <ui:Button Content="Previous"
-                               Command="{Binding PreviousPageCommand}"
-                               Appearance="Secondary"
-                               IsEnabled="{Binding CanGoPrevious}" />
-                    <Border Style="{StaticResource AccentPillStyle}" VerticalAlignment="Center" Margin="12,0">
-                      <TextBlock Text="{Binding PageLabel}" Style="{StaticResource AccentPillTextStyle}" />
                     </Border>
-                    <ui:Button Content="Next"
-                               Command="{Binding NextPageCommand}"
-                               Appearance="Secondary"
-                               IsEnabled="{Binding CanGoNext}" />
-                  </StackPanel>
-                  <TextBlock Grid.Column="2"
-                             Text="{Binding UpdatedLabel}"
-                             Foreground="{DynamicResource TextTertiaryBrush}"
-                             FontSize="11"
-                             HorizontalAlignment="Right"
-                             VerticalAlignment="Center" />
-                </Grid>
-              </Border>
-              </StackPanel>
-            </ScrollViewer>
-        </Grid>
-      </Grid>
 
+                    <!-- Footer -->
+                    <StackPanel Grid.Row="1" Margin="12,0" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Name}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 FontSize="12.5" FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding AppLabel}" Margin="0,3,0,0"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
+                                 FontSize="10.5" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+                <DataTemplate.Triggers>
+                  <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                    <Setter TargetName="Shine" Property="Opacity" Value="0.06" />
+                  </Trigger>
+                </DataTemplate.Triggers>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- Pager: flat, centered -->
+          <Grid Margin="0,22,0,26">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding VisibleCountLabel}" FontSize="11.5"
+                       Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+              <ui:Button Style="{StaticResource IconButtonStyle}" Icon="{ui:SymbolIcon ChevronLeft24}"
+                         Appearance="Transparent" Command="{Binding PreviousPageCommand}"
+                         IsEnabled="{Binding CanGoPrevious}" ToolTip="Previous page" />
+              <TextBlock Text="{Binding PageLabel}" Margin="14,0" FontSize="12.5" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+              <ui:Button Style="{StaticResource IconButtonStyle}" Icon="{ui:SymbolIcon ChevronRight24}"
+                         Appearance="Transparent" Command="{Binding NextPageCommand}"
+                         IsEnabled="{Binding CanGoNext}" ToolTip="Next page" />
+            </StackPanel>
+            <TextBlock Grid.Column="2" Text="{Binding UpdatedLabel}" FontSize="11"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
+                       HorizontalAlignment="Right" VerticalAlignment="Center" />
+          </Grid>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
     <!-- Download dialog overlay -->
     <Grid x:Name="OverlayGrid" Visibility="Collapsed">
       <Border Background="#60000000" MouseLeftButtonUp="Overlay_Close" />

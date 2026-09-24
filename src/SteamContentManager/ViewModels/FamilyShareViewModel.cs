@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -31,9 +30,6 @@ public sealed class FamilyShareViewModel : ViewModelBase
 {
     private readonly ISettingsService _settings;
     private readonly ISecureCredentialService _credentials;
-    private readonly IDownloadQueueStore _downloadQueue;
-    private readonly IRyuuGameDownloadService _ryuuService;
-    private readonly IRyuuSecureDownloadService _ryuuDownload;
     private readonly HttpClient _httpClient;
     private CancellationTokenSource? _searchCts;
 
@@ -61,22 +57,21 @@ public sealed class FamilyShareViewModel : ViewModelBase
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "ResonanceTools", "GreenLuma");
 
+    // Present after Uninstall so startup doesn't silently re-detect GL from Downloads
+    private static readonly string UninstalledMarker = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "ResonanceTools", "greenluma_uninstalled");
+
     public FamilyShareViewModel(
         IAppDataStore store,
         INavigationService navigation,
         ILoggingService logging,
         ISettingsService settings,
-        ISecureCredentialService credentials,
-        IDownloadQueueStore downloadQueue,
-        IRyuuGameDownloadService ryuuService,
-        IRyuuSecureDownloadService ryuuDownload)
+        ISecureCredentialService credentials)
         : base(store, navigation, logging)
     {
         _settings = settings;
         _credentials = credentials;
-        _downloadQueue = downloadQueue;
-        _ryuuService = ryuuService;
-        _ryuuDownload = ryuuDownload;
         _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("ResonanceTools/1.0");
 
@@ -91,13 +86,19 @@ public sealed class FamilyShareViewModel : ViewModelBase
         InstallGreenLumaCommand = new AsyncRelayCommand(InstallGreenLumaAsync);
         BrowseGlPathCommand = new RelayCommand(BrowseGlPath);
         RestartSteamCommand = new RelayCommand(RestartSteam, () => HasSteamPath);
-        DownloadGameCommand = new AsyncRelayCommand<int>(DownloadGameAsync);
-        PrepareManifestsCommand = new AsyncRelayCommand(PrepareManifestsAsync, () => Games.Count > 0 && HasSteamPath);
-
+        UninstallGreenLumaCommand = new RelayCommand(UninstallGreenLuma, () => GreenLumaReady);
+        AutoDetectCommand = new AsyncRelayCommand(async () =>
+        {
+            try { File.Delete(UninstalledMarker); } catch { }
+            ActionStatus = "Searching Downloads for GreenLuma…";
+            await TryAutoInstallAsync();
+            if (!GreenLumaReady) ActionStatus = "No GreenLuma found in Downloads.";
+        });
         DetectSteam();
         LoadGlPath();
         DetectGreenLuma();
-        if (!GreenLumaReady) _ = TryAutoInstallAsync();
+        ActionStatus = GreenLumaReady ? $"GreenLuma ready → {GlPath}" : "GreenLuma not installed.";
+        if (!GreenLumaReady && !File.Exists(UninstalledMarker)) _ = TryAutoInstallAsync();
         LoadSavedGames();
         ImportExistingAppList();
     }
@@ -124,6 +125,7 @@ public sealed class FamilyShareViewModel : ViewModelBase
         {
             if (!SetProperty(ref _glPath, value)) return;
             OnPropertyChanged(nameof(HasGlPath));
+            if (!string.IsNullOrWhiteSpace(value)) try { File.Delete(UninstalledMarker); } catch { }
             DetectGreenLuma();
             SaveGlPath();
         }
@@ -148,9 +150,11 @@ public sealed class FamilyShareViewModel : ViewModelBase
 
     public string StatusMessage { get => _statusMessage; private set => SetProperty(ref _statusMessage, value); }
     public string ActionStatus { get => _actionStatus; private set => SetProperty(ref _actionStatus, value); }
+
+
     public bool IsSearching { get => _isSearching; private set => SetProperty(ref _isSearching, value); }
     public bool IsBusy { get => _isBusy; private set { if (SetProperty(ref _isBusy, value)) GenerateCommand.NotifyCanExecuteChanged(); } }
-    public bool GreenLumaReady { get => _greenLumaReady; private set { if (SetProperty(ref _greenLumaReady, value)) { OnPropertyChanged(nameof(GreenLumaMissing)); LaunchCommand.NotifyCanExecuteChanged(); } } }
+    public bool GreenLumaReady { get => _greenLumaReady; private set { if (SetProperty(ref _greenLumaReady, value)) { OnPropertyChanged(nameof(GreenLumaMissing)); LaunchCommand.NotifyCanExecuteChanged(); UninstallGreenLumaCommand?.NotifyCanExecuteChanged(); } } }
     public bool GreenLumaMissing => !GreenLumaReady && HasSteamPath;
     public bool IsInstalling { get => _isInstalling; private set => SetProperty(ref _isInstalling, value); }
     public bool StealthMode { get => _stealthMode; set => SetProperty(ref _stealthMode, value); }
@@ -169,9 +173,8 @@ public sealed class FamilyShareViewModel : ViewModelBase
     public IAsyncRelayCommand InstallGreenLumaCommand { get; }
     public ICommand BrowseGlPathCommand { get; }
     public RelayCommand RestartSteamCommand { get; }
-    public IAsyncRelayCommand DownloadGameCommand { get; }
-    public IAsyncRelayCommand PrepareManifestsCommand { get; }
-
+    public RelayCommand UninstallGreenLumaCommand { get; }
+    public IAsyncRelayCommand AutoDetectCommand { get; }
     // ── GreenLuma Install ───────────────────────────────────────────
 
     private async Task TryAutoInstallAsync()
@@ -306,6 +309,79 @@ public sealed class FamilyShareViewModel : ViewModelBase
         }
     }
 
+    // ── Uninstall ───────────────────────────────────────────────────
+
+    private void UninstallGreenLuma()
+    {
+        var answer = System.Windows.MessageBox.Show(
+            "Remove GreenLuma?\n\n• Steam restarts without GreenLuma\n• GL files in the Steam folder are deleted\n• The AppList is reset\n\nYour GL download folder itself is kept.",
+            "Uninstall GreenLuma", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+        if (answer != System.Windows.MessageBoxResult.Yes) return;
+
+        var removed = new List<string>();
+        var steamWasRunning = Process.GetProcessesByName("steam").Length > 0;
+
+        foreach (var name in new[] { "DLLInjector", "steam" })
+            foreach (var proc in Process.GetProcessesByName(name))
+                try { proc.Kill(); proc.WaitForExit(5000); } catch { }
+
+        if (HasSteamPath)
+        {
+            var files = new List<string>();
+            foreach (var pattern in new[] { "GreenLuma*.dll", "GreenLuma*.exe", "GreenLuma*.log", "DLLInjector.exe", "DLLInjector.ini", "user32SF.dll", "StealthMode.bin" })
+                try { files.AddRange(Directory.EnumerateFiles(SteamPath, pattern)); } catch { }
+            // Steam ships no user32.dll in its root — one there is always GL stealth mode
+            var stealthDll = Path.Combine(SteamPath, "user32.dll");
+            if (File.Exists(stealthDll)) files.Add(stealthDll);
+
+            foreach (var f in files)
+                try { File.Delete(f); removed.Add(Path.GetFileName(f)); } catch { }
+
+            foreach (var d in new[] { "AppList", "GreenLuma2026_Files", "GreenLuma" })
+            {
+                var dir = Path.Combine(SteamPath, d);
+                if (Directory.Exists(dir)) try { Directory.Delete(dir, true); removed.Add(d + "\\"); } catch { }
+            }
+        }
+
+        if (Directory.Exists(DefaultGlDir))
+            try { Directory.Delete(DefaultGlDir, true); removed.Add("app GL copy"); } catch { }
+
+        // User-provided GL folder: keep the files, just clear the unlock list
+        if (HasGlPath && !GlPath.Equals(SteamPath, StringComparison.OrdinalIgnoreCase))
+        {
+            var ini = Path.Combine(GlPath, "AppList", "AppList.ini");
+            if (File.Exists(ini))
+            {
+                var slots = ReadSlots(ini);
+                var lines = new List<string> { "[AppList]", "# Format:", "# Old AppID = New AppID to unlock", "# Remove the # before the old AppID", "" };
+                lines.AddRange(slots.Select(s => $"#{s} = "));
+                try { File.WriteAllLines(ini, lines, new UTF8Encoding(false)); removed.Add("AppList reset"); } catch { }
+            }
+        }
+
+        try { File.Delete(GlPathFile); } catch { }
+        try { Directory.CreateDirectory(Path.GetDirectoryName(UninstalledMarker)!); File.WriteAllText(UninstalledMarker, DateTime.Now.ToString("O")); } catch { }
+
+        _glPath = string.Empty;
+        OnPropertyChanged(nameof(GlPath));
+        OnPropertyChanged(nameof(HasGlPath));
+        GreenLumaReady = false;
+        AppListCount = 0;
+        UpdateStatus();
+
+        if (steamWasRunning && HasSteamPath)
+        {
+            var exe = Path.Combine(SteamPath, "steam.exe");
+            if (File.Exists(exe)) try { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true }); } catch { }
+        }
+
+        ActionStatus = removed.Count > 0
+            ? $"GreenLuma uninstalled: {string.Join(", ", removed)}"
+            : "GreenLuma uninstalled (nothing left to delete).";
+        Logging.Add(LogLevel.Info, "GreenLuma", ActionStatus);
+    }
+
     // ── Launch GreenLuma ────────────────────────────────────────────
 
     private void LaunchGreenLuma()
@@ -362,26 +438,8 @@ public sealed class FamilyShareViewModel : ViewModelBase
                 UseShellExecute = true
             });
 
-            ActionStatus = "GreenLuma launched — Steam is restarting.";
+            ActionStatus = "GreenLuma running — shared games are unlocked. Downloads are blocked while GL runs; use Restart Steam to install or update.";
             if (StealthMode) CleanGreenLumaLogs();
-
-            // Trigger steam://install for each game after Steam starts
-            if (Games.Count > 0)
-            {
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(12));
-                    foreach (var game in Games.ToList())
-                    {
-                        try
-                        {
-                            Process.Start(new ProcessStartInfo($"steam://install/{game.AppId}") { UseShellExecute = true });
-                            await Task.Delay(1500);
-                        }
-                        catch { }
-                    }
-                });
-            }
         }
         catch (Exception ex)
         {
@@ -587,6 +645,44 @@ public sealed class FamilyShareViewModel : ViewModelBase
 
     // ── Generate / Clean AppList ────────────────────────────────────
 
+    // GreenLuma 2026 AppList.ini maps an already-licensed "old" AppID slot to the AppID to unlock:
+    // "90 = 2947440". These are the slots shipped in the official template.
+    private static readonly int[] DefaultSlots =
+    {
+        90, 205, 219, 310, 410, 570, 575, 635, 640, 740, 1213, 1273, 1840, 2145, 2403, 4270, 4940, 8680, 8710,
+        8730, 8770, 13180, 17505, 17515, 17525, 17535, 17555, 17575, 17585, 18010, 18030, 22150, 34120, 41005,
+        41015, 41040, 41080, 42300, 42320, 42750, 43210, 55280, 63220, 70010, 72310, 72780, 91720, 96810, 111710,
+        203300, 203600, 208050, 212542, 215350, 215360, 216280, 216840, 220070, 221410, 222840, 223160, 223240,
+        223250, 223350, 223910, 224620, 229950, 230030, 231390, 233780, 236600, 236650, 237410, 238670, 238690,
+        255470, 258680, 261020, 261140, 261310, 265360, 266910, 294420, 302530, 302550, 312070, 313250, 315420,
+        316000, 319070, 320420, 321770, 322050, 323010, 332850, 366490, 373300, 374980, 381690, 382030, 401530,
+        405270, 407350, 443030, 476580, 551410, 568880, 613220, 733580, 807210, 858280, 875860, 944490, 961940,
+        1042420, 1054830, 1070560, 1070910, 1113280, 1161040, 1182480, 1245040, 1391110, 1420170, 1493710,
+        1580130, 1628350, 1635560, 1826330, 1874900, 1887720, 1977700, 2180100, 2230260, 2348590, 2676230,
+        2738040, 2805730, 3029110, 3043620, 3086180, 3127680, 3340990, 3658110, 4183110, 4185400, 4333400,
+        4427310, 4628710, 4628740, 4690330, 4862110
+    };
+
+    private static readonly Regex AppListLine = new(@"^\s*(#?)\s*(\d+)\s*=\s*(\d*)\s*$", RegexOptions.Compiled);
+
+    private static List<int> ReadSlots(string iniPath)
+    {
+        var slots = new List<int>();
+        if (File.Exists(iniPath))
+        {
+            foreach (var line in File.ReadAllLines(iniPath))
+            {
+                var m = AppListLine.Match(line);
+                if (!m.Success) continue;
+                // "N = " without '#' is the broken pre-slot format, not a slot
+                var commented = m.Groups[1].Length > 0;
+                var hasValue = m.Groups[3].Length > 0;
+                if (commented || hasValue) slots.Add(int.Parse(m.Groups[2].Value));
+            }
+        }
+        return slots.Count >= 10 ? slots.Distinct().ToList() : DefaultSlots.ToList();
+    }
+
     private void GenerateAppList()
     {
         if (Games.Count == 0) return;
@@ -601,204 +697,49 @@ public sealed class FamilyShareViewModel : ViewModelBase
             if (baseDir == null) { ActionStatus = "No GreenLuma or Steam path."; return; }
 
             var appListDir = Path.Combine(baseDir, "AppList");
+            Directory.CreateDirectory(appListDir);
+            var iniPath = Path.Combine(appListDir, "AppList.ini");
 
-            if (Directory.Exists(appListDir))
+            var steamapps = HasSteamPath ? Path.Combine(SteamPath, "steamapps") : null;
+            var gameIds = Games.Select(g => g.AppId).ToHashSet();
+            var slots = ReadSlots(iniPath);
+            // Remapping a slot the user really has installed would hide that app
+            var usable = slots.Where(s => !gameIds.Contains(s) &&
+                (steamapps == null || !File.Exists(Path.Combine(steamapps, $"appmanifest_{s}.acf")))).ToList();
+
+            if (Games.Count > usable.Count)
             {
-                foreach (var f in Directory.EnumerateFiles(appListDir, "*.txt"))
-                    try { File.Delete(f); } catch { }
-                var oldIni = Path.Combine(appListDir, "AppList.ini");
-                if (File.Exists(oldIni)) try { File.Delete(oldIni); } catch { }
+                ActionStatus = $"Too many games: GreenLuma has {usable.Count} free slots.";
+                return;
             }
-            else
-                Directory.CreateDirectory(appListDir);
 
-            // GL 2026 AppList.ini format
-            var lines = new List<string> { "[AppList]" };
-            foreach (var game in Games)
-                lines.Add($"{game.AppId} = ");
-            File.WriteAllLines(Path.Combine(appListDir, "AppList.ini"), lines, new UTF8Encoding(false));
-
-            // Legacy numbered .txt format (compatibility with older GL / guides)
+            var assigned = new Dictionary<int, int>();
             for (var i = 0; i < Games.Count; i++)
-                File.WriteAllText(Path.Combine(appListDir, $"{i}.txt"), Games[i].AppId.ToString(), new UTF8Encoding(false));
+                assigned[usable[i]] = Games[i].AppId;
 
-            // Create fake ACF files so Steam recognizes the games
-            if (HasSteamPath)
+            var lines = new List<string>
             {
-                var steamapps = Path.Combine(SteamPath, "steamapps");
-                if (Directory.Exists(steamapps))
-                {
-                    foreach (var game in Games)
-                    {
-                        var acfPath = Path.Combine(steamapps, $"appmanifest_{game.AppId}.acf");
-                        if (!File.Exists(acfPath))
-                        {
-                            var gameName = game.Name.StartsWith("App ") ? $"App_{game.AppId}" : SanitizeFolderName(game.Name);
-                            File.WriteAllText(acfPath, string.Join("\r\n",
-                                "\"AppState\"",
-                                "{",
-                                $"  \"AppID\"  \"{game.AppId}\"",
-                                "  \"Universe\" \"1\"",
-                                $"  \"installdir\" \"{gameName}\"",
-                                "  \"StateFlags\" \"1026\"",
-                                "}"), new UTF8Encoding(false));
-                        }
-                    }
-                }
-            }
+                "[AppList]",
+                "# Format:",
+                "# Old AppID = New AppID to unlock",
+                "# Remove the # before the old AppID",
+                ""
+            };
+            foreach (var slot in slots)
+                lines.Add(assigned.TryGetValue(slot, out var appId) ? $"{slot} = {appId}" : $"#{slot} = ");
+
+            File.WriteAllLines(iniPath, lines, new UTF8Encoding(false));
+
+            // GL 2026 only reads AppList.ini; leftover numbered .txt files are from the old format
+            foreach (var f in Directory.EnumerateFiles(appListDir, "*.txt"))
+                try { File.Delete(f); } catch { }
 
             AppListCount = Games.Count;
-            ActionStatus = $"AppList: {Games.Count} game(s) → {appListDir}";
+            ActionStatus = $"AppList.ini: {Games.Count} game(s) mapped → {appListDir}";
             if (StealthMode) CleanGreenLumaLogs();
         }
         catch (Exception ex) { ActionStatus = $"Failed: {ex.Message}"; }
         finally { IsBusy = false; UpdateStatus(); }
-    }
-
-    private async Task PrepareManifestsAsync()
-    {
-        if (!HasSteamPath || Games.Count == 0) return;
-
-        var appSettings = _settings.Load();
-        var authCode = appSettings.RyuuApiKey;
-        if (string.IsNullOrWhiteSpace(authCode))
-            authCode = await _credentials.ReadAsync("ryuu-auth-key");
-        if (string.IsNullOrWhiteSpace(authCode))
-        {
-            ActionStatus = "No Ryuu auth code — set it in Settings.";
-            return;
-        }
-
-        var depotcache = Path.Combine(SteamPath, "depotcache");
-        Directory.CreateDirectory(depotcache);
-        var configVdf = Path.Combine(SteamPath, "config", "config.vdf");
-        var prepared = 0;
-
-        foreach (var game in Games.ToList())
-        {
-            ActionStatus = $"Fetching manifests for {game.Name}…";
-            try
-            {
-                var zipResult = await _ryuuDownload.DownloadAsync(game.AppId, authCode!, game.Name);
-                if (!zipResult.Succeeded) { ActionStatus = $"Ryuu: {zipResult.Message}"; continue; }
-
-                using var zip = ZipFile.OpenRead(zipResult.ArchivePath);
-
-                // Extract LUA
-                var luaEntry = zip.Entries.FirstOrDefault(e => e.Name.EndsWith(".lua", StringComparison.OrdinalIgnoreCase));
-                if (luaEntry is null) continue;
-
-                string luaContent;
-                using (var reader = new StreamReader(luaEntry.Open()))
-                    luaContent = await reader.ReadToEndAsync();
-
-                var depots = _ryuuService.ParseLua(luaContent);
-
-                // Copy manifest files to depotcache
-                foreach (var entry in zip.Entries.Where(e => e.Name.EndsWith(".manifest", StringComparison.OrdinalIgnoreCase)))
-                {
-                    var dest = Path.Combine(depotcache, entry.Name);
-                    entry.ExtractToFile(dest, overwrite: true);
-                }
-
-                // Inject decryption keys into config.vdf
-                if (depots.Count > 0 && File.Exists(configVdf))
-                    InjectDecryptionKeys(configVdf, depots);
-
-                // Add depot IDs to the AppList alongside the AppID
-                var injector = FindInjector();
-                var baseDir = injector != null ? Path.GetDirectoryName(injector)! : HasGlPath ? GlPath : SteamPath;
-                var appListDir = Path.Combine(baseDir, "AppList");
-                if (Directory.Exists(appListDir))
-                {
-                    var iniPath = Path.Combine(appListDir, "AppList.ini");
-                    var existingIds = new HashSet<string>();
-                    if (File.Exists(iniPath))
-                    {
-                        foreach (var line in File.ReadAllLines(iniPath))
-                        {
-                            var t = line.Trim();
-                            var eq = t.IndexOf('=');
-                            if (eq > 0 && !t.StartsWith('[') && !t.StartsWith('#'))
-                                existingIds.Add(t[..eq].Trim());
-                        }
-                    }
-
-                    var newLines = new List<string>();
-                    foreach (var depot in depots)
-                    {
-                        var id = depot.DepotId.ToString();
-                        if (existingIds.Add(id))
-                            newLines.Add($"{id} = ");
-                    }
-
-                    if (newLines.Count > 0)
-                    {
-                        File.AppendAllLines(iniPath, newLines, new UTF8Encoding(false));
-                        // Also add .txt files for legacy compat
-                        var txtCount = Directory.EnumerateFiles(appListDir, "*.txt").Count();
-                        for (var i = 0; i < newLines.Count; i++)
-                        {
-                            var depotId = newLines[i].Split('=')[0].Trim();
-                            File.WriteAllText(Path.Combine(appListDir, $"{txtCount + i}.txt"), depotId, new UTF8Encoding(false));
-                        }
-                    }
-                }
-
-                prepared++;
-                Logging.Add(LogLevel.Info, "GreenLuma", $"Prepared {depots.Count} depot(s) for {game.Name}");
-            }
-            catch (Exception ex)
-            {
-                Logging.Add(LogLevel.Error, "GreenLuma", $"Manifest prep failed for {game.AppId}: {ex.Message}");
-            }
-        }
-
-        ActionStatus = prepared > 0
-            ? $"Manifests ready for {prepared} game(s) — depotcache + config.vdf updated."
-            : "No manifests could be fetched.";
-    }
-
-    private static void InjectDecryptionKeys(string configVdfPath, IReadOnlyList<RyuuDepotInfo> depots)
-    {
-        try
-        {
-            var content = File.ReadAllText(configVdfPath, Encoding.UTF8);
-
-            var depotBlockIdx = content.LastIndexOf("\"depots\"", StringComparison.OrdinalIgnoreCase);
-            if (depotBlockIdx < 0) return;
-
-            var braceStart = content.IndexOf('{', depotBlockIdx);
-            if (braceStart < 0) return;
-
-            // Find the matching closing brace
-            var depth = 1;
-            var insertPos = braceStart + 1;
-            for (var i = braceStart + 1; i < content.Length; i++)
-            {
-                if (content[i] == '{') depth++;
-                else if (content[i] == '}') { depth--; if (depth == 0) { insertPos = i; break; } }
-            }
-
-            var sb = new StringBuilder();
-            foreach (var depot in depots)
-            {
-                if (string.IsNullOrEmpty(depot.DecryptionKey)) continue;
-                var idStr = depot.DepotId.ToString();
-                if (content.Contains($"\"{idStr}\"")) continue;
-
-                sb.AppendLine($"\t\t\t\t\"{idStr}\"");
-                sb.AppendLine("\t\t\t\t{");
-                sb.AppendLine($"\t\t\t\t\t\"DecryptionKey\"\t\t\"{depot.DecryptionKey}\"");
-                sb.AppendLine("\t\t\t\t}");
-            }
-
-            if (sb.Length == 0) return;
-
-            var newContent = content.Insert(insertPos, sb.ToString());
-            File.WriteAllText(configVdfPath, newContent, new UTF8Encoding(false));
-        }
-        catch { }
     }
 
     private void CleanAppList()
@@ -837,9 +778,26 @@ public sealed class FamilyShareViewModel : ViewModelBase
         foreach (var d in new[] { Path.Combine(SteamPath, "GreenLuma"), Path.Combine(SteamPath, "AppList") })
             if (Directory.Exists(d)) try { Directory.Delete(d, true); cleaned.Add(Path.GetFileName(d)); } catch { }
 
+        var steamapps = Path.Combine(SteamPath, "steamapps");
+        foreach (var game in Games)
+        {
+            var acf = Path.Combine(steamapps, $"appmanifest_{game.AppId}.acf");
+            if (IsPlaceholderAcf(acf)) try { File.Delete(acf); cleaned.Add($"acf {game.AppId}"); } catch { }
+        }
+
         AppListCount = 0;
         ActionStatus = cleaned.Count > 0 ? $"Cleaned: {string.Join(", ", cleaned)}" : "Nothing to clean.";
         DetectGreenLuma();
+    }
+
+    // Manifest with nothing on disk (e.g. hand-made "fake ACF"): shows as installed + Buy in Steam
+    private static bool IsPlaceholderAcf(string path)
+    {
+        if (!File.Exists(path)) return false;
+        var text = File.ReadAllText(path);
+        var noDepots = !text.Contains("\"InstalledDepots\"") || Regex.IsMatch(text, "\"InstalledDepots\"\\s*\\{\\s*\\}");
+        var noSize = !Regex.IsMatch(text, "\"SizeOnDisk\"\\s*\"[1-9]");
+        return noDepots && noSize;
     }
 
     private void CleanGreenLumaLogs()
@@ -871,90 +829,6 @@ public sealed class FamilyShareViewModel : ViewModelBase
                 ActionStatus = "steam.exe not found.";
         }
         catch (Exception ex) { ActionStatus = $"Restart failed: {ex.Message}"; }
-    }
-
-    // ── Download ────────────────────────────────────────────────────
-
-    private async Task DownloadGameAsync(int appId)
-    {
-        var entry = Games.FirstOrDefault(g => g.AppId == appId);
-        if (entry == null) return;
-
-        var settings = _settings.Load();
-        var basePath = settings.DownloadFolder;
-        if (string.IsNullOrWhiteSpace(basePath))
-            basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SteamGames");
-
-        var gameName = entry.Name.StartsWith("App ") ? $"App_{appId}" : SanitizeFolderName(entry.Name);
-        var folder = Path.Combine(basePath, gameName);
-
-        var job = new DownloadJob
-        {
-            AppId = appId,
-            GameName = entry.Name,
-            CoverImageUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/header.jpg",
-            TargetFolder = folder,
-            Started = DateTime.Now,
-            DownloadMode = "DepotDownloaderMod (Ryuu)",
-            AuthorizationConfirmed = true
-        };
-        job.State = DownloadJobState.Preparing;
-        job.Status = "Starting download…";
-
-        Store.Downloads.Insert(0, job);
-        await _downloadQueue.SaveAsync(job);
-        ActionStatus = $"Download queued: {entry.Name} — check Downloads tab.";
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var progress = new Progress<string>(msg =>
-                {
-                    if (msg.StartsWith("PROGRESS|", StringComparison.Ordinal))
-                    {
-                        var parts = msg.Split('|');
-                        if (parts.Length >= 10 && double.TryParse(parts[4],
-                                System.Globalization.NumberStyles.Float,
-                                System.Globalization.CultureInfo.InvariantCulture, out var pct))
-                        {
-                            job.Progress = pct;
-                            job.State = DownloadJobState.Downloading;
-                            if (!string.IsNullOrWhiteSpace(parts[5])) job.Downloaded = parts[5];
-                            if (!string.IsNullOrWhiteSpace(parts[6])) job.TotalSize = parts[6];
-                            if (!string.IsNullOrWhiteSpace(parts[7])) job.Speed = parts[7];
-                            if (!string.IsNullOrWhiteSpace(parts[8])) job.Eta = parts[8];
-                            job.Status = $"Downloading — {pct:0.#}%";
-                        }
-                    }
-                    else
-                    {
-                        job.Status = msg;
-                    }
-                });
-
-                var result = await _ryuuService.DownloadGameAsync(appId, folder, progress);
-                job.State = result.Succeeded ? DownloadJobState.Completed : DownloadJobState.Failed;
-                job.Status = result.Succeeded ? "Done" : result.Message;
-                job.Finished = DateTime.Now;
-                await _downloadQueue.SaveAsync(job);
-            }
-            catch (Exception ex)
-            {
-                job.State = DownloadJobState.Failed;
-                job.Status = ex.Message;
-                job.Finished = DateTime.Now;
-            }
-        });
-    }
-
-    private static string SanitizeFolderName(string name)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var sb = new StringBuilder(name.Length);
-        foreach (var c in name)
-            sb.Append(invalid.Contains(c) ? '_' : c);
-        return sb.ToString().Trim();
     }
 
     // ── Detection ───────────────────────────────────────────────────
@@ -1044,12 +918,7 @@ public sealed class FamilyShareViewModel : ViewModelBase
             var iniPath = Path.Combine(dir, "AppList.ini");
             if (File.Exists(iniPath))
             {
-                try
-                {
-                    AppListCount = File.ReadAllLines(iniPath)
-                        .Count(l => { var t = l.Trim(); return t.Length > 0 && !t.StartsWith('[') && !t.StartsWith('#'); });
-                    return;
-                }
+                try { AppListCount = ReadMappedAppIds(iniPath).Count; return; }
                 catch { }
             }
 
@@ -1057,6 +926,18 @@ public sealed class FamilyShareViewModel : ViewModelBase
             if (txtCount > 0) { AppListCount = txtCount; return; }
         }
         AppListCount = 0;
+    }
+
+    private static List<int> ReadMappedAppIds(string iniPath)
+    {
+        var ids = new List<int>();
+        foreach (var line in File.ReadAllLines(iniPath))
+        {
+            var m = AppListLine.Match(line);
+            if (m.Success && m.Groups[1].Length == 0 && int.TryParse(m.Groups[3].Value, out var appId) && appId > 0)
+                ids.Add(appId);
+        }
+        return ids;
     }
 
     private void UpdateStatus()
@@ -1087,13 +968,9 @@ public sealed class FamilyShareViewModel : ViewModelBase
             {
                 try
                 {
-                    foreach (var line in File.ReadAllLines(iniPath))
+                    foreach (var appId in ReadMappedAppIds(iniPath))
                     {
-                        var trimmed = line.Trim();
-                        if (trimmed.StartsWith('[') || trimmed.StartsWith('#') || trimmed.Length == 0) continue;
-                        var eqIdx = trimmed.IndexOf('=');
-                        var idStr = eqIdx > 0 ? trimmed[..eqIdx].Trim() : trimmed;
-                        if (int.TryParse(idStr, out var appId) && appId > 0 && existingIds.Add(appId))
+                        if (existingIds.Add(appId))
                         { Games.Add(new AppListEntry { AppId = appId, Name = $"App {appId}" }); added++; _ = ResolveNameAsync(appId); }
                     }
                 }

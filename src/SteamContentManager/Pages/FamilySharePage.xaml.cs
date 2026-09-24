@@ -55,10 +55,8 @@ public partial class FamilySharePage : Page
         SearchBox.Text = string.Empty;
     }
 
-    private async void GenerateAndLaunch_Click(object sender, RoutedEventArgs e)
+    private void GenerateAndLaunch_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.PrepareManifestsCommand.CanExecute(null))
-            await ViewModel.PrepareManifestsCommand.ExecuteAsync(null);
         ViewModel.GenerateCommand.Execute(null);
         ViewModel.LaunchCommand.Execute(null);
     }

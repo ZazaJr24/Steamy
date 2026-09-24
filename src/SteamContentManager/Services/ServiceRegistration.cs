@@ -104,10 +104,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<INavigationService>(),
             sp.GetRequiredService<ILoggingService>(),
             sp.GetRequiredService<ISettingsService>(),
-            sp.GetRequiredService<ISecureCredentialService>(),
-            sp.GetRequiredService<IDownloadQueueStore>(),
-            sp.GetRequiredService<IRyuuGameDownloadService>(),
-            sp.GetRequiredService<IRyuuSecureDownloadService>()));
+            sp.GetRequiredService<ISecureCredentialService>()));
+        services.AddSingleton<GoldbergViewModel>();
         services.AddSingleton<UnsteamViewModel>();
         services.AddSingleton<ScreamApiViewModel>();
         services.AddSingleton<HvFixesViewModel>();

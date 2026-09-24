@@ -87,6 +87,9 @@
               <ui:NavigationViewItem Content="GreenLuma"
                                      Icon="{ui:SymbolIcon People24}"
                                      TargetPageType="{x:Type pages:FamilySharePage}" />
+              <ui:NavigationViewItem Content="Goldberg"
+                                     Icon="{ui:SymbolIcon Games24}"
+                                     TargetPageType="{x:Type pages:GoldbergPage}" />
             </ui:NavigationViewItem.MenuItems>
           </ui:NavigationViewItem>
 
