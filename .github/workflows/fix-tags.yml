@@ -13,12 +13,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create v0.0.3 tag via API
+      - name: Create v0.0.3 release targeting correct commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           FULL_SHA=$(git rev-parse 600f711)
-          echo "Creating tag v0.0.3 -> $FULL_SHA"
-          gh api repos/ZazaJr24/ResonanceTools/git/refs \
-            -f ref=refs/tags/v0.0.3 \
-            -f sha="$FULL_SHA"
+          echo "Creating release v0.0.3 -> $FULL_SHA"
+          gh release create v0.0.3 \
+            --title "v0.0.3" \
+            --notes "Version 0.0.3" \
+            --target "$FULL_SHA"
