@@ -247,6 +247,7 @@ public sealed class DownloadJob : UiObservableObject
     public string AppLabel => $"App {AppId}";
     public string DepotLabel => DepotId is null ? "App depot set" : $"Depot {DepotId}";
     public string ExitCodeLabel => ExitCode is null ? "—" : ExitCode.Value.ToString();
+    public string? PortraitArtUrl => AppId > 0 ? $"https://cdn.akamai.steamstatic.com/steam/apps/{AppId}/library_600x900.jpg" : null;
     public bool IsPaused => State == DownloadJobState.Paused;
     public bool IsTerminal => State is DownloadJobState.Completed or DownloadJobState.Failed or DownloadJobState.Cancelled;
 
