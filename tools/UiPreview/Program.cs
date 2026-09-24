@@ -1,4 +1,6 @@
 using System.IO;
+using System.Net;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -15,6 +17,7 @@ namespace UiPreview;
 /// <summary>Runs the real app on a CI runner, seeds sample data and renders the dashboard to PNG files.</summary>
 public static class Program
 {
+    private const string CatalogUrl = "http://localhost:18765/";
     private static string _outDir = string.Empty;
 
     [STAThread]
@@ -68,6 +71,54 @@ public static class Program
         UiThemeService.Apply("Light");
         await Delay(2000);
         Capture(window, "3-dashboard-light");
+
+        UiThemeService.Apply("Dark");
+        using var catalog = StartCatalogServer();
+        var settingsService = App.Services.GetRequiredService<ISettingsService>();
+        var settings = settingsService.Load();
+        settings.FixMirrorUrl = CatalogUrl;
+        await settingsService.SaveAsync(settings);
+
+        var navigation = App.Services.GetRequiredService<INavigationService>();
+        navigation.Navigate<GameFixesPage>();
+        await Delay(9000);
+        Capture(window, "4-fixes-dark");
+
+        navigation.Navigate<LibraryPage>();
+        await Delay(3000);
+        navigation.Navigate<SettingsPage>();
+        await Delay(2500);
+        Capture(window, "5-settings-after-games-dark");
+    }
+
+    private static HttpListener StartCatalogServer()
+    {
+        var games = new (string AppId, string Name, int Fixes)[]
+        {
+            ("1245620", "ELDEN RING", 1), ("1091500", "Cyberpunk 2077", 2), ("292030", "The Witcher 3: Wild Hunt", 1),
+            ("1174180", "Red Dead Redemption 2", 1), ("413150", "Stardew Valley", 1), ("1145360", "Hades", 1),
+            ("271590", "Grand Theft Auto V", 1), ("620", "Portal 2", 1), ("730", "Counter-Strike 2", 1), ("1086940", "Baldur's Gate 3", 2)
+        };
+        var json = "[" + string.Join(",", games.Select(g => $$"""{"appid":"{{g.AppId}}","name":"{{g.Name}}","fixes":[{{string.Join(",", Enumerable.Range(1, g.Fixes).Select(i => $$"""{"filename":"Sample fix {{i}}.zip","path":"fixes/{{g.AppId}}/{{i}}.zip","size":"12.{{i}} MB","badges":["Sample"]}"""))}}]}""")) + "]";
+        var body = Encoding.UTF8.GetBytes(json);
+
+        var listener = new HttpListener();
+        listener.Prefixes.Add(CatalogUrl);
+        listener.Start();
+        _ = Task.Run(async () =>
+        {
+            while (listener.IsListening)
+            {
+                HttpListenerContext context;
+                try { context = await listener.GetContextAsync(); }
+                catch { return; }
+                context.Response.ContentType = "application/json";
+                context.Response.ContentLength64 = body.Length;
+                await context.Response.OutputStream.WriteAsync(body);
+                context.Response.Close();
+            }
+        });
+        return listener;
     }
 
     private static void Seed()
@@ -139,7 +190,7 @@ public static class Program
         window.UpdateLayout();
         Save(window, (int)window.ActualWidth, (int)window.ActualHeight, Path.Combine(_outDir, $"{name}-window.png"), null, new Point());
 
-        var page = FindChild<DashboardPage>(window);
+        var page = FindChild<Page>(window);
         if (page?.Content is ScrollViewer { Content: FrameworkElement content } scroll)
         {
             var padding = scroll.Padding;
