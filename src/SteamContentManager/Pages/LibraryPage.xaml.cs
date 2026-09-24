@@ -77,10 +77,14 @@ public partial class LibraryPage : Page
 
         try
         {
-            var coverUrl = item.HeaderImage is not null ? null
-                : $"https://cdn.akamai.steamstatic.com/steam/apps/{item.AppId}/header.jpg";
-            OverlayCover.Source = item.HeaderImage ?? (coverUrl is not null
-                ? new BitmapImage(new Uri(coverUrl)) : null);
+            var heroUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{item.AppId}/library_hero.jpg";
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.UriSource = new Uri(heroUrl);
+            bmp.DecodePixelHeight = 280;
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.EndInit();
+            OverlayCover.Source = bmp;
         }
         catch { OverlayCover.Source = null; }
 

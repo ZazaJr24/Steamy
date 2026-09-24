@@ -37,14 +37,20 @@
       </Setter>
     </Style>
 
-    <Style x:Key="ToolTile" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+    <Style x:Key="QuickAction" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
       <Setter Property="Appearance" Value="Secondary" />
-      <Setter Property="Margin" Value="6" />
-      <Setter Property="Padding" Value="14,12" />
-      <Setter Property="MinHeight" Value="72" />
+      <Setter Property="Padding" Value="18,16" />
+      <Setter Property="MinHeight" Value="80" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="QuickActionIcon" TargetType="Border">
+      <Setter Property="Width" Value="44" />
+      <Setter Property="Height" Value="44" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <Style x:Key="StatusDot" TargetType="Ellipse">
@@ -88,27 +94,65 @@
       <GradientStop Color="#C00E0F12" Offset="0.45" />
       <GradientStop Color="#200E0F12" Offset="1" />
     </LinearGradientBrush>
+
+    <Style x:Key="InlineStat" TargetType="Border">
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="12,6" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+    </Style>
   </Page.Resources>
 
   <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="30,26,30,44">
     <StackPanel MaxWidth="1280" HorizontalAlignment="Stretch">
 
-      <!-- Header: greeting, live summary, search and refresh -->
+      <!-- Header: greeting + inline stats + search -->
       <Grid Margin="0,0,0,20">
         <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <StackPanel VerticalAlignment="Center">
-          <TextBlock Text="{Binding Greeting}" Style="{StaticResource PageTitleStyle}" />
-          <TextBlock Text="{Binding HeaderSummary}" Style="{StaticResource PageSubtitleStyle}" Margin="0" />
+          <TextBlock Text="{Binding Greeting}" Style="{StaticResource PageTitleStyle}" Margin="0" />
+          <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+            <Border Style="{StaticResource InlineStat}">
+              <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="Games24" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding InstalledCount}" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Text=" games" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource InlineStat}">
+              <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding ActiveDownloadCount}" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Text=" active" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource InlineStat}">
+              <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="TopSpeed24" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding CurrentSpeed}" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource InlineStat}" Margin="0">
+              <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="Storage24" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding StorageFree}" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Text=" free" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
         </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
           <ui:ProgressRing Width="18" Height="18" Margin="0,0,12,0" IsIndeterminate="True"
                            Visibility="{Binding IsRefreshing, Converter={StaticResource BoolToVis}}" />
           <ui:TextBox x:Name="DashboardSearch"
-                      Width="320"
-                      PlaceholderText="Search games by name or App ID…"
+                      Width="280"
+                      PlaceholderText="Search games…"
                       Icon="{ui:SymbolIcon Search24}"
                       VerticalAlignment="Center"
                       KeyDown="DashboardSearch_KeyDown" />
@@ -119,7 +163,7 @@
       </Grid>
 
       <!-- Hero: running download, else most recently updated game, else first-run welcome -->
-      <Border CornerRadius="20" Height="250" Margin="0,0,0,20"
+      <Border CornerRadius="20" Height="220" Margin="0,0,0,22"
               Background="{DynamicResource SurfaceElevatedBrush}"
               BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1">
         <Grid>
@@ -133,14 +177,14 @@
 
           <!-- Download in progress -->
           <StackPanel DataContext="{Binding HeroDownload}" VerticalAlignment="Bottom" HorizontalAlignment="Left"
-                      Width="560" Margin="30,0,30,26"
+                      Width="560" Margin="30,0,30,22"
                       Visibility="{Binding DataContext.ShowDownloadHero, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolToVis}}">
             <Border Style="{StaticResource StatePill}" HorizontalAlignment="Left">
               <TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}" />
             </Border>
-            <TextBlock Text="{Binding GameName}" FontSize="28" FontWeight="SemiBold" Foreground="White"
-                       Margin="0,10,0,0" TextTrimming="CharacterEllipsis" />
-            <Grid Margin="0,14,0,0">
+            <TextBlock Text="{Binding GameName}" FontSize="26" FontWeight="SemiBold" Foreground="White"
+                       Margin="0,8,0,0" TextTrimming="CharacterEllipsis" />
+            <Grid Margin="0,12,0,0">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -150,9 +194,7 @@
               <TextBlock Grid.Column="1" Text="{Binding ProgressLabel}" Foreground="White" FontWeight="SemiBold"
                          Margin="12,0,0,0" VerticalAlignment="Center" />
             </Grid>
-            <TextBlock Text="{Binding DataContext.HeroDownloadDetail, RelativeSource={RelativeSource AncestorType=Page}}"
-                       Foreground="#D0D4DE" FontSize="12.5" Margin="0,8,0,0" TextTrimming="CharacterEllipsis" />
-            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
               <ui:Button Style="{StaticResource PauseButton}" Margin="0,0,8,0" Appearance="Primary" Content="Pause"
                          Icon="{ui:SymbolIcon Pause24}" CommandParameter="{Binding}"
                          Command="{Binding DataContext.DownloadActions.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
@@ -162,21 +204,21 @@
               <ui:Button Style="{StaticResource StartButton}" Margin="0,0,8,0" Appearance="Primary" Content="Start"
                          Icon="{ui:SymbolIcon Play24}" CommandParameter="{Binding}"
                          Command="{Binding DataContext.DownloadActions.StartCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
-              <ui:Button Content="Open downloads" Appearance="Secondary" Icon="{ui:SymbolIcon ArrowDownload24}"
+              <ui:Button Content="Downloads" Appearance="Secondary" Icon="{ui:SymbolIcon ArrowDownload24}"
                          Command="{Binding DataContext.NavigateDownloadsCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
             </StackPanel>
           </StackPanel>
 
           <!-- Most recently updated game -->
-          <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" MaxWidth="620" Margin="30,0,30,26"
+          <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" MaxWidth="620" Margin="30,0,30,22"
                       Visibility="{Binding ShowGameHero, Converter={StaticResource BoolToVis}}">
             <Border Background="#33FFFFFF" CornerRadius="12" Padding="9,4" HorizontalAlignment="Left">
               <TextBlock Text="RECENTLY UPDATED" FontSize="10.5" FontWeight="SemiBold" Foreground="White" />
             </Border>
-            <TextBlock Text="{Binding HeroGame.Name}" FontSize="30" FontWeight="SemiBold" Foreground="White"
-                       Margin="0,10,0,0" TextTrimming="CharacterEllipsis" />
-            <TextBlock Text="{Binding HeroGameDetail}" Foreground="#D0D4DE" FontSize="13" Margin="0,5,0,0" />
-            <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+            <TextBlock Text="{Binding HeroGame.Name}" FontSize="28" FontWeight="SemiBold" Foreground="White"
+                       Margin="0,8,0,0" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding HeroGameDetail}" Foreground="#D0D4DE" FontSize="13" Margin="0,4,0,0" />
+            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
               <ui:Button Content="Play" Appearance="Primary" Icon="{ui:SymbolIcon Play24}" Margin="0,0,8,0"
                          Command="{Binding PlayGameCommand}" CommandParameter="{Binding HeroGame}" />
               <ui:Button Content="Open folder" Appearance="Secondary" Icon="{ui:SymbolIcon FolderOpen24}" Margin="0,0,8,0"
@@ -194,11 +236,11 @@
               <Border Style="{StaticResource AccentPillStyle}" HorizontalAlignment="Left">
                 <TextBlock Text="GET STARTED" Style="{StaticResource AccentPillTextStyle}" FontSize="10.5" />
               </Border>
-              <TextBlock Text="Welcome to ResonanceTools" FontSize="28" FontWeight="SemiBold"
+              <TextBlock Text="Welcome to ResonanceTools" FontSize="26" FontWeight="SemiBold"
                          Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,0" />
               <TextBlock Style="{StaticResource MutedTextStyle}" FontSize="13" Margin="0,6,0,0"
                          Text="Point the app at your Steam folder to see your games here, then set up DepotDownloader and your fixes source." />
-              <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+              <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                 <ui:Button Content="Open Settings" Appearance="Primary" Icon="{ui:SymbolIcon Settings24}" Margin="0,0,8,0"
                            Command="{Binding NavigateSettingsCommand}" />
                 <ui:Button Content="Browse games" Appearance="Secondary" Icon="{ui:SymbolIcon Apps24}"
@@ -209,66 +251,60 @@
         </Grid>
       </Border>
 
-      <!-- Live numbers -->
-      <UniformGrid Columns="4" Margin="-6,0,-6,20">
-        <Border Style="{StaticResource SurfaceCardStyle}" Margin="6" Padding="18">
+      <!-- Quick Actions -->
+      <TextBlock Text="Quick Actions" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8" />
+      <UniformGrid Columns="4" Margin="-4,0,-4,22">
+        <ui:Button Style="{StaticResource QuickAction}" Margin="4" Command="{Binding NavigateDepotDownloaderCommand}">
           <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <StackPanel>
-              <TextBlock Text="INSTALLED" Style="{StaticResource PillTextStyle}" />
-              <TextBlock Text="{Binding InstalledCount}" Style="{StaticResource MetricValueStyle}" Margin="0,8,0,2" />
-              <TextBlock Text="{Binding InstalledSummary}" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-            <Border Grid.Column="1" Style="{StaticResource DashIconBadge}" VerticalAlignment="Top">
-              <ui:SymbolIcon Symbol="Games24" Style="{StaticResource DashIcon}" />
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Border Style="{StaticResource QuickActionIcon}" Background="#1A3B82F6">
+              <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="22" Foreground="#3B82F6" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
+            <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+              <TextBlock Text="Download" Style="{StaticResource CardTitleStyle}" FontSize="13.5" />
+              <TextBlock Text="Depot downloader" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,2,0,0" />
+            </StackPanel>
           </Grid>
-        </Border>
+        </ui:Button>
 
-        <Border Style="{StaticResource SurfaceCardStyle}" Margin="6" Padding="18">
+        <ui:Button Style="{StaticResource QuickAction}" Margin="4" Command="{Binding NavigateFixesCommand}">
           <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <StackPanel>
-              <TextBlock Text="DOWNLOADING" Style="{StaticResource PillTextStyle}" />
-              <TextBlock Text="{Binding ActiveDownloadCount}" Style="{StaticResource MetricValueStyle}" Margin="0,8,0,2" />
-              <TextBlock Text="{Binding DownloadSummary}" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-            <Border Grid.Column="1" Style="{StaticResource DashIconBadge}" VerticalAlignment="Top">
-              <ui:SymbolIcon Symbol="ArrowDownload24" Style="{StaticResource DashIcon}" />
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Border Style="{StaticResource QuickActionIcon}" Background="#1A22C55E">
+              <ui:SymbolIcon Symbol="ShieldTask24" FontSize="22" Foreground="#22C55E" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
+            <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+              <TextBlock Text="Game Fixes" Style="{StaticResource CardTitleStyle}" FontSize="13.5" />
+              <TextBlock Text="Apply fixes" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,2,0,0" />
+            </StackPanel>
           </Grid>
-        </Border>
+        </ui:Button>
 
-        <Border Style="{StaticResource SurfaceCardStyle}" Margin="6" Padding="18">
+        <ui:Button Style="{StaticResource QuickAction}" Margin="4" Command="{Binding NavigateDlcUnlockerCommand}">
           <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <StackPanel>
-              <TextBlock Text="SPEED" Style="{StaticResource PillTextStyle}" />
-              <TextBlock Text="{Binding CurrentSpeed}" Style="{StaticResource MetricValueStyle}" Margin="0,8,0,2" TextTrimming="CharacterEllipsis" />
-              <TextBlock Text="{Binding SpeedSummary}" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-            <Border Grid.Column="1" Style="{StaticResource DashIconBadge}" VerticalAlignment="Top">
-              <ui:SymbolIcon Symbol="TopSpeed24" Style="{StaticResource DashIcon}" />
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Border Style="{StaticResource QuickActionIcon}" Background="#1AA855F7">
+              <ui:SymbolIcon Symbol="PuzzlePiece24" FontSize="22" Foreground="#A855F7" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
+            <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+              <TextBlock Text="DLC Unlocker" Style="{StaticResource CardTitleStyle}" FontSize="13.5" />
+              <TextBlock Text="Unlock all DLCs" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,2,0,0" />
+            </StackPanel>
           </Grid>
-        </Border>
+        </ui:Button>
 
-        <Border Style="{StaticResource SurfaceCardStyle}" Margin="6" Padding="18">
+        <ui:Button Style="{StaticResource QuickAction}" Margin="4" Command="{Binding NavigateSteamlessCommand}">
           <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-            <StackPanel>
-              <TextBlock Text="STORAGE" Style="{StaticResource PillTextStyle}" />
-              <TextBlock Text="{Binding StorageFree}" Style="{StaticResource MetricValueStyle}" Margin="0,8,0,2" TextTrimming="CharacterEllipsis" />
-              <TextBlock Text="{Binding StorageSummary}" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-            <Border Grid.Column="1" Style="{StaticResource DashIconBadge}" VerticalAlignment="Top">
-              <ui:SymbolIcon Symbol="Storage24" Style="{StaticResource DashIcon}" />
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Border Style="{StaticResource QuickActionIcon}" Background="#1AF59E0B">
+              <ui:SymbolIcon Symbol="Wrench24" FontSize="22" Foreground="#F59E0B" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
-            <ProgressBar Grid.Row="1" Grid.ColumnSpan="2" Margin="0,12,0,0" Style="{StaticResource StorageBar}"
-                         Value="{Binding StorageUsedPercent, Mode=OneWay}" />
+            <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+              <TextBlock Text="Steamless" Style="{StaticResource CardTitleStyle}" FontSize="13.5" />
+              <TextBlock Text="Unpack EXE" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,2,0,0" />
+            </StackPanel>
           </Grid>
-        </Border>
+        </ui:Button>
       </UniformGrid>
 
       <Grid>
@@ -278,11 +314,11 @@
           <ColumnDefinition Width="*" MinWidth="300" />
         </Grid.ColumnDefinitions>
 
-        <!-- Library -->
+        <!-- Recent games -->
         <StackPanel>
           <Grid Margin="0,0,0,10">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBlock Text="Recently updated" Style="{StaticResource SectionTitleStyle}" Margin="0" VerticalAlignment="Center" />
+            <TextBlock Text="Your Games" Style="{StaticResource SectionTitleStyle}" Margin="0" VerticalAlignment="Center" />
             <ui:Button Grid.Column="1" Content="View all" Appearance="Transparent" Command="{Binding NavigateLibraryCommand}" />
           </Grid>
 
@@ -294,7 +330,7 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Button Style="{StaticResource DashPlainButton}" Margin="6" Tag="{Binding}" Click="GameCover_Click" ToolTip="{Binding Name}">
-                  <Border Style="{StaticResource CoverCardStyle}" Height="236" Background="{Binding CoverColor}">
+                  <Border Style="{StaticResource CoverCardStyle}" Height="260" Background="{Binding CoverColor}">
                     <Grid>
                       <TextBlock Text="{Binding CoverGlyph}" FontSize="56" Foreground="#35FFFFFF"
                                  HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -304,15 +340,15 @@
                           <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
                         </Border.Background>
                       </Border>
-                      <Border CornerRadius="0,0,13,13" Height="120" VerticalAlignment="Bottom" Background="{StaticResource CoverFadeBrush}" />
+                      <Border CornerRadius="0,0,13,13" Height="130" VerticalAlignment="Bottom" Background="{StaticResource CoverFadeBrush}" />
                       <Border Background="#CC0E0F12" CornerRadius="8" Padding="7,3" Margin="10"
                               HorizontalAlignment="Left" VerticalAlignment="Top"
                               Visibility="{Binding UpdateRequired, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Update" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" />
                       </Border>
-                      <StackPanel VerticalAlignment="Bottom" Margin="12,0,12,12">
+                      <StackPanel VerticalAlignment="Bottom" Margin="12,0,12,14">
                         <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding Size}" FontSize="11" Foreground="#C7CBD8" Margin="0,3,0,0" />
+                        <TextBlock Text="{Binding Size}" FontSize="11" Foreground="#C7CBD8" Margin="0,4,0,0" />
                       </StackPanel>
                     </Grid>
                   </Border>
@@ -341,7 +377,8 @@
 
         <!-- Downloads and setup status -->
         <StackPanel Grid.Column="2">
-          <Border Style="{StaticResource SurfaceCardStyle}" Padding="18" Margin="0,44,0,0">
+          <!-- Downloads -->
+          <Border Style="{StaticResource SurfaceCardStyle}" Padding="18" Margin="0,32,0,0">
             <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions>
@@ -394,7 +431,7 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <StackPanel Margin="0,16,0,2" Visibility="{Binding ShowNoJobs, Converter={StaticResource BoolToVis}}">
+              <StackPanel Margin="0,12,0,2" Visibility="{Binding ShowNoJobs, Converter={StaticResource BoolToVis}}">
                 <Grid>
                   <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                   <Border Style="{StaticResource DashIconBadge}">
@@ -402,7 +439,7 @@
                   </Border>
                   <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="Nothing downloading" Style="{StaticResource CardTitleStyle}" FontSize="12.5" />
-                    <TextBlock Text="Queue a download to see its progress here." Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" Margin="0,2,0,0" TextWrapping="Wrap" />
+                    <TextBlock Text="Queue a download to see it here." Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" Margin="0,2,0,0" TextWrapping="Wrap" />
                   </StackPanel>
                 </Grid>
                 <ui:Button Content="New download" Appearance="Secondary" Icon="{ui:SymbolIcon CloudArrowDown24}"
@@ -411,14 +448,34 @@
             </StackPanel>
           </Border>
 
-          <Border Style="{StaticResource SurfaceCardStyle}" Padding="18" Margin="0,16,0,0">
+          <!-- Storage -->
+          <Border Style="{StaticResource SurfaceCardStyle}" Padding="18" Margin="0,14,0,0">
             <StackPanel>
-              <TextBlock Text="Setup" Style="{StaticResource DashCardHeader}" />
-              <TextBlock Text="{Binding StatusSummary}" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" Margin="0,3,0,0" />
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBlock Text="Storage" Style="{StaticResource DashCardHeader}" />
+                <TextBlock Grid.Column="1" Text="{Binding StorageFree}" FontWeight="Bold" FontSize="16"
+                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+              </Grid>
+              <TextBlock Text="{Binding StorageSummary}" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" Margin="0,4,0,0" />
+              <ProgressBar Style="{StaticResource StorageBar}" Margin="0,10,0,0"
+                           Value="{Binding StorageUsedPercent, Mode=OneWay}" />
+            </StackPanel>
+          </Border>
+
+          <!-- Setup status -->
+          <Border Style="{StaticResource SurfaceCardStyle}" Padding="18" Margin="0,14,0,0">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBlock Text="Setup" Style="{StaticResource DashCardHeader}" />
+                <TextBlock Grid.Column="1" Text="{Binding StatusSummary}" Style="{StaticResource TertiaryTextStyle}" FontSize="11"
+                           VerticalAlignment="Center" />
+              </Grid>
               <ItemsControl ItemsSource="{Binding StatusItems}" Margin="0,4,0,0">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Grid Margin="0,12,0,0">
+                    <Grid Margin="0,10,0,0">
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -427,7 +484,7 @@
                       <Ellipse Style="{StaticResource StatusDot}" VerticalAlignment="Top" Margin="0,5,12,0" />
                       <StackPanel Grid.Column="1">
                         <TextBlock Text="{Binding Title}" Style="{StaticResource CardTitleStyle}" FontSize="12.5" />
-                        <TextBlock Text="{Binding Detail}" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5"
+                        <TextBlock Text="{Binding Detail}" Style="{StaticResource TertiaryTextStyle}" FontSize="11"
                                    TextWrapping="Wrap" Margin="0,2,0,0" />
                       </StackPanel>
                       <ui:Button Grid.Column="2" Style="{StaticResource StatusAction}" Margin="10,0,0,0"
@@ -438,84 +495,33 @@
               </ItemsControl>
             </StackPanel>
           </Border>
+
+          <!-- More tools -->
+          <Border Style="{StaticResource SurfaceCardStyle}" Padding="18" Margin="0,14,0,0">
+            <StackPanel>
+              <TextBlock Text="More Tools" Style="{StaticResource DashCardHeader}" />
+              <ui:Button Appearance="Secondary" HorizontalAlignment="Stretch" Margin="0,12,0,0"
+                         Command="{Binding NavigateDenuvoActivationCommand}">
+                <Grid HorizontalAlignment="Stretch">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                  <ui:SymbolIcon Symbol="Key24" FontSize="16" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="Denuvo Activation" Margin="12,0,0,0" VerticalAlignment="Center" />
+                  <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight20" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+                </Grid>
+              </ui:Button>
+              <ui:Button Appearance="Secondary" HorizontalAlignment="Stretch" Margin="0,6,0,0"
+                         Command="{Binding NavigateSettingsCommand}">
+                <Grid HorizontalAlignment="Stretch">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                  <ui:SymbolIcon Symbol="Settings24" FontSize="16" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="Settings" Margin="12,0,0,0" VerticalAlignment="Center" />
+                  <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight20" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+                </Grid>
+              </ui:Button>
+            </StackPanel>
+          </Border>
         </StackPanel>
       </Grid>
-
-      <!-- Tools -->
-      <TextBlock Text="Tools" Style="{StaticResource SectionTitleStyle}" Margin="0,26,0,6" />
-      <UniformGrid Columns="3" Margin="-6,0,-6,0">
-        <ui:Button Style="{StaticResource ToolTile}" Command="{Binding NavigateFixesCommand}">
-          <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <Border Style="{StaticResource DashIconBadge}"><ui:SymbolIcon Symbol="ShieldTask24" Style="{StaticResource DashIcon}" /></Border>
-            <StackPanel Grid.Column="1" Margin="14,0,8,0" VerticalAlignment="Center">
-              <TextBlock Text="Game Fixes" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Apply fixes from your fixes source" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
-            </StackPanel>
-            <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight20" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-          </Grid>
-        </ui:Button>
-
-        <ui:Button Style="{StaticResource ToolTile}" Command="{Binding NavigateDlcUnlockerCommand}">
-          <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <Border Style="{StaticResource DashIconBadge}"><ui:SymbolIcon Symbol="PuzzlePiece24" Style="{StaticResource DashIcon}" /></Border>
-            <StackPanel Grid.Column="1" Margin="14,0,8,0" VerticalAlignment="Center">
-              <TextBlock Text="DLC Unlocker" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Pick a game, fetch DLCs, apply" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
-            </StackPanel>
-            <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight20" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-          </Grid>
-        </ui:Button>
-
-        <ui:Button Style="{StaticResource ToolTile}" Command="{Binding NavigateSteamlessCommand}">
-          <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <Border Style="{StaticResource DashIconBadge}"><ui:SymbolIcon Symbol="Wrench24" Style="{StaticResource DashIcon}" /></Border>
-            <StackPanel Grid.Column="1" Margin="14,0,8,0" VerticalAlignment="Center">
-              <TextBlock Text="Steamless" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Unpack a game .exe, keep a backup" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
-            </StackPanel>
-            <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight20" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-          </Grid>
-        </ui:Button>
-
-        <ui:Button Style="{StaticResource ToolTile}" Command="{Binding NavigateDenuvoActivationCommand}">
-          <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <Border Style="{StaticResource DashIconBadge}"><ui:SymbolIcon Symbol="Key24" Style="{StaticResource DashIcon}" /></Border>
-            <StackPanel Grid.Column="1" Margin="14,0,8,0" VerticalAlignment="Center">
-              <TextBlock Text="Denuvo Activation" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Build a package for a Steam game" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
-            </StackPanel>
-            <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight20" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-          </Grid>
-        </ui:Button>
-
-        <ui:Button Style="{StaticResource ToolTile}" Command="{Binding NavigateDepotDownloaderCommand}">
-          <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <Border Style="{StaticResource DashIconBadge}"><ui:SymbolIcon Symbol="CloudArrowDown24" Style="{StaticResource DashIcon}" /></Border>
-            <StackPanel Grid.Column="1" Margin="14,0,8,0" VerticalAlignment="Center">
-              <TextBlock Text="DepotDownloader" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Download with your Steam account" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
-            </StackPanel>
-            <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight20" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-          </Grid>
-        </ui:Button>
-
-        <ui:Button Style="{StaticResource ToolTile}" Command="{Binding NavigateSettingsCommand}">
-          <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <Border Style="{StaticResource DashIconBadge}"><ui:SymbolIcon Symbol="Settings24" Style="{StaticResource DashIcon}" /></Border>
-            <StackPanel Grid.Column="1" Margin="14,0,8,0" VerticalAlignment="Center">
-              <TextBlock Text="Settings" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Paths, keys, fixes source, appearance" Style="{StaticResource TertiaryTextStyle}" FontSize="11.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
-            </StackPanel>
-            <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight20" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-          </Grid>
-        </ui:Button>
-      </UniformGrid>
     </StackPanel>
   </ScrollViewer>
 </Page>
