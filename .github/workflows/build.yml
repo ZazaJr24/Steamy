@@ -31,6 +31,9 @@ jobs:
             -p:Version=${{ github.event.inputs.version }} `
             -o publish
 
+      - name: Add license files
+        run: Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/
+
       - name: Zip release
         run: Compress-Archive -Path publish/* -DestinationPath ResonanceTools-v${{ github.event.inputs.version }}.zip
 

@@ -260,8 +260,8 @@ src/SteamContentManager/
 ## 📄 License
 
 ResonanceTools' own code is released under the [MIT License](LICENSE).
-Bundled third-party tools keep their own licenses and are not covered by it — Steamless is
-CC BY-NC-ND 4.0 (see `src/SteamContentManager/Tools/Steamless/`).
+Bundled third-party components keep their own licenses and are not covered by it — see
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Both files are included in every release ZIP.
 
 <br/>
 

@@ -11,6 +11,8 @@
     <Version>0.0.3</Version>
     <FileVersion>0.0.3</FileVersion>
     <AssemblyVersion>0.0.3</AssemblyVersion>
+    <Product>ResonanceTools</Product>
+    <Copyright>Copyright (c) 2026 ZazaJr24 · MIT License</Copyright>
     <ApplicationIcon />
     <Platforms>AnyCPU</Platforms>
     <LangVersion>latest</LangVersion>
