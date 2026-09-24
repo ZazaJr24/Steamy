@@ -72,6 +72,7 @@ public sealed class Game : UiObservableObject
         set => SetProperty(ref _selected, value);
     }
     public string LastPlayed { get; init; } = string.Empty;
+    public DateTime? LastUpdated { get; init; }
     public string DepotSummary { get; init; } = string.Empty;
     public string ManifestSummary { get; init; } = string.Empty;
     public int AchievementPercent { get; init; }

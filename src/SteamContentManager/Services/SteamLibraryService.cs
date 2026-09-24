@@ -451,6 +451,7 @@ public static class GameFactory
             SizeOnDiskBytes = app.SizeOnDisk,
             InstallState = SteamAppStateMapper.Map(app.StateFlags),
             UpdateRequired = app.UpdateRequired,
+            LastUpdated = app.LastUpdated,
             LastPlayed = app.LastUpdated is { } updatedAt
                 ? $"Updated {updatedAt:dd.MM.yyyy HH:mm}"
                 : "Update time unknown",
