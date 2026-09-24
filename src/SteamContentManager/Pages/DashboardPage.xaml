@@ -362,10 +362,17 @@
                   <DataTemplate>
                     <Grid Margin="0,0,0,14">
                       <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                      <Border Width="40" Height="40" CornerRadius="10" Background="{Binding CoverColor}" VerticalAlignment="Top">
-                        <TextBlock Text="{Binding CoverGlyph}" FontSize="17" Foreground="#AAFFFFFF"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                      </Border>
+                      <Grid Width="36" Height="54" VerticalAlignment="Top">
+                        <Border CornerRadius="8" Background="{Binding CoverColor}">
+                          <TextBlock Text="{Binding CoverGlyph}" FontSize="15" Foreground="#AAFFFFFF"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <Border CornerRadius="8">
+                          <Border.Background>
+                            <ImageBrush ImageSource="{Binding PortraitArtUrl}" Stretch="UniformToFill" />
+                          </Border.Background>
+                        </Border>
+                      </Grid>
                       <StackPanel Grid.Column="1" Margin="12,0,0,0">
                         <Grid>
                           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>

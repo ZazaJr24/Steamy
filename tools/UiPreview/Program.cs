@@ -55,6 +55,8 @@ public static class Program
         window.Width = 1440;
         window.Height = 940;
 
+        // Mica leaves the page background transparent, which a bitmap render cannot show.
+        UiThemeService.ApplyBackdrop("None");
         UiThemeService.Apply("Dark");
         await Delay(4000);
         Capture(window, "1-first-run-dark");
