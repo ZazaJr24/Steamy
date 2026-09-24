@@ -41,8 +41,14 @@
       <Setter Property="FontSize" Value="10" />
       <Setter Property="FontWeight" Value="Bold" />
       <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+      <Setter Property="CharacterSpacing" Value="60" />
       <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
+    <LinearGradientBrush x:Key="HeroBannerFade" StartPoint="0,0" EndPoint="0,1">
+      <GradientStop Color="#00000000" Offset="0" />
+      <GradientStop Color="#CC0E0F12" Offset="0.6" />
+      <GradientStop Color="#F50E0F12" Offset="1" />
+    </LinearGradientBrush>
 
     <!-- Dashboard stat tile -->
     <Style x:Key="StatTileStyle" TargetType="Border" BasedOn="{StaticResource SurfaceCardStyle}">
@@ -251,10 +257,14 @@
               BorderBrush="{DynamicResource BorderSubtleBrush}"
               BorderThickness="1"
               CornerRadius="20"
-              Width="500"
-              MaxHeight="620">
+              Width="560"
+              MaxHeight="720"
+              ClipToBounds="True">
+        <Border.Clip>
+          <RectangleGeometry Rect="0,0,560,720" RadiusX="20" RadiusY="20" />
+        </Border.Clip>
         <Border.Effect>
-          <DropShadowEffect BlurRadius="50" ShadowDepth="12" Direction="270" Color="#000000" Opacity="0.55" />
+          <DropShadowEffect BlurRadius="60" ShadowDepth="14" Direction="270" Color="#000000" Opacity="0.6" />
         </Border.Effect>
         <Grid>
           <Grid.RowDefinitions>
@@ -263,37 +273,39 @@
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
-          <!-- Header with game info -->
-          <Grid Grid.Row="0" Margin="24,20,20,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="Auto" />
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <!-- Game cover thumbnail -->
-            <Border Width="48" Height="48" CornerRadius="10" Margin="0,0,14,0"
-                    ClipToBounds="True" Background="#0B0C0F">
-              <Image x:Name="OverlayCover" Stretch="UniformToFill" />
-            </Border>
-            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-              <TextBlock x:Name="OverlayTitle" Text="Download Game"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="15" FontWeight="SemiBold"
-                         TextTrimming="CharacterEllipsis" />
-              <TextBlock x:Name="OverlayAppId" Text="App 0"
-                         Foreground="{DynamicResource TextTertiaryBrush}"
-                         FontSize="11" Margin="0,2,0,0" />
-            </StackPanel>
-            <ui:Button Grid.Column="2"
-                       Style="{StaticResource IconButtonStyle}"
+          <!-- Hero banner -->
+          <Grid Grid.Row="0" Height="140">
+            <Image x:Name="OverlayCover" Stretch="UniformToFill" VerticalAlignment="Center" />
+            <Border Background="{StaticResource HeroBannerFade}" />
+            <ui:Button Style="{StaticResource IconButtonStyle}"
                        Icon="{ui:SymbolIcon Dismiss24}"
-                       Appearance="Secondary"
                        Width="30" Height="30" MinHeight="30"
-                       VerticalAlignment="Top"
+                       HorizontalAlignment="Right" VerticalAlignment="Top"
+                       Margin="0,12,14,0"
                        ToolTip="Close"
-                       Click="OverlayCloseButton_Click" />
+                       Click="OverlayCloseButton_Click">
+              <ui:Button.Effect>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#000000" Opacity="0.5" />
+              </ui:Button.Effect>
+            </ui:Button>
+            <StackPanel VerticalAlignment="Bottom" Margin="24,0,24,14">
+              <TextBlock x:Name="OverlayTitle" Text="Download Game"
+                         Foreground="White"
+                         FontSize="20" FontWeight="SemiBold"
+                         TextTrimming="CharacterEllipsis">
+                <TextBlock.Effect>
+                  <DropShadowEffect BlurRadius="12" ShadowDepth="0" Color="#000000" Opacity="0.7" />
+                </TextBlock.Effect>
+              </TextBlock>
+              <TextBlock x:Name="OverlayAppId" Text="App 0"
+                         Foreground="#C7CBD8"
+                         FontSize="11.5" Margin="0,3,0,0">
+                <TextBlock.Effect>
+                  <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#000000" Opacity="0.6" />
+                </TextBlock.Effect>
+              </TextBlock>
+            </StackPanel>
           </Grid>
-          <Separator Grid.Row="0" Margin="24,14,24,0" VerticalAlignment="Bottom" />
 
           <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,18,24,6">
             <StackPanel>
@@ -360,23 +372,25 @@
           </ScrollViewer>
 
           <!-- Footer -->
-          <Border Grid.Row="2" Padding="24,14,24,18"
-                  Background="{DynamicResource SurfaceBrush}"
+          <Border Grid.Row="2" Padding="0"
                   CornerRadius="0,0,20,20">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-              </Grid.ColumnDefinitions>
-              <ui:Button Content="Cancel" Appearance="Secondary" Click="OverlayCloseButton_Click" />
-              <ui:Button Grid.Column="2"
-                         x:Name="StartButton"
-                         Content="Start download"
-                         Icon="{ui:SymbolIcon ArrowDownload24}"
-                         Appearance="Primary"
-                         Click="StartDownloadButton_Click" />
-            </Grid>
+            <StackPanel>
+              <Border Height="1" Background="{DynamicResource BorderSubtleBrush}" />
+              <Grid Margin="24,14,24,18">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:Button Content="Close" Appearance="Secondary" Click="OverlayCloseButton_Click" />
+                <ui:Button Grid.Column="2"
+                           x:Name="StartButton"
+                           Content="Start download"
+                           Icon="{ui:SymbolIcon ArrowDownload24}"
+                           Appearance="Primary"
+                           Click="StartDownloadButton_Click" />
+              </Grid>
+            </StackPanel>
           </Border>
         </Grid>
       </Border>
