@@ -31,6 +31,8 @@ public static class UiThemeService
 
         if (_currentBackdrop != "None")
             ApplyTransparentBackgrounds();
+        else
+            RestoreOpaqueBackgrounds();
     }
 
     public static void ApplyBackdrop(string? style)
