@@ -25,7 +25,8 @@ public interface IGameFixDownloadService
         string gameName,
         int appId,
         IProgress<GameFixDownloadProgress>? progress = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? authToken = null);
 
     /// <summary>
     /// Extracts <paramref name="archivePath"/> into <paramref name="targetFolder"/>. The contents
@@ -134,7 +135,8 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
         string gameName,
         int appId,
         IProgress<GameFixDownloadProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? authToken = null)
     {
         if (string.IsNullOrWhiteSpace(archiveUrl))
             return new GameFixDownloadResult(false, string.Empty, "No download URL was provided.");
@@ -155,6 +157,11 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
         {
             var safeUrl = new Uri(archiveUrl.Contains(' ') ? archiveUrl.Replace(" ", "%20") : archiveUrl);
             using var request = new HttpRequestMessage(HttpMethod.Get, safeUrl);
+            if (!string.IsNullOrWhiteSpace(authToken))
+            {
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("token", authToken);
+                request.Headers.Accept.ParseAdd("application/octet-stream");
+            }
             using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return new GameFixDownloadResult(false, string.Empty, $"Download failed: HTTP {(int)response.StatusCode} ({response.ReasonPhrase?.Trim() ?? "unknown"}).");

@@ -167,24 +167,39 @@ public partial class GameFixesPage : Page
         if (_selectedCard is not null)
             int.TryParse(_selectedCard.AppId, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out appId);
 
-        var authCode = settings.RyuuApiKey;
-        if (string.IsNullOrWhiteSpace(authCode))
+        var mirrorUrl = settings.FixMirrorUrl;
+        var credentials = App.Services.GetRequiredService<ISecureCredentialService>();
+        var isMirrorDownload = false;
+        string url;
+
+        if (!string.IsNullOrWhiteSpace(mirrorUrl))
         {
-            var credentials = App.Services.GetRequiredService<ISecureCredentialService>();
-            authCode = await credentials.ReadAsync("ryuu-auth-key") ?? string.Empty;
+            if (!mirrorUrl.EndsWith('/')) mirrorUrl += "/";
+            url = mirrorUrl + fix.Filename;
+            isMirrorDownload = true;
+        }
+        else
+        {
+            var authCode = settings.RyuuApiKey;
+            if (string.IsNullOrWhiteSpace(authCode))
+                authCode = await credentials.ReadAsync("ryuu-auth-key") ?? string.Empty;
+
+            url = fix.Href;
+            if (!string.IsNullOrWhiteSpace(authCode))
+            {
+                var separator = url.Contains('?') ? "&" : "?";
+                url = $"{url}{separator}auth_code={Uri.EscapeDataString(authCode)}";
+            }
         }
 
-        var url = fix.Href;
-        if (!string.IsNullOrWhiteSpace(authCode))
-        {
-            var separator = url.Contains('?') ? "&" : "?";
-            url = $"{url}{separator}auth_code={Uri.EscapeDataString(authCode)}";
-        }
+        string? authToken = null;
+        if (isMirrorDownload)
+            authToken = await credentials.ReadAsync("fix-mirror-token");
 
         OverlayStatus.Text = $"Downloading {fix.Filename}…";
         var dlProgress = new Progress<GameFixDownloadProgress>(p =>
             Dispatcher.BeginInvoke(() => OverlayStatus.Text = $"Downloading {fix.Filename}… {p.Downloaded} / {p.Total} ({p.Percent:F0}%)"));
-        var dlResult = await downloadService.DownloadAsync(url, fix.Filename, gameName, appId, dlProgress);
+        var dlResult = await downloadService.DownloadAsync(url, fix.Filename, gameName, appId, dlProgress, default, authToken);
 
         if (!dlResult.Succeeded)
         {

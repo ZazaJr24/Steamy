@@ -152,6 +152,40 @@
         </StackPanel>
       </Border>
 
+      <TextBlock Text="Fix Mirror" Style="{StaticResource SectionTitleStyle}" />
+      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+        <StackPanel>
+          <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
+            <TextBlock Text="Download game fixes from a private source. Leave the URL empty to use the default provider." Style="{StaticResource MutedTextStyle}" FontSize="12" />
+          </Border>
+          <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Mirror URL" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Raw content URL of the repository's fixes folder." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            </StackPanel>
+            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.FixMirrorUrl, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="https://your-fix-source.example/fixes" />
+          </Grid>
+          <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Access token" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="{Binding MirrorCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+            </StackPanel>
+            <PasswordBox x:Name="MirrorTokenBox" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="MirrorTokenBox_PasswordChanged"
+                         ToolTip="GitHub personal access token for private repo access. Encrypted with DPAPI." />
+          </Grid>
+          <TextBlock Text="Required for private repositories. Encrypted with DPAPI, never exported. Empty means: keep the current token."
+                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,0,0,14" />
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <ui:Button Content="Test mirror" Command="{Binding TestMirrorCommand}" Appearance="Secondary" />
+            <TextBlock Grid.Column="1" Text="{Binding MirrorTestStatus}" Style="{StaticResource MutedTextStyle}"
+                       FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
       <TextBlock Text="Hubcap Manifest" Style="{StaticResource SectionTitleStyle}" />
       <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
         <StackPanel>
@@ -400,7 +434,7 @@
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
           <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
             <TextBlock Text="Stored credentials" Style="{StaticResource CardTitleStyle}" />
-            <TextBlock Text="Deletes the encrypted Steam API key, Ryuu auth key and Hubcap API key from this machine."
+            <TextBlock Text="Deletes the encrypted Steam API key, Ryuu auth key, Hubcap API key and mirror token from this machine."
                        Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
           </StackPanel>
           <ui:Button Grid.Column="1" Content="Clear credentials" Command="{Binding ClearCredentialsCommand}"

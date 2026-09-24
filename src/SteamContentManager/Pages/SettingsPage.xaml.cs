@@ -28,6 +28,7 @@ public partial class SettingsPage : Page
         SteamApiKeyBox.Clear();
         RyuuAuthKeyBox.Clear();
         HubcapApiKeyBox.Clear();
+        MirrorTokenBox.Clear();
     }
 
     private void NumberBox_LostFocus(object sender, RoutedEventArgs e) => ViewModel.NormalizeNumberFields();
@@ -76,6 +77,12 @@ public partial class SettingsPage : Page
     {
         if (sender is PasswordBox passwordBox)
             ViewModel.HubcapApiKeyInput = passwordBox.Password;
+    }
+
+    private void MirrorTokenBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox passwordBox)
+            ViewModel.MirrorTokenInput = passwordBox.Password;
     }
 
     private void SteamLibraryBrowseButton_Click(object sender, RoutedEventArgs e)

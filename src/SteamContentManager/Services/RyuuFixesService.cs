@@ -71,6 +71,10 @@ public sealed class RyuuFixesService : IRyuuFixesService, IDisposable
 
         try
         {
+            var mirrorResult = await TryFetchFromMirrorAsync(cancellationToken).ConfigureAwait(false);
+            if (mirrorResult is not null)
+                return mirrorResult;
+
             var url = BuildFeedUrl();
             using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -96,6 +100,63 @@ public sealed class RyuuFixesService : IRyuuFixesService, IDisposable
                 return new RyuuFixFeedSnapshot(true, stale, TryGetCache(out var at) ? at : DateTimeOffset.MinValue, true,
                     $"The Ryuu generator is unavailable; showing {stale.Count:N0} cached games.");
             return RyuuFixFeedSnapshot.Failure($"The Ryuu fixes feed is unavailable ({exception.GetType().Name}).");
+        }
+    }
+
+    private async Task<RyuuFixFeedSnapshot?> TryFetchFromMirrorAsync(CancellationToken cancellationToken)
+    {
+        var mirrorUrl = _settings.Load().FixMirrorUrl;
+        if (string.IsNullOrWhiteSpace(mirrorUrl))
+            return null;
+
+        try
+        {
+            if (!mirrorUrl.EndsWith('/')) mirrorUrl += "/";
+            var feedUrl = mirrorUrl + "fixes.json";
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, feedUrl);
+            var token = await ReadMirrorTokenAsync().ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(token))
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("token", token);
+            request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
+
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            await using (var networkStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+            await using (var fileStream = File.Create(_cachePath))
+            {
+                await networkStream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
+            }
+
+            var items = await ReadGamesAsync(_cachePath, cancellationToken).ConfigureAwait(false);
+            if (items.Count > 0)
+                return new RyuuFixFeedSnapshot(true, items, DateTimeOffset.UtcNow, false, $"Loaded {items.Count:N0} games from the fix mirror.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            // Mirror failed silently; fall through to Ryuu.
+        }
+
+        return null;
+    }
+
+    private async Task<string?> ReadMirrorTokenAsync()
+    {
+        try
+        {
+            var credentials = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                .GetService<ISecureCredentialService>(App.Services);
+            return credentials is not null ? await credentials.ReadAsync("fix-mirror-token").ConfigureAwait(false) : null;
+        }
+        catch
+        {
+            return null;
         }
     }
 
