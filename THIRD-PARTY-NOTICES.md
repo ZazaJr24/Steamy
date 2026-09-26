@@ -1,6 +1,6 @@
 # Third-party notices
 
-ResonanceTools' own code is licensed under the ResonanceTools License (see `LICENSE`).
+Steamy' own code is licensed under the Steamy License (see `LICENSE`).
 The components below are not covered by that license; each keeps its own terms.
 
 ## Bundled in the release

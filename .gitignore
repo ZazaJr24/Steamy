@@ -17,8 +17,8 @@ Etmp*.txt
 
 # Backups and utility scripts
 backups/
-rename-to-resonancetools.bat
+rename-to-steamy.bat
 
 # User-specific runtime data
-src/SteamContentManager/Data/*.db
-src/SteamContentManager/Data/*.db-*
+src/Steamy/Data/*.db
+src/Steamy/Data/*.db-*

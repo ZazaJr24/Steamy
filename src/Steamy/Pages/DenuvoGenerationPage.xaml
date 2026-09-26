@@ -1,0 +1,108 @@
+<Page x:Class="Steamy.Pages.DenuvoGenerationPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      ScrollViewer.CanContentScroll="False"
+      Background="{DynamicResource AppBackgroundBrush}">
+  <Page.Resources>
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+  </Page.Resources>
+
+  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="28,24,28,40">
+    <StackPanel MaxWidth="1160" HorizontalAlignment="Stretch">
+
+      <!-- Header -->
+      <Grid Margin="0,0,0,6">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel>
+          <TextBlock Text="Denuvo Generation" Style="{StaticResource PageTitleStyle}"/>
+          <TextBlock Text="Local test and metadata previews — no DRM, license or access-control operations." Style="{StaticResource PageSubtitleStyle}"/>
+        </StackPanel>
+        <ui:Button Grid.Column="1" Content="Refresh templates" Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding RefreshCommand}" Appearance="Secondary" VerticalAlignment="Center"/>
+      </Grid>
+
+      <!-- Warning banner -->
+      <Border Background="{DynamicResource WarningSoftBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1" CornerRadius="14" Padding="14,12" Margin="0,0,0,14">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <ui:SymbolIcon Symbol="Warning24" FontSize="18" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Top" Margin="0,1,10,0"/>
+          <TextBlock Grid.Column="1" Text="{Binding SafetySummary, FallbackValue='Only local mock/test metadata previews are produced here. No DRM, licensing, authentication or access-control operation is performed or available.'}" Style="{StaticResource MutedTextStyle}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        </Grid>
+      </Border>
+
+      <!-- No templates fallback -->
+      <Border Style="{StaticResource SubtlePanelStyle}" Padding="18" Margin="0,0,0,14"
+              Visibility="{Binding HasNoTemplates, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <StackPanel>
+          <TextBlock Text="No templates" Style="{StaticResource CardTitleStyle}"/>
+          <TextBlock Text="No local preview templates are configured. Nothing is fetched from third parties." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,4,0,0"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Template cards -->
+      <TextBlock Text="Templates" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,10"/>
+      <ItemsControl ItemsSource="{Binding Templates}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Style="{StaticResource SurfaceCardStyle}" Margin="0,0,0,10" Padding="16">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Width="42" Height="42" CornerRadius="12" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Top">
+                  <ui:SymbolIcon Symbol="Document24" FontSize="18" Foreground="{DynamicResource AccentBrush}"/>
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="14,0,14,0">
+                  <TextBlock Text="{Binding Name}" Style="{StaticResource CardTitleStyle}" FontSize="13.5"/>
+                  <TextBlock Text="{Binding Type}" Foreground="{DynamicResource AccentBrush}" FontSize="11" Margin="0,3,0,0"/>
+                  <TextBlock Text="{Binding Description}" Style="{StaticResource MutedTextStyle}" FontSize="11.5" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right">
+                  <Border Background="#1F42D39A" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding Status}" Foreground="{DynamicResource SuccessBrush}" FontSize="10.5" FontWeight="SemiBold"/>
+                  </Border>
+                  <TextBlock Text="{Binding OutputFormat}" Style="{StaticResource TertiaryTextStyle}" FontSize="10" HorizontalAlignment="Right" Margin="0,6,0,0"/>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- Generator card -->
+      <TextBlock Text="Preview generator" Style="{StaticResource SectionTitleStyle}" Margin="0,10,0,10"/>
+      <Border Style="{StaticResource SurfaceCardStyle}" Padding="18">
+        <StackPanel>
+          <TextBlock Style="{StaticResource MutedTextStyle}" FontSize="11.5" Margin="0,0,0,14" TextWrapping="Wrap"
+                     Text="Only local mock/test metadata is generated. Nothing is sent to Steam and no game or protection files are changed."/>
+
+          <TextBlock Text="Template" Style="{StaticResource FieldLabelStyle}"/>
+          <ComboBox ItemsSource="{Binding Templates}" DisplayMemberPath="Name" SelectedItem="{Binding SelectedTemplate}" Margin="0,0,0,14"/>
+
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+            <ui:Button Content="Generate preview" Icon="{ui:SymbolIcon Play24}" Command="{Binding GenerateCommand}" Appearance="Primary" Margin="0,0,8,0"/>
+            <ui:Button Content="Export preview" Icon="{ui:SymbolIcon Save24}" Click="ExportPreviewButton_Click" Appearance="Secondary"/>
+          </StackPanel>
+
+          <!-- Status -->
+          <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="10" Padding="12,8" Margin="0,0,0,12">
+            <TextBlock Text="{Binding Status}" Style="{StaticResource MutedTextStyle}" FontSize="11.5" TextWrapping="Wrap"/>
+          </Border>
+
+          <!-- JSON output -->
+          <TextBlock Text="JSON preview" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,6"/>
+          <TextBox Text="{Binding Preview, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                   FontFamily="Cascadia Code,Consolas" FontSize="11.5"
+                   Background="{DynamicResource SurfaceSubtleBrush}" BorderThickness="0"
+                   MinHeight="200" VerticalScrollBarVisibility="Auto" Padding="10" />
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</Page>

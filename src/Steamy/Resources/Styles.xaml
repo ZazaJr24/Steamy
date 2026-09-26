@@ -1,0 +1,465 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:models="clr-namespace:Steamy.Models">
+
+  <!-- Smooth motion presets shared by hover effects, dialogs and overlays. A short duration
+       with a cubic ease reads as "smooth" without feeling laggy; OnFinished releases the
+       composition resources as soon as the animation completes. -->
+  <Duration x:Key="HoverAnimationDuration">0:0:0.18</Duration>
+  <Duration x:Key="DialogAnimationDuration">0:0:0.22</Duration>
+  <CubicEase x:Key="SmoothEase" EasingMode="EaseOut" />
+  <CubicEase x:Key="SmoothEaseInOut" EasingMode="EaseInOut" />
+  <!-- Core typography -->
+  <Style x:Key="PageTitleStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="26" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Margin" Value="0,0,0,6" />
+  </Style>
+  <Style x:Key="PageSubtitleStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,0,0,18" />
+  </Style>
+  <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Margin" Value="0,18,0,9" />
+  </Style>
+  <Style x:Key="CardTitleStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style x:Key="MutedTextStyle" TargetType="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style x:Key="TertiaryTextStyle" TargetType="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <Style x:Key="MetricValueStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style x:Key="PillTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <!-- Small uppercase label above a form field or a group of options -->
+  <Style x:Key="FieldLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource PillTextStyle}">
+    <Setter Property="Margin" Value="0,0,0,6" />
+  </Style>
+
+  <!-- Shared surfaces used by page headers, toolbars, notices and flyouts -->
+  <Style x:Key="PageHeaderStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="Padding" Value="18,14" />
+    <Setter Property="Margin" Value="0,0,0,14" />
+  </Style>
+  <Style x:Key="FilterBarStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="10" />
+    <Setter Property="Margin" Value="0,0,0,14" />
+  </Style>
+  <Style x:Key="FilterFlyoutStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="16" />
+    <Setter Property="Effect">
+      <Setter.Value>
+        <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.35" />
+      </Setter.Value>
+    </Setter>
+  </Style>
+  <Style x:Key="SubtlePanelStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+  <Style x:Key="InfoPanelStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
+  <Style x:Key="StatusPillStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="Padding" Value="10,6" />
+  </Style>
+  <Style x:Key="AccentPillStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="9,4" />
+  </Style>
+  <Style x:Key="AccentPillTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <!-- Round icon badge next to a status headline -->
+  <Style x:Key="IconBadgeStyle" TargetType="Border">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- Game cover cards shared by the gallery style pages.
+       Deliberately effect-free: per-card DropShadowEffect forces an intermediate render pass on
+       every card each frame, which is what made the gallery scroll stutter. A flat border with a
+       hover accent keeps it cool and smooth. -->
+  <Style x:Key="CoverCardStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+    <Setter Property="RenderTransform">
+      <Setter.Value>
+        <ScaleTransform ScaleX="1" ScaleY="1" />
+      </Setter.Value>
+    </Setter>
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+      </Trigger>
+      <EventTrigger RoutedEvent="Mouse.MouseEnter">
+        <BeginStoryboard>
+          <Storyboard>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                             To="1.02" Duration="{StaticResource HoverAnimationDuration}" EasingFunction="{StaticResource SmoothEaseInOut}" />
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                             To="1.02" Duration="{StaticResource HoverAnimationDuration}" EasingFunction="{StaticResource SmoothEaseInOut}" />
+          </Storyboard>
+        </BeginStoryboard>
+      </EventTrigger>
+      <EventTrigger RoutedEvent="Mouse.MouseLeave">
+        <BeginStoryboard>
+          <Storyboard>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                             To="1" Duration="{StaticResource HoverAnimationDuration}" EasingFunction="{StaticResource SmoothEaseInOut}" />
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                             To="1" Duration="{StaticResource HoverAnimationDuration}" EasingFunction="{StaticResource SmoothEaseInOut}" />
+          </Storyboard>
+        </BeginStoryboard>
+      </EventTrigger>
+    </Style.Triggers>
+  </Style>
+  <!-- Bottom gradient that keeps titles readable on top of cover art -->
+  <LinearGradientBrush x:Key="CoverFadeBrush" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="#000B0C0F" Offset="0" />
+    <GradientStop Color="#E00B0C0F" Offset="1" />
+  </LinearGradientBrush>
+  <Style x:Key="CoverBadgeStyle" TargetType="Border">
+    <Setter Property="Background" Value="#CC0B0C0F" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="7,3" />
+  </Style>
+  <Style x:Key="CoverBadgeTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="#DCE1EA" />
+  </Style>
+  <!-- List items that host cover cards must not paint their own selection chrome -->
+  <Style x:Key="CoverListItemStyle" TargetType="ListBoxItem">
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ListBoxItem">
+          <ContentPresenter />
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Compact filter trigger. The page supplies the icon/content and owns the Popup. -->
+  <Style x:Key="FilterToggleButtonStyle" TargetType="ToggleButton">
+    <Setter Property="Width" Value="38" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="ToolTip" Value="Filters" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ToggleButton">
+          <Border x:Name="Chrome"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="10"
+                  SnapsToDevicePixels="True">
+            <ContentPresenter HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource ControlHoverBrush}" />
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+              <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Chrome" Property="Opacity" Value="0.5" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Fluent controls keep their WPF-UI templates (BasedOn); these setters only unify sizing
+       and palette. Without BasedOn an implicit style would replace the Fluent template with the
+       plain WPF one, which is why buttons and text boxes used to render white and without
+       placeholder text. -->
+  <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Padding" Value="14,7" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+  <!-- Square icon-only button (refresh, info, close) -->
+  <Style x:Key="IconButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style TargetType="ui:TextBox" BasedOn="{StaticResource {x:Type ui:TextBox}}">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="ClearButtonEnabled" Value="False" />
+  </Style>
+  <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Padding" Value="10,6" />
+  </Style>
+  <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style TargetType="PasswordBox" BasedOn="{StaticResource {x:Type PasswordBox}}">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+  </Style>
+  <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="12,0,0,0" />
+  </Style>
+  <Style TargetType="Separator" BasedOn="{StaticResource {x:Type Separator}}">
+    <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <!-- Plain surface card without CardControl's header/icon layout -->
+  <Style x:Key="SurfaceCardStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="16" />
+  </Style>
+
+  <!-- Quiet, dense data tables -->
+  <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="RowBackground" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="AlternatingRowBackground" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="GridLinesVisibility" Value="Horizontal" />
+    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="HeadersVisibility" Value="Column" />
+    <Setter Property="AutoGenerateColumns" Value="False" />
+    <Setter Property="CanUserAddRows" Value="False" />
+    <Setter Property="CanUserDeleteRows" Value="False" />
+    <Setter Property="IsReadOnly" Value="True" />
+    <Setter Property="SelectionMode" Value="Single" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="RowHeight" Value="36" />
+    <Setter Property="ColumnHeaderHeight" Value="36" />
+  </Style>
+  <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="FontSize" Value="11" />
+  </Style>
+  <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- Page scroll host.
+       WPF-UI hosts page content in a NavigationViewContentPresenter. That presenter wraps the
+       page in a DynamicScrollViewer unless ScrollViewer.CanContentScroll is false on the page
+       instance. While the dynamic viewer is active the page is measured with infinite height,
+       so neither the page's own ScrollViewer nor the host can scroll and mouse wheel plus
+       keyboard scrolling do nothing at all. Every page therefore opts out explicitly with
+       ScrollViewer.CanContentScroll="False" and uses this host for its scrolling. -->
+  <Style x:Key="PageScrollHostStyle" TargetType="ScrollViewer" BasedOn="{StaticResource {x:Type ScrollViewer}}">
+    <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+    <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="CanContentScroll" Value="False" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="PanningMode" Value="VerticalOnly" />
+  </Style>
+
+  <Style TargetType="Page">
+    <Setter Property="ScrollViewer.CanContentScroll" Value="False" />
+  </Style>
+
+  <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <Style TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
+    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <!-- Download job presentation shared by the Downloads and DepotDownloader pages -->
+    <Style x:Key="JobActionButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+      <Setter Property="Visibility" Value="Collapsed" />
+      <Setter Property="Margin" Value="6,0,0,0" />
+    </Style>
+    <Style x:Key="StartButton" TargetType="ui:Button" BasedOn="{StaticResource JobActionButton}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Queued}"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="PauseButton" TargetType="ui:Button" BasedOn="{StaticResource JobActionButton}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsActive}" Value="True"><Setter Property="UIElement.Visibility" Value="Visible" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="ResumeButton" TargetType="ui:Button" BasedOn="{StaticResource JobActionButton}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsPaused}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="RetryButton" TargetType="ui:Button" BasedOn="{StaticResource JobActionButton}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Failed}"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Cancelled}"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="RemoveButton" TargetType="ui:Button" BasedOn="{StaticResource JobActionButton}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsTerminal}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="CompletedOnlyButton" TargetType="ui:Button" BasedOn="{StaticResource JobActionButton}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Completed}"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="CancelButton" TargetType="ui:Button" BasedOn="{StaticResource JobActionButton}">
+      <Setter Property="Visibility" Value="Visible" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsTerminal}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <!-- State pill colours -->
+    <Style x:Key="StatePill" TargetType="Border">
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="9,4" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Completed}"><Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Failed}"><Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Cancelled}"><Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Paused}"><Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Queued}"><Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="StatePillText" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Completed}"><Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Failed}"><Setter Property="Foreground" Value="{DynamicResource DangerBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Cancelled}"><Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Paused}"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Queued}"><Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="JobProgressBar" TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Completed}"><Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Failed}"><Setter Property="Foreground" Value="{DynamicResource DangerBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Paused}"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <!-- Stats row only while a job is actively downloading -->
+    <Style x:Key="LiveStatsStyle">
+      <Setter Property="UIElement.Visibility" Value="Collapsed" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsActive}" Value="True"><Setter Property="UIElement.Visibility" Value="Visible" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+</ResourceDictionary>
