@@ -7,6 +7,9 @@ on:
         description: 'Version tag (e.g. 0.0.2)'
         required: true
         default: '0.0.2'
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
@@ -21,6 +24,16 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "v=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "v=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish self-contained
         run: |
           dotnet publish src/Steamy/Steamy.csproj `
@@ -28,19 +41,19 @@ jobs:
             -r win-x64 `
             --self-contained `
             -p:PublishSingleFile=true `
-            -p:Version=${{ github.event.inputs.version }} `
+            -p:Version=${{ steps.ver.outputs.v }} `
             -o publish
 
       - name: Add license files
         run: Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/
 
       - name: Zip release
-        run: Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ github.event.inputs.version }}.zip
+        run: Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ steps.ver.outputs.v }}.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.event.inputs.version }}
-          name: Steamy v${{ github.event.inputs.version }}
-          files: Steamy-v${{ github.event.inputs.version }}.zip
+          tag_name: v${{ steps.ver.outputs.v }}
+          name: Steamy v${{ steps.ver.outputs.v }}
+          files: Steamy-v${{ steps.ver.outputs.v }}.zip
           generate_release_notes: true
