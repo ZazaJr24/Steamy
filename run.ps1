@@ -1,4 +1,4 @@
-# Starts Steam Content Manager from a freshly built binary.
+# Starts Steamy from a freshly built binary.
 #
 # Why this exists: an older copy of the executable lying around (for example one that was built
 # into a temporary folder) is easy to launch by accident, and it then behaves like a bug report
@@ -8,11 +8,11 @@
 $ErrorActionPreference = 'Stop'
 
 $root = $PSScriptRoot
-$project = Join-Path $root 'src\SteamContentManager\SteamContentManager.csproj'
-$exe = Join-Path $root 'src\SteamContentManager\bin\Release\net8.0-windows\SteamContentManager.exe'
+$project = Join-Path $root 'src\Steamy\Steamy.csproj'
+$exe = Join-Path $root 'src\Steamy\bin\Release\net8.0-windows\Steamy.exe'
 
 Write-Host 'Stopping running instances...'
-Get-Process -Name SteamContentManager -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name Steamy -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 
 Write-Host 'Building Release...'

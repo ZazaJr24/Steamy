@@ -1,9 +1,9 @@
 <p align="center">
-  <a href="https://github.com/ZazaJr24/ResonanceTools/releases"><img src="https://img.shields.io/github/v/release/ZazaJr24/ResonanceTools?include_prereleases&style=for-the-badge&color=ff6b6b&label=Download&cacheSeconds=600" /></a>
+  <a href="https://github.com/ZazaJr24/Steamy/releases"><img src="https://img.shields.io/github/v/release/ZazaJr24/Steamy?include_prereleases&style=for-the-badge&color=ff6b6b&label=Download&cacheSeconds=600" /></a>
   &nbsp;
-  <a href="https://github.com/ZazaJr24/ResonanceTools/stargazers"><img src="https://img.shields.io/github/stars/ZazaJr24/ResonanceTools?style=for-the-badge&color=f59e0b&logo=github&cacheSeconds=60" /></a>
+  <a href="https://github.com/ZazaJr24/Steamy/stargazers"><img src="https://img.shields.io/github/stars/ZazaJr24/Steamy?style=for-the-badge&color=f59e0b&logo=github&cacheSeconds=60" /></a>
   &nbsp;
-  <a href="https://github.com/ZazaJr24/ResonanceTools/releases"><img src="https://img.shields.io/github/downloads/ZazaJr24/ResonanceTools/total?style=for-the-badge&color=22c55e&label=Downloads" /></a>
+  <a href="https://github.com/ZazaJr24/Steamy/releases"><img src="https://img.shields.io/github/downloads/ZazaJr24/Steamy/total?style=for-the-badge&color=22c55e&label=Downloads" /></a>
   &nbsp;
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Custom-6366f1?style=for-the-badge" /></a>
 </p>
@@ -17,7 +17,7 @@
 
 <h1 align="center">
   <br/>
-  ResonanceTools
+  Steamy
   <br/>
 </h1>
 
@@ -30,16 +30,16 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ZazaJr24/ResonanceTools/releases/latest"><b>Download Latest</b></a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#-tools">Features</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#%EF%B8%8F-build-from-source">Build</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#-credits">Credits</a>
+  <a href="https://github.com/ZazaJr24/Steamy/releases/latest"><b>Download Latest</b></a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#-tools">Features</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#%EF%B8%8F-build-from-source">Build</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="#-credits">Credits</a>
 </p>
 
 ---
 
 <br/>
 
-## What is ResonanceTools?
+## What is Steamy?
 
-ResonanceTools replaces your folder full of scattered `.exe` files, batch scripts, and half-working tools with **one clean, modern desktop app**. Built with Fluent Design, it looks and feels like it belongs on Windows 11 — dark mode, Mica backdrop, smooth animations.
+Steamy replaces your folder full of scattered `.exe` files, batch scripts, and half-working tools with **one clean, modern desktop app**. Built with Fluent Design, it looks and feels like it belongs on Windows 11 — dark mode, Mica backdrop, smooth animations.
 
 Every tool is wired up, configured, and ready to go. No command lines. No README hunting. No "which version do I need?"
 
@@ -199,7 +199,7 @@ Full-featured download manager built in.
 
 ## ⬇️ Download
 
-Grab the latest release from the [**Releases**](https://github.com/ZazaJr24/ResonanceTools/releases) page.
+Grab the latest release from the [**Releases**](https://github.com/ZazaJr24/Steamy/releases) page.
 
 > **Requirements:** Windows 10/11 with .NET 8 Desktop Runtime
 
@@ -212,12 +212,12 @@ Grab the latest release from the [**Releases**](https://github.com/ZazaJr24/Reso
 ## 🛠️ Build from Source
 
 ```powershell
-git clone https://github.com/ZazaJr24/ResonanceTools.git
-cd ResonanceTools
-dotnet build src/SteamContentManager/SteamContentManager.csproj -c Release
+git clone https://github.com/ZazaJr24/Steamy.git
+cd Steamy
+dotnet build src/Steamy/Steamy.csproj -c Release
 ```
 
-> Output: `src/SteamContentManager/bin/Release/net8.0-windows/ResonanceTools.exe`
+> Output: `src/Steamy/bin/Release/net8.0-windows/Steamy.exe`
 
 <br/>
 
@@ -228,7 +228,7 @@ dotnet build src/SteamContentManager/SteamContentManager.csproj -c Release
 ## 📁 Project Structure
 
 ```
-src/SteamContentManager/
+src/Steamy/
 ├── Pages/           UI pages — Dashboard, Games, Tools, Settings
 ├── ViewModels/      MVVM ViewModels
 ├── Services/        Core logic — CreamAPI, Goldberg, GameLocator, ...
@@ -259,7 +259,7 @@ src/SteamContentManager/
 
 ## 📄 License
 
-ResonanceTools' own code is released under the [ResonanceTools License](LICENSE).
+Steamy' own code is released under the [Steamy License](LICENSE).
 Sharing and forking are welcome; rebranding or commercial redistribution requires permission.
 Bundled third-party components keep their own licenses and are not covered by it — see
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Both files are included in every release ZIP.
@@ -271,7 +271,7 @@ Bundled third-party components keep their own licenses and are not covered by it
 <br/>
 
 <p align="center">
-  <strong>ResonanceTools</strong><br/>
+  <strong>Steamy</strong><br/>
   <sub>No bloat. No telemetry. No nonsense.</sub><br/><br/>
-  <img src="https://img.shields.io/github/stars/ZazaJr24/ResonanceTools?style=social&cacheSeconds=60" />
+  <img src="https://img.shields.io/github/stars/ZazaJr24/Steamy?style=social&cacheSeconds=60" />
 </p>

@@ -23,7 +23,7 @@ jobs:
 
       - name: Publish self-contained
         run: |
-          dotnet publish src/SteamContentManager/SteamContentManager.csproj `
+          dotnet publish src/Steamy/Steamy.csproj `
             -c Release `
             -r win-x64 `
             --self-contained `
@@ -35,12 +35,12 @@ jobs:
         run: Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/
 
       - name: Zip release
-        run: Compress-Archive -Path publish/* -DestinationPath ResonanceTools-v${{ github.event.inputs.version }}.zip
+        run: Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ github.event.inputs.version }}.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.event.inputs.version }}
-          name: ResonanceTools v${{ github.event.inputs.version }}
-          files: ResonanceTools-v${{ github.event.inputs.version }}.zip
+          name: Steamy v${{ github.event.inputs.version }}
+          files: Steamy-v${{ github.event.inputs.version }}.zip
           generate_release_notes: true
