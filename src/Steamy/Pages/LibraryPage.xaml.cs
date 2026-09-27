@@ -285,64 +285,13 @@ public partial class LibraryPage : Page
 
         var ryuuService = App.Services.GetRequiredService<IRyuuGameDownloadService>();
         var source = _selectedSource;
-        var lastDiskCheck = DateTime.UtcNow;
-        var lastDiskBytes = 0L;
         var progress = new Progress<string>(msg => Dispatcher.BeginInvoke(() =>
         {
-            job.State = DownloadJobState.Downloading;
-
-            if (msg.StartsWith("PROGRESS|", StringComparison.Ordinal))
-            {
-                var parts = msg.Split('|');
-                if (parts.Length >= 10
-                    && double.TryParse(parts[4], System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture, out var pct))
-                {
-                    var depotIndex = parts[2];
-                    var totalDepots = parts[3];
-                    if (int.TryParse(depotIndex, out var dIdx) && int.TryParse(totalDepots, out var dTotal) && dTotal > 0)
-                        job.Progress = ((dIdx - 1) * 100.0 + pct) / dTotal;
-                    else
-                        job.Progress = pct;
-                    if (!string.IsNullOrWhiteSpace(parts[5])) job.Downloaded = parts[5];
-                    if (!string.IsNullOrWhiteSpace(parts[6])) job.TotalSize = parts[6];
-                    if (!string.IsNullOrWhiteSpace(parts[7])) job.Speed = parts[7];
-                    if (!string.IsNullOrWhiteSpace(parts[8])) job.Eta = parts[8];
-                    if (!string.IsNullOrWhiteSpace(parts[9])) job.CurrentFile = parts[9];
-                    job.Status = $"Downloading depot {depotIndex}/{totalDepots} — {job.Progress:0.#}%";
-
-                    var currentBytes = ParseBytesValue(parts[5]);
-                    var now = DateTime.UtcNow;
-                    var elapsed = (now - lastDiskCheck).TotalSeconds;
-                    if (elapsed >= 1.0 && currentBytes > lastDiskBytes)
-                    {
-                        var bytesPerSec = (currentBytes - lastDiskBytes) / elapsed;
-                        job.DiskSpeed = FormatSpeed(bytesPerSec);
-                        lastDiskBytes = currentBytes;
-                        lastDiskCheck = now;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(job.Eta) && pct > 0 && !string.IsNullOrWhiteSpace(parts[7]))
-                    {
-                        var totalBytes = ParseBytesValue(parts[6]);
-                        var netSpeed = ParseBytesValue(parts[7]);
-                        if (netSpeed > 0 && totalBytes > currentBytes)
-                        {
-                            var secsLeft = (totalBytes - currentBytes) / netSpeed;
-                            job.Eta = secsLeft < 60 ? $"{secsLeft:F0}s"
-                                    : secsLeft < 3600 ? $"{secsLeft / 60:F0}m {secsLeft % 60:F0}s"
-                                    : $"{secsLeft / 3600:F0}h {(secsLeft % 3600) / 60:F0}m";
-                        }
-                    }
-                }
-            }
-            else
-            {
+            if (!GameDownloadProgressMessage.TryApply(job, msg))
                 job.Status = msg;
-            }
 
             if (_selectedItem == item)
-                OverlayStatus.Text = job.Status;
+                OverlayStatus.Text = job.IsActive ? $"{job.Status} — {job.ProgressLabel}" : job.Status;
         }));
 
         try
@@ -363,6 +312,7 @@ public partial class LibraryPage : Page
 
             await Dispatcher.BeginInvoke(() =>
             {
+                job.ClearLiveStats();
                 if (result.Succeeded)
                 {
                     job.State = DownloadJobState.Completed;
@@ -416,35 +366,4 @@ public partial class LibraryPage : Page
 
     private static string SanitizeFolderName(string name)
         => Regex.Replace(name, @"[<>:""/\\|?*]", "_").Trim();
-
-    private static readonly Regex BytesValuePattern = new(
-        @"([\d.,]+)\s*(TiB|TB|GiB|GB|MiB|MB|KiB|KB|bytes?|B)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static long ParseBytesValue(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return 0;
-        var m = BytesValuePattern.Match(text);
-        if (!m.Success) return 0;
-        if (!double.TryParse(m.Groups[1].Value.Replace(',', '.'),
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var val))
-            return 0;
-        return m.Groups[2].Value.ToUpperInvariant() switch
-        {
-            "TIB" or "TB" => (long)(val * 1024L * 1024 * 1024 * 1024),
-            "GIB" or "GB" => (long)(val * 1024L * 1024 * 1024),
-            "MIB" or "MB" => (long)(val * 1024L * 1024),
-            "KIB" or "KB" => (long)(val * 1024),
-            _ => (long)val
-        };
-    }
-
-    private static string FormatSpeed(double bytesPerSec) => bytesPerSec switch
-    {
-        >= 1024 * 1024 * 1024 => $"{bytesPerSec / (1024 * 1024 * 1024):F1} GB/s",
-        >= 1024 * 1024 => $"{bytesPerSec / (1024 * 1024):F1} MB/s",
-        >= 1024 => $"{bytesPerSec / 1024:F1} KB/s",
-        _ => $"{bytesPerSec:F0} B/s"
-    };
 }

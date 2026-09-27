@@ -50,10 +50,29 @@ jobs:
       - name: Zip release
         run: Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ steps.ver.outputs.v }}.zip
 
+      # The release description is the CHANGELOG.md section of this version.
+      - name: Release notes from CHANGELOG
+        shell: pwsh
+        run: |
+          $version = "${{ steps.ver.outputs.v }}"
+          $lines = @(Get-Content CHANGELOG.md -Encoding utf8)
+          $header = $lines | Select-String -Pattern ("^##\s+v?" + [regex]::Escape($version) + "\b") | Select-Object -First 1
+          $notes = @()
+          if ($header) {
+            for ($i = $header.LineNumber; $i -lt $lines.Count; $i++) {
+              if ($lines[$i] -match '^##\s') { break }
+              $notes += $lines[$i]
+            }
+          }
+          $text = ($notes -join "`n").Trim()
+          if (-not $text) { $text = "Steamy $version" }
+          Set-Content -Path release-notes.md -Value $text -Encoding utf8
+          Get-Content release-notes.md
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.v }}
           name: Steamy v${{ steps.ver.outputs.v }}
           files: Steamy-v${{ steps.ver.outputs.v }}.zip
-          generate_release_notes: true
+          body_path: release-notes.md
