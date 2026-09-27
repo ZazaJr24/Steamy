@@ -3,6 +3,13 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.1.2
+
+### New
+- Downloads redesigned like a game launcher: the current download is featured in a large banner on its game art with a big progress bar, percentage, speed, time left, size and the live internet curve.
+- "Up next" shows the queue and "Recently finished" the done and failed downloads, as clean rows with game art.
+- With nothing running, the banner offers "Start next" for the first waiting download.
+
 ## 0.1.1
 
 ### New

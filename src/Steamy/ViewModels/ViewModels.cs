@@ -127,27 +127,72 @@ public sealed class DownloadsViewModel : ViewModelBase
         if (e.OldItems is not null) foreach (DownloadJob job in e.OldItems) job.PropertyChanged -= OnJobPropertyChanged;
         if (e.NewItems is not null) foreach (DownloadJob job in e.NewItems) job.PropertyChanged += OnJobPropertyChanged;
 
-        // Without filters the visible list mirrors the queue, so only the changed cards are touched
-        // and the existing ones keep their state instead of being rebuilt.
-        if (!HasActiveFilters && e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add && e.NewItems is not null)
-        {
-            var index = Math.Clamp(e.NewStartingIndex, 0, FilteredJobs.Count);
-            foreach (DownloadJob job in e.NewItems) FilteredJobs.Insert(index++, job);
-            RaiseCounts();
-        }
-        else if (!HasActiveFilters && e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove && e.OldItems is not null)
-        {
-            foreach (DownloadJob job in e.OldItems) FilteredJobs.Remove(job);
-            RaiseCounts();
-        }
-        else
-        {
-            RefreshFilter();
-        }
+        RefreshFilter();
     }
     private void OnJobPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(DownloadJob.State)) RaiseCounts();
+        if (e.PropertyName != nameof(DownloadJob.State)) return;
+        UpdateSections();
+        RaiseCounts();
+    }
+
+    // ---- Xbox-style layout: one featured download, then the queue, then finished jobs ----
+
+    private DownloadJob? _heroJob;
+    public DownloadJob? HeroJob
+    {
+        get => _heroJob;
+        private set
+        {
+            if (!SetProperty(ref _heroJob, value)) return;
+            OnPropertyChanged(nameof(HasHeroJob));
+            OnPropertyChanged(nameof(ShowIdleHero));
+        }
+    }
+    public bool HasHeroJob => HeroJob is not null;
+    public bool ShowIdleHero => HeroJob is null;
+    public ObservableCollection<DownloadJob> QueueJobs { get; } = new();
+    public ObservableCollection<DownloadJob> HistoryJobs { get; } = new();
+    public bool HasQueue => QueueJobs.Count > 0;
+    public bool HasHistory => HistoryJobs.Count > 0;
+    public DownloadJob? NextQueuedJob => QueueJobs.FirstOrDefault(job => job.State == DownloadJobState.Queued);
+    public bool HasNextQueuedJob => NextQueuedJob is not null;
+    public string IdleHeadline => Jobs.Count == 0 ? "No downloads yet"
+        : QueueJobs.Count > 0 ? (QueueJobs.Count == 1 ? "1 download is waiting" : $"{QueueJobs.Count} downloads are waiting")
+        : "You're all caught up";
+    public string IdleDetail => Jobs.Count == 0 ? "Pick a game in the library and start a download — it shows up here live."
+        : QueueJobs.Count > 0 ? "Start the next one whenever you're ready."
+        : "Every download is finished. Find your games in the list below.";
+
+    private void UpdateSections()
+    {
+        IEnumerable<DownloadJob> visible = Jobs;
+        if (!string.IsNullOrWhiteSpace(SearchText))
+            visible = visible.Where(x => x.GameName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || x.AppId.ToString().Contains(SearchText));
+        var list = visible.ToList();
+
+        HeroJob = list.FirstOrDefault(job => job.IsActive) ?? list.FirstOrDefault(job => job.State == DownloadJobState.Paused);
+        Sync(QueueJobs, list.Where(job => job != HeroJob && !job.IsTerminal).ToList());
+        Sync(HistoryJobs, list.Where(job => job.IsTerminal).ToList());
+
+        OnPropertyChanged(nameof(HasQueue)); OnPropertyChanged(nameof(HasHistory));
+        OnPropertyChanged(nameof(NextQueuedJob)); OnPropertyChanged(nameof(HasNextQueuedJob));
+        OnPropertyChanged(nameof(IdleHeadline)); OnPropertyChanged(nameof(IdleDetail));
+    }
+
+    // Moves rows instead of rebuilding the list, so unchanged cards keep their state.
+    private static void Sync(ObservableCollection<DownloadJob> target, IReadOnlyList<DownloadJob> desired)
+    {
+        for (var index = target.Count - 1; index >= 0; index--)
+            if (!desired.Contains(target[index])) target.RemoveAt(index);
+
+        for (var index = 0; index < desired.Count; index++)
+        {
+            var current = target.IndexOf(desired[index]);
+            if (current == index) continue;
+            if (current >= 0) target.Move(current, index);
+            else target.Insert(index, desired[index]);
+        }
     }
     private void RaiseCounts()
     {
@@ -204,7 +249,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     public int QueuedJobCount => Jobs.Count(x=>x.State==DownloadJobState.Queued);
     public int FailedCount => Jobs.Count(x=>x.State==DownloadJobState.Failed);
     public override Task OnNavigatedToAsync(){ Settings=_settings.Load(); OnPropertyChanged(nameof(Settings)); RefreshFilter(); return Task.CompletedTask; }
-    private void RefreshFilter() { Settings=_settings.Load(); OnPropertyChanged(nameof(Settings)); IEnumerable<DownloadJob> q=Jobs; if(!string.IsNullOrWhiteSpace(SearchText)) q=q.Where(x=>x.GameName.Contains(SearchText,StringComparison.OrdinalIgnoreCase)||x.AppId.ToString().Contains(SearchText)); q=SelectedFilter switch { "Active"=>q.Where(x=>x.IsActive),"Queued"=>q.Where(x=>x.State==DownloadJobState.Queued),"Completed"=>q.Where(x=>x.State==DownloadJobState.Completed),"Failed"=>q.Where(x=>x.State==DownloadJobState.Failed),_=>q}; FilteredJobs.Clear(); foreach(var x in q)FilteredJobs.Add(x); OnPropertyChanged(nameof(HasJobs)); OnPropertyChanged(nameof(TotalProgress)); OnPropertyChanged(nameof(ActiveCount)); OnPropertyChanged(nameof(CompletedCount)); OnPropertyChanged(nameof(QueuedJobCount)); OnPropertyChanged(nameof(FailedCount)); }
+    private void RefreshFilter() { Settings=_settings.Load(); OnPropertyChanged(nameof(Settings)); IEnumerable<DownloadJob> q=Jobs; if(!string.IsNullOrWhiteSpace(SearchText)) q=q.Where(x=>x.GameName.Contains(SearchText,StringComparison.OrdinalIgnoreCase)||x.AppId.ToString().Contains(SearchText)); q=SelectedFilter switch { "Active"=>q.Where(x=>x.IsActive),"Queued"=>q.Where(x=>x.State==DownloadJobState.Queued),"Completed"=>q.Where(x=>x.State==DownloadJobState.Completed),"Failed"=>q.Where(x=>x.State==DownloadJobState.Failed),_=>q}; FilteredJobs.Clear(); foreach(var x in q)FilteredJobs.Add(x); OnPropertyChanged(nameof(HasJobs)); OnPropertyChanged(nameof(TotalProgress)); OnPropertyChanged(nameof(ActiveCount)); OnPropertyChanged(nameof(CompletedCount)); OnPropertyChanged(nameof(QueuedJobCount)); OnPropertyChanged(nameof(FailedCount)); UpdateSections(); }
 }
 
 public enum LibraryNsfwScope { Hide, Show }
