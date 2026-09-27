@@ -38,7 +38,14 @@ public partial class DashboardPage : Page
 
 public partial class DownloadsPage : Page
 {
-    public DownloadsPage() { InitializeComponent(); DataContext = App.Services.GetRequiredService<DownloadsViewModel>(); }
+    public DownloadsPage()
+    {
+        InitializeComponent();
+        var viewModel = App.Services.GetRequiredService<DownloadsViewModel>();
+        DataContext = viewModel;
+        Loaded += (_, _) => viewModel.StartLiveStats();
+        Unloaded += (_, _) => viewModel.StopLiveStats();
+    }
 }
 
 public partial class DepotsPage : Page
