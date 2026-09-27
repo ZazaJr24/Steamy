@@ -38,6 +38,8 @@ public sealed class NetworkThroughputSampler
     }
 
     public int HistoryLength { get; }
+    /// <summary>False where the OS does not expose adapter statistics (e.g. under Wine).</summary>
+    public bool IsAvailable { get; private set; } = true;
     public double BytesPerSecond { get; private set; }
     public double PeakBytesPerSecond { get; private set; }
     public IReadOnlyCollection<double> History => _history;
@@ -46,6 +48,7 @@ public sealed class NetworkThroughputSampler
     {
         var now = _clock();
         var current = _readReceivedBytes();
+        IsAvailable = current is not null;
         if (current is null) return BytesPerSecond;
 
         if (_lastBytes is not null && now > _lastTime)

@@ -22,6 +22,11 @@ public class SmoothProgressBar : ProgressBar
     private bool _animating;
     private TimeSpan _lastFrame;
 
+    // Implicit styles are matched by DefaultStyleKey, so without this the app's ProgressBar
+    // look would not apply to this subclass wherever no Style is set explicitly.
+    static SmoothProgressBar() =>
+        DefaultStyleKeyProperty.OverrideMetadata(typeof(SmoothProgressBar), new FrameworkPropertyMetadata(typeof(ProgressBar)));
+
     public SmoothProgressBar()
     {
         Loaded += (_, _) => Value = _target;

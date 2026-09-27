@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
@@ -37,6 +38,66 @@ public static class ProcessWriteCounter
             return null;
         }
     };
+}
+
+/// <summary>
+/// Supplies "bytes written so far" for a download. The process' own write counter is preferred;
+/// where the OS does not report it (Wine/Proton report zero), the growth of the target folder is
+/// used instead, rescanned every 250 ms or less often for large folders.
+/// </summary>
+public static class DownloadByteSource
+{
+    public static Func<long?> For(Process process, string targetFolder)
+    {
+        var writeCounter = ProcessWriteCounter.For(process);
+        var folderGrowth = FolderGrowth(targetFolder);
+        var counterWorks = false;
+        return () =>
+        {
+            var written = writeCounter();
+            if (written is > 0) counterWorks = true;
+            return counterWorks ? written : folderGrowth();
+        };
+    }
+
+    private static Func<long?> FolderGrowth(string folder)
+    {
+        long? baseline = null;
+        long growth = 0;
+        var lastScan = long.MinValue;
+        var interval = 250L;
+        return () =>
+        {
+            var now = Environment.TickCount64;
+            if (baseline is not null && now - lastScan < interval) return growth;
+            lastScan = now;
+
+            // Small folders are rescanned often for accuracy; big ones back off so a scan never
+            // costs more than a tenth of the time between scans.
+            var size = FolderSize(folder);
+            interval = Math.Clamp((Environment.TickCount64 - now) * 10, 250, 5000);
+            if (size is null) return baseline is null ? null : growth;
+            baseline ??= size.Value;
+            growth = Math.Max(0, size.Value - baseline.Value);
+            return growth;
+        };
+    }
+
+    private static long? FolderSize(string folder)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return 0;
+            var total = 0L;
+            foreach (var file in new DirectoryInfo(folder).EnumerateFiles("*", SearchOption.AllDirectories))
+                total += file.Length;
+            return total;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
 }
 
 /// <summary>

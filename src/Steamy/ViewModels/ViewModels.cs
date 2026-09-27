@@ -72,8 +72,9 @@ public sealed class DownloadsViewModel : ViewModelBase
         _network.Sample();
         var active = Jobs.Where(job => job.IsActive).ToList();
 
-        InternetSpeedLabel = DownloadFormat.Speed(_network.BytesPerSecond);
-        InternetPeakLabel = _network.PeakBytesPerSecond > 0 ? $"Peak {DownloadFormat.Speed(_network.PeakBytesPerSecond)}" : string.Empty;
+        InternetSpeedLabel = _network.IsAvailable ? DownloadFormat.Speed(_network.BytesPerSecond) : "—";
+        InternetPeakLabel = !_network.IsAvailable ? "Not measurable on this system"
+            : _network.PeakBytesPerSecond > 0 ? $"Peak {DownloadFormat.Speed(_network.PeakBytesPerSecond)}" : "Measuring…";
         (InternetSparkline, InternetSparklineArea) = BuildSparkline(_network.History, _network.HistoryLength);
 
         var jobRate = active.Sum(job => job.BytesPerSecond);

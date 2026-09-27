@@ -165,7 +165,7 @@
       </Grid>
 
       <!-- ═══ JOB LIST ═══ -->
-      <ItemsControl ItemsSource="{Binding FilteredJobs}">
+      <ItemsControl ItemsSource="{Binding FilteredJobs}" RequestBringIntoView="JobList_RequestBringIntoView">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
             <Border Style="{StaticResource DownloadJobCardStyle}">

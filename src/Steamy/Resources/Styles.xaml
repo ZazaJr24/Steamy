@@ -1,7 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                    xmlns:models="clr-namespace:Steamy.Models">
+                    xmlns:models="clr-namespace:Steamy.Models"
+                    xmlns:controls="clr-namespace:Steamy.Controls">
 
   <!-- Smooth motion presets shared by hover effects, dialogs and overlays. A short duration
        with a cubic ease reads as "smooth" without feeling laggy; OnFinished releases the
@@ -448,6 +449,8 @@
         <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Queued}"><Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /></DataTrigger>
       </Style.Triggers>
     </Style>
+    <!-- Implicit styles match the exact type, so the smooth bar needs its own to get the app look -->
+    <Style TargetType="controls:SmoothProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}" />
     <Style x:Key="JobProgressBar" TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
       <Style.Triggers>
         <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Preparing}"><Setter Property="IsIndeterminate" Value="True" /></DataTrigger>

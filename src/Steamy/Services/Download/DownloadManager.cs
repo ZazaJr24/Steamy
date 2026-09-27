@@ -304,6 +304,12 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         var result = await _verification.VerifyAsync(job.TargetFolder, cancellationToken).ConfigureAwait(false);
         SetGameState(job, result.HasContent ? DownloadJobState.Completed : DownloadJobState.Failed);
         job.Status = result.Message;
+        if (result.HasContent)
+        {
+            // The measured folder size replaces the running estimate.
+            job.Downloaded = DownloadFormat.Bytes(result.TotalBytes);
+            job.TotalSize = job.Downloaded;
+        }
         _logging.Add(result.HasContent ? LogLevel.Info : LogLevel.Warning, "Verification", result.Message, job.AppId, job.Id);
         return result.HasContent;
     }
@@ -326,6 +332,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
 
         SetGameState(job, DownloadJobState.Completed);
         job.Progress = 100;
+        if (job.TotalSize.StartsWith('~')) job.TotalSize = job.Downloaded;
         job.Status = verifyAfterDownload
             ? "DepotDownloader finished without errors — no local folder to check"
             : "DepotDownloader finished without errors";
