@@ -240,6 +240,20 @@ public sealed class GoldbergViewModel : ViewModelBase
 
     // ── Emulator download (Detanup01/gbe_fork) ──────────────────────
 
+    // gbe_fork has renamed its archives over time (emu-win-release.7z, …-win64-release.zip, …),
+    // so match any Windows release archive and prefer release over debug builds.
+    private static (string Name, string Url) PickWindowsAsset(IReadOnlyList<(string Name, string Url)> assets) =>
+        assets
+            .Where(a => (a.Name.EndsWith(".7z", StringComparison.OrdinalIgnoreCase) || a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                        && a.Name.Contains("win", StringComparison.OrdinalIgnoreCase)
+                        && !a.Name.Contains("linux", StringComparison.OrdinalIgnoreCase)
+                        && !a.Name.Contains("mac", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(a => a.Name.StartsWith("emu-win-release", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(a => a.Name.Contains("release", StringComparison.OrdinalIgnoreCase))
+            .ThenBy(a => a.Name.Contains("debug", StringComparison.OrdinalIgnoreCase))
+            .ThenBy(a => a.Name.Contains("tools", StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault();
+
     private async Task InstallEmuAsync(bool force)
     {
         IsBusy = true;
@@ -262,12 +276,17 @@ public sealed class GoldbergViewModel : ViewModelBase
                 return;
             }
 
-            var asset = doc.RootElement.GetProperty("assets").EnumerateArray()
+            var assets = doc.RootElement.GetProperty("assets").EnumerateArray()
                 .Select(a => (Name: a.GetProperty("name").GetString() ?? "", Url: a.GetProperty("browser_download_url").GetString() ?? ""))
-                .Where(a => a.Name.StartsWith("emu-win-release", StringComparison.OrdinalIgnoreCase) && a.Name.EndsWith(".7z", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(a => a.Name)
-                .FirstOrDefault();
-            if (string.IsNullOrEmpty(asset.Url)) { ActionStatus = "No Windows release asset found on GitHub."; return; }
+                .ToList();
+            var asset = PickWindowsAsset(assets);
+            if (string.IsNullOrEmpty(asset.Url))
+            {
+                ActionStatus = assets.Count == 0
+                    ? $"Release {tag} on GitHub has no files attached yet."
+                    : $"No Windows build in release {tag} ({string.Join(", ", assets.Select(a => a.Name))}).";
+                return;
+            }
 
             Directory.CreateDirectory(EmuRoot);
             var archive = Path.Combine(EmuRoot, asset.Name);
