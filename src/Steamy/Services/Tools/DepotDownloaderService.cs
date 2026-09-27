@@ -31,6 +31,12 @@ public sealed class DepotDownloaderRequest
     /// Steam Guard code. The app never reads, stores or supplies those values.
     /// </summary>
     public bool InteractiveConsole { get; init; }
+
+    /// <summary>Concurrent chunk downloads (<c>-max-downloads</c>); 0 keeps the tool's default.</summary>
+    public int MaxDownloads { get; init; }
+
+    /// <summary>Route downloads through a detected local Lancache server (<c>-use-lancache</c>).</summary>
+    public bool UseLancache { get; init; }
 }
 
 public sealed record DepotDownloaderCommand(string FileName, IReadOnlyList<string> Arguments, string WorkingDirectory, bool Interactive = false);
@@ -55,7 +61,9 @@ public sealed record DepotDownloaderProgress(
     string Total,
     string Speed,
     string Eta,
-    string RawLine);
+    string RawLine,
+    int DepotIndex = 0,
+    int DepotCount = 0);
 
 public sealed record DepotDownloaderRunResult(
     int? ExitCode,
@@ -76,6 +84,20 @@ public static class DepotDownloaderArgumentBuilder
     private static readonly Regex BranchPattern = new("^[A-Za-z0-9._-]+$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex UsernamePattern = new("^[A-Za-z0-9._-]{2,64}$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    public const int MaxDownloadsLimit = 128;
+
+    /// <summary>Performance options shared by every DepotDownloader invocation.</summary>
+    public static void AddTransferOptions(ICollection<string> arguments, int maxDownloads, bool useLancache)
+    {
+        if (maxDownloads > 0)
+        {
+            arguments.Add("-max-downloads");
+            arguments.Add(Math.Min(maxDownloads, MaxDownloadsLimit).ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (useLancache) arguments.Add("-use-lancache");
+    }
+
     public static DepotDownloaderValidationResult Validate(DepotDownloaderRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -90,6 +112,9 @@ public static class DepotDownloaderArgumentBuilder
             return DepotDownloaderValidationResult.Invalid("A target folder is required.");
         if (!request.AuthorizationConfirmed)
             return DepotDownloaderValidationResult.Invalid("The user must confirm authorization for this content.");
+
+        if (request.MaxDownloads is < 0 or > MaxDownloadsLimit)
+            return DepotDownloaderValidationResult.Invalid($"Download connections must be between 1 and {MaxDownloadsLimit}.");
 
         if (!string.IsNullOrWhiteSpace(request.SteamUsername) && !UsernamePattern.IsMatch(request.SteamUsername.Trim()))
             return DepotDownloaderValidationResult.Invalid("The Steam account name may only contain letters, digits, dot, dash and underscore.");
@@ -156,6 +181,8 @@ public static class DepotDownloaderArgumentBuilder
             // A password argument is never added: DepotDownloader asks the user itself.
             arguments.Add("-remember-password");
         }
+
+        AddTransferOptions(arguments, request.MaxDownloads, request.UseLancache);
 
         var workingDirectory = string.IsNullOrWhiteSpace(request.WorkingDirectory)
             ? Path.GetFullPath(request.TargetFolder)
@@ -308,6 +335,26 @@ public static class DepotDownloaderOutputParser
             && string.IsNullOrWhiteSpace(eta) && string.IsNullOrWhiteSpace(currentFile)) return null;
 
         return new DepotDownloaderProgress(percent, currentFile, downloaded, total, speed, eta, line);
+    }
+
+    private static readonly Regex FailurePattern = new(
+        @"(?i)\b(error|unable|failed|aborting|not available|invalid|no valid depot key|was not found|not completely downloaded|access denied|timed? ?out)\b",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex PercentLinePattern = new(@"^\d{1,3}[.,]\d+%\s", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>The last output line that describes why the tool gave up, if it printed one.</summary>
+    public static string? ExtractFailureReason(string output)
+    {
+        if (string.IsNullOrWhiteSpace(output)) return null;
+
+        var lines = output.Split('\n');
+        for (var index = lines.Length - 1; index >= 0; index--)
+        {
+            var line = lines[index].Trim();
+            if (line.Length > 0 && !PercentLinePattern.IsMatch(line) && FailurePattern.IsMatch(line)) return line;
+        }
+
+        return null;
     }
 
     private static void QueueOutputLog(string line)
@@ -505,10 +552,22 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
                     string.Empty);
             }
 
-            var stdoutTask = ReadLinesAsync(process.StandardOutput, stdout, progress);
-            var stderrTask = ReadLinesAsync(process.StandardError, stderr, progress);
-            await process.WaitForExitAsync().ConfigureAwait(false);
-            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+            var tracker = new DownloadProgressTracker(ProcessWriteCounter.For(process));
+            using var tickerStop = new CancellationTokenSource();
+            var ticker = ReportProgressAsync(tracker, progress, tickerStop.Token);
+            try
+            {
+                var stdoutTask = ReadLinesAsync(process.StandardOutput, stdout, tracker);
+                var stderrTask = ReadLinesAsync(process.StandardError, stderr, tracker);
+                await process.WaitForExitAsync().ConfigureAwait(false);
+                await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+            }
+            finally
+            {
+                tickerStop.Cancel();
+                await ticker.ConfigureAwait(false);
+            }
+            progress?.Report(tracker.Snapshot());
 
             var wasPaused = active.PauseRequested;
             var wasCancelled = cancellationToken.IsCancellationRequested && !wasPaused;
@@ -539,13 +598,35 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
     private static async Task ReadLinesAsync(
         StreamReader reader,
         BoundedOutputBuffer output,
-        IProgress<DepotDownloaderProgress>? progress)
+        DownloadProgressTracker tracker)
     {
         while (await reader.ReadLineAsync().ConfigureAwait(false) is { } line)
         {
             output.Add(line);
-            var parsed = DepotDownloaderOutputParser.Parse(line);
-            if (parsed is not null) progress?.Report(parsed);
+            tracker.ObserveLine(line);
+        }
+    }
+
+    public static readonly TimeSpan ProgressInterval = TimeSpan.FromMilliseconds(100);
+
+    private static async Task ReportProgressAsync(
+        DownloadProgressTracker tracker,
+        IProgress<DepotDownloaderProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        if (progress is null) return;
+
+        using var timer = new PeriodicTimer(ProgressInterval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+            {
+                var snapshot = tracker.Snapshot();
+                if (snapshot.Percent is not null || snapshot.RawLine.Length > 0) progress.Report(snapshot);
+            }
+        }
+        catch (OperationCanceledException)
+        {
         }
     }
 

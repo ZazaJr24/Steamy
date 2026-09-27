@@ -177,89 +177,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         await File.WriteAllLinesAsync(keyFilePath, keyLines, cancellationToken);
 
         Directory.CreateDirectory(targetFolder);
-        var failedDepots = new List<string>();
-        var completedDepots = 0;
-
-        foreach (var depot in depots)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            progress?.Report($"Downloading depot {depot.DepotId} ({completedDepots + 1}/{depots.Count})...");
-
-            var manifestFile = $"{depot.DepotId}_{depot.ManifestId}.manifest";
-            var manifestPath = Path.Combine(appWorkDir, manifestFile);
-            var keyFile = Path.Combine(appWorkDir, $"{appId}.key");
-
-            var args = new List<string>
-            {
-                "-app", appId.ToString(CultureInfo.InvariantCulture),
-                "-depot", depot.DepotId.ToString(CultureInfo.InvariantCulture),
-                "-manifest", depot.ManifestId,
-                "-depotkeys", keyFile,
-                "-dir", Path.GetFullPath(targetFolder)
-            };
-            if (File.Exists(manifestPath))
-            {
-                args.Add("-manifestfile");
-                args.Add(manifestPath);
-            }
-
-            try
-            {
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = ddPath,
-                    WorkingDirectory = appWorkDir,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
-                    StandardErrorEncoding = System.Text.Encoding.UTF8
-                };
-                foreach (var arg in args)
-                    startInfo.ArgumentList.Add(arg);
-
-                using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-                if (!process.Start())
-                {
-                    failedDepots.Add($"Depot {depot.DepotId}: failed to start DepotDownloaderMod");
-                    continue;
-                }
-
-                var (exitCode, stdoutLines) = await RunProcessWithWatchdogAsync(
-                    process, depot.DepotId, completedDepots + 1, depots.Count, targetFolder, progress, cancellationToken);
-
-                var totalLine = stdoutLines.LastOrDefault(l => l.StartsWith("Total downloaded:", StringComparison.Ordinal));
-                if (exitCode != 0 || (totalLine is not null && totalLine.Contains("0 bytes")))
-                {
-                    var lastLines = string.Join(" | ", stdoutLines.TakeLast(5));
-                    failedDepots.Add($"Depot {depot.DepotId}: exit {exitCode} — {lastLines}");
-                    _logging.Add(Models.LogLevel.Error, "RyuuDownload",
-                        $"Depot {depot.DepotId} failed (exit {exitCode}): {lastLines}", appId);
-                }
-                else
-                {
-                    completedDepots++;
-                    progress?.Report($"Depot {depot.DepotId} completed ({completedDepots}/{depots.Count})");
-                    _logging.Add(Models.LogLevel.Info, "RyuuDownload",
-                        $"Depot {depot.DepotId} downloaded for App {appId}.", appId);
-                }
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
-            {
-                failedDepots.Add($"Depot {depot.DepotId}: {ex.Message}");
-            }
-        }
-
-        if (failedDepots.Count > 0 && completedDepots == 0)
-            return new RyuuGameDownloadResult(false, $"All depots failed:\n{string.Join("\n", failedDepots)}");
-
-        if (failedDepots.Count > 0)
-            return new RyuuGameDownloadResult(true,
-                $"{completedDepots}/{depots.Count} depots downloaded. Failed:\n{string.Join("\n", failedDepots)}");
-
-        return new RyuuGameDownloadResult(true, $"All {depots.Count} depots downloaded to {targetFolder}.");
+        return await RunDepotDownloaderModAsync(ddPath, appId, depots, appWorkDir, targetFolder, progress, cancellationToken);
     }
 
     public async Task<RyuuGameDownloadResult> DownloadGameAsync(
@@ -330,13 +248,15 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
     {
         var failedDepots = new List<string>();
         var completedDepots = 0;
+        var settings = _settings.Load();
 
         var keyFile = Path.Combine(appWorkDir, $"{appId}.key");
 
-        foreach (var depot in depots)
+        for (var index = 0; index < depots.Count; index++)
         {
+            var depot = depots[index];
             cancellationToken.ThrowIfCancellationRequested();
-            progress?.Report($"Downloading depot {depot.DepotId} ({completedDepots + 1}/{depots.Count})...");
+            progress?.Report($"Preparing depot {depot.DepotId} ({index + 1}/{depots.Count})...");
 
             var manifestFileName = $"{depot.DepotId}_{depot.ManifestId}.manifest";
             var manifestFilePath = Path.Combine(appWorkDir, manifestFileName);
@@ -354,6 +274,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 args.Add("-manifestfile");
                 args.Add(manifestFilePath);
             }
+            DepotDownloaderArgumentBuilder.AddTransferOptions(args, settings.DownloadConnections, settings.UseLancache);
 
             try
             {
@@ -379,20 +300,23 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 }
 
                 var (exitCode, stdoutLines) = await RunProcessWithWatchdogAsync(
-                    process, depot.DepotId, completedDepots + 1, depots.Count, targetFolder, progress, cancellationToken);
+                    process, depot.DepotId, index + 1, depots.Count, progress, cancellationToken);
 
                 var totalLine = stdoutLines.LastOrDefault(l => l.StartsWith("Total downloaded:", StringComparison.Ordinal));
-                if (exitCode != 0 || (totalLine is not null && totalLine.Contains("0 bytes")))
+                if (exitCode != 0 || (totalLine is not null && totalLine.StartsWith("Total downloaded: 0 bytes", StringComparison.Ordinal)))
                 {
-                    var lastLines = string.Join(" | ", stdoutLines.TakeLast(5));
-                    failedDepots.Add($"Depot {depot.DepotId}: exit {exitCode} — {lastLines}");
+                    var reason = DepotDownloaderOutputParser.ExtractFailureReason(string.Join('\n', stdoutLines))
+                                 ?? string.Join(" | ", stdoutLines.TakeLast(5));
+                    failedDepots.Add($"Depot {depot.DepotId}: exit {exitCode} — {reason}");
                     _logging.Add(Models.LogLevel.Error, "GameDownload",
-                        $"Depot {depot.DepotId} failed (exit {exitCode}): {lastLines}", appId);
+                        $"Depot {depot.DepotId} failed (exit {exitCode}): {reason}", appId);
                 }
                 else
                 {
                     completedDepots++;
-                    progress?.Report($"Depot {depot.DepotId} completed ({completedDepots}/{depots.Count})");
+                    progress?.Report(GameDownloadProgressMessage.Format(depot.DepotId, index + 1, depots.Count, 100, null));
+                    _logging.Add(Models.LogLevel.Info, "GameDownload",
+                        $"Depot {depot.DepotId} downloaded for App {appId}.", appId);
                 }
             }
             catch (OperationCanceledException) { throw; }
@@ -412,145 +336,73 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         return new RyuuGameDownloadResult(true, $"All {depots.Count} depots downloaded to {targetFolder}.");
     }
 
+    private static readonly TimeSpan StallTimeout = TimeSpan.FromMinutes(3);
+
     private static async Task<(int ExitCode, List<string> StdoutLines)> RunProcessWithWatchdogAsync(
         Process process, int depotId, int depotIndex, int totalDepots,
-        string targetFolder, IProgress<string>? progress, CancellationToken cancellationToken)
+        IProgress<string>? progress, CancellationToken cancellationToken)
     {
         var stdoutLines = new List<string>();
-        var lastActivityUtc = DateTime.UtcNow;
-
-        var lastPct = "0";
-        var lastDl = "";
-        var lastTot = "";
-        var lastSpd = "";
-        var lastEta = "";
-        var lastFile = "";
-
-        var folderBytes = 0L;
-        var prevFolderBytes = 0L;
-        var prevFolderCheck = DateTime.UtcNow;
+        var tracker = new DownloadProgressTracker(ProcessWriteCounter.For(process));
 
         var readStdout = Task.Run(async () =>
         {
             while (await process.StandardOutput.ReadLineAsync(cancellationToken) is { } line)
             {
                 stdoutLines.Add(line);
-                lastActivityUtc = DateTime.UtcNow;
-                var parsed = DepotDownloaderOutputParser.Parse(line);
-                if (parsed is not null)
-                {
-                    if (parsed.Percent is not null) lastPct = parsed.Percent.Value.ToString("F1", CultureInfo.InvariantCulture);
-                    if (!string.IsNullOrWhiteSpace(parsed.Downloaded)) lastDl = parsed.Downloaded;
-                    if (!string.IsNullOrWhiteSpace(parsed.Total)) lastTot = parsed.Total;
-                    if (!string.IsNullOrWhiteSpace(parsed.Speed)) lastSpd = parsed.Speed;
-                    if (!string.IsNullOrWhiteSpace(parsed.Eta)) lastEta = parsed.Eta;
-                    if (!string.IsNullOrWhiteSpace(parsed.CurrentFile)) lastFile = parsed.CurrentFile;
-                    progress?.Report($"PROGRESS|{depotId}|{depotIndex}|{totalDepots}|{lastPct}|{lastDl}|{lastTot}|{lastSpd}|{lastEta}|{lastFile}");
-                }
-                else if (!string.IsNullOrWhiteSpace(line))
-                {
+                if (tracker.ObserveLine(line) is null && !string.IsNullOrWhiteSpace(line))
                     progress?.Report(line);
-                }
             }
         }, cancellationToken);
 
         var readStderr = process.StandardError.ReadToEndAsync(cancellationToken);
 
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        using var reg = timeoutCts.Token.Register(() =>
+        using var watchdog = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var reg = watchdog.Token.Register(() =>
         {
             try { if (!process.HasExited) process.Kill(true); } catch { }
         });
 
-        // Background task: watchdog + periodic folder-size stats
-        _ = Task.Run(async () =>
+        // Progress ticks every 100 ms; the process only counts as stuck when it neither prints
+        // nor writes anything, so one large file can no longer trip the watchdog.
+        var ticker = Task.Run(async () =>
         {
+            using var timer = new PeriodicTimer(DepotDownloaderService.ProgressInterval);
             try
             {
-                while (!process.HasExited && !timeoutCts.Token.IsCancellationRequested)
+                while (await timer.WaitForNextTickAsync(watchdog.Token))
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(3), timeoutCts.Token);
+                    var snapshot = tracker.Snapshot();
+                    if (snapshot.Percent is { } percent)
+                        progress?.Report(GameDownloadProgressMessage.Format(depotId, depotIndex, totalDepots, percent, snapshot));
 
-                    if ((DateTime.UtcNow - lastActivityUtc).TotalMinutes > 3)
+                    if (tracker.SecondsSinceActivity > StallTimeout.TotalSeconds)
                     {
-                        progress?.Report("No output for 3 minutes — killing stuck process.");
-                        timeoutCts.Cancel();
+                        progress?.Report("No download activity for 3 minutes — stopping the stuck process.");
+                        watchdog.Cancel();
                         return;
-                    }
-
-                    // Calculate stats from folder size when DDMod doesn't provide them
-                    if (string.IsNullOrWhiteSpace(lastDl) && Directory.Exists(targetFolder))
-                    {
-                        try
-                        {
-                            var dirInfo = new DirectoryInfo(targetFolder);
-                            folderBytes = dirInfo.EnumerateFiles("*", SearchOption.AllDirectories)
-                                .Sum(f => { try { return f.Length; } catch { return 0; } });
-
-                            lastDl = FormatBytes(folderBytes);
-
-                            if (double.TryParse(lastPct, NumberStyles.Float, CultureInfo.InvariantCulture, out var pct) && pct > 0.1)
-                            {
-                                var estimatedTotal = (long)(folderBytes / (pct / 100.0));
-                                lastTot = FormatBytes(estimatedTotal);
-                            }
-
-                            var now = DateTime.UtcNow;
-                            var elapsed = (now - prevFolderCheck).TotalSeconds;
-                            if (elapsed >= 2.0 && folderBytes > prevFolderBytes)
-                            {
-                                var bytesPerSec = (folderBytes - prevFolderBytes) / elapsed;
-                                lastSpd = FormatBytes((long)bytesPerSec) + "/s";
-
-                                if (double.TryParse(lastPct, NumberStyles.Float, CultureInfo.InvariantCulture, out var p) && p > 0.1)
-                                {
-                                    var estimatedTotal = folderBytes / (p / 100.0);
-                                    var remaining = estimatedTotal - folderBytes;
-                                    if (remaining > 0 && bytesPerSec > 0)
-                                    {
-                                        var secs = remaining / bytesPerSec;
-                                        lastEta = secs < 60 ? $"{secs:F0}s"
-                                                : secs < 3600 ? $"{secs / 60:F0}m {secs % 60:F0}s"
-                                                : $"{secs / 3600:F0}h {(secs % 3600) / 60:F0}m";
-                                    }
-                                }
-
-                                prevFolderBytes = folderBytes;
-                                prevFolderCheck = now;
-                            }
-
-                            progress?.Report($"PROGRESS|{depotId}|{depotIndex}|{totalDepots}|{lastPct}|{lastDl}|{lastTot}|{lastSpd}|{lastEta}|{lastFile}");
-                        }
-                        catch { }
                     }
                 }
             }
             catch (OperationCanceledException) { }
-        }, timeoutCts.Token);
+        });
 
         try
         {
-            await process.WaitForExitAsync(timeoutCts.Token);
+            await process.WaitForExitAsync(watchdog.Token);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             // Watchdog killed the process
         }
-        timeoutCts.Cancel();
+        watchdog.Cancel();
+        await ticker;
         await readStdout;
         _ = await readStderr;
 
         var exitCode = process.HasExited ? process.ExitCode : -1;
         return (exitCode, stdoutLines);
     }
-
-    private static string FormatBytes(long bytes) => bytes switch
-    {
-        >= 1024L * 1024 * 1024 => $"{bytes / (1024.0 * 1024 * 1024):F2} GB",
-        >= 1024L * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
-        >= 1024L => $"{bytes / 1024.0:F0} KB",
-        _ => $"{bytes} B"
-    };
 
     private static readonly Regex ManifestFilePattern = new(
         @"^(\d+)_(\d+)\.manifest$",
@@ -691,4 +543,52 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
     }
 
     public void Dispose() => _httpClient.Dispose();
+}
+
+/// <summary>
+/// The compact progress message the per-depot DepotDownloaderMod runner reports, and the single
+/// place that applies it to a job, so every page shows the same numbers.
+/// </summary>
+public static class GameDownloadProgressMessage
+{
+    private const string Prefix = "PROGRESS|";
+
+    public static string Format(int depotId, int depotIndex, int depotCount, double percent, DepotDownloaderProgress? snapshot) =>
+        string.Join('|',
+            "PROGRESS",
+            depotId.ToString(CultureInfo.InvariantCulture),
+            depotIndex.ToString(CultureInfo.InvariantCulture),
+            depotCount.ToString(CultureInfo.InvariantCulture),
+            percent.ToString("0.00", CultureInfo.InvariantCulture),
+            Clean(snapshot?.Downloaded),
+            Clean(snapshot?.Total),
+            Clean(snapshot?.Speed),
+            Clean(snapshot?.Eta),
+            Clean(snapshot?.CurrentFile));
+
+    /// <summary>Applies a progress message to the job. Returns false for plain status text.</summary>
+    public static bool TryApply(Models.DownloadJob job, string message)
+    {
+        if (!message.StartsWith(Prefix, StringComparison.Ordinal)) return false;
+
+        var parts = message.Split('|');
+        if (parts.Length < 10
+            || !double.TryParse(parts[4], NumberStyles.Float, CultureInfo.InvariantCulture, out var percent))
+            return true;
+
+        job.State = Models.DownloadJobState.Downloading;
+        var hasDepots = int.TryParse(parts[2], out var index) & int.TryParse(parts[3], out var count) && count > 0;
+        var overall = hasDepots ? ((index - 1) * 100.0 + percent) / count : percent;
+        job.Progress = Math.Max(job.Progress, overall);
+
+        if (parts[5].Length > 0) job.Downloaded = parts[5];
+        if (parts[6].Length > 0) job.TotalSize = parts[6];
+        if (parts[7].Length > 0) job.Speed = parts[7];
+        if (parts[8].Length > 0) job.Eta = parts[8];
+        if (parts[9].Length > 0) job.CurrentFile = parts[9];
+        job.Status = hasDepots && count > 1 ? $"Downloading depot {index} of {count}" : "Downloading";
+        return true;
+    }
+
+    private static string Clean(string? value) => value?.Replace('|', '/') ?? string.Empty;
 }

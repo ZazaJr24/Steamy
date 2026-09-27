@@ -2,6 +2,7 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:Steamy.Controls"
       ScrollViewer.CanContentScroll="False"
       Background="{DynamicResource AppBackgroundBrush}">
   <Page.Resources>
@@ -189,9 +190,9 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
-              <ProgressBar Style="{StaticResource JobProgressBar}" Height="6" Minimum="0" Maximum="100"
-                           Value="{Binding Progress, Mode=OneWay}" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Text="{Binding ProgressLabel}" Foreground="White" FontWeight="SemiBold"
+              <controls:SmoothProgressBar Style="{StaticResource JobProgressBar}" Height="6" Minimum="0" Maximum="100"
+                           SmoothValue="{Binding Progress, Mode=OneWay}" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{Binding ProgressLabel}" Foreground="White" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular"
                          Margin="12,0,0,0" VerticalAlignment="Center" />
             </Grid>
             <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
@@ -418,8 +419,8 @@
                             <TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}" FontSize="10.5" />
                           </Border>
                         </Grid>
-                        <ProgressBar Style="{StaticResource JobProgressBar}" Height="4" Minimum="0" Maximum="100"
-                                     Value="{Binding Progress, Mode=OneWay}" Margin="0,8,0,6" />
+                        <controls:SmoothProgressBar Style="{StaticResource JobProgressBar}" Height="4" Minimum="0" Maximum="100"
+                                     SmoothValue="{Binding Progress, Mode=OneWay}" Margin="0,8,0,6" />
                         <Grid>
                           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                           <TextBlock Text="{Binding ProgressLabel}" Style="{StaticResource TertiaryTextStyle}" FontSize="11" />

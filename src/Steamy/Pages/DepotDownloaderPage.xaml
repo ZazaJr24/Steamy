@@ -3,6 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:models="clr-namespace:Steamy.Models"
+      xmlns:controls="clr-namespace:Steamy.Controls"
       ScrollViewer.CanContentScroll="False"
       Background="{DynamicResource AppBackgroundBrush}">
   <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="26,22,26,40">
@@ -73,8 +74,28 @@
               <ItemsControl ItemsSource="{Binding Jobs}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border Style="{StaticResource SubtlePanelStyle}" Margin="0,0,0,9">
-                      <StackPanel>
+                    <Border Margin="0,0,0,9">
+                      <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource SubtlePanelStyle}">
+                          <Setter Property="RenderTransform"><Setter.Value><TranslateTransform /></Setter.Value></Setter>
+                          <Style.Triggers>
+                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                              <BeginStoryboard>
+                                <Storyboard>
+                                  <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.28" />
+                                  <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="8" To="0" Duration="0:0:0.32">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                  </DoubleAnimation>
+                                </Storyboard>
+                              </BeginStoryboard>
+                            </EventTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Border.Style>
+                      <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                      <Border Style="{StaticResource JobStateStripe}" Margin="0,2,10,2"/>
+                      <StackPanel Grid.Column="1">
                         <Grid>
                           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                           <StackPanel Orientation="Horizontal" Margin="0,0,12,0" VerticalAlignment="Center">
@@ -86,16 +107,20 @@
                             <TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}"/>
                           </Border>
                         </Grid>
-                        <ProgressBar Value="{Binding Progress}" Maximum="100" Margin="0,10,0,6" Style="{StaticResource JobProgressBar}"/>
+                        <Grid Margin="0,10,0,6">
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                          <controls:SmoothProgressBar SmoothValue="{Binding Progress}" Maximum="100" Height="6" VerticalAlignment="Center" Style="{StaticResource JobProgressBar}"/>
+                          <TextBlock Grid.Column="1" Text="{Binding ProgressLabel}" Style="{StaticResource JobNumberText}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" Margin="10,0,0,0" MinWidth="48" TextAlignment="Right"/>
+                        </Grid>
                         <Grid>
                           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                           <TextBlock Text="{Binding Status}" Style="{StaticResource MutedTextStyle}" FontSize="12" TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}"/>
                           <TextBlock Grid.Column="1" Text="{Binding SizeSummary}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,0"/>
                         </Grid>
                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0" Style="{StaticResource LiveStatsStyle}">
-                          <TextBlock Text="{Binding Speed}" Style="{StaticResource TertiaryTextStyle}" FontSize="11"/>
+                          <TextBlock Text="{Binding Speed}" Style="{StaticResource JobNumberText}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" FontSize="11"/>
                           <TextBlock Text="  ·  " Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11"/>
-                          <TextBlock Text="{Binding Eta}" Style="{StaticResource TertiaryTextStyle}" FontSize="11"/>
+                          <TextBlock Text="{Binding Eta}" Style="{StaticResource JobNumberText}" FontSize="11"/>
                           <TextBlock Text="  ·  " Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11"/>
                           <TextBlock Text="{Binding CurrentFile}" Style="{StaticResource TertiaryTextStyle}" FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="360"/>
                         </StackPanel>
@@ -120,6 +145,7 @@
                           </TextBox.Style>
                         </TextBox>
                       </StackPanel>
+                      </Grid>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>

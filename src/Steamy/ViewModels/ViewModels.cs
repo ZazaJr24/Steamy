@@ -33,7 +33,44 @@ public abstract class ViewModelBase : ObservableObject, INavigationAware
 public sealed class DownloadsViewModel : ViewModelBase
 {
     private readonly IDownloadManager _manager; private readonly IRyuuGameDownloadService _ryuu; private readonly ISettingsService _settings; private string _search = ""; private string _filter = "All downloads";
-    public DownloadsViewModel(IAppDataStore s, INavigationService n, ILoggingService l, IDownloadManager m, IRyuuGameDownloadService ryuu, ISettingsService settings) : base(s,n,l) { _manager=m; _ryuu=ryuu; _settings=settings; Settings=settings.Load(); Jobs=s.Downloads; RefreshFilter(); }
+    public DownloadsViewModel(IAppDataStore s, INavigationService n, ILoggingService l, IDownloadManager m, IRyuuGameDownloadService ryuu, ISettingsService settings) : base(s,n,l)
+    {
+        _manager=m; _ryuu=ryuu; _settings=settings; Settings=settings.Load(); Jobs=s.Downloads;
+        foreach (var job in Jobs) job.PropertyChanged += OnJobPropertyChanged;
+        Jobs.CollectionChanged += OnJobsChanged;
+        RefreshFilter();
+    }
+    private void OnJobsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null) foreach (DownloadJob job in e.OldItems) job.PropertyChanged -= OnJobPropertyChanged;
+        if (e.NewItems is not null) foreach (DownloadJob job in e.NewItems) job.PropertyChanged += OnJobPropertyChanged;
+
+        // Without filters the visible list mirrors the queue, so only the changed cards are touched
+        // and the existing ones keep their state instead of being rebuilt.
+        if (!HasActiveFilters && e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add && e.NewItems is not null)
+        {
+            var index = Math.Clamp(e.NewStartingIndex, 0, FilteredJobs.Count);
+            foreach (DownloadJob job in e.NewItems) FilteredJobs.Insert(index++, job);
+            RaiseCounts();
+        }
+        else if (!HasActiveFilters && e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove && e.OldItems is not null)
+        {
+            foreach (DownloadJob job in e.OldItems) FilteredJobs.Remove(job);
+            RaiseCounts();
+        }
+        else
+        {
+            RefreshFilter();
+        }
+    }
+    private void OnJobPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DownloadJob.State)) RaiseCounts();
+    }
+    private void RaiseCounts()
+    {
+        OnPropertyChanged(nameof(HasJobs)); OnPropertyChanged(nameof(ActiveCount)); OnPropertyChanged(nameof(QueuedJobCount)); OnPropertyChanged(nameof(CompletedCount)); OnPropertyChanged(nameof(FailedCount)); OnPropertyChanged(nameof(TotalProgress));
+    }
     public AppSettings Settings { get; private set; }
     public ObservableCollection<DownloadJob> Jobs { get; }
     public ObservableCollection<DownloadJob> FilteredJobs { get; } = new();
@@ -53,7 +90,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     public ICommand RetryCommand => new AsyncRelayCommand<DownloadJob>(x=>x is null?Task.CompletedTask:_manager.RetryAsync(x));
     public ICommand StartCommand => new AsyncRelayCommand<DownloadJob>(StartAsync);
     public ICommand VerifyCommand => new AsyncRelayCommand<DownloadJob>(async x=>{if(x is null)return; await _manager.VerifyAsync(x); RefreshFilter();});
-    public ICommand RemoveCommand => new AsyncRelayCommand<DownloadJob>(async x=>{if(x is null)return; await _manager.ForgetAsync(x); Jobs.Remove(x); RefreshFilter();});
+    public ICommand RemoveCommand => new AsyncRelayCommand<DownloadJob>(async x=>{if(x is null)return; await _manager.ForgetAsync(x); Jobs.Remove(x);});
     public ICommand OpenFolderCommand => new RelayCommand<DownloadJob>(x=>{if(x is not null && !string.IsNullOrWhiteSpace(x.TargetFolder) && Directory.Exists(x.TargetFolder)) try{Process.Start(new ProcessStartInfo(x.TargetFolder){UseShellExecute=true});}catch{}});
     public ICommand RefreshCommand => new RelayCommand(RefreshFilter);
     public ICommand NavigateLibraryCommand => new RelayCommand(()=>Navigation.Navigate<LibraryPage>());
@@ -68,29 +105,15 @@ public sealed class DownloadsViewModel : ViewModelBase
             job.Status = "Resuming — loading cached manifests";
             var progress = new Progress<string>(msg => System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
             {
-                if (msg.StartsWith("PROGRESS|", StringComparison.Ordinal))
-                {
-                    var p = msg.Split('|');
-                    if (p.Length >= 10 && double.TryParse(p[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pct))
-                    {
-                        job.State = DownloadJobState.Downloading;
-                        if (int.TryParse(p[2], out var dIdx) && int.TryParse(p[3], out var dTotal) && dTotal > 0)
-                            job.Progress = ((dIdx - 1) * 100.0 + pct) / dTotal;
-                        else
-                            job.Progress = pct;
-                        if (!string.IsNullOrWhiteSpace(p[5])) job.Downloaded = p[5];
-                        if (!string.IsNullOrWhiteSpace(p[6])) job.TotalSize = p[6];
-                        if (!string.IsNullOrWhiteSpace(p[7])) job.Speed = p[7];
-                        if (!string.IsNullOrWhiteSpace(p[8])) job.Eta = p[8];
-                        job.Status = $"Downloading depot {p[2]}/{p[3]} — {job.Progress:0.#}%";
-                    }
-                }
-                else { job.Status = msg; }
+                if (!GameDownloadProgressMessage.TryApply(job, msg)) job.Status = msg;
             }));
             var result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress));
             job.State = result.Succeeded ? DownloadJobState.Completed : DownloadJobState.Failed;
             job.Status = result.Message;
-            if (result.Succeeded) { job.Progress = 100; job.Finished = DateTime.Now; }
+            job.Speed = string.Empty;
+            job.Eta = string.Empty;
+            job.Finished = DateTime.Now;
+            if (result.Succeeded) job.Progress = 100;
         }
         else { await _manager.StartAsync(job); }
         RefreshFilter();
