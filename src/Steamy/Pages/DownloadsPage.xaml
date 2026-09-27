@@ -22,6 +22,31 @@
         </Trigger>
       </Style.Triggers>
     </Style>
+    <Style x:Key="LiveTileStyle" TargetType="Border">
+      <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="16,12" />
+      <Setter Property="MinHeight" Value="84" />
+    </Style>
+    <Style x:Key="LiveTileCaption" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="10.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    </Style>
+    <Style x:Key="LiveTileValue" TargetType="TextBlock" BasedOn="{StaticResource JobNumberText}">
+      <Setter Property="FontSize" Value="20" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <Style x:Key="LiveTileHint" TargetType="TextBlock" BasedOn="{StaticResource JobNumberText}">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+      <Setter Property="Margin" Value="0,2,0,0" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
     <Style x:Key="HideWhenEmpty" TargetType="TextBlock" BasedOn="{StaticResource JobNumberText}">
       <Style.Triggers>
         <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger>
@@ -68,6 +93,76 @@
         <Run Text="  ·  "/>
         <Run Text="{Binding FailedCount, Mode=OneWay, StringFormat='{}{0} failed'}"/>
       </TextBlock>
+
+      <!-- ═══ LIVE PANEL ═══ -->
+      <Grid Margin="0,0,0,18">
+        <Grid.Style>
+          <Style TargetType="Grid">
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding HasJobs}" Value="False">
+                <Setter Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Grid.Style>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="2*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Internet -->
+        <Border Style="{StaticResource LiveTileStyle}" Margin="0,0,12,0">
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+              <TextBlock Text="INTERNET" Style="{StaticResource LiveTileCaption}"/>
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <ui:SymbolIcon Symbol="ArrowDownload20" FontSize="18" Foreground="{DynamicResource AccentBrush}"
+                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBlock Text="{Binding InternetSpeedLabel}" Style="{StaticResource LiveTileValue}"/>
+              </StackPanel>
+              <TextBlock Text="{Binding InternetPeakLabel}" Style="{StaticResource LiveTileHint}"/>
+            </StackPanel>
+            <Canvas Grid.Column="1" Width="200" Height="40" ClipToBounds="True"
+                    HorizontalAlignment="Right" VerticalAlignment="Center">
+              <Polygon Points="{Binding InternetSparklineArea}" Fill="{DynamicResource AccentSoftBrush}"/>
+              <Polyline Points="{Binding InternetSparkline}" Stroke="{DynamicResource AccentBrush}"
+                        StrokeThickness="1.6" StrokeLineJoin="Round"/>
+            </Canvas>
+          </Grid>
+        </Border>
+
+        <!-- Download rate across jobs -->
+        <Border Grid.Column="1" Style="{StaticResource LiveTileStyle}" Margin="0,0,12,0"
+                ToolTip="Data the active downloads write per second">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="DOWNLOAD RATE" Style="{StaticResource LiveTileCaption}"/>
+            <TextBlock Text="{Binding JobsSpeedLabel}" Style="{StaticResource LiveTileValue}" Margin="0,4,0,0"/>
+            <TextBlock Style="{StaticResource LiveTileHint}"
+                       Text="{Binding ActiveCount, StringFormat='{}{0} active job(s)'}"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Remaining time -->
+        <Border Grid.Column="2" Style="{StaticResource LiveTileStyle}" Margin="0,0,12,0">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="TIME LEFT" Style="{StaticResource LiveTileCaption}"/>
+            <TextBlock Text="{Binding OverallEtaLabel}" Style="{StaticResource LiveTileValue}" Margin="0,4,0,0"/>
+            <TextBlock Text="{Binding OverallEtaHint}" Style="{StaticResource LiveTileHint}"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Overall progress of the active jobs -->
+        <Border Grid.Column="3" Style="{StaticResource LiveTileStyle}">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="PROGRESS" Style="{StaticResource LiveTileCaption}"/>
+            <TextBlock Text="{Binding ActiveProgressLabel}" Style="{StaticResource LiveTileValue}" Margin="0,4,0,6"/>
+            <controls:SmoothProgressBar SmoothValue="{Binding ActiveProgress}" Maximum="100" Height="4"/>
+          </StackPanel>
+        </Border>
+      </Grid>
 
       <!-- ═══ JOB LIST ═══ -->
       <ItemsControl ItemsSource="{Binding FilteredJobs}">

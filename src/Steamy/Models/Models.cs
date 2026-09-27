@@ -135,6 +135,8 @@ public sealed class DownloadJob : UiObservableObject
     private string _diskSpeed = string.Empty;
     private string _eta = string.Empty;
     private string _currentFile = string.Empty;
+    private double _bytesPerSecond;
+    private double? _etaSeconds;
     private string _processLog = string.Empty;
     private int? _exitCode;
     private int? _depotId;
@@ -223,6 +225,28 @@ public sealed class DownloadJob : UiObservableObject
     {
         get => _currentFile;
         set => SetProperty(ref _currentFile, value);
+    }
+
+    /// <summary>Measured data rate of this job; 0 when idle.</summary>
+    public double BytesPerSecond
+    {
+        get => _bytesPerSecond;
+        set => SetProperty(ref _bytesPerSecond, value);
+    }
+
+    public double? EtaSeconds
+    {
+        get => _etaSeconds;
+        set => SetProperty(ref _etaSeconds, value);
+    }
+
+    public void ClearLiveStats()
+    {
+        Speed = string.Empty;
+        DiskSpeed = string.Empty;
+        Eta = string.Empty;
+        BytesPerSecond = 0;
+        EtaSeconds = null;
     }
 
     public string ProcessLog

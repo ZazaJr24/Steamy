@@ -38,7 +38,88 @@ public sealed class DownloadsViewModel : ViewModelBase
         _manager=m; _ryuu=ryuu; _settings=settings; Settings=settings.Load(); Jobs=s.Downloads;
         foreach (var job in Jobs) job.PropertyChanged += OnJobPropertyChanged;
         Jobs.CollectionChanged += OnJobsChanged;
+        _liveTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(500) };
+        _liveTimer.Tick += (_, _) => UpdateLiveStats();
         RefreshFilter();
+    }
+
+    private const double SparklineWidth = 200;
+    private const double SparklineHeight = 40;
+    private readonly NetworkThroughputSampler _network = new();
+    private readonly DispatcherTimer _liveTimer;
+
+    public string InternetSpeedLabel { get; private set; } = "—";
+    public string InternetPeakLabel { get; private set; } = string.Empty;
+    public System.Windows.Media.PointCollection InternetSparkline { get; private set; } = new();
+    public System.Windows.Media.PointCollection InternetSparklineArea { get; private set; } = new();
+    public string JobsSpeedLabel { get; private set; } = "—";
+    public string OverallEtaLabel { get; private set; } = "—";
+    public string OverallEtaHint { get; private set; } = string.Empty;
+    public double ActiveProgress { get; private set; }
+    public string ActiveProgressLabel { get; private set; } = "—";
+
+    /// <summary>Samples twice per second while the Downloads page is visible.</summary>
+    public void StartLiveStats()
+    {
+        UpdateLiveStats();
+        _liveTimer.Start();
+    }
+
+    public void StopLiveStats() => _liveTimer.Stop();
+
+    private void UpdateLiveStats()
+    {
+        _network.Sample();
+        var active = Jobs.Where(job => job.IsActive).ToList();
+
+        InternetSpeedLabel = DownloadFormat.Speed(_network.BytesPerSecond);
+        InternetPeakLabel = _network.PeakBytesPerSecond > 0 ? $"Peak {DownloadFormat.Speed(_network.PeakBytesPerSecond)}" : string.Empty;
+        (InternetSparkline, InternetSparklineArea) = BuildSparkline(_network.History, _network.HistoryLength);
+
+        var jobRate = active.Sum(job => job.BytesPerSecond);
+        JobsSpeedLabel = active.Count == 0 ? "Idle" : DownloadFormat.Speed(jobRate);
+
+        var longestEta = active.Where(job => job.EtaSeconds is not null).Select(job => job.EtaSeconds!.Value).DefaultIfEmpty(-1).Max();
+        OverallEtaLabel = active.Count == 0 ? "—" : longestEta >= 0 ? DownloadFormat.Duration(longestEta) : "Estimating…";
+        OverallEtaHint = active.Count == 0 ? "No active downloads"
+            : longestEta >= 0 ? $"Finishes around {DateTime.Now.AddSeconds(longestEta):HH:mm}" : "Waiting for the first files";
+
+        ActiveProgress = active.Count == 0 ? 0 : active.Average(job => job.Progress);
+        ActiveProgressLabel = active.Count == 0 ? "—" : $"{ActiveProgress:0.0}%";
+
+        foreach (var name in LiveStatNames) OnPropertyChanged(name);
+    }
+
+    private static readonly string[] LiveStatNames =
+    {
+        nameof(InternetSpeedLabel), nameof(InternetPeakLabel), nameof(InternetSparkline), nameof(InternetSparklineArea),
+        nameof(JobsSpeedLabel), nameof(OverallEtaLabel), nameof(OverallEtaHint), nameof(ActiveProgress), nameof(ActiveProgressLabel)
+    };
+
+    private static (System.Windows.Media.PointCollection Line, System.Windows.Media.PointCollection Area) BuildSparkline(IReadOnlyCollection<double> values, int capacity)
+    {
+        var line = new System.Windows.Media.PointCollection();
+        var area = new System.Windows.Media.PointCollection();
+        if (values.Count >= 2)
+        {
+            // A floor keeps an idle connection flat instead of amplifying noise to full height.
+            var max = Math.Max(values.Max() * 1.15, 256 * 1024);
+            var step = SparklineWidth / Math.Max(capacity - 1, 1);
+            var x = SparklineWidth - (values.Count - 1) * step;
+            area.Add(new Point(x, SparklineHeight));
+            foreach (var value in values)
+            {
+                var point = new Point(x, SparklineHeight - value / max * (SparklineHeight - 2) - 1);
+                line.Add(point);
+                area.Add(point);
+                x += step;
+            }
+            area.Add(new Point(SparklineWidth, SparklineHeight));
+        }
+
+        line.Freeze();
+        area.Freeze();
+        return (line, area);
     }
     private void OnJobsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
@@ -110,8 +191,7 @@ public sealed class DownloadsViewModel : ViewModelBase
             var result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress));
             job.State = result.Succeeded ? DownloadJobState.Completed : DownloadJobState.Failed;
             job.Status = result.Message;
-            job.Speed = string.Empty;
-            job.Eta = string.Empty;
+            job.ClearLiveStats();
             job.Finished = DateTime.Now;
             if (result.Succeeded) job.Progress = 100;
         }

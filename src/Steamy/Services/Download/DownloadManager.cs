@@ -365,6 +365,8 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         if (!string.IsNullOrWhiteSpace(update.Total)) job.TotalSize = update.Total;
         if (!string.IsNullOrWhiteSpace(update.Speed)) job.Speed = update.Speed;
         if (!string.IsNullOrWhiteSpace(update.Eta)) job.Eta = update.Eta;
+        job.BytesPerSecond = update.BytesPerSecond;
+        job.EtaSeconds = update.EtaSeconds;
         if (update.DepotCount > 1) job.Status = $"Downloading depot {update.DepotIndex} of {update.DepotCount}";
     }
 
@@ -376,12 +378,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         ClearLiveStats(job);
     }
 
-    private static void ClearLiveStats(DownloadJob job)
-    {
-        job.Speed = string.Empty;
-        job.DiskSpeed = string.Empty;
-        job.Eta = string.Empty;
-    }
+    private static void ClearLiveStats(DownloadJob job) => job.ClearLiveStats();
 
     private void SetGameState(DownloadJob job, DownloadJobState state)
     {

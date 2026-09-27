@@ -312,8 +312,7 @@ public partial class LibraryPage : Page
 
             await Dispatcher.BeginInvoke(() =>
             {
-                job.Speed = string.Empty;
-                job.Eta = string.Empty;
+                job.ClearLiveStats();
                 if (result.Succeeded)
                 {
                     job.State = DownloadJobState.Completed;

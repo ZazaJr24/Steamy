@@ -171,15 +171,19 @@ public sealed class DownloadProgressTracker
 
             var total = _toolTotal;
             var eta = _toolEta;
+            double? etaSeconds = null;
             if (_bytesPerPercent is { } bytesPerPercent && bytesPerPercent > 0)
             {
                 if (total.Length == 0 && depotCount == 1) total = "~" + DownloadFormat.Bytes((long)(bytesPerPercent * 100));
-                if (eta.Length == 0 && _bytesPerSecond > 1)
+                if (_bytesPerSecond > 1)
                 {
-                    var seconds = (100 - segment) * bytesPerPercent / _bytesPerSecond;
-                    eta = depotCount > 1
-                        ? $"{DownloadFormat.Duration(seconds)} for depot {depotIndex} of {depotCount}"
-                        : $"{DownloadFormat.Duration(seconds)} left";
+                    etaSeconds = (100 - segment) * bytesPerPercent / _bytesPerSecond;
+                    if (eta.Length == 0)
+                    {
+                        eta = depotCount > 1
+                            ? $"{DownloadFormat.Duration(etaSeconds.Value)} for depot {depotIndex} of {depotCount}"
+                            : $"{DownloadFormat.Duration(etaSeconds.Value)} left";
+                    }
                 }
             }
 
@@ -195,7 +199,9 @@ public sealed class DownloadProgressTracker
                 eta,
                 rawLine,
                 depotIndex,
-                depotCount);
+                depotCount,
+                _bytesPerSecond,
+                etaSeconds);
         }
     }
 
