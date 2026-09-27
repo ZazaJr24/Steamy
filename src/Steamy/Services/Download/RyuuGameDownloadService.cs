@@ -564,7 +564,9 @@ public static class GameDownloadProgressMessage
             Clean(snapshot?.Total),
             Clean(snapshot?.Speed),
             Clean(snapshot?.Eta),
-            Clean(snapshot?.CurrentFile));
+            Clean(snapshot?.CurrentFile),
+            (snapshot?.BytesPerSecond ?? 0).ToString("0", CultureInfo.InvariantCulture),
+            snapshot?.EtaSeconds is { } eta ? eta.ToString("0", CultureInfo.InvariantCulture) : string.Empty);
 
     /// <summary>Applies a progress message to the job. Returns false for plain status text.</summary>
     public static bool TryApply(Models.DownloadJob job, string message)
@@ -586,6 +588,11 @@ public static class GameDownloadProgressMessage
         if (parts[7].Length > 0) job.Speed = parts[7];
         if (parts[8].Length > 0) job.Eta = parts[8];
         if (parts[9].Length > 0) job.CurrentFile = parts[9];
+        if (parts.Length >= 12)
+        {
+            job.BytesPerSecond = double.TryParse(parts[10], NumberStyles.Float, CultureInfo.InvariantCulture, out var rate) ? rate : 0;
+            job.EtaSeconds = double.TryParse(parts[11], NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) ? seconds : null;
+        }
         job.Status = hasDepots && count > 1 ? $"Downloading depot {index} of {count}" : "Downloading";
         return true;
     }
