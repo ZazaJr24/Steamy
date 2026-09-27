@@ -7,15 +7,7 @@ using System.Text.Json;
 
 namespace Steamy.Services;
 
-public sealed record UpdateInfo(
-    Version Version,
-    string Tag,
-    string Title,
-    string Notes,
-    Uri AssetUrl,
-    long AssetSize,
-    DateTimeOffset? PublishedAt,
-    Uri PageUrl);
+public sealed record UpdateInfo(Version Version, string Tag, Uri AssetUrl, long AssetSize);
 
 public enum UpdateStage { Downloading, Installing }
 
@@ -41,14 +33,6 @@ public interface IUpdateService
 
     /// <summary>Removes the files the previous update moved aside.</summary>
     void CleanUpPreviousInstall();
-
-    /// <summary>The release that was just installed, exactly once after the restart.</summary>
-    UpdateInfo? TakeJustInstalled();
-
-    /// <summary>Remembers a release the user does not want; newer releases are offered again.</summary>
-    void SkipVersion(Version version);
-
-    bool IsSkipped(Version version);
 }
 
 /// <summary>
@@ -86,8 +70,6 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
     }
 
     public Version CurrentVersion { get; }
-
-    private string MarkerPath => Path.Combine(_workDirectory, "installed.json");
 
     public async Task<UpdateInfo?> CheckAsync(CancellationToken cancellationToken = default)
     {
@@ -142,12 +124,8 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
             return new UpdateInfo(
                 version,
                 tag,
-                release.TryGetProperty("name", out var title) ? title.GetString() ?? tag : tag,
-                release.TryGetProperty("body", out var body) ? body.GetString() ?? string.Empty : string.Empty,
                 new Uri(asset.GetProperty("browser_download_url").GetString()!),
-                asset.GetProperty("size").GetInt64(),
-                release.TryGetProperty("published_at", out var published) && published.TryGetDateTimeOffset(out var date) ? date : null,
-                new Uri(release.GetProperty("html_url").GetString()!));
+                asset.GetProperty("size").GetInt64());
         }
 
         return null;
@@ -180,9 +158,6 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
 
             cancellationToken.ThrowIfCancellationRequested();
             ReplaceFiles(staging, _installDirectory, progress);
-
-            File.WriteAllText(MarkerPath, JsonSerializer.Serialize(new InstalledMarker(
-                update.Version.ToString(), update.Tag, update.Title, update.Notes, update.PageUrl.ToString())));
         }
         finally
         {
@@ -316,50 +291,6 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
         }
     }
 
-    public UpdateInfo? TakeJustInstalled()
-    {
-        try
-        {
-            if (!File.Exists(MarkerPath)) return null;
-            var marker = JsonSerializer.Deserialize<InstalledMarker>(File.ReadAllText(MarkerPath));
-            File.Delete(MarkerPath);
-            if (marker is null || !Version.TryParse(marker.Version, out var version) || Normalize(version) != CurrentVersion) return null;
-            return new UpdateInfo(CurrentVersion, marker.Tag, marker.Title, marker.Notes, new Uri(marker.PageUrl), 0, null, new Uri(marker.PageUrl));
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or UriFormatException)
-        {
-            return null;
-        }
-    }
-
-    private string SkipPath => Path.Combine(_workDirectory, "skipped-version.txt");
-
-    public void SkipVersion(Version version)
-    {
-        try
-        {
-            Directory.CreateDirectory(_workDirectory);
-            File.WriteAllText(SkipPath, Normalize(version).ToString());
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-        }
-    }
-
-    public bool IsSkipped(Version version)
-    {
-        try
-        {
-            return File.Exists(SkipPath)
-                   && Version.TryParse(File.ReadAllText(SkipPath).Trim(), out var skipped)
-                   && Normalize(skipped) == Normalize(version);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
     public static Version Normalize(Version version) =>
         new(Math.Max(version.Major, 0), Math.Max(version.Minor, 0), Math.Max(version.Build, 0));
 
@@ -369,8 +300,6 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }
-
-    private sealed record InstalledMarker(string Version, string Tag, string Title, string Notes, string PageUrl);
 
     public void Dispose()
     {
