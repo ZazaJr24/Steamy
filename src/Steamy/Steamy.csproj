@@ -38,14 +38,9 @@
     <None Include="Data\appid.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Data\appid.json')" />
   </ItemGroup>
 
-  <!--
-    Steamless ships inside the application: the user never has to download a tool. Only the
-    command line build and the unpacker plugins are bundled — Steamless.CLI.exe needs the
-    "Plugins" folder next to it, otherwise it cannot unpack anything. The files are shipped
-    unmodified and keep their own license (see NOTICE.md in the same folder).
-  -->
+  <!-- Only DepotDownloaderMod is bundled; all other tools are downloaded at runtime. -->
   <ItemGroup>
-    <None Include="Tools\**\*" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="Tools\DepotDownloaderMod\**\*" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
   <!-- CreamAPI replacement DLLs bundled for the DLC Unlocker (CreamAPI mode). -->

@@ -6,6 +6,11 @@ public static class ToolDefinitions
         "FroggMaster", "CreamInstaller", "CreamInstaller", "CreamInstaller.exe",
         name => name.Equals("CreamInstaller.exe", StringComparison.OrdinalIgnoreCase));
 
+    public static readonly GitHubToolDefinition Steamless = new(
+        "atom0s", "Steamless", "Steamless", "Steamless.CLI.exe",
+        name => name.Contains("Steamless", StringComparison.OrdinalIgnoreCase)
+             && name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+
     // No working GitHub repo with releases — manual browse only.
     public static readonly GitHubToolDefinition? GreenLuma2024 = null;
 

@@ -18,6 +18,7 @@ public sealed class SteamlessViewModel : ObservableObject
 {
     private readonly ISteamlessService _steamless;
     private readonly ISettingsService _settingsService;
+    private readonly IGitHubToolDownloadService? _toolDownload;
 
     private CancellationTokenSource? _runCts;
     private string _steamlessPath = string.Empty;
@@ -36,19 +37,18 @@ public sealed class SteamlessViewModel : ObservableObject
     private bool _showLog;
     private bool _showAdvanced;
 
-    public SteamlessViewModel(ISteamlessService steamless, ISettingsService settings)
+    public SteamlessViewModel(ISteamlessService steamless, ISettingsService settings, IGitHubToolDownloadService? toolDownload = null)
     {
         _steamless = steamless;
         _settingsService = settings;
+        _toolDownload = toolDownload;
         SettingsModel = settings.Load();
         _steamlessPath = SettingsModel.SteamlessExePath;
         _targetExePath = SettingsModel.SteamlessTargetExePath;
         _extraArguments = SettingsModel.SteamlessExtraArguments;
 
-        // The bundled build is ready before any check runs, so the page must never open claiming
-        // "Not configured" while a usable Steamless sits next to the application.
         _status = string.IsNullOrWhiteSpace(_steamlessPath)
-            ? (SteamlessBundle.IsAvailable ? "Bundled build ready" : "Not configured")
+            ? (SteamlessBundle.IsAvailable ? "Bundled build ready" : "Downloading Steamless…")
             : "Not checked";
 
         _lastMessage = string.IsNullOrWhiteSpace(_steamlessPath)
@@ -66,6 +66,39 @@ public sealed class SteamlessViewModel : ObservableObject
         UseBundledBuildCommand = new RelayCommand(UseBundledBuild, () => SteamlessBundle.IsAvailable);
         ToggleLogCommand = new RelayCommand(ToggleLog);
         ToggleAdvancedCommand = new RelayCommand(() => ShowAdvanced = !ShowAdvanced);
+
+        if (!SteamlessBundle.IsAvailable && string.IsNullOrWhiteSpace(_steamlessPath))
+            _ = EnsureSteamlessAsync();
+    }
+
+    private async Task EnsureSteamlessAsync()
+    {
+        if (_toolDownload is null || ToolDefinitions.Steamless is null) return;
+
+        var cached = _toolDownload.GetCachedPath(ToolDefinitions.Steamless);
+        if (cached is not null)
+        {
+            SteamlessPath = cached;
+            Status = "Ready";
+            LastMessage = "Pick the game .exe, then press Run.";
+            await PersistAsync().ConfigureAwait(false);
+            return;
+        }
+
+        Status = "Downloading Steamless…";
+        var result = await _toolDownload.DownloadLatestAsync(ToolDefinitions.Steamless).ConfigureAwait(false);
+        if (result.Succeeded && result.CachedPath is not null)
+        {
+            SteamlessPath = result.CachedPath;
+            Status = $"Steamless {result.Version} ready";
+            LastMessage = "Pick the game .exe, then press Run.";
+        }
+        else
+        {
+            Status = "Download failed";
+            LastMessage = result.Message;
+        }
+        await PersistAsync().ConfigureAwait(false);
     }
 
     public AppSettings SettingsModel { get; private set; }
