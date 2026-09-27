@@ -49,10 +49,11 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
-## ✨ What's new in 0.1.1
+## ✨ What's new in 0.1.2
 
+- **Downloads like a game launcher** — the current download in a big banner on its game art, with speed, time left and the live internet curve; "Up next" and "Recently finished" below
 - **Auto-update** — Steamy checks for a new version at startup and updates itself with one click
-- **Live download panel** — internet speed with a live graph, download rate, time left and overall progress
+- **Live stats** — internet speed with a live graph, download rate and time left
 - **Smooth progress** — downloads move in 0.1 % steps instead of jumping once per file
 - **Fresh dashboard** — calmer layout, colored quick actions, one clean side panel
 
@@ -171,7 +172,8 @@ Full-featured download manager built in.
   <img src="docs/screenshots/downloads.png" width="900" alt="Steamy downloads" />
 </p>
 
-- **Live panel** — internet speed with a 30-second graph, combined download rate, time left and overall progress
+- **Featured download** — a large banner on the game's art with progress, speed, time left, size and a 30-second internet speed graph
+- **Up next / Recently finished** — the queue and finished downloads as clean rows with game art
 - **Smooth progress** — moves in 0.1 % steps between the tool's per-file updates; several depots add up to one overall value
 - **Per download** — speed, size estimate, time left and the file being written
 - **Faster** — choose how many connections each download uses; Lancache support
