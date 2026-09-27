@@ -11,17 +11,17 @@
   <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#EAEDF1" />
   <SolidColorBrush x:Key="ControlHoverBrush" Color="#E1E5EB" />
   <SolidColorBrush x:Key="BorderSubtleBrush" Color="#D4D9E1" />
-  <SolidColorBrush x:Key="AccentBrush" Color="#5C6B84" />
-  <SolidColorBrush x:Key="AccentSoftBrush" Color="#E2E7EE" />
-  <SolidColorBrush x:Key="SuccessBrush" Color="#1C8A63" />
-  <SolidColorBrush x:Key="SuccessSoftBrush" Color="#DCF1E8" />
-  <SolidColorBrush x:Key="WarningBrush" Color="#976619" />
-  <SolidColorBrush x:Key="WarningSoftBrush" Color="#F7EFDD" />
-  <SolidColorBrush x:Key="DangerBrush" Color="#C0454C" />
-  <SolidColorBrush x:Key="DangerSoftBrush" Color="#F8E4E5" />
-  <SolidColorBrush x:Key="TextPrimaryBrush" Color="#15181D" />
-  <SolidColorBrush x:Key="TextSecondaryBrush" Color="#4D545F" />
-  <SolidColorBrush x:Key="TextTertiaryBrush" Color="#78808C" />
+  <SolidColorBrush x:Key="AccentBrush" Color="#0284C7" />
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="#E0F2FE" />
+  <SolidColorBrush x:Key="SuccessBrush" Color="#059669" />
+  <SolidColorBrush x:Key="SuccessSoftBrush" Color="#DCFCE7" />
+  <SolidColorBrush x:Key="WarningBrush" Color="#D97706" />
+  <SolidColorBrush x:Key="WarningSoftBrush" Color="#FEF3C7" />
+  <SolidColorBrush x:Key="DangerBrush" Color="#E11D48" />
+  <SolidColorBrush x:Key="DangerSoftBrush" Color="#FFE4E6" />
+  <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0F172A" />
+  <SolidColorBrush x:Key="TextSecondaryBrush" Color="#475569" />
+  <SolidColorBrush x:Key="TextTertiaryBrush" Color="#64748B" />
 
   <!-- Softly rounded Fluent controls. WPF-UI reads these theme keys for every control
        template (buttons, text boxes, combo boxes, popups, content dialogs), so overriding

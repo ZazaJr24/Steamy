@@ -3,6 +3,20 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.1.4
+
+### New
+- DLC Unlocker page completely redesigned: clean minimal two-column layout with games list and DLC checklist side by side, toolbar in the header row, no cards or borders cluttering the view
+- Denuvo Activation page redesigned: all settings in one compact card — proxy DLL dropdown, Capcom and Debug checkboxes on a single row, expandable launch script section with browse-for-exe support
+- Browse executable option added to Denuvo launch script settings
+
+### Improved
+- DLC Unlocker: removed Advanced Settings expander and all secondary options from the main view for a cleaner experience
+- DLC Unlocker: game list shows only game names, no AppID badges
+- DLC Unlocker: DLC list shows only checkbox + name, no extra metadata
+- Denuvo Activation: options use compact checkboxes instead of tall toggle-switch cards
+- Overall UI is more minimal, modern and consistent across all tool pages
+
 ## 0.1.3
 
 ### Fixed

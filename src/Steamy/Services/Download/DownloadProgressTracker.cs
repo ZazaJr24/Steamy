@@ -262,7 +262,9 @@ public sealed class DownloadProgressTracker
                 depotIndex,
                 depotCount,
                 _bytesPerSecond,
-                etaSeconds);
+                etaSeconds,
+                _lastBytes,
+                (long)((_bytesPerPercent ?? 0) * 100));
         }
     }
 

@@ -9,18 +9,18 @@
     <BooleanToVisibilityConverter x:Key="BoolVis" />
 
     <LinearGradientBrush x:Key="HeroSideShade" StartPoint="0,0" EndPoint="1,0">
-      <GradientStop Color="#F00B0C0F" Offset="0" />
-      <GradientStop Color="#B00B0C0F" Offset="0.45" />
-      <GradientStop Color="#200B0C0F" Offset="1" />
+      <GradientStop Color="#F40A0D14" Offset="0" />
+      <GradientStop Color="#B80A0D14" Offset="0.45" />
+      <GradientStop Color="#150A0D14" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="HeroBottomShade" StartPoint="0,0" EndPoint="0,1">
-      <GradientStop Color="#000B0C0F" Offset="0.3" />
-      <GradientStop Color="#E60B0C0F" Offset="1" />
+      <GradientStop Color="#000A0D14" Offset="0.3" />
+      <GradientStop Color="#E80A0D14" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="IdleGlow" StartPoint="0,0" EndPoint="1,1">
-      <GradientStop Color="#303B82F6" Offset="0" />
-      <GradientStop Color="#16A855F7" Offset="0.55" />
-      <GradientStop Color="#00A855F7" Offset="1" />
+      <GradientStop Color="#280284C7" Offset="0" />
+      <GradientStop Color="#186366F1" Offset="0.55" />
+      <GradientStop Color="#000A0D14" Offset="1" />
     </LinearGradientBrush>
 
     <!-- Hero text on top of game art -->
@@ -44,15 +44,18 @@
       <Setter Property="Margin" Value="0,0,0,12" />
     </Style>
 
-    <!-- Queue row: borderless, lights up on hover -->
+    <!-- Queue row: crisp glass card, lights up on hover -->
     <Style x:Key="QueueRow" TargetType="Border" BasedOn="{StaticResource JobCardEntrance}">
       <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
-      <Setter Property="CornerRadius" Value="18" />
-      <Setter Property="Padding" Value="12" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="Padding" Value="14" />
       <Setter Property="Margin" Value="0,0,0,10" />
       <Style.Triggers>
         <Trigger Property="IsMouseOver" Value="True">
           <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+          <Setter Property="BorderBrush" Value="{DynamicResource ControlHoverBrush}" />
         </Trigger>
       </Style.Triggers>
     </Style>

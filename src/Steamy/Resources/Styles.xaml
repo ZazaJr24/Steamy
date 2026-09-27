@@ -169,11 +169,13 @@
   </Style>
   <!-- Bottom gradient that keeps titles readable on top of cover art -->
   <LinearGradientBrush x:Key="CoverFadeBrush" StartPoint="0,0" EndPoint="0,1">
-    <GradientStop Color="#000B0C0F" Offset="0" />
-    <GradientStop Color="#E00B0C0F" Offset="1" />
+    <GradientStop Color="#000A0D14" Offset="0" />
+    <GradientStop Color="#EE0A0D14" Offset="1" />
   </LinearGradientBrush>
   <Style x:Key="CoverBadgeStyle" TargetType="Border">
-    <Setter Property="Background" Value="#CC0B0C0F" />
+    <Setter Property="Background" Value="#EE0A0D14" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="7,3" />
   </Style>

@@ -214,32 +214,90 @@ public sealed class DownloadsViewModel : ViewModelBase
     public ICommand PauseCommand => new AsyncRelayCommand<DownloadJob>(x=>x is null?Task.CompletedTask:_manager.PauseAsync(x));
     public ICommand ResumeCommand => new AsyncRelayCommand<DownloadJob>(ResumeAsync);
     public ICommand CancelCommand => new AsyncRelayCommand<DownloadJob>(x=>x is null?Task.CompletedTask:_manager.CancelAsync(x));
-    public ICommand RetryCommand => new AsyncRelayCommand<DownloadJob>(x=>x is null?Task.CompletedTask:_manager.RetryAsync(x));
+    public ICommand RetryCommand => new AsyncRelayCommand<DownloadJob>(RetryJobAsync);
     public ICommand StartCommand => new AsyncRelayCommand<DownloadJob>(StartAsync);
     public ICommand VerifyCommand => new AsyncRelayCommand<DownloadJob>(async x=>{if(x is null)return; await _manager.VerifyAsync(x); RefreshFilter();});
     public ICommand RemoveCommand => new AsyncRelayCommand<DownloadJob>(async x=>{if(x is null)return; await _manager.ForgetAsync(x); Jobs.Remove(x);});
     public ICommand OpenFolderCommand => new RelayCommand<DownloadJob>(x=>{if(x is not null && !string.IsNullOrWhiteSpace(x.TargetFolder) && Directory.Exists(x.TargetFolder)) try{Process.Start(new ProcessStartInfo(x.TargetFolder){UseShellExecute=true});}catch{}});
     public ICommand RefreshCommand => new RelayCommand(RefreshFilter);
     public ICommand NavigateLibraryCommand => new RelayCommand(()=>Navigation.Navigate<LibraryPage>());
-    private async Task StartAsync(DownloadJob? job) { if(job is null)return; await _manager.StartAsync(job); RefreshFilter(); }
+
+    private static bool IsRyuuOrModJob(DownloadJob job)
+    {
+        var mode = job.DownloadMode ?? "";
+        if (mode.Contains("Ryuu", StringComparison.OrdinalIgnoreCase)
+            || mode.Contains("Hubcap", StringComparison.OrdinalIgnoreCase)
+            || mode.Contains("DepotDownloaderMod", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (job.DepotId is null && !string.IsNullOrWhiteSpace(job.TargetFolder))
+            return true;
+
+        return false;
+    }
+
+    private async Task StartAsync(DownloadJob? job)
+    {
+        if (job is null) return;
+        if (IsRyuuOrModJob(job))
+            await ResumeAsync(job);
+        else
+            await _manager.StartAsync(job);
+        RefreshFilter();
+    }
+
+    private async Task RetryJobAsync(DownloadJob? job)
+    {
+        if (job is null) return;
+        if (IsRyuuOrModJob(job))
+            await ResumeAsync(job);
+        else
+            await _manager.RetryAsync(job);
+        RefreshFilter();
+    }
+
     private async Task ResumeAsync(DownloadJob? job)
     {
         if (job is null) return;
-        var mode = job.DownloadMode ?? "";
-        if (mode.Contains("Ryuu", StringComparison.OrdinalIgnoreCase) || mode.Contains("Hubcap", StringComparison.OrdinalIgnoreCase))
+        if (IsRyuuOrModJob(job))
         {
+            if (string.IsNullOrWhiteSpace(job.DownloadMode)
+                || job.DownloadMode.Equals("DepotDownloader", StringComparison.OrdinalIgnoreCase)
+                || job.DownloadMode.Equals("Not configured", StringComparison.OrdinalIgnoreCase))
+            {
+                job.DownloadMode = "DepotDownloaderMod (Ryuu)";
+            }
+
             job.State = DownloadJobState.Preparing;
             job.Status = "Resuming — loading cached manifests";
             var progress = new Progress<string>(msg => System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
             {
                 if (!GameDownloadProgressMessage.TryApply(job, msg)) job.Status = msg;
             }));
-            var result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress));
-            job.State = result.Succeeded ? DownloadJobState.Completed : DownloadJobState.Failed;
-            job.Status = result.Message;
-            job.ClearLiveStats();
-            job.Finished = DateTime.Now;
-            if (result.Succeeded) job.Progress = 100;
+            using var cts = new CancellationTokenSource();
+            _manager.RegisterJob(job.Id, cts);
+            try
+            {
+                var result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress, cts.Token));
+                job.State = result.Succeeded ? DownloadJobState.Completed : DownloadJobState.Failed;
+                job.Status = result.Message;
+                job.ClearLiveStats();
+                job.Finished = DateTime.Now;
+                if (result.Succeeded) job.Progress = 100;
+            }
+            catch (OperationCanceledException)
+            {
+                var wasPaused = _manager.IsPauseRequested(job.Id);
+                job.State = wasPaused ? DownloadJobState.Paused : DownloadJobState.Cancelled;
+                job.Status = wasPaused ? "Paused — resume will continue from existing files" : "Download cancelled.";
+                job.ClearLiveStats();
+            }
+            finally
+            {
+                _manager.UnregisterJob(job.Id);
+                var queueStore = App.Services?.GetService(typeof(IDownloadQueueStore)) as IDownloadQueueStore;
+                if (queueStore != null) await queueStore.SaveAsync(job);
+            }
         }
         else { await _manager.StartAsync(job); }
         RefreshFilter();
