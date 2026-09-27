@@ -432,8 +432,6 @@ public sealed class LoggingNotificationService : INotificationService
     public void Show(string title, string message) =>
         _logging.Add(LogLevel.Info, "Notification", $"{title}: {message}");
 }
-public interface IUpdateService { Task<bool> CheckAsync(CancellationToken cancellationToken = default); }
-public sealed class DemoUpdateService : IUpdateService { public Task<bool> CheckAsync(CancellationToken cancellationToken = default) => Task.FromResult(false); }
 public interface ILibraryService { }
 public interface IGameMetadataService { }
 public interface ISteamAuthService { }

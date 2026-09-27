@@ -112,5 +112,10 @@
         </ui:NavigationView.FooterMenuItems>
       </ui:NavigationView>
     </Grid>
+
+    <!-- Dimmed layer for cards shown on top of the app, e.g. the update prompt -->
+    <Grid x:Name="OverlayLayer" Grid.Row="1" Visibility="Collapsed" Background="#B8050608" Opacity="0">
+      <ContentControl x:Name="OverlayHost" HorizontalAlignment="Center" VerticalAlignment="Center" Focusable="False" />
+    </Grid>
   </Grid>
 </ui:FluentWindow>
