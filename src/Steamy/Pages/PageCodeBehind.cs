@@ -38,7 +38,22 @@ public partial class DashboardPage : Page
 
 public partial class DownloadsPage : Page
 {
-    public DownloadsPage() { InitializeComponent(); DataContext = App.Services.GetRequiredService<DownloadsViewModel>(); }
+    public DownloadsPage()
+    {
+        InitializeComponent();
+        var viewModel = App.Services.GetRequiredService<DownloadsViewModel>();
+        DataContext = viewModel;
+        Loaded += (_, _) => viewModel.StartLiveStats();
+        Unloaded += (_, _) => viewModel.StopLiveStats();
+    }
+
+    // Clicking Start/Pause swaps the buttons and WPF would scroll the card into view; only
+    // keyboard navigation should move the page.
+    private void JobList_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+    {
+        if (System.Windows.Input.InputManager.Current.MostRecentInputDevice is System.Windows.Input.MouseDevice)
+            e.Handled = true;
+    }
 }
 
 public partial class DepotsPage : Page

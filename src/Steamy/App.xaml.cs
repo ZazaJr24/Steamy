@@ -58,6 +58,56 @@ public partial class App : Application
         ApplySavedBackdrop();
 
         _ = RestoreDownloadQueueAsync();
+        _ = RunStartupUpdateFlowAsync(window);
+    }
+
+    /// <summary>
+    /// Removes what the last update left behind, then asks GitHub in the background whether a newer
+    /// release exists, a moment after start so the window is responsive first.
+    /// </summary>
+    private static async Task RunStartupUpdateFlowAsync(Window window)
+    {
+        try
+        {
+            var updates = Services.GetRequiredService<IUpdateService>();
+            await Task.Run(updates.CleanUpPreviousInstall);
+
+            if (!Services.GetRequiredService<ISettingsService>().Load().AutoUpdate) return;
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            await CheckForUpdatesAsync();
+        }
+        catch (Exception exception)
+        {
+            LogException("The update check failed", exception);
+        }
+    }
+
+    /// <summary>Checks GitHub and offers a newer release. Returns a short status for the settings page.</summary>
+    public static async Task<string> CheckForUpdatesAsync()
+    {
+        var updates = Services.GetRequiredService<IUpdateService>();
+        var logging = Services.GetRequiredService<ILoggingService>();
+
+        UpdateInfo? update;
+        try
+        {
+            update = await updates.CheckAsync();
+        }
+        catch (UpdateException exception)
+        {
+            logging.Add(LogLevel.Warning, "Updater", $"Update check failed: {exception.Message}");
+            return $"Could not check for updates: {exception.Message}";
+        }
+
+        if (update is null) return $"You're up to date — version {updates.CurrentVersion}.";
+
+        logging.Add(LogLevel.Info, "Updater", $"Version {update.Version} is available (running {updates.CurrentVersion}).");
+        if (Current.MainWindow is not MainWindow main) return $"Version {update.Version} is available.";
+        var prompt = new Views.UpdatePrompt(updates, update);
+        main.ShowOverlay(prompt);
+        await prompt.Closed;
+        main.HideOverlay();
+        return $"Version {update.Version} is available.";
     }
 
     /// <summary>

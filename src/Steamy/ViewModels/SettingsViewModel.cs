@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
@@ -53,6 +54,8 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _parallelHint = string.Empty;
     private string _retryHint = string.Empty;
     private string _timeoutHint = string.Empty;
+    private string _connectionsText = string.Empty;
+    private string _connectionsHint = string.Empty;
     private bool _isBusy;
     private bool _hasUnsavedChanges;
 
@@ -82,6 +85,7 @@ public sealed class SettingsViewModel : ViewModelBase
         TestHubcapCommand = new AsyncRelayCommand(TestHubcapAsync);
         TestDnsCommand = new AsyncRelayCommand(TestDnsAsync);
         TestMirrorCommand = new AsyncRelayCommand(TestMirrorAsync);
+        CheckForUpdatesCommand = new AsyncRelayCommand(CheckForUpdatesAsync);
 
         _ = RefreshCredentialStatusAsync();
     }
@@ -248,6 +252,22 @@ public sealed class SettingsViewModel : ViewModelBase
         }
     }
 
+    public string DownloadConnectionsText
+    {
+        get => _connectionsText;
+        set
+        {
+            if (!SetProperty(ref _connectionsText, value)) return;
+            ApplyNumber(value, 1, DepotDownloaderArgumentBuilder.MaxDownloadsLimit, parsed => Settings.DownloadConnections = parsed, hint => DownloadConnectionsHint = hint, "connections");
+        }
+    }
+
+    public string DownloadConnectionsHint
+    {
+        get => _connectionsHint;
+        private set => SetProperty(ref _connectionsHint, value);
+    }
+
     public string TimeoutSecondsHint
     {
         get => _timeoutHint;
@@ -288,6 +308,23 @@ public sealed class SettingsViewModel : ViewModelBase
     public IAsyncRelayCommand TestHubcapCommand { get; }
     public IAsyncRelayCommand TestDnsCommand { get; }
     public IAsyncRelayCommand TestMirrorCommand { get; }
+    public IAsyncRelayCommand CheckForUpdatesCommand { get; }
+
+    public string AppVersionLabel =>
+        $"You're on version {App.Services.GetRequiredService<IUpdateService>().CurrentVersion}. Updates come from github.com/{GitHubUpdateService.Repository}.";
+
+    private string _updateStatus = string.Empty;
+    public string UpdateStatus
+    {
+        get => _updateStatus;
+        private set => SetProperty(ref _updateStatus, value);
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        UpdateStatus = "Checking GitHub…";
+        UpdateStatus = await App.CheckForUpdatesAsync();
+    }
 
     // ---- saving ------------------------------------------------------------------------------
 
@@ -713,7 +750,9 @@ public sealed class SettingsViewModel : ViewModelBase
         ParallelDownloadsText = Settings.ParallelDownloads.ToString(CultureInfo.InvariantCulture);
         RetryCountText = Settings.RetryCount.ToString(CultureInfo.InvariantCulture);
         TimeoutSecondsText = Settings.TimeoutSeconds.ToString(CultureInfo.InvariantCulture);
+        DownloadConnectionsText = Settings.DownloadConnections.ToString(CultureInfo.InvariantCulture);
 
+        DownloadConnectionsHint = $"1–{DepotDownloaderArgumentBuilder.MaxDownloadsLimit} connections per job (current: {Settings.DownloadConnections}).";
         ParallelDownloadsHint = $"1–16 parallel jobs (current: {Settings.ParallelDownloads}).";
         RetryCountHint = $"0–10 retries (current: {Settings.RetryCount}).";
         TimeoutSecondsHint = $"5–3600 seconds (current: {Settings.TimeoutSeconds}).";

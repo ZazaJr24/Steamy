@@ -135,13 +135,15 @@ public sealed class DownloadJob : UiObservableObject
     private string _diskSpeed = string.Empty;
     private string _eta = string.Empty;
     private string _currentFile = string.Empty;
+    private double _bytesPerSecond;
+    private double? _etaSeconds;
     private string _processLog = string.Empty;
     private int? _exitCode;
     private int? _depotId;
     private string _branch = "public";
     private string _manifestId = string.Empty;
     private bool _authorizationConfirmed;
-    private string _downloadMode = "Demo fallback";
+    private string _downloadMode = "DepotDownloader";
 
     public Guid Id { get; init; } = Guid.NewGuid();
     public int AppId { get; init; }
@@ -225,6 +227,28 @@ public sealed class DownloadJob : UiObservableObject
         set => SetProperty(ref _currentFile, value);
     }
 
+    /// <summary>Measured data rate of this job; 0 when idle.</summary>
+    public double BytesPerSecond
+    {
+        get => _bytesPerSecond;
+        set => SetProperty(ref _bytesPerSecond, value);
+    }
+
+    public double? EtaSeconds
+    {
+        get => _etaSeconds;
+        set => SetProperty(ref _etaSeconds, value);
+    }
+
+    public void ClearLiveStats()
+    {
+        Speed = string.Empty;
+        DiskSpeed = string.Empty;
+        Eta = string.Empty;
+        BytesPerSecond = 0;
+        EtaSeconds = null;
+    }
+
     public string ProcessLog
     {
         get => _processLog;
@@ -276,7 +300,7 @@ public sealed class DownloadJob : UiObservableObject
         }
     }
 
-    public string ProgressLabel => $"{Progress:0.#}%";
+    public string ProgressLabel => $"{Progress:0.0}%";
 
     public string Status
     {
@@ -497,6 +521,8 @@ public sealed class AppSettings : ObservableObject
     private string _workingDirectory = string.Empty;
     private string _downloadFolder = string.Empty;
     private int _parallelDownloads = 2;
+    private int _downloadConnections = 16;
+    private bool _useLancache;
     private int _retryCount = 3;
     private int _timeoutSeconds = 60;
     private bool _verifyAfterDownload = true;
@@ -568,6 +594,11 @@ public sealed class AppSettings : ObservableObject
     public string WorkingDirectory { get => _workingDirectory; set => SetProperty(ref _workingDirectory, value); }
     public string DownloadFolder { get => _downloadFolder; set => SetProperty(ref _downloadFolder, value); }
     public int ParallelDownloads { get => _parallelDownloads; set => SetProperty(ref _parallelDownloads, value); }
+
+    /// <summary>Concurrent chunk downloads per job, passed to DepotDownloader as <c>-max-downloads</c>.</summary>
+    public int DownloadConnections { get => _downloadConnections; set => SetProperty(ref _downloadConnections, value); }
+
+    public bool UseLancache { get => _useLancache; set => SetProperty(ref _useLancache, value); }
     public int RetryCount { get => _retryCount; set => SetProperty(ref _retryCount, value); }
     public int TimeoutSeconds { get => _timeoutSeconds; set => SetProperty(ref _timeoutSeconds, value); }
     public bool VerifyAfterDownload { get => _verifyAfterDownload; set => SetProperty(ref _verifyAfterDownload, value); }

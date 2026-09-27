@@ -43,6 +43,21 @@ Steamy replaces your folder full of scattered `.exe` files, batch scripts, and h
 
 Every tool is wired up, configured, and ready to go. No command lines. No README hunting. No "which version do I need?"
 
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" width="900" alt="Steamy dashboard" />
+</p>
+
+<br/>
+
+## ✨ What's new in 0.1.1
+
+- **Auto-update** — Steamy checks for a new version at startup and updates itself with one click
+- **Live download panel** — internet speed with a live graph, download rate, time left and overall progress
+- **Smooth progress** — downloads move in 0.1 % steps instead of jumping once per file
+- **Fresh dashboard** — calmer layout, colored quick actions, one clean side panel
+
+Full list in the [**CHANGELOG**](CHANGELOG.md).
+
 <br/>
 
 ---
@@ -152,10 +167,32 @@ Your entire Steam library in a responsive grid with cover art. Search, filter, s
 
 Full-featured download manager built in.
 
-- Pause / Resume / Cancel
-- Live speed and progress stats
-- Integrity verification
-- Open in Explorer / Remove
+<p align="center">
+  <img src="docs/screenshots/downloads.png" width="900" alt="Steamy downloads" />
+</p>
+
+- **Live panel** — internet speed with a 30-second graph, combined download rate, time left and overall progress
+- **Smooth progress** — moves in 0.1 % steps between the tool's per-file updates; several depots add up to one overall value
+- **Per download** — speed, size estimate, time left and the file being written
+- **Faster** — choose how many connections each download uses; Lancache support
+- Pause / Resume / Cancel / Retry, clear error messages, integrity check, open in Explorer
+
+<br/>
+
+---
+
+<br/>
+
+## 🔄 Auto-Update
+
+Steamy keeps itself up to date. At startup it asks GitHub for the latest release; if there is a newer one, a small card shows your **current** and the **latest version** — **Update now** downloads it, swaps the files and restarts. **Later** keeps you where you are.
+
+<p align="center">
+  <img src="docs/screenshots/update.png" width="700" alt="Steamy update card" />
+</p>
+
+- Nothing breaks if an update fails — every file is rolled back
+- **Settings › Check now** looks for updates any time; the startup check can be switched off
 
 <br/>
 
@@ -172,6 +209,8 @@ Full-featured download manager built in.
 | **Language** | Per-tool configuration |
 | **Network** | HTTP proxy support |
 | **Sources** | Multiple manifest providers |
+| **Downloads** | Parallel jobs, retries, connections per download, Lancache |
+| **Updates** | Automatic update check, Check now |
 | **Security** | DPAPI-encrypted API key storage |
 
 <br/>
@@ -201,7 +240,8 @@ Full-featured download manager built in.
 
 Grab the latest release from the [**Releases**](https://github.com/ZazaJr24/Steamy/releases) page.
 
-> **Requirements:** Windows 10/11 with .NET 8 Desktop Runtime
+> **Requirements:** Windows 10/11. Nothing else — the release ZIP brings everything it needs.
+> From version 0.1.1 on, Steamy updates itself.
 
 <br/>
 
@@ -219,6 +259,12 @@ dotnet build src/Steamy/Steamy.csproj -c Release
 
 > Output: `src/Steamy/bin/Release/net8.0-windows/Steamy.exe`
 
+**Releasing a new version**
+
+1. Add a `## x.y.z` section at the top of [`CHANGELOG.md`](CHANGELOG.md) — it becomes the release notes
+2. Set the version in `src/Steamy/Steamy.csproj`
+3. Push a tag `vx.y.z` — GitHub Actions builds the ZIP and publishes the release, and every installed Steamy offers the update
+
 <br/>
 
 ---
@@ -231,9 +277,10 @@ dotnet build src/Steamy/Steamy.csproj -c Release
 src/Steamy/
 ├── Pages/           UI pages — Dashboard, Games, Tools, Settings
 ├── ViewModels/      MVVM ViewModels
-├── Services/        Core logic — CreamAPI, Goldberg, GameLocator, ...
+├── Services/        Core logic — downloads, updater, CreamAPI, Goldberg, ...
 ├── Models/          Data models and enums
-├── Controls/        Custom controls — AdaptiveGridPanel, ...
+├── Views/           Update card
+├── Controls/        Custom controls — SmoothProgressBar, AdaptiveGridPanel, ...
 ├── Resources/       Styles, themes, bundled DLLs
 └── Tools/           Bundled Steamless CLI + plugins
 ```
@@ -259,7 +306,7 @@ src/Steamy/
 
 ## 📄 License
 
-Steamy' own code is released under the [Steamy License](LICENSE).
+Steamy's own code is released under the [Steamy License](LICENSE).
 Sharing and forking are welcome; rebranding or commercial redistribution requires permission.
 Bundled third-party components keep their own licenses and are not covered by it — see
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Both files are included in every release ZIP.
