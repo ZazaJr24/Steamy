@@ -554,7 +554,7 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
                     string.Empty);
             }
 
-            var tracker = new DownloadProgressTracker(ProcessWriteCounter.For(process));
+            var tracker = new DownloadProgressTracker(DownloadByteSource.For(process, Path.GetFullPath(request.TargetFolder)));
             using var tickerStop = new CancellationTokenSource();
             var ticker = ReportProgressAsync(tracker, progress, tickerStop.Token);
             try

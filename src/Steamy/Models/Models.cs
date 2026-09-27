@@ -143,7 +143,7 @@ public sealed class DownloadJob : UiObservableObject
     private string _branch = "public";
     private string _manifestId = string.Empty;
     private bool _authorizationConfirmed;
-    private string _downloadMode = "Demo fallback";
+    private string _downloadMode = "DepotDownloader";
 
     public Guid Id { get; init; } = Guid.NewGuid();
     public int AppId { get; init; }
