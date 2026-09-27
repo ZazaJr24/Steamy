@@ -271,6 +271,12 @@ public sealed class DownloadJob : UiObservableObject
     public string AppLabel => $"App {AppId}";
     public string DepotLabel => DepotId is null ? "App depot set" : $"Depot {DepotId}";
     public string ExitCodeLabel => ExitCode is null ? "—" : ExitCode.Value.ToString();
+    /// <summary>Wide store header art; the job's own cover when it has one.</summary>
+    public string? HeaderArtUrl => !string.IsNullOrWhiteSpace(CoverImageUrl) ? CoverImageUrl
+        : AppId > 0 ? $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{AppId}/header.jpg" : null;
+
+    /// <summary>Large library background art used for the featured download.</summary>
+    public string? HeroArtUrl => AppId > 0 ? $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{AppId}/library_hero.jpg" : null;
     public string? PortraitArtUrl => AppId > 0 ? $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{AppId}/library_600x900.jpg" : null;
     public bool IsPaused => State == DownloadJobState.Paused;
     public bool IsTerminal => State is DownloadJobState.Completed or DownloadJobState.Failed or DownloadJobState.Cancelled;
