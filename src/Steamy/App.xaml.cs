@@ -62,8 +62,8 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// After an update, shows once what changed. Otherwise asks GitHub in the background whether a
-    /// newer release exists, a moment after start so the window is responsive first.
+    /// Removes what the last update left behind, then asks GitHub in the background whether a newer
+    /// release exists, a moment after start so the window is responsive first.
     /// </summary>
     private static async Task RunStartupUpdateFlowAsync(Window window)
     {
@@ -72,17 +72,9 @@ public partial class App : Application
             var updates = Services.GetRequiredService<IUpdateService>();
             await Task.Run(updates.CleanUpPreviousInstall);
 
-            var installed = updates.TakeJustInstalled();
-            if (installed is not null)
-            {
-                await window.Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-                Views.UpdateWindow.ShowWhatsNew(window, updates, installed);
-                return;
-            }
-
             if (!Services.GetRequiredService<ISettingsService>().Load().AutoUpdate) return;
             await Task.Delay(TimeSpan.FromSeconds(2));
-            await CheckForUpdatesAsync(userInitiated: false);
+            await CheckForUpdatesAsync();
         }
         catch (Exception exception)
         {
@@ -91,7 +83,7 @@ public partial class App : Application
     }
 
     /// <summary>Checks GitHub and offers a newer release. Returns a short status for the settings page.</summary>
-    public static async Task<string> CheckForUpdatesAsync(bool userInitiated)
+    public static async Task<string> CheckForUpdatesAsync()
     {
         var updates = Services.GetRequiredService<IUpdateService>();
         var logging = Services.GetRequiredService<ILoggingService>();
@@ -108,16 +100,14 @@ public partial class App : Application
         }
 
         if (update is null) return $"You're up to date — version {updates.CurrentVersion}.";
-        if (!userInitiated && updates.IsSkipped(update.Version)) return $"Version {update.Version} is skipped.";
 
         logging.Add(LogLevel.Info, "Updater", $"Version {update.Version} is available (running {updates.CurrentVersion}).");
-        var activeDownloads = Services.GetRequiredService<IAppDataStore>().Downloads.Count(job => job.IsActive);
-        var choice = Views.UpdateWindow.ShowAvailable(Current.MainWindow, updates, update, activeDownloads);
-        return choice switch
-        {
-            Views.UpdateChoice.Skip => $"Version {update.Version} will be skipped.",
-            _ => $"Version {update.Version} is available."
-        };
+        if (Current.MainWindow is not MainWindow main) return $"Version {update.Version} is available.";
+        var prompt = new Views.UpdatePrompt(updates, update);
+        main.ShowOverlay(prompt);
+        await prompt.Closed;
+        main.HideOverlay();
+        return $"Version {update.Version} is available.";
     }
 
     /// <summary>

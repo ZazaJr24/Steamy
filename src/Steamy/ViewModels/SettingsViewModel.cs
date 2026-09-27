@@ -323,7 +323,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private async Task CheckForUpdatesAsync()
     {
         UpdateStatus = "Checking GitHub…";
-        UpdateStatus = await App.CheckForUpdatesAsync(userInitiated: true);
+        UpdateStatus = await App.CheckForUpdatesAsync();
     }
 
     // ---- saving ------------------------------------------------------------------------------

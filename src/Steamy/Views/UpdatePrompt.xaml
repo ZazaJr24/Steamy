@@ -1,0 +1,110 @@
+<UserControl x:Class="Steamy.Views.UpdatePrompt"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:controls="clr-namespace:Steamy.Controls">
+  <UserControl.Resources>
+    <Style x:Key="VersionLabel" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="VersionValue" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="24" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,4,0,0" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+    </Style>
+  </UserControl.Resources>
+
+  <Border Width="420" CornerRadius="24" Padding="30,32,30,26"
+          Background="{DynamicResource SurfaceElevatedBrush}"
+          RenderTransformOrigin="0.5,0.5">
+    <Border.Effect>
+      <DropShadowEffect BlurRadius="48" ShadowDepth="12" Opacity="0.6" Color="Black" />
+    </Border.Effect>
+    <Border.RenderTransform><ScaleTransform /></Border.RenderTransform>
+    <Border.Triggers>
+      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+        <BeginStoryboard>
+          <Storyboard>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.2" />
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" From="0.94" To="1" Duration="0:0:0.28">
+              <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.35" /></DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="0.94" To="1" Duration="0:0:0.28">
+              <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.35" /></DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+          </Storyboard>
+        </BeginStoryboard>
+      </EventTrigger>
+    </Border.Triggers>
+
+    <StackPanel>
+      <!-- Glowing icon -->
+      <Grid Width="72" Height="72" HorizontalAlignment="Center">
+        <Ellipse>
+          <Ellipse.Fill>
+            <RadialGradientBrush>
+              <GradientStop Color="#448C99AE" Offset="0" />
+              <GradientStop Color="#118C99AE" Offset="0.7" />
+              <GradientStop Color="#008C99AE" Offset="1" />
+            </RadialGradientBrush>
+          </Ellipse.Fill>
+        </Ellipse>
+        <Ellipse Width="52" Height="52" Fill="{DynamicResource AccentSoftBrush}" />
+        <ui:SymbolIcon x:Name="HeaderIcon" Symbol="ArrowSync24" FontSize="26"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </Grid>
+
+      <TextBlock x:Name="TitleText" Text="Update available" FontSize="21" FontWeight="SemiBold" Margin="0,16,0,0"
+                 Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+
+      <!-- Current → Latest -->
+      <Grid Margin="0,24,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <TextBlock Text="Current version" Style="{StaticResource VersionLabel}" />
+          <TextBlock x:Name="CurrentVersionText" Style="{StaticResource VersionValue}"
+                     Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+        <ui:SymbolIcon Grid.Column="1" Symbol="ArrowRight24" FontSize="18" Margin="12,18,12,0"
+                       Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="2">
+          <TextBlock Text="Latest version" Style="{StaticResource VersionLabel}" />
+          <TextBlock x:Name="LatestVersionText" Style="{StaticResource VersionValue}"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+        </StackPanel>
+      </Grid>
+
+      <!-- Progress while updating -->
+      <StackPanel x:Name="ProgressArea" Visibility="Collapsed" Margin="0,24,0,0">
+        <controls:SmoothProgressBar x:Name="Bar" Maximum="100" Height="6" />
+        <TextBlock x:Name="StatusText" FontSize="12" Margin="0,8,0,0" HorizontalAlignment="Center"
+                   Foreground="{DynamicResource TextSecondaryBrush}" Typography.NumeralAlignment="Tabular" />
+      </StackPanel>
+
+      <TextBlock x:Name="ErrorText" Visibility="Collapsed" FontSize="12" Margin="0,18,0,0" TextWrapping="Wrap"
+                 TextAlignment="Center" Foreground="{DynamicResource DangerBrush}" />
+
+      <!-- Actions -->
+      <Grid Margin="0,28,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="10" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <ui:Button x:Name="UpdateButton" Content="Update now" Appearance="Primary" Click="Update_Click"
+                   HorizontalAlignment="Stretch" Height="42" CornerRadius="12" FontWeight="SemiBold" />
+        <ui:Button x:Name="LaterButton" Grid.Column="2" Content="Later" Appearance="Secondary" Click="Later_Click"
+                   HorizontalAlignment="Stretch" Height="42" CornerRadius="12" />
+      </Grid>
+    </StackPanel>
+  </Border>
+</UserControl>

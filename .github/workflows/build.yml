@@ -50,7 +50,7 @@ jobs:
       - name: Zip release
         run: Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ steps.ver.outputs.v }}.zip
 
-      # The in-app updater shows the release body as "What's new", so it comes from CHANGELOG.md.
+      # The release description is the CHANGELOG.md section of this version.
       - name: Release notes from CHANGELOG
         shell: pwsh
         run: |
