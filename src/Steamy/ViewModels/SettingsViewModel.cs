@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
@@ -84,6 +85,7 @@ public sealed class SettingsViewModel : ViewModelBase
         TestHubcapCommand = new AsyncRelayCommand(TestHubcapAsync);
         TestDnsCommand = new AsyncRelayCommand(TestDnsAsync);
         TestMirrorCommand = new AsyncRelayCommand(TestMirrorAsync);
+        CheckForUpdatesCommand = new AsyncRelayCommand(CheckForUpdatesAsync);
 
         _ = RefreshCredentialStatusAsync();
     }
@@ -306,6 +308,23 @@ public sealed class SettingsViewModel : ViewModelBase
     public IAsyncRelayCommand TestHubcapCommand { get; }
     public IAsyncRelayCommand TestDnsCommand { get; }
     public IAsyncRelayCommand TestMirrorCommand { get; }
+    public IAsyncRelayCommand CheckForUpdatesCommand { get; }
+
+    public string AppVersionLabel =>
+        $"You're on version {App.Services.GetRequiredService<IUpdateService>().CurrentVersion}. Updates come from github.com/{GitHubUpdateService.Repository}.";
+
+    private string _updateStatus = string.Empty;
+    public string UpdateStatus
+    {
+        get => _updateStatus;
+        private set => SetProperty(ref _updateStatus, value);
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        UpdateStatus = "Checking GitHub…";
+        UpdateStatus = await App.CheckForUpdatesAsync(userInitiated: true);
+    }
 
     // ---- saving ------------------------------------------------------------------------------
 

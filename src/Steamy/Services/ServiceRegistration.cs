@@ -47,6 +47,7 @@ public static class ServiceRegistration
         services.AddSingleton<IDepotDownloaderCheckService>(_ => new DepotDownloaderCheckService());
 
         services.AddSingleton<IGitHubToolDownloadService, GitHubToolDownloadService>();
+        services.AddSingleton<IUpdateService>(_ => new GitHubUpdateService());
 
         services.AddSingleton<DashboardViewModel>();
         services.AddSingleton<DownloadsViewModel>();
