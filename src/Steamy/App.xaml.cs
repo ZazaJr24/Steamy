@@ -58,6 +58,66 @@ public partial class App : Application
         ApplySavedBackdrop();
 
         _ = RestoreDownloadQueueAsync();
+        _ = RunStartupUpdateFlowAsync(window);
+    }
+
+    /// <summary>
+    /// After an update, shows once what changed. Otherwise asks GitHub in the background whether a
+    /// newer release exists, a moment after start so the window is responsive first.
+    /// </summary>
+    private static async Task RunStartupUpdateFlowAsync(Window window)
+    {
+        try
+        {
+            var updates = Services.GetRequiredService<IUpdateService>();
+            await Task.Run(updates.CleanUpPreviousInstall);
+
+            var installed = updates.TakeJustInstalled();
+            if (installed is not null)
+            {
+                await window.Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                Views.UpdateWindow.ShowWhatsNew(window, updates, installed);
+                return;
+            }
+
+            if (!Services.GetRequiredService<ISettingsService>().Load().AutoUpdate) return;
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            await CheckForUpdatesAsync(userInitiated: false);
+        }
+        catch (Exception exception)
+        {
+            LogException("The update check failed", exception);
+        }
+    }
+
+    /// <summary>Checks GitHub and offers a newer release. Returns a short status for the settings page.</summary>
+    public static async Task<string> CheckForUpdatesAsync(bool userInitiated)
+    {
+        var updates = Services.GetRequiredService<IUpdateService>();
+        var logging = Services.GetRequiredService<ILoggingService>();
+
+        UpdateInfo? update;
+        try
+        {
+            update = await updates.CheckAsync();
+        }
+        catch (UpdateException exception)
+        {
+            logging.Add(LogLevel.Warning, "Updater", $"Update check failed: {exception.Message}");
+            return $"Could not check for updates: {exception.Message}";
+        }
+
+        if (update is null) return $"You're up to date — version {updates.CurrentVersion}.";
+        if (!userInitiated && updates.IsSkipped(update.Version)) return $"Version {update.Version} is skipped.";
+
+        logging.Add(LogLevel.Info, "Updater", $"Version {update.Version} is available (running {updates.CurrentVersion}).");
+        var activeDownloads = Services.GetRequiredService<IAppDataStore>().Downloads.Count(job => job.IsActive);
+        var choice = Views.UpdateWindow.ShowAvailable(Current.MainWindow, updates, update, activeDownloads);
+        return choice switch
+        {
+            Views.UpdateChoice.Skip => $"Version {update.Version} will be skipped.",
+            _ => $"Version {update.Version} is available."
+        };
     }
 
     /// <summary>
