@@ -3,6 +3,11 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.1.3
+
+### Fixed
+- Goldberg: the emulator download finds the Windows build again after gbe_fork renamed its release files; if nothing matches, the message lists the release's files.
+
 ## 0.1.2
 
 ### New
