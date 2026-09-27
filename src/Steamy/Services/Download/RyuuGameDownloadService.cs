@@ -300,7 +300,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 }
 
                 var (exitCode, stdoutLines) = await RunProcessWithWatchdogAsync(
-                    process, depot.DepotId, index + 1, depots.Count, progress, cancellationToken);
+                    process, depot.DepotId, index + 1, depots.Count, Path.GetFullPath(targetFolder), progress, cancellationToken);
 
                 var totalLine = stdoutLines.LastOrDefault(l => l.StartsWith("Total downloaded:", StringComparison.Ordinal));
                 if (exitCode != 0 || (totalLine is not null && totalLine.StartsWith("Total downloaded: 0 bytes", StringComparison.Ordinal)))
@@ -339,11 +339,11 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
     private static readonly TimeSpan StallTimeout = TimeSpan.FromMinutes(3);
 
     private static async Task<(int ExitCode, List<string> StdoutLines)> RunProcessWithWatchdogAsync(
-        Process process, int depotId, int depotIndex, int totalDepots,
+        Process process, int depotId, int depotIndex, int totalDepots, string targetFolder,
         IProgress<string>? progress, CancellationToken cancellationToken)
     {
         var stdoutLines = new List<string>();
-        var tracker = new DownloadProgressTracker(ProcessWriteCounter.For(process));
+        var tracker = new DownloadProgressTracker(DownloadByteSource.For(process, targetFolder));
 
         var readStdout = Task.Run(async () =>
         {
