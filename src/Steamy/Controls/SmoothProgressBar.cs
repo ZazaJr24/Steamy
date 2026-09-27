@@ -1,17 +1,32 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Threading;
+using System.Windows.Media;
 
 namespace Steamy.Controls;
 
+/// <summary>
+/// A progress bar that glides towards <see cref="SmoothValue"/> on every rendered frame. The easing
+/// is time based, so it looks the same at any frame rate, and it never stalls on tiny steps.
+/// </summary>
 public class SmoothProgressBar : ProgressBar
 {
     public static readonly DependencyProperty SmoothValueProperty =
         DependencyProperty.Register(nameof(SmoothValue), typeof(double), typeof(SmoothProgressBar),
             new PropertyMetadata(0.0, OnSmoothValueChanged));
 
+    private const double TimeConstantSeconds = 0.3;
+    private const double MinimumSpeedPerSecond = 0.6;
+    private const double SnapDistance = 0.005;
+
     private double _target;
-    private DispatcherTimer? _timer;
+    private bool _animating;
+    private TimeSpan _lastFrame;
+
+    public SmoothProgressBar()
+    {
+        Loaded += (_, _) => Value = _target;
+        Unloaded += (_, _) => StopAnimation();
+    }
 
     public double SmoothValue
     {
@@ -22,35 +37,53 @@ public class SmoothProgressBar : ProgressBar
     private static void OnSmoothValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not SmoothProgressBar bar) return;
-        bar._target = (double)e.NewValue;
-        bar.EnsureTimer();
-    }
 
-    private void EnsureTimer()
-    {
-        if (_timer is not null) return;
-        _timer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(16) };
-        _timer.Tick += OnTick;
-        _timer.Start();
-    }
+        bar._target = Math.Clamp((double)e.NewValue, bar.Minimum, bar.Maximum);
 
-    private void OnTick(object? sender, EventArgs e)
-    {
-        var current = Value;
-        var diff = _target - current;
-
-        if (Math.Abs(diff) < 0.02)
+        // A reset (retry, new job in a recycled container) should not crawl backwards.
+        if (!bar.IsLoaded || bar._target < bar.Value - 1)
         {
-            Value = _target;
-            _timer!.Stop();
-            _timer.Tick -= OnTick;
-            _timer = null;
+            bar.StopAnimation();
+            bar.Value = bar._target;
             return;
         }
 
-        var step = Math.Max(0.03, Math.Abs(diff) * 0.06);
-        Value = diff > 0
-            ? Math.Min(current + step, _target)
-            : Math.Max(current - step, _target);
+        bar.StartAnimation();
+    }
+
+    private void StartAnimation()
+    {
+        if (_animating) return;
+        _animating = true;
+        _lastFrame = TimeSpan.Zero;
+        CompositionTarget.Rendering += OnRendering;
+    }
+
+    private void StopAnimation()
+    {
+        if (!_animating) return;
+        _animating = false;
+        CompositionTarget.Rendering -= OnRendering;
+    }
+
+    private void OnRendering(object? sender, EventArgs e)
+    {
+        var frameTime = e is RenderingEventArgs rendering ? rendering.RenderingTime : TimeSpan.Zero;
+        if (frameTime == _lastFrame) return;
+
+        var elapsed = _lastFrame == TimeSpan.Zero ? 1 / 60.0 : Math.Min((frameTime - _lastFrame).TotalSeconds, 0.1);
+        _lastFrame = frameTime;
+
+        var difference = _target - Value;
+        if (Math.Abs(difference) <= SnapDistance)
+        {
+            Value = _target;
+            StopAnimation();
+            return;
+        }
+
+        var eased = Math.Abs(difference) * (1 - Math.Exp(-elapsed / TimeConstantSeconds));
+        var step = Math.Min(Math.Abs(difference), Math.Max(eased, MinimumSpeedPerSecond * elapsed));
+        Value += Math.Sign(difference) * step;
     }
 }

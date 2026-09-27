@@ -322,6 +322,26 @@
             <Run Text="{Binding TimeoutSecondsHint, Mode=OneWay}" />
           </TextBlock>
 
+          <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="110" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Connections per download" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="How many chunks each job fetches from Steam's CDN servers at the same time (-max-downloads). More connections usually mean higher speed on fast lines; lower it if your connection or disk struggles." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding DownloadConnectionsText, UpdateSourceTrigger=PropertyChanged}"
+                        LostFocus="NumberBox_LostFocus" ToolTip="1–128 connections" />
+          </Grid>
+          <TextBlock Text="{Binding DownloadConnectionsHint}" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,0,0,14" TextWrapping="Wrap" />
+
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Use Lancache" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Route downloads through a Lancache server on your network when one is detected (-use-lancache)." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+            <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.UseLancache}" />
+          </Grid>
+
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">

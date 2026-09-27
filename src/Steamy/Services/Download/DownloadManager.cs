@@ -18,11 +18,9 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     private readonly IDownloadQueueStore _queueStore;
     private readonly ILoggingService _logging;
     private readonly INotificationService _notifications;
-    private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _cancellations = new();        private readonly ConcurrentDictionary<Guid, bool> _pauseRequested = new();
-
-    private readonly ConcurrentDictionary<Guid, Task> _running = new();        private readonly ConcurrentDictionary<Guid, long> _lastProgressTick = new();
-
-    private const long ProgressUpdateIntervalMilliseconds = 250;
+    private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _cancellations = new();
+    private readonly ConcurrentDictionary<Guid, bool> _pauseRequested = new();
+    private readonly ConcurrentDictionary<Guid, Task> _running = new();
 
     private sealed class InlineProgress<T> : IProgress<T>
     {
@@ -118,7 +116,9 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
                 AuthorizationConfirmed = job.AuthorizationConfirmed,
                 VerifyAfterDownload = settings.VerifyAfterDownload,
                 SteamUsername = settings.SteamUsername,
-                InteractiveConsole = settings.InteractiveToolConsole
+                InteractiveConsole = settings.InteractiveToolConsole,
+                MaxDownloads = settings.DownloadConnections,
+                UseLancache = settings.UseLancache
             };
 
             var validation = DepotDownloaderArgumentBuilder.Validate(request);
@@ -195,7 +195,8 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             {
                 var detail = result.ErrorOutput is { Length: > 0 }
                     ? FirstMeaningfulLine(result.ErrorOutput)
-                    : $"exit code {result.ExitCode?.ToString() ?? "unknown"}";
+                    : DepotDownloaderOutputParser.ExtractFailureReason(result.Output)
+                      ?? $"exit code {result.ExitCode?.ToString() ?? "unknown"}";
                 SetFailure(job, $"DepotDownloader failed: {detail}. No completed download was reported.");
                 _logging.Add(LogLevel.Error, "DownloadManager", $"DepotDownloader failed ({detail}).", job.AppId, job.Id);
                 return false;
@@ -230,7 +231,6 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             _cancellations.TryRemove(job.Id, out _);
             _pauseRequested.TryRemove(job.Id, out _);
             _running.TryRemove(job.Id, out _);
-            _lastProgressTick.TryRemove(job.Id, out _);
             await _queueStore.SaveAsync(job).ConfigureAwait(false);
             linked.Dispose();
         }
@@ -355,26 +355,17 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     private static string QuoteArgument(string argument) =>
         argument.Any(char.IsWhiteSpace) ? $"\"{argument}\"" : argument;
 
-    private void ApplyProgress(DownloadJob job, DepotDownloaderProgress update)
+    // Updates arrive on a fixed 100 ms cadence from the tool adapter, so nothing is throttled or dropped here.
+    private static void ApplyProgress(DownloadJob job, DepotDownloaderProgress update)
     {
-        var fileChanged = !string.IsNullOrWhiteSpace(update.CurrentFile)
-            && !string.Equals(job.CurrentFile, update.CurrentFile, StringComparison.Ordinal);
-        if (fileChanged) job.CurrentFile = update.CurrentFile;
-
-        var now = Environment.TickCount64;
-        var shouldApply = _lastProgressTick.AddOrUpdate(
-            job.Id,
-            now - ProgressUpdateIntervalMilliseconds,
-            (_, last) => now - last >= ProgressUpdateIntervalMilliseconds ? now : last) == now;
-
-        if (!shouldApply) return;
-
+        if (!string.IsNullOrWhiteSpace(update.CurrentFile)) job.CurrentFile = update.CurrentFile;
         if (!string.IsNullOrWhiteSpace(update.RawLine)) job.AppendLog(update.RawLine);
         if (update.Percent is not null) job.Progress = update.Percent.Value;
         if (!string.IsNullOrWhiteSpace(update.Downloaded)) job.Downloaded = update.Downloaded;
         if (!string.IsNullOrWhiteSpace(update.Total)) job.TotalSize = update.Total;
         if (!string.IsNullOrWhiteSpace(update.Speed)) job.Speed = update.Speed;
         if (!string.IsNullOrWhiteSpace(update.Eta)) job.Eta = update.Eta;
+        if (update.DepotCount > 1) job.Status = $"Downloading depot {update.DepotIndex} of {update.DepotCount}";
     }
 
     private void SetFailure(DownloadJob job, string status)
