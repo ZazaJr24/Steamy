@@ -409,10 +409,16 @@
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Automatic update checks" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Check only for updates to this application." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              <TextBlock Text="Automatic updates" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="At startup Steamy looks for a new version on GitHub, shows what's new and installs it with one click." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding AppVersionLabel, Mode=OneWay}" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding UpdateStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="11.5" Margin="0,4,0,0" TextWrapping="Wrap" />
             </StackPanel>
-            <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.AutoUpdate}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <ui:Button Content="Check now" Icon="{ui:SymbolIcon ArrowSync24}" Appearance="Secondary"
+                         Command="{Binding CheckForUpdatesCommand}" Margin="0,0,12,0" />
+              <ui:ToggleSwitch IsChecked="{Binding Settings.AutoUpdate}" />
+            </StackPanel>
           </Grid>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
