@@ -155,18 +155,41 @@ public sealed class JsonSettingsService : ISettingsService
 
     public AppSettings Load()
     {
+        AppSettings? settings = null;
         try
         {
             if (File.Exists(_path))
             {
-                var settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(
+                settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(
                     File.ReadAllText(_path),
                     new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (settings is not null) return settings;
             }
         }
         catch { }
-        return new AppSettings();
+        settings ??= new AppSettings();
+
+        // Auto-detect DepotDownloader from application's Tools folder
+        if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath) || !File.Exists(settings.DepotDownloaderPath))
+        {
+            var baseTools = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools");
+            var candidate = Path.Combine(baseTools, "DepotDownloader", "DepotDownloader.exe");
+            if (File.Exists(candidate))
+            {
+                settings.DepotDownloaderPath = candidate;
+            }
+            else
+            {
+                var modCandidate = Directory.Exists(Path.Combine(baseTools, "DepotDownloaderMod"))
+                    ? Directory.GetFiles(Path.Combine(baseTools, "DepotDownloaderMod"), "DepotDownloader*.exe", SearchOption.AllDirectories).FirstOrDefault()
+                    : null;
+                if (modCandidate is not null && File.Exists(modCandidate))
+                {
+                    settings.DepotDownloaderPath = modCandidate;
+                }
+            }
+        }
+
+        return settings;
     }
 
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
@@ -323,12 +346,20 @@ public interface IDownloadManager
 
     /// <summary>Removes the job from the stored queue. Local files are never touched.</summary>
     Task ForgetAsync(DownloadJob job, CancellationToken cancellationToken = default);
+
+    void RegisterJob(Guid jobId, CancellationTokenSource cancellationTokenSource);
+    void UnregisterJob(Guid jobId);
+    bool IsPauseRequested(Guid jobId);
 }
 
 public sealed class DemoDownloadManager : IDownloadManager
 {
     private readonly ILoggingService _logging;
     public DemoDownloadManager(ILoggingService logging) => _logging = logging;
+
+    public void RegisterJob(Guid jobId, CancellationTokenSource cancellationTokenSource) { }
+    public void UnregisterJob(Guid jobId) { }
+    public bool IsPauseRequested(Guid jobId) => false;
 
     public async Task<bool> StartAsync(DownloadJob job, CancellationToken cancellationToken = default)
     {

@@ -1,6 +1,7 @@
 # .NET build output
 **/bin/
 **/obj/
+publish/
 
 # IDE and local tooling
 .vs/

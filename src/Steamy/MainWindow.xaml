@@ -25,14 +25,14 @@
                  Foreground="{DynamicResource TextSecondaryBrush}" />
 
     <Grid Grid.Row="1">
-      <ui:NavigationView x:Name="RootNavigation"
+        <ui:NavigationView x:Name="RootNavigation"
                         PaneDisplayMode="Left"
                         OpenPaneLength="184"
                         CompactPaneLength="52"
                         IsBackButtonVisible="Collapsed"
                         IsPaneToggleVisible="True"
                         IsFooterSeparatorVisible="True"
-                        PaneTitle="S"
+                        PaneTitle="Steamy"
                         Transition="None"
                         IsPaneOpen="True"
                         Background="{DynamicResource SidebarBackgroundBrush}">
@@ -40,23 +40,27 @@
           <Border Height="0" Visibility="Collapsed" />
         </ui:NavigationView.Header>
         <ui:NavigationView.PaneHeader>
-          <Border Margin="14,12,14,14"
+          <Border Margin="12,12,12,14"
                   Padding="10,9"
                   Background="{DynamicResource SurfaceElevatedBrush}"
                   BorderBrush="{DynamicResource BorderSubtleBrush}"
                   BorderThickness="1"
-                  CornerRadius="12">
+                  CornerRadius="14">
             <StackPanel Orientation="Horizontal">
-              <Border Width="30" Height="30" CornerRadius="9"
-                      Background="{DynamicResource AccentSoftBrush}">
-                <TextBlock Text="S" Foreground="{DynamicResource AccentBrush}"
-                           FontSize="15" FontWeight="Bold"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Border Width="34" Height="34" CornerRadius="10">
+                <Border.Background>
+                  <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#0284C7" Offset="0" />
+                    <GradientStop Color="#6366F1" Offset="1" />
+                  </LinearGradientBrush>
+                </Border.Background>
+                <ui:SymbolIcon Symbol="Games24" Foreground="White" FontSize="18"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Border>
               <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                 <TextBlock Text="Steamy" Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontSize="12.5" FontWeight="SemiBold" />
-                <TextBlock Text="Steam Modding Toolkit" Foreground="{DynamicResource TextTertiaryBrush}"
+                           FontSize="14" FontWeight="Bold" />
+                <TextBlock Text="Steam Modding Suite" Foreground="{DynamicResource TextTertiaryBrush}"
                            FontSize="10.5" Margin="0,1,0,0" />
               </StackPanel>
             </StackPanel>

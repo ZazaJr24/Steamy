@@ -69,7 +69,6 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             var settings = _settingsService.Load();
             if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath))
             {
-                job.DownloadMode = "Not configured";
                 job.AppendLog("DepotDownloader is not configured. No file was downloaded.");
                 SetFailure(job, "DepotDownloader is not configured — no file was downloaded. Select the tool under Settings › Downloads.");
                 _logging.Add(LogLevel.Warning, "DownloadManager", "Download refused: no DepotDownloader executable is configured.", job.AppId, job.Id);
@@ -78,7 +77,6 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
 
             if (!File.Exists(settings.DepotDownloaderPath))
             {
-                job.DownloadMode = "Not configured";
                 job.AppendLog($"DepotDownloader executable not found: {settings.DepotDownloaderPath}");
                 SetFailure(job, $"DepotDownloader executable not found — no file was downloaded: {settings.DepotDownloaderPath}");
                 _logging.Add(LogLevel.Error, "DownloadManager", "Download refused: the configured DepotDownloader executable does not exist.", job.AppId, job.Id);
@@ -93,7 +91,6 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
                 }
                 catch (Exception exception)
                 {
-                    job.DownloadMode = "Not configured";
                     job.AppendLog($"Target folder could not be created: {job.TargetFolder}");
                     SetFailure(job, $"Target folder is not available and could not be created: {exception.Message}");
                     _logging.Add(LogLevel.Error, "DownloadManager", "Target folder unavailable.", job.AppId, job.Id);
@@ -236,37 +233,62 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         }
     }
 
+    public void RegisterJob(Guid jobId, CancellationTokenSource cancellationTokenSource)
+    {
+        _cancellations[jobId] = cancellationTokenSource;
+        _pauseRequested.TryRemove(jobId, out _);
+    }
+
+    public void UnregisterJob(Guid jobId)
+    {
+        _cancellations.TryRemove(jobId, out _);
+        _pauseRequested.TryRemove(jobId, out _);
+    }
+
+    public bool IsPauseRequested(Guid jobId) => _pauseRequested.ContainsKey(jobId);
+
     public async Task PauseAsync(DownloadJob job, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);
+        _pauseRequested[job.Id] = true;
+        SetGameState(job, DownloadJobState.Paused);
+        job.Status = "Paused by user";
+        ClearLiveStats(job);
+
+        await _depotDownloader.StopAsync(job.Id, pause: true, cancellationToken).ConfigureAwait(false);
+
         if (_cancellations.TryGetValue(job.Id, out var cancellation))
         {
-            _pauseRequested[job.Id] = true;
-            await _depotDownloader.StopAsync(job.Id, pause: true, cancellationToken).ConfigureAwait(false);
-            cancellation.Cancel();
-            return;
+            try
+            {
+                cancellation.Cancel();
+            }
+            catch (ObjectDisposedException) { }
         }
 
-        if (!job.IsTerminal)
-        {
-            SetGameState(job, DownloadJobState.Paused);
-            job.Status = "Paused by user";
-        }
+        await _queueStore.SaveAsync(job).ConfigureAwait(false);
     }
 
     public async Task CancelAsync(DownloadJob job, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);
         _pauseRequested.TryRemove(job.Id, out _);
-        if (_cancellations.TryGetValue(job.Id, out var cancellation))
-        {
-            await _depotDownloader.StopAsync(job.Id, pause: false, cancellationToken).ConfigureAwait(false);
-            cancellation.Cancel();
-            return;
-        }
-
         SetGameState(job, DownloadJobState.Cancelled);
         job.Status = "Cancelled by user";
+        ClearLiveStats(job);
+
+        await _depotDownloader.StopAsync(job.Id, pause: false, cancellationToken).ConfigureAwait(false);
+
+        if (_cancellations.TryGetValue(job.Id, out var cancellation))
+        {
+            try
+            {
+                cancellation.Cancel();
+            }
+            catch (ObjectDisposedException) { }
+        }
+
+        await _queueStore.SaveAsync(job).ConfigureAwait(false);
     }
 
     public Task RetryAsync(DownloadJob job, CancellationToken cancellationToken = default)

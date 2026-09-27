@@ -62,7 +62,7 @@ public sealed class DenuvoGeneratorDownloadService : IDenuvoGeneratorDownloadSer
     {
         _httpClient = httpClient ?? new HttpClient();
         _ownsHttpClient = httpClient is null;
-        _httpClient.Timeout = TimeSpan.FromSeconds(120);
+        _httpClient.Timeout = TimeSpan.FromMinutes(5);
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
         {
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/0.1 (Denuvo generator downloader)");

@@ -24,7 +24,8 @@ public sealed record PersistedDownloadJob(
     DownloadPriority Priority,
     DateTime Started,
     DateTime UpdatedAt,
-    string CoverImageUrl = "");
+    string CoverImageUrl = "",
+    string DownloadMode = "DepotDownloader");
 
 public interface ILocalDatabase
 {
@@ -70,7 +71,7 @@ public sealed class SqliteLocalDatabase : ILocalDatabase
                 CREATE TABLE IF NOT EXISTS Providers (Name TEXT PRIMARY KEY, BaseUrl TEXT NOT NULL, State TEXT NOT NULL, UpdatedAt TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS Logs (Id INTEGER PRIMARY KEY AUTOINCREMENT, Timestamp TEXT NOT NULL, Level TEXT NOT NULL, Component TEXT NOT NULL, Message TEXT NOT NULL, AppId INTEGER NULL, JobId TEXT NULL);
                 CREATE TABLE IF NOT EXISTS Settings (Key TEXT PRIMARY KEY, Value TEXT NOT NULL, UpdatedAt TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS QueueJobs (Id TEXT PRIMARY KEY, AppId INTEGER NOT NULL, GameName TEXT NOT NULL, CoverColor TEXT NOT NULL, CoverGlyph TEXT NOT NULL, TargetFolder TEXT NOT NULL, DepotId INTEGER NULL, Branch TEXT NOT NULL, ManifestId TEXT NOT NULL, AuthorizationConfirmed INTEGER NOT NULL, State TEXT NOT NULL, Progress REAL NOT NULL, Status TEXT NOT NULL, TotalSize TEXT NOT NULL, Downloaded TEXT NOT NULL, Priority TEXT NOT NULL, Started TEXT NOT NULL, UpdatedAt TEXT NOT NULL, CoverImageUrl TEXT NOT NULL DEFAULT '');
+                CREATE TABLE IF NOT EXISTS QueueJobs (Id TEXT PRIMARY KEY, AppId INTEGER NOT NULL, GameName TEXT NOT NULL, CoverColor TEXT NOT NULL, CoverGlyph TEXT NOT NULL, TargetFolder TEXT NOT NULL, DepotId INTEGER NULL, Branch TEXT NOT NULL, ManifestId TEXT NOT NULL, AuthorizationConfirmed INTEGER NOT NULL, State TEXT NOT NULL, Progress REAL NOT NULL, Status TEXT NOT NULL, TotalSize TEXT NOT NULL, Downloaded TEXT NOT NULL, Priority TEXT NOT NULL, Started TEXT NOT NULL, UpdatedAt TEXT NOT NULL, CoverImageUrl TEXT NOT NULL DEFAULT '', DownloadMode TEXT NOT NULL DEFAULT 'DepotDownloader');
                 """;
             command.ExecuteNonQuery();
 
@@ -78,6 +79,11 @@ public sealed class SqliteLocalDatabase : ILocalDatabase
             using var migrate = connection.CreateCommand();
             migrate.CommandText = "ALTER TABLE QueueJobs ADD COLUMN CoverImageUrl TEXT NOT NULL DEFAULT '';";
             try { migrate.ExecuteNonQuery(); } catch (Microsoft.Data.Sqlite.SqliteException) { }
+
+            // Migrate existing databases that lack the DownloadMode column.
+            using var migrateMode = connection.CreateCommand();
+            migrateMode.CommandText = "ALTER TABLE QueueJobs ADD COLUMN DownloadMode TEXT NOT NULL DEFAULT 'DepotDownloader';";
+            try { migrateMode.ExecuteNonQuery(); } catch (Microsoft.Data.Sqlite.SqliteException) { }
 
             _initialized = true;
         }
@@ -117,9 +123,9 @@ public sealed class SqliteLocalDatabase : ILocalDatabase
         await using var connection = await OpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO QueueJobs(Id, AppId, GameName, CoverColor, CoverGlyph, TargetFolder, DepotId, Branch, ManifestId, AuthorizationConfirmed, State, Progress, Status, TotalSize, Downloaded, Priority, Started, UpdatedAt, CoverImageUrl)
-            VALUES ($id, $appid, $game, $color, $glyph, $folder, $depot, $branch, $manifest, $authorized, $state, $progress, $status, $total, $downloaded, $priority, $started, $updated, $coverurl)
-            ON CONFLICT(Id) DO UPDATE SET AppId = excluded.AppId, GameName = excluded.GameName, CoverColor = excluded.CoverColor, CoverGlyph = excluded.CoverGlyph, TargetFolder = excluded.TargetFolder, DepotId = excluded.DepotId, Branch = excluded.Branch, ManifestId = excluded.ManifestId, AuthorizationConfirmed = excluded.AuthorizationConfirmed, State = excluded.State, Progress = excluded.Progress, Status = excluded.Status, TotalSize = excluded.TotalSize, Downloaded = excluded.Downloaded, Priority = excluded.Priority, Started = excluded.Started, UpdatedAt = excluded.UpdatedAt, CoverImageUrl = excluded.CoverImageUrl;
+            INSERT INTO QueueJobs(Id, AppId, GameName, CoverColor, CoverGlyph, TargetFolder, DepotId, Branch, ManifestId, AuthorizationConfirmed, State, Progress, Status, TotalSize, Downloaded, Priority, Started, UpdatedAt, CoverImageUrl, DownloadMode)
+            VALUES ($id, $appid, $game, $color, $glyph, $folder, $depot, $branch, $manifest, $authorized, $state, $progress, $status, $total, $downloaded, $priority, $started, $updated, $coverurl, $mode)
+            ON CONFLICT(Id) DO UPDATE SET AppId = excluded.AppId, GameName = excluded.GameName, CoverColor = excluded.CoverColor, CoverGlyph = excluded.CoverGlyph, TargetFolder = excluded.TargetFolder, DepotId = excluded.DepotId, Branch = excluded.Branch, ManifestId = excluded.ManifestId, AuthorizationConfirmed = excluded.AuthorizationConfirmed, State = excluded.State, Progress = excluded.Progress, Status = excluded.Status, TotalSize = excluded.TotalSize, Downloaded = excluded.Downloaded, Priority = excluded.Priority, Started = excluded.Started, UpdatedAt = excluded.UpdatedAt, CoverImageUrl = excluded.CoverImageUrl, DownloadMode = excluded.DownloadMode;
             """;
         command.Parameters.AddWithValue("$id", job.Id.ToString());
         command.Parameters.AddWithValue("$appid", job.AppId);
@@ -140,6 +146,7 @@ public sealed class SqliteLocalDatabase : ILocalDatabase
         command.Parameters.AddWithValue("$started", job.Started.ToUniversalTime().ToString("O"));
         command.Parameters.AddWithValue("$updated", DateTimeOffset.UtcNow.ToString("O"));
         command.Parameters.AddWithValue("$coverurl", job.CoverImageUrl);
+        command.Parameters.AddWithValue("$mode", job.DownloadMode);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -168,7 +175,7 @@ public sealed class SqliteLocalDatabase : ILocalDatabase
         var jobs = new List<PersistedDownloadJob>();
         await using var connection = await OpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, AppId, GameName, CoverColor, CoverGlyph, TargetFolder, DepotId, Branch, ManifestId, AuthorizationConfirmed, State, Progress, Status, TotalSize, Downloaded, Priority, Started, UpdatedAt, CoverImageUrl FROM QueueJobs ORDER BY UpdatedAt DESC;";
+        command.CommandText = "SELECT Id, AppId, GameName, CoverColor, CoverGlyph, TargetFolder, DepotId, Branch, ManifestId, AuthorizationConfirmed, State, Progress, Status, TotalSize, Downloaded, Priority, Started, UpdatedAt, CoverImageUrl, DownloadMode FROM QueueJobs ORDER BY UpdatedAt DESC;";
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         while (await reader.ReadAsync(cancellationToken))
@@ -194,7 +201,8 @@ public sealed class SqliteLocalDatabase : ILocalDatabase
                 Enum.TryParse<DownloadPriority>(reader.GetString(15), out var priority) ? priority : DownloadPriority.Normal,
                 DateTime.TryParse(reader.GetString(16), null, System.Globalization.DateTimeStyles.RoundtripKind, out var started) ? started.ToLocalTime() : DateTime.Now,
                 DateTime.TryParse(reader.GetString(17), null, System.Globalization.DateTimeStyles.RoundtripKind, out var updated) ? updated.ToLocalTime() : DateTime.Now,
-                reader.IsDBNull(18) ? string.Empty : reader.GetString(18)));
+                reader.IsDBNull(18) ? string.Empty : reader.GetString(18),
+                reader.IsDBNull(19) ? "DepotDownloader" : reader.GetString(19)));
         }
 
         return jobs;

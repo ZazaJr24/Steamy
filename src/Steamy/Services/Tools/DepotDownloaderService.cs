@@ -65,7 +65,9 @@ public sealed record DepotDownloaderProgress(
     int DepotIndex = 0,
     int DepotCount = 0,
     double BytesPerSecond = 0,
-    double? EtaSeconds = null);
+    double? EtaSeconds = null,
+    long DownloadedBytes = 0,
+    long TotalBytes = 0);
 
 public sealed record DepotDownloaderRunResult(
     int? ExitCode,

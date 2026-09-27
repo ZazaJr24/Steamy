@@ -45,8 +45,8 @@
     </Style>
     <LinearGradientBrush x:Key="HeroBannerFade" StartPoint="0,0" EndPoint="0,1">
       <GradientStop Color="#00000000" Offset="0" />
-      <GradientStop Color="#CC0E0F12" Offset="0.6" />
-      <GradientStop Color="#F50E0F12" Offset="1" />
+      <GradientStop Color="#CC0A0D14" Offset="0.6" />
+      <GradientStop Color="#F80A0D14" Offset="1" />
     </LinearGradientBrush>
 
     <!-- Dashboard stat tile -->

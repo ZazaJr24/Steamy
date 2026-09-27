@@ -284,6 +284,10 @@ public partial class LibraryPage : Page
         OverlayStatus.Text = $"Download queued — check Downloads tab for progress.";
 
         var ryuuService = App.Services.GetRequiredService<IRyuuGameDownloadService>();
+        var downloadManager = App.Services.GetRequiredService<IDownloadManager>();
+        using var cts = new CancellationTokenSource();
+        downloadManager.RegisterJob(job.Id, cts);
+
         var source = _selectedSource;
         var progress = new Progress<string>(msg => Dispatcher.BeginInvoke(() =>
         {
@@ -298,7 +302,7 @@ public partial class LibraryPage : Page
         {
             var archivePath = _customArchivePath;
             var result = await Task.Run(() =>
-                ryuuService.DownloadGameAsync(item.AppId, targetFolder, source, progress));
+                ryuuService.DownloadGameAsync(item.AppId, targetFolder, source, progress, cts.Token));
 
             if (result.Succeeded && !string.IsNullOrEmpty(archivePath) && File.Exists(archivePath))
             {
@@ -339,12 +343,14 @@ public partial class LibraryPage : Page
         }
         catch (OperationCanceledException)
         {
-            job.State = DownloadJobState.Cancelled;
-            job.Status = "Download cancelled.";
+            var wasPaused = downloadManager.IsPauseRequested(job.Id);
+            job.State = wasPaused ? DownloadJobState.Paused : DownloadJobState.Cancelled;
+            job.Status = wasPaused ? "Paused — resume will continue from existing files" : "Download cancelled.";
+            job.ClearLiveStats();
             if (_selectedItem == item)
             {
-                OverlayStatus.Text = "Download cancelled.";
-                StartButton.Content = "Start download";
+                OverlayStatus.Text = job.Status;
+                StartButton.Content = wasPaused ? "Resume download" : "Start download";
                 StartButton.IsEnabled = true;
             }
         }
@@ -360,8 +366,11 @@ public partial class LibraryPage : Page
                 StartButton.IsEnabled = true;
             }
         }
-
-        await queueStore.SaveAsync(job);
+        finally
+        {
+            downloadManager.UnregisterJob(job.Id);
+            await queueStore.SaveAsync(job);
+        }
     }
 
     private static string SanitizeFolderName(string name)

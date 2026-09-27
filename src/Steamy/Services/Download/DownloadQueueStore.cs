@@ -104,7 +104,8 @@ public sealed class DownloadQueueStore : IDownloadQueueStore
             TotalSize = row.TotalSize,
             Started = row.Started,
             Priority = row.Priority,
-            Downloaded = row.Downloaded
+            Downloaded = row.Downloaded,
+            DownloadMode = row.DownloadMode
         };
 
         if (!Enum.TryParse<DownloadJobState>(row.State, out var state)) state = DownloadJobState.Queued;
@@ -148,6 +149,7 @@ public sealed class DownloadQueueStore : IDownloadQueueStore
             job.Priority,
             job.Started,
             DateTime.Now,
-            job.CoverImageUrl);
+            job.CoverImageUrl,
+            job.DownloadMode);
     }
 }
