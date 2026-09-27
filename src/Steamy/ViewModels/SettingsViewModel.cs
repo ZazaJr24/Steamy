@@ -53,6 +53,8 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _parallelHint = string.Empty;
     private string _retryHint = string.Empty;
     private string _timeoutHint = string.Empty;
+    private string _connectionsText = string.Empty;
+    private string _connectionsHint = string.Empty;
     private bool _isBusy;
     private bool _hasUnsavedChanges;
 
@@ -246,6 +248,22 @@ public sealed class SettingsViewModel : ViewModelBase
             if (!SetProperty(ref _timeoutText, value)) return;
             ApplyNumber(value, 5, 3600, parsed => Settings.TimeoutSeconds = parsed, hint => TimeoutSecondsHint = hint, "seconds");
         }
+    }
+
+    public string DownloadConnectionsText
+    {
+        get => _connectionsText;
+        set
+        {
+            if (!SetProperty(ref _connectionsText, value)) return;
+            ApplyNumber(value, 1, DepotDownloaderArgumentBuilder.MaxDownloadsLimit, parsed => Settings.DownloadConnections = parsed, hint => DownloadConnectionsHint = hint, "connections");
+        }
+    }
+
+    public string DownloadConnectionsHint
+    {
+        get => _connectionsHint;
+        private set => SetProperty(ref _connectionsHint, value);
     }
 
     public string TimeoutSecondsHint
@@ -713,7 +731,9 @@ public sealed class SettingsViewModel : ViewModelBase
         ParallelDownloadsText = Settings.ParallelDownloads.ToString(CultureInfo.InvariantCulture);
         RetryCountText = Settings.RetryCount.ToString(CultureInfo.InvariantCulture);
         TimeoutSecondsText = Settings.TimeoutSeconds.ToString(CultureInfo.InvariantCulture);
+        DownloadConnectionsText = Settings.DownloadConnections.ToString(CultureInfo.InvariantCulture);
 
+        DownloadConnectionsHint = $"1–{DepotDownloaderArgumentBuilder.MaxDownloadsLimit} connections per job (current: {Settings.DownloadConnections}).";
         ParallelDownloadsHint = $"1–16 parallel jobs (current: {Settings.ParallelDownloads}).";
         RetryCountHint = $"0–10 retries (current: {Settings.RetryCount}).";
         TimeoutSecondsHint = $"5–3600 seconds (current: {Settings.TimeoutSeconds}).";

@@ -450,9 +450,47 @@
     </Style>
     <Style x:Key="JobProgressBar" TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
       <Style.Triggers>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Preparing}"><Setter Property="IsIndeterminate" Value="True" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Verifying}"><Setter Property="IsIndeterminate" Value="True" /></DataTrigger>
         <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Completed}"><Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" /></DataTrigger>
         <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Failed}"><Setter Property="Foreground" Value="{DynamicResource DangerBrush}" /></DataTrigger>
         <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Paused}"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <!-- Thin state-coloured stripe on the left edge of a job card -->
+    <Style x:Key="JobStateStripe" TargetType="Border">
+      <Setter Property="Width" Value="3" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Completed}"><Setter Property="Background" Value="{DynamicResource SuccessBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Failed}"><Setter Property="Background" Value="{DynamicResource DangerBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Paused}"><Setter Property="Background" Value="{DynamicResource WarningBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Cancelled}"><Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" /></DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Queued}"><Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <!-- Fixed-width digits so a changing percentage or speed does not make the text wobble -->
+    <Style x:Key="JobNumberText" TargetType="TextBlock">
+      <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- Soft fade + rise when a job card appears -->
+    <Style x:Key="JobCardEntrance" TargetType="FrameworkElement">
+      <Setter Property="RenderTransform"><Setter.Value><TranslateTransform Y="0" /></Setter.Value></Setter>
+      <Style.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.28" />
+              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="8" To="0" Duration="0:0:0.32">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
       </Style.Triggers>
     </Style>
     <!-- Stats row only while a job is actively downloading -->
