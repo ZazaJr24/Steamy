@@ -41,6 +41,7 @@ jobs:
             -r win-x64 `
             --self-contained `
             -p:PublishSingleFile=true `
+            -p:EnableCompressionInSingleFile=true `
             -p:Version=${{ steps.ver.outputs.v }} `
             -o publish
 
