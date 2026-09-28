@@ -41,7 +41,10 @@ public sealed class HubcapCatalogService : IHubcapCatalogService, IDisposable
         if (!forceRefresh && cached.Count > 0 && DateTimeOffset.UtcNow - cachedAt < CacheLifetime)
             return new SteamCatalogSnapshot(true, cached, cachedAt, true, $"Loaded {cached.Count:N0} Hubcap games from cache.");
 
-        var key = await _credentials.ReadAsync("hubcap-api-key");
+        string? key = null;
+        try { key = await _credentials.ReadAsync("hubcap-api-key"); } catch { }
+        if (string.IsNullOrWhiteSpace(key))
+            key = _settings.Load().HubcapApiKey;
         if (string.IsNullOrWhiteSpace(key))
         {
             if (cached.Count > 0)

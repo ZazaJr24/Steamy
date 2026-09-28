@@ -500,10 +500,12 @@ public sealed class FamilyShareViewModel : ViewModelBase
 
     private async Task<bool> SearchHubcapAsync(string query, CancellationToken ct)
     {
-        var key = await _credentials.ReadAsync("hubcap-api-key");
-        if (string.IsNullOrWhiteSpace(key)) return false;
-
+        string? key = null;
+        try { key = await _credentials.ReadAsync("hubcap-api-key"); } catch { }
         var appSettings = _settings.Load();
+        if (string.IsNullOrWhiteSpace(key))
+            key = appSettings.HubcapApiKey;
+        if (string.IsNullOrWhiteSpace(key)) return false;
         var baseUrl = appSettings.HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";
         var url = $"{baseUrl}/api/v1/search?q={Uri.EscapeDataString(query)}&limit=10";
 

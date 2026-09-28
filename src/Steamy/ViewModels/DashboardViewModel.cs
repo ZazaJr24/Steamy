@@ -224,6 +224,20 @@ public sealed class DashboardViewModel : ViewModelBase
 
     public bool IsStorageLow => _storageTotal > 0 && _storageFree < _storageTotal * 0.1;
 
+    // ---- SteamMidra-style system info ---------------------------------------------------------------
+
+    public string SteamPath => _scan is { Succeeded: true, SteamRoot.Length: > 0 } scan ? scan.SteamRoot : "Not configured";
+    public string LibraryFolderCountLabel => (_scan?.LibraryFolders.Count ?? 0).ToString();
+    public string DetectedAppCountLabel => (_scan?.Apps.Count ?? 0).ToString();
+    public string TotalGameSize => ByteSize.Format(Store.Games.Sum(g => Math.Max(0, g.SizeOnDiskBytes)));
+    public string DepotToolVersionLabel => _depotStatus is { IsReady: true } status
+        ? (string.IsNullOrWhiteSpace(status.Version) || status.Version == "unknown" ? "Ready" : $"v{status.Version}")
+        : "Not configured";
+    public bool IsDepotReady => _depotStatus?.IsReady == true;
+    public string LastScanLabel => _lastRefresh == DateTime.MinValue
+        ? "Never"
+        : _lastRefresh.ToLocalTime().ToString("HH:mm");
+
     // ---- lists ----------------------------------------------------------------------------------
 
     public bool HasRecentGames => RecentGames.Count > 0;
@@ -259,6 +273,8 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand NavigateSteamlessCommand => new RelayCommand(() => Navigation.Navigate<SteamlessPage>());
     public ICommand NavigateDenuvoActivationCommand => new RelayCommand(() => Navigation.Navigate<DenuvoActivationPage>());
     public ICommand NavigateDepotDownloaderCommand => new RelayCommand(() => Navigation.Navigate<DepotDownloaderPage>());
+    public ICommand NavigateFamilyShareCommand => new RelayCommand(() => Navigation.Navigate<FamilySharePage>());
+    public ICommand OpenManifestFolderCommand => new RelayCommand(OpenManifestFolder);
 
     public override Task OnNavigatedToAsync() => RefreshAsync(force: false);
 
@@ -284,6 +300,9 @@ public sealed class DashboardViewModel : ViewModelBase
         {
             IsRefreshing = false;
             OnPropertyChanged(nameof(Greeting));
+            OnPropertyChanged(nameof(DepotToolVersionLabel));
+            OnPropertyChanged(nameof(IsDepotReady));
+            OnPropertyChanged(nameof(LastScanLabel));
         }
     }
 
@@ -310,6 +329,10 @@ public sealed class DashboardViewModel : ViewModelBase
         OnPropertyChanged(nameof(InstalledCount));
         OnPropertyChanged(nameof(InstalledSummary));
         OnPropertyChanged(nameof(HeaderSummary));
+        OnPropertyChanged(nameof(SteamPath));
+        OnPropertyChanged(nameof(LibraryFolderCountLabel));
+        OnPropertyChanged(nameof(DetectedAppCountLabel));
+        OnPropertyChanged(nameof(TotalGameSize));
     }
 
     private void RefreshDownloads()
@@ -511,6 +534,16 @@ public sealed class DashboardViewModel : ViewModelBase
     {
         if (game is null || string.IsNullOrWhiteSpace(game.InstallFolder) || !Directory.Exists(game.InstallFolder)) return;
         StartShell(game.InstallFolder);
+    }
+
+    private void OpenManifestFolder()
+    {
+        var settings = _settings.Load();
+        var folder = !string.IsNullOrWhiteSpace(settings.DownloadFolder) ? settings.DownloadFolder
+            : !string.IsNullOrWhiteSpace(settings.WorkingDirectory) ? settings.WorkingDirectory
+            : null;
+        if (folder is not null && Directory.Exists(folder))
+            StartShell(folder);
     }
 
     private void StartShell(string target)
