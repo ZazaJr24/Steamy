@@ -3,6 +3,22 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.0
+
+### New
+- DepotBox as a new manifest source (replaces Resonance)
+- Dashboard redesign with System Overview, manifest sharing and better visuals
+- Share Manifests section to help the community
+
+### Improved
+- Dashboard cards with hover animations and accent highlights
+- Download dialog is now cleaner and more minimalistic
+- API keys are stored more securely with encrypted credential fallback
+
+### Fixed
+- Hubcap downloads work again (correct endpoint)
+- Hubcap API key is now resolved properly everywhere
+
 ## 0.1.5
 
 ### Fixed
