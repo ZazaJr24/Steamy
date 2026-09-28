@@ -6,8 +6,15 @@ Add a new `## x.y.z` section at the top before tagging.
 ## 0.2.2
 
 ### Fixed
+- Hubcap works again: the Lua now comes from its own `/api/v1/lua` endpoint and the depot manifests from `/api/v1/manifest`, exactly like the Hubcap API documents it
+- Hubcap availability check no longer spends daily quota — it uses the free `/api/v1/status` endpoint instead of downloading the manifest
+- Hubcap failures show the API's own error message instead of a bare HTTP code
 - DepotBox availability check now uses the correct lightweight API endpoint instead of triggering a full file generation
+- DepotBox understands every response shape (zip archive, plain Lua, JSON with a file link or error) and sends the API key in both accepted header styles
 - HTTP timeout increased to 15 minutes to match DepotBox API recommendations
+
+### Improved
+- Hubcap game catalog loads through the free `/api/v1/library` endpoint with pagination — the complete list in a few requests
 
 ## 0.2.1
 
