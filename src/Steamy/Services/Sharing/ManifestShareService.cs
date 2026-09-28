@@ -1,6 +1,7 @@
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using Steamy.Models;
