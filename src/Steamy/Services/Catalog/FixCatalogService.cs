@@ -101,7 +101,11 @@ public sealed class FixCatalogService : IFixCatalogService, IDisposable
         if (source is null)
             return FixFeedSnapshot.Failure("The fixes source URL in Settings is not valid. Clear it to use the built-in source.");
 
-        if (!forceRefresh && TryGetCache(out var cachedAt) && DateTimeOffset.UtcNow - cachedAt < CacheLifetime)
+        if (forceRefresh)
+        {
+            try { if (File.Exists(_cachePath)) File.Delete(_cachePath); } catch { }
+        }
+        else if (TryGetCache(out var cachedAt) && DateTimeOffset.UtcNow - cachedAt < CacheLifetime)
         {
             var cached = await ReadGamesAsync(_cachePath, cancellationToken).ConfigureAwait(false);
             if (cached.Count > 0)
@@ -110,7 +114,12 @@ public sealed class FixCatalogService : IFixCatalogService, IDisposable
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, source.FeedUrl);
+            var feedUrl = forceRefresh
+                ? source.FeedUrl + (source.FeedUrl.Contains('?') ? "&" : "?") + "_t=" + DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                : source.FeedUrl;
+            using var request = new HttpRequestMessage(HttpMethod.Get, feedUrl);
+            if (forceRefresh)
+                request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
             var token = await _credentials.ReadAsync(FixSource.TokenCredentialName, cancellationToken).ConfigureAwait(false);
             if (!string.IsNullOrWhiteSpace(token))
                 request.Headers.Authorization = new AuthenticationHeaderValue("token", token);
