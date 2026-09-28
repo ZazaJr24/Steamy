@@ -3,6 +3,27 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.0
+
+### New
+- DepotBox manifest source with API key support — downloads manifests from depotbox.org
+- Dashboard: SteamMidra-style System Overview card showing Steam path, library folders, detected apps, total game size and DepotDownloader version with status indicator
+- Dashboard: Community section with manifest sharing — open your downloads folder to share manifest files with others
+- Settings: DepotBox API key section with encrypted DPAPI credential storage
+
+### Improved
+- Dashboard: stat cards with hover animations, accent borders and drop shadows
+- Dashboard: game cards scale on hover with smooth transitions
+- Download dialog: more minimalistic layout — compact source pills, no separators, streamlined custom archive picker with inline label
+- DPAPI credential fallback across all services (Hubcap, DepotBox, DenuvoActivation, FamilyShare, HubcapCatalog) — keys saved in the encrypted store are always checked first
+
+### Fixed
+- Hubcap: correct endpoint `/api/v1/manifest/{appId}` instead of the old search endpoint
+- Hubcap: availability check and catalog service now use DPAPI fallback for the API key
+
+### Removed
+- Resonance manifest source (replaced by DepotBox)
+
 ## 0.1.5
 
 ### Fixed
