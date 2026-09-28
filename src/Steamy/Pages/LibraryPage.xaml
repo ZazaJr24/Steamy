@@ -32,9 +32,9 @@
       <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="10" />
-      <Setter Property="Padding" Value="14,8" />
-      <Setter Property="Margin" Value="0,0,8,8" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="Margin" Value="0,0,6,6" />
       <Setter Property="Cursor" Value="Hand" />
     </Style>
     <Style x:Key="DialogSectionLabel" TargetType="TextBlock">
@@ -149,41 +149,52 @@
           <ItemsControl ItemsSource="{Binding PagedCatalogItems}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="176" Spacing="16" CoverRatio="1.5" FooterHeight="54" />
+                <controls:AdaptiveGridPanel MinItemWidth="176" Spacing="16" CoverRatio="1.5" FooterHeight="58" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Border x:Name="Card"
-                        CornerRadius="12"
+                        CornerRadius="14"
                         Background="{DynamicResource SurfaceElevatedBrush}"
                         BorderBrush="Transparent"
-                        BorderThickness="1"
+                        BorderThickness="1.5"
                         Cursor="Hand"
                         SnapsToDevicePixels="True"
                         MouseLeftButtonUp="GameCard_MouseLeftButtonUp"
                         Tag="{Binding}"
-                        ToolTip="{Binding Name}">
+                        ToolTip="{Binding Name}"
+                        RenderTransformOrigin="0.5,0.5">
+                  <Border.RenderTransform><ScaleTransform ScaleX="1" ScaleY="1" /></Border.RenderTransform>
                   <Grid>
                     <Grid.RowDefinitions>
                       <RowDefinition Height="*" />
-                      <RowDefinition Height="53" />
+                      <RowDefinition Height="58" />
                     </Grid.RowDefinitions>
 
                     <!-- Cover: rounded via brush instead of a clip geometry (cheaper, scales with the card) -->
-                    <Border CornerRadius="11,11,0,0" Background="#0B0C0F">
+                    <Border CornerRadius="13,13,0,0" Background="#0B0C0F">
                       <Grid>
-                        <Border CornerRadius="11,11,0,0">
+                        <Border CornerRadius="13,13,0,0">
                           <Border.Background>
                             <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
                           </Border.Background>
                         </Border>
-                        <Border CornerRadius="11,11,0,0" Background="{DynamicResource SurfaceSubtleBrush}"
+                        <Border CornerRadius="13,13,0,0" Background="{DynamicResource SurfaceSubtleBrush}"
                                 Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         <TextBlock Text="STEAM" Foreground="#3A3E47" FontSize="15" FontWeight="Bold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <Border x:Name="Shine" CornerRadius="11,11,0,0" Background="#FFFFFF" Opacity="0" />
+                        <!-- Bottom fade for text readability -->
+                        <Border CornerRadius="0,0,0,0" Height="60" VerticalAlignment="Bottom">
+                          <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                              <GradientStop Color="#00000000" Offset="0" />
+                              <GradientStop Color="#40000000" Offset="1" />
+                            </LinearGradientBrush>
+                          </Border.Background>
+                        </Border>
+                        <Border x:Name="Shine" CornerRadius="13,13,0,0" Background="#FFFFFF" Opacity="0" />
                         <Border Style="{StaticResource CoverBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
                           <TextBlock Text="{Binding TypeLabel}" Style="{StaticResource CoverBadgeTextStyle}" />
                         </Border>
@@ -199,12 +210,12 @@
                     </Border>
 
                     <!-- Footer -->
-                    <StackPanel Grid.Row="1" Margin="12,0" VerticalAlignment="Center">
+                    <StackPanel Grid.Row="1" Margin="14,0" VerticalAlignment="Center">
                       <TextBlock Text="{Binding Name}"
                                  Foreground="{DynamicResource TextPrimaryBrush}"
-                                 FontSize="12.5" FontWeight="SemiBold"
+                                 FontSize="13" FontWeight="SemiBold"
                                  TextTrimming="CharacterEllipsis" />
-                      <TextBlock Text="{Binding AppLabel}" Margin="0,3,0,0"
+                      <TextBlock Text="{Binding AppLabel}" Margin="0,4,0,0"
                                  Foreground="{DynamicResource TextTertiaryBrush}"
                                  FontSize="10.5" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
@@ -214,6 +225,27 @@
                   <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
                     <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                     <Setter TargetName="Shine" Property="Opacity" Value="0.06" />
+                    <Setter TargetName="Card" Property="Effect">
+                      <Setter.Value>
+                        <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Color="#000000" Opacity="0.35" />
+                      </Setter.Value>
+                    </Setter>
+                    <Trigger.EnterActions>
+                      <BeginStoryboard>
+                        <Storyboard>
+                          <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.03" Duration="0:0:0.15" />
+                          <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.03" Duration="0:0:0.15" />
+                        </Storyboard>
+                      </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                      <BeginStoryboard>
+                        <Storyboard>
+                          <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.2" />
+                          <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.2" />
+                        </Storyboard>
+                      </BeginStoryboard>
+                    </Trigger.ExitActions>
                   </Trigger>
                 </DataTemplate.Triggers>
               </DataTemplate>
@@ -306,30 +338,30 @@
             </StackPanel>
           </Grid>
 
-          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,18,24,6">
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,16,24,6">
             <StackPanel>
-              <!-- SOURCE -->
-              <TextBlock Text="SOURCE" Style="{StaticResource DialogSectionLabel}" />
+              <!-- Source -->
+              <TextBlock Text="Source" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,6" />
               <WrapPanel Margin="0,0,0,2">
                 <Border Style="{StaticResource HostPill}" x:Name="SourceRyuu" MouseLeftButtonUp="Source_Click" Tag="Ryuu"><TextBlock Text="Ryuu" FontSize="11" FontWeight="SemiBold" /></Border>
                 <Border Style="{StaticResource HostPill}" x:Name="SourceZaza" MouseLeftButtonUp="Source_Click" Tag="Zaza"><TextBlock Text="Zaza" FontSize="11" FontWeight="SemiBold" /></Border>
                 <Border Style="{StaticResource HostPill}" x:Name="SourceHubcap" MouseLeftButtonUp="Source_Click" Tag="Hubcap"><TextBlock Text="Hubcap" FontSize="11" FontWeight="SemiBold" /></Border>
-                <Border Style="{StaticResource HostPill}" x:Name="SourceResonance" MouseLeftButtonUp="Source_Click" Tag="Resonance" ToolTip="Check the ResonanceManifests repository for this AppID"><TextBlock Text="Resonance" FontSize="11" FontWeight="SemiBold" /></Border>
+                <Border Style="{StaticResource HostPill}" x:Name="SourceDepotBox" MouseLeftButtonUp="Source_Click" Tag="DepotBox" ToolTip="Requires API key"><TextBlock Text="DepotBox" FontSize="11" FontWeight="SemiBold" /></Border>
               </WrapPanel>
-              <TextBlock x:Name="SourceAvailabilityText" Text="" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
+              <TextBlock x:Name="SourceAvailabilityText" Text="" FontSize="10.5" Margin="0,2,0,12" TextWrapping="Wrap" />
 
-              <Separator Margin="0,8,0,16" />
-
-              <!-- DOWNLOAD LOCATION -->
-              <TextBlock Text="DOWNLOAD LOCATION" Style="{StaticResource DialogSectionLabel}" />
-              <Grid Margin="0,0,0,6">
+              <!-- Download to -->
+              <TextBlock Text="Download to" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,6" />
+              <Grid Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Border Background="{DynamicResource SurfaceBrush}"
                         BorderBrush="{DynamicResource BorderSubtleBrush}"
-                        BorderThickness="1" CornerRadius="10" Padding="12,0" MinHeight="36">
+                        BorderThickness="1" CornerRadius="10" Padding="12,0" MinHeight="34">
                   <TextBlock x:Name="DownloadPathText" Text="Select a folder…"
                              Foreground="{DynamicResource TextTertiaryBrush}"
                              FontSize="12" TextTrimming="CharacterEllipsis"
@@ -339,34 +371,28 @@
                            Margin="8,0,0,0" Click="BrowseFolderButton_Click" />
               </Grid>
 
-              <Separator Margin="0,10,0,16" />
-
-              <!-- CUSTOM ARCHIVE -->
-              <TextBlock Text="CUSTOM ARCHIVE (OPTIONAL)" Style="{StaticResource DialogSectionLabel}" />
+              <!-- Custom archive -->
               <Grid Margin="0,0,0,4">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Border Background="{DynamicResource SurfaceBrush}"
-                        BorderBrush="{DynamicResource BorderSubtleBrush}"
-                        BorderThickness="1" CornerRadius="10" Padding="12,0" MinHeight="36">
-                  <TextBlock x:Name="CustomArchiveText" Text="No archive selected"
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="Custom archive" FontSize="11" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextTertiaryBrush}" />
+                  <TextBlock x:Name="CustomArchiveText" Text="None"
                              Foreground="{DynamicResource TextTertiaryBrush}"
-                             FontSize="12" TextTrimming="CharacterEllipsis"
-                             VerticalAlignment="Center" />
-                </Border>
-                <ui:Button Grid.Column="1" Content="Browse" Appearance="Secondary"
-                           Margin="8,0,0,0" Click="BrowseArchiveButton_Click" />
+                             FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                </StackPanel>
+                <ui:Button Grid.Column="1" Content="Add" Appearance="Secondary"
+                           Margin="8,0,0,0" Click="BrowseArchiveButton_Click"
+                           ToolTip="Extract .zip / .7z / .rar after download" />
               </Grid>
-              <TextBlock Text="Extract a .zip / .7z / .rar into the download folder after the manifest download."
-                         Foreground="{DynamicResource TextTertiaryBrush}"
-                         FontSize="10" TextWrapping="Wrap" Margin="0,2,0,0" />
 
               <!-- Status -->
               <TextBlock x:Name="OverlayStatus" Text=""
                          Foreground="{DynamicResource AccentBrush}"
-                         FontSize="11.5" Margin="0,14,0,0" TextWrapping="Wrap" />
+                         FontSize="11" Margin="0,12,0,0" TextWrapping="Wrap" />
             </StackPanel>
           </ScrollViewer>
 

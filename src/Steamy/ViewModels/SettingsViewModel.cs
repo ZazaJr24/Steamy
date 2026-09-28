@@ -25,6 +25,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private const string SteamApiKeyName = "steam-api-key";
     private const string RyuuAuthKeyName = "ryuu-auth-key";
     private const string HubcapApiKeyName = "hubcap-api-key";
+    private const string DepotBoxApiKeyName = "depotbox-api-key";
     private const string MirrorTokenName = FixSource.TokenCredentialName;
 
     private readonly ISettingsService _settingsService;
@@ -38,6 +39,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _steamCredentialStatus = "Not configured";
     private string _ryuuCredentialStatus = "Not configured";
     private string _hubcapCredentialStatus = "Not configured";
+    private string _depotBoxCredentialStatus = "Not configured";
     private string _mirrorCredentialStatus = "Not configured";
     private string _mirrorTestStatus = "Not checked yet.";
     private string _steamTestStatus = "Not checked yet.";
@@ -110,6 +112,9 @@ public sealed class SettingsViewModel : ViewModelBase
     public string HubcapApiKeyInput { get; set; } = string.Empty;
 
     /// <summary>Bound to the password box; only ever written into the encrypted store.</summary>
+    public string DepotBoxApiKeyInput { get; set; } = string.Empty;
+
+    /// <summary>Bound to the password box; only ever written into the encrypted store.</summary>
     public string MirrorTokenInput { get; set; } = string.Empty;
 
     public string SteamCredentialStatus
@@ -128,6 +133,12 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         get => _hubcapCredentialStatus;
         private set => SetProperty(ref _hubcapCredentialStatus, value);
+    }
+
+    public string DepotBoxCredentialStatus
+    {
+        get => _depotBoxCredentialStatus;
+        private set => SetProperty(ref _depotBoxCredentialStatus, value);
     }
 
     public string MirrorCredentialStatus
@@ -371,7 +382,17 @@ public sealed class SettingsViewModel : ViewModelBase
 
         if (!string.IsNullOrWhiteSpace(HubcapApiKeyInput))
         {
-            await _credentials.SaveAsync(HubcapApiKeyName, HubcapApiKeyInput.Trim());
+            var trimmed = HubcapApiKeyInput.Trim();
+            try { await _credentials.SaveAsync(HubcapApiKeyName, trimmed); } catch { }
+            Settings.HubcapApiKey = trimmed;
+            storedSomething = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(DepotBoxApiKeyInput))
+        {
+            var trimmed = DepotBoxApiKeyInput.Trim();
+            try { await _credentials.SaveAsync(DepotBoxApiKeyName, trimmed); } catch { }
+            Settings.DepotBoxApiKey = trimmed;
             storedSomething = true;
         }
 
@@ -386,6 +407,7 @@ public sealed class SettingsViewModel : ViewModelBase
         SteamApiKeyInput = string.Empty;
         RyuuAuthKeyInput = string.Empty;
         HubcapApiKeyInput = string.Empty;
+        DepotBoxApiKeyInput = string.Empty;
         MirrorTokenInput = string.Empty;
         CredentialInputsCleared?.Invoke(this, EventArgs.Empty);
         await RefreshCredentialStatusAsync();
@@ -393,32 +415,41 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public async Task RefreshCredentialStatusAsync()
     {
-        var steam = await _credentials.ReadAsync(SteamApiKeyName);
-        var ryuu = await _credentials.ReadAsync(RyuuAuthKeyName);
-        var hubcap = await _credentials.ReadAsync(HubcapApiKeyName);
-        var mirror = await _credentials.ReadAsync(MirrorTokenName);
+        string? steam = null, ryuu = null, hubcap = null, depotBox = null, mirror = null;
+        try { steam = await _credentials.ReadAsync(SteamApiKeyName); } catch { }
+        try { ryuu = await _credentials.ReadAsync(RyuuAuthKeyName); } catch { }
+        try { hubcap = await _credentials.ReadAsync(HubcapApiKeyName); } catch { }
+        try { depotBox = await _credentials.ReadAsync(DepotBoxApiKeyName); } catch { }
+        try { mirror = await _credentials.ReadAsync(MirrorTokenName); } catch { }
 
         SteamCredentialStatus = DescribeCredential(steam);
         RyuuCredentialStatus = DescribeCredential(ryuu);
-        HubcapCredentialStatus = DescribeCredential(hubcap);
+        HubcapCredentialStatus = DescribeCredential(hubcap, Settings.HubcapApiKey);
+        DepotBoxCredentialStatus = DescribeCredential(depotBox, Settings.DepotBoxApiKey);
         MirrorCredentialStatus = DescribeCredential(mirror);
 
-        static string DescribeCredential(string? value)
-            => string.IsNullOrWhiteSpace(value)
-                ? "Not configured"
-                : "Stored · encrypted with DPAPI";
+        static string DescribeCredential(string? value, string? fallback = null)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                return "Stored · encrypted with DPAPI";
+            if (!string.IsNullOrWhiteSpace(fallback))
+                return "Stored · app settings fallback";
+            return "Not configured";
+        }
     }
 
     private async Task ClearCredentialsAsync()
     {
-        await _credentials.DeleteAsync(SteamApiKeyName);
-        await _credentials.DeleteAsync(RyuuAuthKeyName);
-        await _credentials.DeleteAsync(HubcapApiKeyName);
-        await _credentials.DeleteAsync(MirrorTokenName);
+        try { await _credentials.DeleteAsync(SteamApiKeyName); } catch { }
+        try { await _credentials.DeleteAsync(RyuuAuthKeyName); } catch { }
+        try { await _credentials.DeleteAsync(HubcapApiKeyName); } catch { }
+        try { await _credentials.DeleteAsync(DepotBoxApiKeyName); } catch { }
+        try { await _credentials.DeleteAsync(MirrorTokenName); } catch { }
 
         SteamApiKeyInput = string.Empty;
         RyuuAuthKeyInput = string.Empty;
         HubcapApiKeyInput = string.Empty;
+        DepotBoxApiKeyInput = string.Empty;
         MirrorTokenInput = string.Empty;
         CredentialInputsCleared?.Invoke(this, EventArgs.Empty);
 
@@ -502,7 +533,10 @@ public sealed class SettingsViewModel : ViewModelBase
         try
         {
             var baseUrl = Settings.HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";
-            var key = await _credentials.ReadAsync(HubcapApiKeyName);
+            string? key = null;
+            try { key = await _credentials.ReadAsync(HubcapApiKeyName); } catch { }
+            if (string.IsNullOrWhiteSpace(key))
+                key = Settings.HubcapApiKey;
 
             var healthResult = await _probe.ProbeAsync($"{baseUrl}/api/v1/health");
             HubcapTestStatus = $"Health: {healthResult.Message} ({healthResult.ElapsedMilliseconds} ms)";

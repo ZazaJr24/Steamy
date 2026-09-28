@@ -28,6 +28,7 @@ public partial class SettingsPage : Page
         SteamApiKeyBox.Clear();
         RyuuAuthKeyBox.Clear();
         HubcapApiKeyBox.Clear();
+        DepotBoxApiKeyBox.Clear();
         MirrorTokenBox.Clear();
     }
 
@@ -78,6 +79,12 @@ public partial class SettingsPage : Page
     {
         if (sender is PasswordBox passwordBox)
             ViewModel.HubcapApiKeyInput = passwordBox.Password;
+    }
+
+    private void DepotBoxApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox passwordBox)
+            ViewModel.DepotBoxApiKeyInput = passwordBox.Password;
     }
 
     private void MirrorTokenBox_PasswordChanged(object sender, RoutedEventArgs e)
