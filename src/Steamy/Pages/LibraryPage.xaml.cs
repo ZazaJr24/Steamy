@@ -92,6 +92,7 @@ public partial class LibraryPage : Page
         SetOptionState(SourceZaza, false);
         SetOptionState(SourceHubcap, false);
         SetOptionState(SourceResonance, false);
+        SetOptionState(SourceSteamTools, false);
         SourceAvailabilityText.Text = "";
 
         _ = CheckSourceAvailabilityAsync(ManifestSource.Ryuu, item.AppId);
@@ -129,6 +130,7 @@ public partial class LibraryPage : Page
         SetOptionState(SourceZaza, source == ManifestSource.Zaza);
         SetOptionState(SourceHubcap, source == ManifestSource.Hubcap);
         SetOptionState(SourceResonance, source == ManifestSource.Resonance);
+        SetOptionState(SourceSteamTools, source == ManifestSource.SteamTools);
         var info = App.Services.GetRequiredService<IManifestSourceService>().Sources
             .FirstOrDefault(s => s.Source == source);
         OverlayStatus.Text = info is not null ? info.Description : $"{source} selected.";

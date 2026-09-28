@@ -12,7 +12,8 @@ public enum ManifestSource
     Ryuu,
     Zaza,
     Hubcap,
-    Resonance
+    Resonance,
+    SteamTools
 }
 
 public sealed record ManifestSourceInfo(
@@ -50,6 +51,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         new(ManifestSource.Zaza, "Zaza", "ZazaJr24 Game-Files-UpdateR on GitHub", "https://raw.githubusercontent.com/ZazaJr24/Game-Files-UpdateR/main/", RequiresAuthCode: false),
         new(ManifestSource.Hubcap, "Hubcap", "Hubcap Manifest API (requires API key)", "https://hubcapmanifest.com/", RequiresAuthCode: true),
         new(ManifestSource.Resonance, "Resonance", "ResonanceManifests on GitHub", "https://raw.githubusercontent.com/Dev12434/ResonanceManifests/main/", RequiresAuthCode: false),
+        new(ManifestSource.SteamTools, "SteamTools", "SteamToolsApp manifest generator (free, no key)", "https://steamtoolsapp.com/", RequiresAuthCode: false),
     };
 
     private readonly ISettingsService _settings;
@@ -88,6 +90,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             ManifestSource.Zaza => await CheckGitHubAvailabilityAsync("ZazaJr24/Game-Files-UpdateR", appId, cancellationToken),
             ManifestSource.Resonance => await CheckGitHubAvailabilityAsync("Dev12434/ResonanceManifests", appId, cancellationToken),
             ManifestSource.Hubcap => await CheckHubcapAvailabilityAsync(appId, cancellationToken),
+            ManifestSource.SteamTools => await CheckSteamToolsAvailabilityAsync(appId, cancellationToken),
             _ => false
         };
     }
@@ -133,6 +136,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             ManifestSource.Hubcap => await DownloadFromHubcapAsync(appId, progress, cancellationToken),
             ManifestSource.Resonance => await DownloadFromGitHubAsync(
                 "Dev12434/ResonanceManifests", appId, progress, cancellationToken),
+            ManifestSource.SteamTools => await DownloadFromSteamToolsAsync(appId, progress, cancellationToken),
             _ => new ManifestDownloadResult(false, $"Unknown source: {source}")
         };
     }
@@ -374,6 +378,78 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             $"Downloaded {downloadedCount} file(s) from {sourceName} for App {appId}.", appId);
 
         return new ManifestDownloadResult(true, $"Downloaded from {sourceName}.", luaContent, appWorkDir);
+    }
+
+    private async Task<bool> CheckSteamToolsAvailabilityAsync(int appId, CancellationToken ct)
+    {
+        try
+        {
+            var appIdStr = appId.ToString(CultureInfo.InvariantCulture);
+            using var req = new HttpRequestMessage(HttpMethod.Post, "https://steamtoolsapp.com/api/generate");
+            req.Content = new StringContent(
+                $"{{\"appId\":\"{appIdStr}\",\"branch\":\"public\"}}",
+                System.Text.Encoding.UTF8, "application/json");
+            using var resp = await _httpClient.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode) return false;
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("data", out var data)
+                && data.TryGetProperty("manifestFound", out var found))
+                return found.GetBoolean();
+            return false;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { return false; }
+    }
+
+    private async Task<ManifestDownloadResult> DownloadFromSteamToolsAsync(
+        int appId, IProgress<string>? progress, CancellationToken ct)
+    {
+        var appIdStr = appId.ToString(CultureInfo.InvariantCulture);
+        var appWorkDir = Path.Combine(_workFolder, "steamtools", appIdStr);
+        Directory.CreateDirectory(appWorkDir);
+
+        progress?.Report("Downloading manifest from SteamTools...");
+        try
+        {
+            var zipUrl = $"https://steamtoolsapp.com/api/files/{appIdStr}/zip";
+            using var resp = await _httpClient.GetAsync(zipUrl, ct);
+            if (!resp.IsSuccessStatusCode)
+                return new ManifestDownloadResult(false,
+                    $"SteamTools returned HTTP {(int)resp.StatusCode} for App {appId}.");
+
+            var zipPath = Path.Combine(appWorkDir, $"{appIdStr}_steamtools.zip");
+            await using (var fs = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                await resp.Content.CopyToAsync(fs, ct);
+
+            string? luaContent = null;
+            using var zip = ZipFile.OpenRead(zipPath);
+            foreach (var entry in zip.Entries)
+            {
+                var ext = Path.GetExtension(entry.Name).ToLowerInvariant();
+                if (ext is ".lua" or ".key" or ".manifest" or ".vdf")
+                {
+                    var destPath = Path.Combine(appWorkDir, entry.Name);
+                    entry.ExtractToFile(destPath, overwrite: true);
+                    if (ext == ".lua")
+                        using (var reader = new StreamReader(entry.Open()))
+                            luaContent = await reader.ReadToEndAsync(ct);
+                }
+            }
+
+            if (luaContent is null)
+                return new ManifestDownloadResult(false, $"No Lua script found in SteamTools archive for App {appId}.");
+
+            _logging.Add(Models.LogLevel.Info, "ManifestSource",
+                $"Downloaded manifest from SteamTools for App {appId}.", appId);
+            return new ManifestDownloadResult(true, "Downloaded from SteamTools.", luaContent, appWorkDir);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            return new ManifestDownloadResult(false, $"SteamTools download failed: {ex.Message}");
+        }
     }
 
     public void Dispose() => _httpClient.Dispose();

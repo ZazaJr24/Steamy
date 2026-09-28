@@ -315,6 +315,7 @@
                 <Border Style="{StaticResource HostPill}" x:Name="SourceZaza" MouseLeftButtonUp="Source_Click" Tag="Zaza"><TextBlock Text="Zaza" FontSize="11" FontWeight="SemiBold" /></Border>
                 <Border Style="{StaticResource HostPill}" x:Name="SourceHubcap" MouseLeftButtonUp="Source_Click" Tag="Hubcap"><TextBlock Text="Hubcap" FontSize="11" FontWeight="SemiBold" /></Border>
                 <Border Style="{StaticResource HostPill}" x:Name="SourceResonance" MouseLeftButtonUp="Source_Click" Tag="Resonance" ToolTip="Check the ResonanceManifests repository for this AppID"><TextBlock Text="Resonance" FontSize="11" FontWeight="SemiBold" /></Border>
+                <Border Style="{StaticResource HostPill}" x:Name="SourceSteamTools" MouseLeftButtonUp="Source_Click" Tag="SteamTools" ToolTip="SteamToolsApp manifest generator (free, no key required)"><TextBlock Text="SteamTools" FontSize="11" FontWeight="SemiBold" /></Border>
               </WrapPanel>
               <TextBlock x:Name="SourceAvailabilityText" Text="" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
 
