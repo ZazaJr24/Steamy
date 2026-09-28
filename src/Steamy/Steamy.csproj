@@ -8,7 +8,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Steamy</RootNamespace>
     <AssemblyName>Steamy</AssemblyName>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <FileVersion>0.2.0</FileVersion>
     <AssemblyVersion>0.2.0</AssemblyVersion>
     <Product>Steamy</Product>

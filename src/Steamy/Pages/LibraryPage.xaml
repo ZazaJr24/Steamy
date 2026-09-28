@@ -172,7 +172,7 @@
 
                     <Border CornerRadius="13,13,0,0" Background="#0B0C0F">
                       <Grid>
-                        <Border CornerRadius="13,13,0,0" CacheMode="BitmapCache">
+                        <Border CornerRadius="13,13,0,0" CacheMode="BitmapCache" RenderOptions.BitmapScalingMode="HighQuality">
                           <Border.Background>
                             <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
                           </Border.Background>
