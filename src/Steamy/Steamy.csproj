@@ -8,9 +8,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Steamy</RootNamespace>
     <AssemblyName>Steamy</AssemblyName>
-    <Version>0.1.5</Version>
-    <FileVersion>0.1.5</FileVersion>
-    <AssemblyVersion>0.1.5</AssemblyVersion>
+    <Version>0.2.0</Version>
+    <FileVersion>0.2.0</FileVersion>
+    <AssemblyVersion>0.2.0</AssemblyVersion>
     <Product>Steamy</Product>
     <Copyright>Copyright (c) 2026 ZazaJr24 · Steamy License</Copyright>
     <ApplicationIcon />
@@ -31,6 +31,20 @@
   <!-- Images used from XAML go in as WPF resources so they can be referenced by pack URI. -->
   <ItemGroup>
     <Resource Include="Resources\steamless.png" />
+  </ItemGroup>
+
+  <!-- Localization resource files -->
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Strings.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\Strings.de-DE.resx" />
+    <Compile Update="Resources\Strings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Strings.resx</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>

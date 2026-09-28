@@ -95,7 +95,7 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public AppSettings Settings { get; private set; }
 
-    public string[] Languages { get; } = { "System Default", "Deutsch", "English" };
+    public string[] Languages { get; } = { "System Default", "English", "Deutsch", "Français", "Español", "Русский", "中文", "日本語", "Türkçe" };
     public string[] Appearances { get; } = { "System", "Light", "Dark" };
     public string[] BackdropStyles { get; } = { "None", "Mica", "Acrylic", "Tabbed" };
     public string[] DnsModes { get; } = { "System resolver", "Cloudflare DoH", "Google DoH", "Quad9 DoH", "Custom DoH" };

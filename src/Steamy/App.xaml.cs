@@ -235,7 +235,18 @@ public partial class App : Application
                 && !document.RootElement.TryGetProperty("language", out language)) return;
             var value = language.GetString();
             if (string.IsNullOrWhiteSpace(value) || value.Equals("System Default", StringComparison.OrdinalIgnoreCase)) return;
-            var culture = new CultureInfo(value.StartsWith("Deutsch", StringComparison.OrdinalIgnoreCase) ? "de-DE" : "en-US");
+            var tag = value switch
+            {
+                _ when value.StartsWith("Deutsch", StringComparison.OrdinalIgnoreCase) => "de-DE",
+                _ when value.StartsWith("Français", StringComparison.OrdinalIgnoreCase) => "fr-FR",
+                _ when value.StartsWith("Español", StringComparison.OrdinalIgnoreCase) => "es-ES",
+                _ when value.StartsWith("Русский", StringComparison.OrdinalIgnoreCase) => "ru-RU",
+                _ when value.StartsWith("中文", StringComparison.OrdinalIgnoreCase) => "zh-CN",
+                _ when value.StartsWith("日本語", StringComparison.OrdinalIgnoreCase) => "ja-JP",
+                _ when value.StartsWith("Türkçe", StringComparison.OrdinalIgnoreCase) => "tr-TR",
+                _ => "en-US"
+            };
+            var culture = new CultureInfo(tag);
             CultureInfo.DefaultThreadCurrentUICulture = culture;
             Thread.CurrentThread.CurrentUICulture = culture;
         }

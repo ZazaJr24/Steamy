@@ -108,6 +108,9 @@ public static class ServiceRegistration
         services.AddSingleton<UnsteamViewModel>();
         services.AddSingleton<ScreamApiViewModel>();
         services.AddSingleton<HvFixesViewModel>();
+        services.AddSingleton<BetterSteamToolsViewModel>();
+        services.AddSingleton<SteamAchievementManagerViewModel>();
+        services.AddSingleton<AutoSteamCrackerViewModel>();
 
         return services;
     }

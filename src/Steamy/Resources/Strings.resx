@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- Navigation -->
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Nav_Games" xml:space="preserve"><value>Games</value></data>
+  <data name="Nav_Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Nav_Fixes" xml:space="preserve"><value>Fixes</value></data>
+  <data name="Nav_Utilities" xml:space="preserve"><value>Utilities</value></data>
+  <data name="Nav_Downloads" xml:space="preserve"><value>Downloads</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>Settings</value></data>
+
+  <!-- Tool names -->
+  <data name="Tool_Steamless" xml:space="preserve"><value>Steamless</value></data>
+  <data name="Tool_DenuvoActivation" xml:space="preserve"><value>Denuvo Activation</value></data>
+  <data name="Tool_DlcUnlocker" xml:space="preserve"><value>DLC Unlocker</value></data>
+  <data name="Tool_GreenLuma" xml:space="preserve"><value>GreenLuma</value></data>
+  <data name="Tool_Goldberg" xml:space="preserve"><value>Goldberg</value></data>
+  <data name="Tool_BetterSteamTools" xml:space="preserve"><value>BetterSteamTools</value></data>
+  <data name="Tool_ScreamApi" xml:space="preserve"><value>ScreamAPI</value></data>
+  <data name="Tool_XStoreUnlocker" xml:space="preserve"><value>XStore Unlocker</value></data>
+  <data name="Tool_AutoSteamCracker" xml:space="preserve"><value>SteamAutoCracker</value></data>
+  <data name="Tool_AchievementManager" xml:space="preserve"><value>Achievement Manager</value></data>
+  <data name="Tool_GameFixes" xml:space="preserve"><value>Game Fixes</value></data>
+
+  <!-- ToolRunner Page -->
+  <data name="ToolRunner_Status" xml:space="preserve"><value>Status</value></data>
+  <data name="ToolRunner_NotConfigured" xml:space="preserve"><value>Not configured</value></data>
+  <data name="ToolRunner_Ready" xml:space="preserve"><value>Ready</value></data>
+  <data name="ToolRunner_Running" xml:space="preserve"><value>Running…</value></data>
+  <data name="ToolRunner_Download" xml:space="preserve"><value>Download</value></data>
+  <data name="ToolRunner_Downloading" xml:space="preserve"><value>Downloading…</value></data>
+  <data name="ToolRunner_Browse" xml:space="preserve"><value>Browse</value></data>
+  <data name="ToolRunner_Run" xml:space="preserve"><value>Run</value></data>
+  <data name="ToolRunner_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="ToolRunner_Arguments" xml:space="preserve"><value>Arguments</value></data>
+  <data name="ToolRunner_Executable" xml:space="preserve"><value>Executable</value></data>
+  <data name="ToolRunner_WorkingDir" xml:space="preserve"><value>Working Directory</value></data>
+  <data name="ToolRunner_Version" xml:space="preserve"><value>Version</value></data>
+  <data name="ToolRunner_Output" xml:space="preserve"><value>Output</value></data>
+  <data name="ToolRunner_Done" xml:space="preserve"><value>Done!</value></data>
+  <data name="ToolRunner_Failed" xml:space="preserve"><value>Failed</value></data>
+  <data name="ToolRunner_Info" xml:space="preserve"><value>Info</value></data>
+  <data name="ToolRunner_AutoDownloaded" xml:space="preserve"><value>Auto-downloaded from GitHub</value></data>
+  <data name="ToolRunner_SelectExecutable" xml:space="preserve"><value>Select executable</value></data>
+
+  <!-- Settings Page -->
+  <data name="Settings_Title" xml:space="preserve"><value>Settings</value></data>
+  <data name="Settings_Appearance" xml:space="preserve"><value>Appearance</value></data>
+  <data name="Settings_Theme" xml:space="preserve"><value>Theme</value></data>
+  <data name="Settings_ThemeDesc" xml:space="preserve"><value>Switch between system, light and dark Fluent appearance. Applied immediately and saved.</value></data>
+  <data name="Settings_WindowBackdrop" xml:space="preserve"><value>Window Backdrop</value></data>
+  <data name="Settings_WindowBackdropDesc" xml:space="preserve"><value>Mica, Acrylic or Tabbed translucent background effect (Windows 11). Applied immediately.</value></data>
+  <data name="Settings_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Settings_LanguageDesc" xml:space="preserve"><value>The selected language is applied on the next start.</value></data>
+  <data name="Settings_SteamConnection" xml:space="preserve"><value>Steam connection</value></data>
+  <data name="Settings_SteamApiKey" xml:space="preserve"><value>Steam API key</value></data>
+  <data name="Settings_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Settings_Reset" xml:space="preserve"><value>Reset to defaults</value></data>
+  <data name="Settings_Export" xml:space="preserve"><value>Export</value></data>
+  <data name="Settings_Import" xml:space="preserve"><value>Import</value></data>
+  <data name="Settings_DownloadSettings" xml:space="preserve"><value>Download settings</value></data>
+  <data name="Settings_ParallelDownloads" xml:space="preserve"><value>Parallel downloads</value></data>
+  <data name="Settings_RetryCount" xml:space="preserve"><value>Retry count</value></data>
+  <data name="Settings_Timeout" xml:space="preserve"><value>Timeout (seconds)</value></data>
+  <data name="Settings_Connections" xml:space="preserve"><value>Connections per job</value></data>
+  <data name="Settings_VerifyAfterDownload" xml:space="preserve"><value>Verify after download</value></data>
+  <data name="Settings_KeepHistory" xml:space="preserve"><value>Keep history</value></data>
+  <data name="Settings_AutoResume" xml:space="preserve"><value>Auto-resume</value></data>
+  <data name="Settings_DebugLogging" xml:space="preserve"><value>Debug logging</value></data>
+  <data name="Settings_AutoUpdate" xml:space="preserve"><value>Auto-update</value></data>
+  <data name="Settings_Notifications" xml:space="preserve"><value>Notifications</value></data>
+  <data name="Settings_DnsSettings" xml:space="preserve"><value>DNS settings</value></data>
+
+  <!-- Dashboard -->
+  <data name="Dashboard_Title" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Dashboard_Welcome" xml:space="preserve"><value>Welcome to Steamy</value></data>
+  <data name="Dashboard_Subtitle" xml:space="preserve"><value>Steam Modding Suite</value></data>
+  <data name="Dashboard_QuickActions" xml:space="preserve"><value>Quick Actions</value></data>
+  <data name="Dashboard_RecentDownloads" xml:space="preserve"><value>Recent Downloads</value></data>
+  <data name="Dashboard_ToolStatus" xml:space="preserve"><value>Tool Status</value></data>
+  <data name="Dashboard_SystemHealth" xml:space="preserve"><value>System Health</value></data>
+  <data name="Dashboard_InstalledGames" xml:space="preserve"><value>Installed Games</value></data>
+  <data name="Dashboard_ActiveDownloads" xml:space="preserve"><value>Active Downloads</value></data>
+  <data name="Dashboard_AvailableTools" xml:space="preserve"><value>Available Tools</value></data>
+
+  <!-- Common -->
+  <data name="Common_OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Common_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="Common_Warning" xml:space="preserve"><value>Warning</value></data>
+  <data name="Common_Success" xml:space="preserve"><value>Success</value></data>
+  <data name="Common_Loading" xml:space="preserve"><value>Loading…</value></data>
+  <data name="Common_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Common_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Common_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Common_Paste" xml:space="preserve"><value>Paste</value></data>
+  <data name="Common_Yes" xml:space="preserve"><value>Yes</value></data>
+  <data name="Common_No" xml:space="preserve"><value>No</value></data>
+  <data name="Common_Available" xml:space="preserve"><value>Available</value></data>
+  <data name="Common_NotAvailable" xml:space="preserve"><value>Not available</value></data>
+  <data name="Common_Installed" xml:space="preserve"><value>Installed</value></data>
+  <data name="Common_NotInstalled" xml:space="preserve"><value>Not installed</value></data>
+  <data name="Common_StartDownload" xml:space="preserve"><value>Start download</value></data>
+  <data name="Common_SelectFolder" xml:space="preserve"><value>Select a folder…</value></data>
+
+  <!-- Downloads -->
+  <data name="Downloads_Title" xml:space="preserve"><value>Downloads</value></data>
+  <data name="Downloads_NoActive" xml:space="preserve"><value>No active downloads</value></data>
+  <data name="Downloads_Completed" xml:space="preserve"><value>Completed</value></data>
+  <data name="Downloads_Failed" xml:space="preserve"><value>Failed</value></data>
+  <data name="Downloads_Cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="Downloads_Paused" xml:space="preserve"><value>Paused</value></data>
+  <data name="Downloads_Preparing" xml:space="preserve"><value>Preparing</value></data>
+  <data name="Downloads_ClearHistory" xml:space="preserve"><value>Clear history</value></data>
+
+  <!-- Library -->
+  <data name="Library_Title" xml:space="preserve"><value>Game Library</value></data>
+  <data name="Library_SearchGames" xml:space="preserve"><value>Search games…</value></data>
+  <data name="Library_ChooseSource" xml:space="preserve"><value>Choose a manifest source and download folder.</value></data>
+  <data name="Library_CheckingAvailability" xml:space="preserve"><value>Checking availability...</value></data>
+  <data name="Library_SelectDownloadFolder" xml:space="preserve"><value>Select download folder</value></data>
+</root>

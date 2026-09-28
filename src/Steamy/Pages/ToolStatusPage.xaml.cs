@@ -39,3 +39,18 @@ public sealed class ScreamApiPage : ToolRunnerPage
 {
     public ScreamApiPage() : base(App.Services.GetRequiredService<ScreamApiViewModel>()) { }
 }
+
+public sealed class BetterSteamToolsPage : ToolRunnerPage
+{
+    public BetterSteamToolsPage() : base(App.Services.GetRequiredService<BetterSteamToolsViewModel>()) { }
+}
+
+public sealed class SteamAchievementManagerPage : ToolRunnerPage
+{
+    public SteamAchievementManagerPage() : base(App.Services.GetRequiredService<SteamAchievementManagerViewModel>()) { }
+}
+
+public sealed class AutoSteamCrackerPage : ToolRunnerPage
+{
+    public AutoSteamCrackerPage() : base(App.Services.GetRequiredService<AutoSteamCrackerViewModel>()) { }
+}

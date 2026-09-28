@@ -3,6 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:pages="clr-namespace:Steamy.Pages"
+                 xmlns:res="clr-namespace:Steamy.Resources"
                  Title="Steamy"
                  Height="900"
                  Width="1440"
@@ -68,16 +69,16 @@
         </ui:NavigationView.PaneHeader>
 
         <ui:NavigationView.MenuItems>
-          <ui:NavigationViewItem Content="Dashboard"
+          <ui:NavigationViewItem Content="{x:Static res:Strings.Nav_Dashboard}"
                                  Icon="{ui:SymbolIcon Home24}"
                                  TargetPageType="{x:Type pages:DashboardPage}" />
-          <ui:NavigationViewItem Content="Games"
+          <ui:NavigationViewItem Content="{x:Static res:Strings.Nav_Games}"
                                  Icon="{ui:SymbolIcon Apps24}"
                                  TargetPageType="{x:Type pages:LibraryPage}" />
 
           <ui:NavigationViewItemSeparator />
 
-          <ui:NavigationViewItem Content="Tools" Icon="{ui:SymbolIcon Wrench24}">
+          <ui:NavigationViewItem Content="{x:Static res:Strings.Nav_Tools}" Icon="{ui:SymbolIcon Wrench24}">
             <ui:NavigationViewItem.MenuItems>
               <ui:NavigationViewItem Content="Steamless"
                                      Icon="{ui:ImageIcon '/Steamy;component/Resources/steamless.png'}"
@@ -94,10 +95,30 @@
               <ui:NavigationViewItem Content="Goldberg"
                                      Icon="{ui:SymbolIcon Games24}"
                                      TargetPageType="{x:Type pages:GoldbergPage}" />
+              <ui:NavigationViewItem Content="BetterSteamTools"
+                                     Icon="{ui:SymbolIcon KeyMultiple24}"
+                                     TargetPageType="{x:Type pages:BetterSteamToolsPage}" />
+              <ui:NavigationViewItem Content="ScreamAPI"
+                                     Icon="{ui:SymbolIcon GlobeShield24}"
+                                     TargetPageType="{x:Type pages:ScreamApiPage}" />
+              <ui:NavigationViewItem Content="XStore Unlocker"
+                                     Icon="{ui:SymbolIcon XboxConsole24}"
+                                     TargetPageType="{x:Type pages:XStoreUnlockerPage}" />
+              <ui:NavigationViewItem Content="SteamAutoCracker"
+                                     Icon="{ui:SymbolIcon Flash24}"
+                                     TargetPageType="{x:Type pages:AutoSteamCrackerPage}" />
             </ui:NavigationViewItem.MenuItems>
           </ui:NavigationViewItem>
 
-          <ui:NavigationViewItem Content="Fixes" Icon="{ui:SymbolIcon Shield24}">
+          <ui:NavigationViewItem Content="{x:Static res:Strings.Nav_Utilities}" Icon="{ui:SymbolIcon Toolbox24}">
+            <ui:NavigationViewItem.MenuItems>
+              <ui:NavigationViewItem Content="Achievement Manager"
+                                     Icon="{ui:SymbolIcon Trophy24}"
+                                     TargetPageType="{x:Type pages:SteamAchievementManagerPage}" />
+            </ui:NavigationViewItem.MenuItems>
+          </ui:NavigationViewItem>
+
+          <ui:NavigationViewItem Content="{x:Static res:Strings.Nav_Fixes}" Icon="{ui:SymbolIcon Shield24}">
             <ui:NavigationViewItem.MenuItems>
               <ui:NavigationViewItem Content="Game Fixes"
                                      Icon="{ui:SymbolIcon ShieldTask24}"
@@ -107,10 +128,10 @@
         </ui:NavigationView.MenuItems>
 
         <ui:NavigationView.FooterMenuItems>
-          <ui:NavigationViewItem Content="Downloads"
+          <ui:NavigationViewItem Content="{x:Static res:Strings.Nav_Downloads}"
                                  Icon="{ui:SymbolIcon ArrowDownload24}"
                                  TargetPageType="{x:Type pages:DownloadsPage}" />
-          <ui:NavigationViewItem Content="Settings"
+          <ui:NavigationViewItem Content="{x:Static res:Strings.Nav_Settings}"
                                  Icon="{ui:SymbolIcon Settings24}"
                                  TargetPageType="{x:Type pages:SettingsPage}" />
         </ui:NavigationView.FooterMenuItems>

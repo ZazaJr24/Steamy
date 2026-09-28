@@ -40,17 +40,19 @@ public sealed class UnsteamViewModel : ToolRunnerViewModel
 
 public sealed class ScreamApiViewModel : ToolRunnerViewModel
 {
-    public ScreamApiViewModel(ILocalToolRunner runner, ISettingsService settings)
+    public ScreamApiViewModel(ILocalToolRunner runner, ISettingsService settings, IGitHubToolDownloadService dl)
         : base(
             runner, settings,
             pageKey: "screamapi",
             title: "ScreamAPI",
-            subtitle: "Epic DLC Unlocker — browse and configure manually.",
+            subtitle: "Epic Games DLC Unlocker — auto-downloads from GitHub.",
             expectedFileNameHint: "ScreamAPI.dll",
-            infoText: "ScreamAPI replaces the Epic Online Services SDK DLL in a game folder to unlock DLC. GitHub API is rate-limited; browse to select the file manually.",
+            infoText: "ScreamAPI replaces the Epic Online Services SDK DLL in a game folder to unlock DLC for Epic Games titles. Downloads automatically from GitHub.",
             downloadUrl: "https://github.com/acidicoala/ScreamAPI",
             readPath: s => s.ScreamApiPath,
-            writePath: (s, v) => s.ScreamApiPath = v)
+            writePath: (s, v) => s.ScreamApiPath = v,
+            downloadService: dl,
+            toolDefinition: ToolDefinitions.ScreamApi)
     { }
 }
 
@@ -70,3 +72,59 @@ public sealed class HvFixesViewModel : ToolRunnerViewModel
     { }
 }
 
+public sealed class BetterSteamToolsViewModel : ToolRunnerViewModel
+{
+    public BetterSteamToolsViewModel(ILocalToolRunner runner, ISettingsService settings, IGitHubToolDownloadService dl)
+        : base(
+            runner, settings,
+            pageKey: "bettersteamtools",
+            title: "BetterSteamTools",
+            subtitle: "Open Source Steam Unlocker — auto-downloads from GitHub.",
+            expectedFileNameHint: "BetterSteamTools.exe",
+            infoText: "BetterSteamTools is an open-source Steam DLC unlocker. Downloads automatically from GitHub releases.",
+            downloadUrl: "https://github.com/madoiscool/BetterSteamTools",
+            showWindow: true,
+            readPath: s => s.BetterSteamToolsPath,
+            writePath: (s, v) => s.BetterSteamToolsPath = v,
+            downloadService: dl,
+            toolDefinition: ToolDefinitions.BetterSteamTools)
+    { }
+}
+
+public sealed class SteamAchievementManagerViewModel : ToolRunnerViewModel
+{
+    public SteamAchievementManagerViewModel(ILocalToolRunner runner, ISettingsService settings, IGitHubToolDownloadService dl)
+        : base(
+            runner, settings,
+            pageKey: "sam",
+            title: "SAM",
+            subtitle: "Steam Achievement Manager — auto-downloads from GitHub.",
+            expectedFileNameHint: "SAM.Picker.exe",
+            infoText: "Steam Achievement Manager lets you lock and unlock achievements on your Steam account. Requires Steam to be running. Downloads automatically from GitHub.",
+            downloadUrl: "https://github.com/gibbed/SteamAchievementManager",
+            showWindow: true,
+            readPath: s => s.SamPath,
+            writePath: (s, v) => s.SamPath = v,
+            downloadService: dl,
+            toolDefinition: ToolDefinitions.SteamAchievementManager)
+    { }
+}
+
+public sealed class AutoSteamCrackerViewModel : ToolRunnerViewModel
+{
+    public AutoSteamCrackerViewModel(ILocalToolRunner runner, ISettingsService settings, IGitHubToolDownloadService dl)
+        : base(
+            runner, settings,
+            pageKey: "autosteamcracker",
+            title: "SteamAutoCracker",
+            subtitle: "Automatic Steam game cracker — auto-downloads from GitHub.",
+            expectedFileNameHint: "SteamAutoCracker.exe",
+            infoText: "SteamAutoCracker automatically applies Steamless + Goldberg emulator to crack Steam DRM in one click. Downloads automatically from GitHub.",
+            downloadUrl: "https://github.com/BigBoiCJ/SteamAutoCracker",
+            showWindow: true,
+            readPath: s => s.AutoSteamCrackerPath,
+            writePath: (s, v) => s.AutoSteamCrackerPath = v,
+            downloadService: dl,
+            toolDefinition: ToolDefinitions.AutoSteamCracker)
+    { }
+}
