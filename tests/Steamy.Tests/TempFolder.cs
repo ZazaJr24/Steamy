@@ -13,7 +13,8 @@ internal sealed class TempFolder : IDisposable
 
     public string Write(string relativePath, string content)
     {
-        var full = System.IO.Path.Combine(Path, relativePath);
+        // Native separators, so paths compare equal to what the scanner enumerates on every OS.
+        var full = System.IO.Path.Combine(Path, relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar));
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
         File.WriteAllText(full, content);
         return full;
