@@ -99,7 +99,7 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
     public GameFixDownloadService(ISettingsService settings, HttpClient? httpClient = null)
     {
         _settings = settings;
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
         _ownsHttpClient = httpClient is null;
         _httpClient.Timeout = TimeSpan.FromMinutes(20);
         _httpClient.DefaultRequestHeaders.UserAgent.Clear();

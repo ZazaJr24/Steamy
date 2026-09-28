@@ -49,15 +49,15 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
-## ✨ What's new in 0.2.4
+## ✨ What's new in 0.2.5
 
-- **API keys are stored as you type** — no more "No API key stored" while the key sits in the box, and **Test connection** always checks the key you just entered
-- **Clearer key errors** — the test shows the API's own message (e.g. "Invalid API key") instead of a bare HTTP code
-- **Hubcap and DepotBox actually work** — the Lua parser was dropping every depot because both services write a third argument on `setManifestid`, and DepotBox now uses its one-request `/api/direct-download` package that already contains the Lua plus all depot manifests
-- **No more locked Start button** — an availability check that cannot reach the API says "you can still try" instead of "not available", and a missing key names the exact Settings section
+- **Depot Dumper** — new page and sidebar entry: dump the Lua and every depot manifest of a game, then send the pack to the project's private dump repository. Write-only by design: contributors can send, but only the repository owner can read it
+- **Real download size** — a multi-depot download now shows the actual data across all depots ("12.6 GB in 14 depots") instead of a depot count, and the size grows in as each depot is measured
+- **Calmer speed readout** — the measured rate is smoothed over several seconds with a small dead-band, so the number glides instead of flickering; the internet curve is smoother too
+- **Stable DNS** — the resolver selected in Settings is now actually used by every request Steamy makes (catalogs, sources, updates, artwork) with cached answers and an automatic fallback to the system resolver
+- **DLC Unlocker rebuilt** — new layout with an unlocker/game-folder/DLL-pack strip, game avatars, a real empty state for the DLC list and a result banner you can dismiss
+- **Dashboard polish** — Depot Dumper card, wider gutters on the left and bottom so nothing touches the window edge, and store header art is shown when a game has no portrait cover
 - **Sharp covers everywhere** — the cached bitmap that made game art blurry on scaled displays is gone
-- **Settings looks like the Dashboard** — aurora header, icon section headers, hover cards and staggered fade-ins, plus a DepotBox test connection with your live request counts
-- **DepotBox API key check** — new **Test connection** button next to the key, using the free DepotBox stats endpoints
 
 Full list in the [**CHANGELOG**](CHANGELOG.md).
 

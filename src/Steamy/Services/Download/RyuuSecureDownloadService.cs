@@ -59,7 +59,7 @@ public sealed class RyuuSecureDownloadService : IRyuuSecureDownloadService, IDis
     public RyuuSecureDownloadService(ISettingsService settings, HttpClient? httpClient = null)
     {
         _settings = settings;
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
         _ownsHttpClient = httpClient is null;
         _httpClient.Timeout = TimeSpan.FromMinutes(20);
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)

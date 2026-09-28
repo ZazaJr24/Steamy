@@ -111,7 +111,8 @@ public sealed class DownloadProgressTracker
 {
     private const double MaxInterpolatedPercent = 99.9;
     private const long MinimumSampleBytes = 1L << 20;
-    private const double SpeedSmoothingSeconds = 1.5;
+    // Long enough that the readout glides instead of dancing around the real rate.
+    private const double SpeedSmoothingSeconds = 3.0;
 
     private static readonly Regex ProcessingDepotPattern = new(@"^\s*Processing depot (?<id>\d+)", RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex DownloadingDepotPattern = new(@"^\s*Downloading depot (?<id>\d+)\b(?!\s+manifest)", RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -144,6 +145,8 @@ public sealed class DownloadProgressTracker
     private string _toolSpeed = string.Empty;
     private string _toolEta = string.Empty;
     private string _pendingLine = string.Empty;
+    private string _steadySpeedText = string.Empty;
+    private double _steadySpeedValue;
 
     public DownloadProgressTracker(Func<long?> bytesWritten, Func<double>? clockSeconds = null)
     {
@@ -224,8 +227,11 @@ public sealed class DownloadProgressTracker
             _displayed = Math.Max(_displayed, Math.Round(overall, 2));
 
             var started = _hasPercent || _depotIndex > 0;
-            var speed = _toolSpeed.Length > 0 ? _toolSpeed
-                : _bytesPerSecond > 1 ? DownloadFormat.Speed(_bytesPerSecond) : string.Empty;
+            // The measured rate is smoothed over several seconds and is preferred over the tool's
+            // own instantaneous text, which jumps around by megabytes from line to line.
+            var speed = _bytesPerSecond > 4096 ? SteadySpeed(DownloadFormat.Speed(_bytesPerSecond))
+                : _toolSpeed.Length > 0 ? _toolSpeed
+                : string.Empty;
 
             var downloaded = _toolDownloaded.Length > 0 ? _toolDownloaded
                 : bytes > 0 ? DownloadFormat.Bytes(bytes) : string.Empty;
@@ -342,6 +348,18 @@ public sealed class DownloadProgressTracker
         return _lastBytes;
     }
 
+    /// <summary>Keeps the readout steady: a change below four percent reuses the previous text.</summary>
+    private string SteadySpeed(string text)
+    {
+        if (_steadySpeedText.Length > 0 && _steadySpeedValue > 0
+            && Math.Abs(_bytesPerSecond - _steadySpeedValue) / _steadySpeedValue < 0.04)
+            return _steadySpeedText;
+
+        _steadySpeedValue = _bytesPerSecond;
+        _steadySpeedText = text;
+        return text;
+    }
+
     private void UpdateSpeed(double now, long bytes)
     {
         var elapsed = now - _speedSampleTime;
@@ -370,6 +388,26 @@ public static class DownloadFormat
     };
 
     public static string Speed(double bytesPerSecond) => Bytes((long)bytesPerSecond) + "/s";
+
+    /// <summary>Reads a formatted size such as "473.4 MB" back into bytes; 0 when it cannot.</summary>
+    public static long TryParseSize(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return 0;
+
+        var value = text.Trim().TrimStart('~').Trim();
+        var digits = 0;
+        while (digits < value.Length && (char.IsDigit(value[digits]) || value[digits] is '.' or ',')) digits++;
+        if (digits == 0) return 0;
+        if (!double.TryParse(value[..digits].Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var number)) return 0;
+
+        var unit = value[digits..].Trim().ToUpperInvariant();
+        var factor = unit.StartsWith("TB", StringComparison.Ordinal) ? 1L << 40
+            : unit.StartsWith("GB", StringComparison.Ordinal) ? 1L << 30
+            : unit.StartsWith("MB", StringComparison.Ordinal) ? 1L << 20
+            : unit.StartsWith("KB", StringComparison.Ordinal) ? 1L << 10
+            : 1L;
+        return (long)(number * factor);
+    }
 
     public static string Duration(double seconds)
     {

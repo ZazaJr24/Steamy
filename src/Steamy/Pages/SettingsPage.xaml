@@ -9,6 +9,20 @@
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
+    <!-- Secret boxes: one look for every key and token on the page. The value never leaves the
+         encrypted store, so the box only has to look like the other fields. -->
+    <Style x:Key="CredentialBoxStyle" TargetType="PasswordBox">
+      <Setter Property="Height" Value="34" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontFamily" Value="Consolas" />
+    </Style>
+
     <!-- ===== Motion presets (same language as the Dashboard) ============================= -->
     <!-- Entrances animate opacity and whole pixels only, so text stays crisp. -->
     <Style x:Key="RiseIn1" TargetType="FrameworkElement">
@@ -786,7 +800,7 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
               <TextBlock Text="Resolver mode" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="DoH is used only by the app's diagnostic/provider requests." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              <TextBlock Text="Applied to every request Steamy makes: catalogs, sources, updates and artwork. A resolver that cannot be reached falls back to the system one." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
             </StackPanel>
             <ComboBox Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding DnsModes}" SelectedItem="{Binding Settings.DnsMode}" SelectionChanged="DnsModeComboBox_SelectionChanged" />
           </Grid>
@@ -816,6 +830,82 @@
                        FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
           </Grid>
           <TextBlock Text="{Binding DnsAddresses}" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap" />
+          <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="12" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal">
+              <ui:SymbolIcon Symbol="Info24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                             VerticalAlignment="Center" Margin="0,0,9,0" />
+              <TextBlock Text="{Binding StableDnsStatus}" Style="{StaticResource MutedTextStyle}" FontSize="12"
+                         TextWrapping="Wrap" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- ===== Depot Dumper and sharing ================================================= -->
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn5}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="14" Foreground="#38BDF8" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBlock Text="Depot Dumper &amp; sharing" VerticalAlignment="Center" FontWeight="SemiBold" />
+        </Border>
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCardLate}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
+        <StackPanel>
+          <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
+            <StackPanel Orientation="Horizontal">
+              <ui:SymbolIcon Symbol="Info24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                             VerticalAlignment="Top" Margin="0,1,9,0" />
+              <TextBlock Text="Dumps are sent into one private repository with a fine-grained token that only has Contents: Read and write on it. A contributor can therefore send, but cannot read what others sent — only the repository owner can open it."
+                         Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Repository owner" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="GitHub account that owns the dump repository." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            </StackPanel>
+            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestShareOwner, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="ZazaJr24" />
+          </Grid>
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Repository" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Keep it private so only you can see the dumps." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            </StackPanel>
+            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestShareRepo, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Steamy-Dumps" />
+          </Grid>
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Branch" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Branch the dumps are committed to." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            </StackPanel>
+            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestShareBranch, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="main" />
+          </Grid>
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Dump folder" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Where the Depot Dumper collects Lua and manifests. Empty uses the download folder." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            </StackPanel>
+            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestDumpFolder, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Leave empty" />
+          </Grid>
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Sharing token" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="{Binding ShareCredentialStatus}" FontSize="12" Margin="0,3,0,0"
+                         Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="Fine-grained PAT with Contents: Read and write on that repository only. Encrypted with DPAPI, never written to logs or exports."
+                         Style="{StaticResource MutedTextStyle}" FontSize="11.5" Margin="0,4,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+            <PasswordBox x:Name="ShareTokenBox" Grid.Column="1" VerticalAlignment="Center"
+                         PasswordChanged="ShareTokenBox_PasswordChanged"
+                         Style="{StaticResource CredentialBoxStyle}" />
+          </Grid>
+          <TextBlock Text="Dumping only reads the selected source. Nothing is uploaded or shared until you press Send to repository on the Depot Dumper page."
+                     Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
 

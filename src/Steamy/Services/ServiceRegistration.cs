@@ -96,6 +96,12 @@ public static class ServiceRegistration
             sp.GetRequiredService<ILoggingService>()));
         services.AddSingleton<ICreamApiService>(sp => new CreamApiService(sp.GetRequiredService<ILoggingService>()));
         services.AddSingleton<CreamApiViewModel>();
+        services.AddSingleton<IManifestShareService>(sp => new ManifestShareService(
+            sp.GetRequiredService<ISettingsService>(),
+            sp.GetRequiredService<ISecureCredentialService>(),
+            sp.GetRequiredService<IManifestSourceService>(),
+            sp.GetRequiredService<ILoggingService>()));
+        services.AddSingleton<DepotDumperViewModel>();
         services.AddSingleton<GameFixesViewModel>();
         services.AddSingleton<GreenLumaViewModel>();
         services.AddSingleton<FamilyShareViewModel>(sp => new FamilyShareViewModel(

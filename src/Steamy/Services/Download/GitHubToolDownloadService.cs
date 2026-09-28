@@ -37,7 +37,7 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
 
     public GitHubToolDownloadService(HttpClient? httpClient = null, string? baseCacheDir = null)
     {
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
         _ownsHttpClient = httpClient is null;
         _httpClient.Timeout = TimeSpan.FromSeconds(120);
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)

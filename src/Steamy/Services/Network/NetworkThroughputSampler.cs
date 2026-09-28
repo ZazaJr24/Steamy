@@ -10,7 +10,9 @@ namespace Steamy.Services;
 /// </summary>
 public sealed class NetworkThroughputSampler
 {
-    private const double SmoothingSeconds = 1.0;
+    // A longer window keeps the internet readout calm: short spikes are averaged away instead of
+    // making the number flicker between samples.
+    private const double SmoothingSeconds = 2.5;
 
     private readonly Func<IReadOnlyDictionary<string, long>?> _readReceivedBytes;
     private readonly Func<double> _clock;

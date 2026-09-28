@@ -155,7 +155,7 @@
     </DataTemplate>
   </Page.Resources>
 
-  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="34,28,34,48">
+  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="40,28,40,64">
     <StackPanel HorizontalAlignment="Stretch" MaxWidth="1320">
 
       <!-- Header -->
@@ -222,7 +222,7 @@
           </StackPanel>
 
           <!-- Title, progress and live numbers -->
-          <StackPanel VerticalAlignment="Bottom" Margin="36,0,36,30">
+          <StackPanel VerticalAlignment="Bottom" Margin="44,0,44,36">
             <Border Background="#26FFFFFF" CornerRadius="10" Padding="10,4" HorizontalAlignment="Left">
               <TextBlock FontSize="10.5" FontWeight="SemiBold" Foreground="White">
                 <Run Text="{Binding StateLabel, Mode=OneWay}" />
@@ -248,7 +248,7 @@
                          Typography.NumeralAlignment="Tabular" />
             </Grid>
 
-            <Grid Margin="0,14,0,0">
+            <Grid Margin="0,24,0,0">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -291,7 +291,7 @@
           <Border CornerRadius="28" Background="{StaticResource IdleGlow}" />
           <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="230" Opacity="0.06" Foreground="{DynamicResource TextPrimaryBrush}"
                          HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,70,0" />
-          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="44,0,44,0" MaxWidth="640">
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="48,0,48,0" MaxWidth="640">
             <TextBlock Text="{Binding IdleHeadline}" FontSize="34" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
             <TextBlock Text="{Binding IdleDetail}" FontSize="14" Margin="0,8,0,0" TextWrapping="Wrap"

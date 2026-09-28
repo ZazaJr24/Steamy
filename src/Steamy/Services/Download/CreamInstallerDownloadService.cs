@@ -63,7 +63,7 @@ public sealed class CreamInstallerDownloadService : ICreamInstallerDownloadServi
 
     public CreamInstallerDownloadService(HttpClient? httpClient = null, string? cacheDirectory = null)
     {
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
         _ownsHttpClient = httpClient is null;
         _httpClient.Timeout = TimeSpan.FromSeconds(60);
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)

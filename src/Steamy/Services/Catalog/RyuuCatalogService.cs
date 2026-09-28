@@ -30,7 +30,7 @@ public sealed class RyuuCatalogService : IRyuuCatalogService, IDisposable
     public RyuuCatalogService(ISettingsService settings, HttpClient? httpClient = null, string? cacheDirectory = null)
     {
         _settings = settings;
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
         _ownsHttpClient = httpClient is null;
         _httpClient.Timeout = TimeSpan.FromSeconds(40);
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)

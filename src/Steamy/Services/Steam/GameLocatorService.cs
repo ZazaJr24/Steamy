@@ -6,6 +6,27 @@ namespace Steamy.Services;
 public sealed record InstalledGameEntry(int AppId, string Name, string InstallPath)
 {
     public string Label => AppId > 0 ? $"{Name} · App {AppId}" : Name;
+
+    /// <summary>Colour of the little avatar tile. Derived from the app id, so a game keeps its colour.</summary>
+    public string CoverColor { get; } = AvatarColors[Math.Abs(AppId) % AvatarColors.Length];
+
+    /// <summary>Short glyph for the avatar: the first letters of the name.</summary>
+    public string CoverGlyph { get; } = BuildGlyph(Name);
+
+    private static readonly string[] AvatarColors =
+    {
+        "#1F38BDF8", "#1FC084FC", "#1F10B981", "#1FF59E0B", "#1FF472B6", "#1F6366F1"
+    };
+
+    private static string BuildGlyph(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "◆";
+
+        var initials = name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(part => char.ToUpperInvariant(part[0]));
+        return string.Concat(initials);
+    }
 }
 
 /// <summary>The executable the locator picked, plus why, plus what else was found.</summary>

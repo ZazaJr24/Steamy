@@ -74,6 +74,9 @@
           <ui:NavigationViewItem Content="Games"
                                  Icon="{ui:SymbolIcon Apps24}"
                                  TargetPageType="{x:Type pages:LibraryPage}" />
+          <ui:NavigationViewItem Content="Depot Dumper"
+                                 Icon="{ui:SymbolIcon CloudArrowDown24}"
+                                 TargetPageType="{x:Type pages:DepotDumperPage}" />
 
           <ui:NavigationViewItemSeparator />
 

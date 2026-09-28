@@ -30,6 +30,7 @@ public partial class SettingsPage : Page
         HubcapApiKeyBox.Clear();
         DepotBoxApiKeyBox.Clear();
         MirrorTokenBox.Clear();
+        ShareTokenBox.Clear();
     }
 
     private void NumberBox_LostFocus(object sender, RoutedEventArgs e) => ViewModel.NormalizeNumberFields();
@@ -105,6 +106,12 @@ public partial class SettingsPage : Page
     {
         if (sender is PasswordBox passwordBox)
             CredentialTyped(passwordBox, "Access token", value => ViewModel.MirrorTokenInput = value);
+    }
+
+    private void ShareTokenBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox passwordBox)
+            CredentialTyped(passwordBox, "Dump sharing token", value => ViewModel.ShareTokenInput = value);
     }
 
     private void SteamLibraryBrowseButton_Click(object sender, RoutedEventArgs e)

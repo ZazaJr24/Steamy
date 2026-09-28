@@ -188,6 +188,16 @@
                 <TextBlock Text="{Binding CoverGlyph}" FontSize="48" Foreground="#30FFFFFF"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            Visibility="{Binding IsArtworkFallback, Converter={StaticResource BoolToVis}}" />
+                <!-- When the portrait art is missing, the wide store header is shown instead of a
+                     bare placeholder. It is painted below the portrait border, so it only ever
+                     appears when the sharper 600x900 art really is not there. -->
+                <Border Margin="1" CornerRadius="13"
+                        Visibility="{Binding IsArtworkFallback, Converter={StaticResource BoolToVis}}"
+                        RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
+                  <Border.Background>
+                    <ImageBrush ImageSource="{Binding HeaderArtworkUrl}" Stretch="UniformToFill" />
+                  </Border.Background>
+                </Border>
                 <!-- No CacheMode here: a BitmapCache renders the cover at 1x and WPF then scales
                      that bitmap on >100% displays, which is exactly what made covers blurry. -->
                 <Border Margin="1" CornerRadius="13"
@@ -489,7 +499,7 @@
     </LinearGradientBrush>
   </Page.Resources>
 
-  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="36,28,36,48">
+  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="40,28,40,64">
     <StackPanel x:Name="Root" MaxWidth="1320" HorizontalAlignment="Stretch">
 
       <!-- Header -->
@@ -732,8 +742,8 @@
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" />
-          <ColumnDefinition Width="28" />
-          <ColumnDefinition Width="340" />
+          <ColumnDefinition Width="32" />
+          <ColumnDefinition Width="352" />
         </Grid.ColumnDefinitions>
 
         <!-- Left: games + tools -->
@@ -753,7 +763,7 @@
                        Command="{Binding NavigateLibraryCommand}" />
           </Grid>
 
-          <ItemsControl ItemsSource="{Binding RecentGames}" Margin="-8,0,-8,0"
+          <ItemsControl ItemsSource="{Binding RecentGames}"
                         Visibility="{Binding HasRecentGames, Converter={StaticResource BoolToVis}}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
@@ -783,7 +793,7 @@
           </Border>
 
           <TextBlock Text="Tools" Style="{StaticResource SectionTitle}" Margin="0,10,0,14" />
-          <UniformGrid Columns="4" Margin="-8,0,-8,0">
+          <UniformGrid Columns="4">
             <Button Style="{StaticResource ToolTile}" Command="{Binding NavigateDepotDownloaderCommand}">
               <Grid>
                 <Grid.ColumnDefinitions>
@@ -920,6 +930,33 @@
                 <ui:Button Content="New download" Appearance="Secondary" Icon="{ui:SymbolIcon CloudArrowDown24}" CornerRadius="10"
                            HorizontalAlignment="Stretch" Margin="0,12,0,0" Command="{Binding NavigateDepotDownloaderCommand}" />
               </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- Depot Dumper & sharing -->
+          <Border Style="{StaticResource SideCard}" Margin="0,0,0,14">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                  <Border Width="32" Height="32" CornerRadius="9" Background="#1F38BDF8" Margin="0,0,10,0">
+                    <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="16" Foreground="#38BDF8"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <TextBlock Text="Depot Dumper" Style="{StaticResource CardTitle}" />
+                </StackPanel>
+              </Grid>
+              <TextBlock Text="Dump the Lua and every depot manifest of a game, then send the pack to the project's private dump repository. Write-only — send yours, never see anyone else's."
+                         Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0" />
+              <ui:Button Content="Open Depot Dumper" Appearance="Primary" CornerRadius="10" HorizontalAlignment="Stretch"
+                         Icon="{ui:SymbolIcon CloudArrowDown24}" Margin="0,12,0,0"
+                         Command="{Binding NavigateDepotDumperCommand}" />
+              <ui:Button Content="Open dump folder" Appearance="Secondary" CornerRadius="10" HorizontalAlignment="Stretch"
+                         Icon="{ui:SymbolIcon FolderOpen24}" Margin="0,8,0,0"
+                         Command="{Binding OpenManifestFolderCommand}" />
             </StackPanel>
           </Border>
 

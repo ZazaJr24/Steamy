@@ -60,7 +60,7 @@ public sealed class DenuvoGeneratorDownloadService : IDenuvoGeneratorDownloadSer
 
     public DenuvoGeneratorDownloadService(HttpClient? httpClient = null, string? cacheDirectory = null)
     {
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
         _ownsHttpClient = httpClient is null;
         _httpClient.Timeout = TimeSpan.FromMinutes(5);
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
