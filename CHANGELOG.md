@@ -3,6 +3,20 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.1
+
+### New
+- Completely redesigned Dashboard: cleaner layout, big hero banner, slim stats bar and one tidy System card
+- Game covers with titles below the art and a smooth hover glow
+
+### Improved
+- Much smoother UI: no more lag when hovering or scrolling
+- Sharp text and covers everywhere (no more blur)
+- Soft fade-in when opening the Dashboard
+
+### Fixed
+- DepotBox source works again
+
 ## 0.2.0
 
 ### New
