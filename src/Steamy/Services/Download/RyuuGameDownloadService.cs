@@ -117,13 +117,10 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var appSettings = _settings.Load();
-        var authCode = appSettings.RyuuApiKey;
+        string? authCode = null;
+        try { authCode = await _credentials.ReadAsync("ryuu-auth-key"); } catch { }
         if (string.IsNullOrWhiteSpace(authCode))
-        {
-            var stored = await _credentials.ReadAsync("ryuu-auth-key");
-            authCode = stored ?? string.Empty;
-        }
+            authCode = _settings.Load().RyuuApiKey;
 
         if (string.IsNullOrWhiteSpace(authCode))
             return new RyuuGameDownloadResult(false, "No Ryuu auth code configured. Set it in Settings.");

@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Text.Json.Serialization;
 using System.Windows.Media.Imaging;
 
 namespace Steamy.Models;
@@ -563,6 +564,7 @@ public sealed class AppSettings : ObservableObject
     public string HubcapBaseUrl { get => _hubcapBaseUrl; set => SetProperty(ref _hubcapBaseUrl, value); }
     public string FixMirrorUrl { get => _fixMirrorUrl; set => SetProperty(ref _fixMirrorUrl, value); }
 
+    [JsonIgnore]
     public string RyuuApiKey { get => _ryuuApiKey; set => SetProperty(ref _ryuuApiKey, value); }
 
     public string Language { get => _language; set => SetProperty(ref _language, value); }
