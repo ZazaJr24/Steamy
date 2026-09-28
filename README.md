@@ -9,16 +9,19 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet&logoColor=white" />
+  <a href="https://github.com/ZazaJr24/Steamy/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ZazaJr24/Steamy/ci.yml?style=flat-square&label=CI&logo=github" /></a>
+  <img src="https://img.shields.io/badge/.NET-9.0-512BD4?style=flat-square&logo=dotnet&logoColor=white" />
   <img src="https://img.shields.io/badge/WPF--UI-4.2-0078D4?style=flat-square" />
   <img src="https://img.shields.io/badge/Windows-10%2F11-0078D6?style=flat-square&logo=windows11&logoColor=white" />
-  <img src="https://img.shields.io/badge/C%23-12-239120?style=flat-square&logo=csharp&logoColor=white" />
+  <img src="https://img.shields.io/badge/C%23-13-239120?style=flat-square&logo=csharp&logoColor=white" />
+</p>
+
+<p align="center">
+  <img src="src/Steamy/Resources/Brand/steamy-256.png" width="112" alt="Steamy" />
 </p>
 
 <h1 align="center">
-  <br/>
   Steamy
-  <br/>
 </h1>
 
 <h3 align="center">
@@ -49,20 +52,15 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
-## ✨ What's new in 0.2.6
+## ✨ What's new in 0.2.7
 
-- **.NET 9** — Steamy now runs on .NET 9 (still a single self-contained ZIP, no runtime install needed)
-- **Depot Dumper with your own account** — a switch adds a DepotDownloaderMod pass under your Steam login so licensed depots are dumped too; the password and 2FA / Steam Guard code are typed in the tool's own console, Steamy never sees them
-- **Cache & temp cleanup** — Settings shows what artwork cache, manifest work folder, Ryuu archives and update packages occupy, and one button frees it
-- **Resume re-fetches manifests** — a paused download refreshes its Lua and manifests before continuing, so long pauses don't run on outdated data
-- **Smoother Downloads page** — the internet curve rebuilds once per second and progress bars idle on sub-pixel steps: less GPU/CPU work while downloading
-- **Depot Dumper** — new page and sidebar entry: dump the Lua and every depot manifest of a game, then send the pack to the project's private dump repository. Write-only by design: contributors can send, but only the repository owner can read it
-- **Real download size** — a multi-depot download now shows the actual data across all depots ("12.6 GB in 14 depots") instead of a depot count, and the size grows in as each depot is measured
-- **Calmer speed readout** — the measured rate is smoothed over several seconds with a small dead-band, so the number glides instead of flickering; the internet curve is smoother too
-- **Stable DNS** — the resolver selected in Settings is now actually used by every request Steamy makes (catalogs, sources, updates, artwork) with cached answers and an automatic fallback to the system resolver
-- **DLC Unlocker rebuilt** — new layout with an unlocker/game-folder/DLL-pack strip, game avatars, a real empty state for the DLC list and a result banner you can dismiss
-- **Dashboard polish** — Depot Dumper card, wider gutters on the left and bottom so nothing touches the window edge, and store header art is shown when a game has no portrait cover
-- **Sharp covers everywhere** — the cached bitmap that made game art blurry on scaled displays is gone
+- **Share page** — every manifest you have in one list: Depot Dumper folders *and* the manifests of your installed games. **Select new**, press **Share**, done — the whole selection goes to the dump repository in **one commit**
+- **Nothing twice** — Steamy remembers what you already shared, so *New* only shows games whose manifests changed
+- **Save as ZIP** — export any selection as one ZIP (a folder per game + `index.json`), no token needed
+- **Privacy by default** — SteamID (`LastOwner`) and local paths are stripped before anything is packed; every pack carries a `steamy.json` with depots, manifest ids and SHA-256 hashes
+- **Complete UI rework** — new dark/light palettes, a real blue accent (primary buttons were grey), one shared design system, new app icon
+- **New Dashboard** — hero, KPI cards, responsive game grid, quick actions for every tool and a *Share all new* card
+- **.NET 9 everywhere** — 9.0.x packages, SDK pinned via `global.json`, SharpCompress 1.0 (vulnerability warning gone), CI with tests on every push
 
 Full list in the [**CHANGELOG**](CHANGELOG.md).
 
@@ -75,6 +73,20 @@ Full list in the [**CHANGELOG**](CHANGELOG.md).
 ## 🔧 Tools
 
 <br/>
+
+<details>
+<summary><strong>📤 Share</strong> — Send all your manifests at once</summary>
+<br/>
+
+One list with everything you can share: the folders the Depot Dumper wrote and the depot manifests Steam keeps for every installed game.
+
+- Search and filter by **New**, **Dumps** or **Steam library**; **Select new** picks everything not shared yet
+- **Share** sends the selection to the dump repository in a **single commit** (one ZIP per game + a batch index)
+- **Save as ZIP** writes the selection into one archive you can pass on anywhere
+- Share history per repository — the same manifests are never sent twice
+- Account data (SteamID, Steam path) is removed before packing
+
+</details>
 
 <details>
 <summary><strong>⚡ Steamless</strong> — Remove Steam DRM</summary>
@@ -236,8 +248,10 @@ Steamy keeps itself up to date. At startup it asks GitHub for the latest release
 | **UI** | [WPF-UI 4.2](https://github.com/lepoco/wpfui) — Fluent Design, Mica/Acrylic |
 | **Pattern** | MVVM — [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) |
 | **DI** | Microsoft.Extensions.DependencyInjection |
-| **Compression** | SharpCompress 0.39 — 7z, zip, rar |
+| **Compression** | SharpCompress 1.0 — 7z, zip, rar |
 | **Security** | Windows DPAPI encrypted credential store |
+| **Tests** | xUnit — sharing core and VDF parser, cross-platform |
+| **CI** | GitHub Actions — build + tests on every push, release on tags |
 
 <br/>
 
@@ -264,9 +278,11 @@ Grab the latest release from the [**Releases**](https://github.com/ZazaJr24/Stea
 git clone https://github.com/ZazaJr24/Steamy.git
 cd Steamy
 dotnet build src/Steamy/Steamy.csproj -c Release
+dotnet test                      # runs the unit tests
+./run.ps1                        # builds and starts a fresh binary
 ```
 
-> Output: `src/Steamy/bin/Release/net9.0-windows/Steamy.exe`
+> Needs the .NET 9 SDK (pinned in `global.json`). Output: `src/Steamy/bin/Release/net9.0-windows/Steamy.exe`
 
 **Releasing a new version**
 
@@ -284,14 +300,15 @@ dotnet build src/Steamy/Steamy.csproj -c Release
 
 ```
 src/Steamy/
-├── Pages/           UI pages — Dashboard, Games, Tools, Settings
+├── Pages/           UI pages — Dashboard, Games, Share, Tools, Settings
 ├── ViewModels/      MVVM ViewModels
-├── Services/        Core logic — downloads, updater, CreamAPI, Goldberg, ...
+├── Services/        Core logic — downloads, sharing, updater, CreamAPI, Goldberg, ...
 ├── Models/          Data models and enums
 ├── Views/           Update card
 ├── Controls/        Custom controls — SmoothProgressBar, AdaptiveGridPanel, ...
-├── Resources/       Styles, themes, bundled DLLs
-└── Tools/           Bundled Steamless CLI + plugins
+├── Resources/       Design system (Styles.xaml), themes, brand icon, bundled DLLs
+└── Tools/           Bundled DepotDownloaderMod
+tests/Steamy.Tests/  xUnit tests for the sharing core and the VDF parser
 ```
 
 <br/>

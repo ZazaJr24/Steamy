@@ -883,7 +883,7 @@
       <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn5}">
         <Border Style="{StaticResource SectionChip}">
           <StackPanel Orientation="Horizontal">
-            <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="14" Foreground="#38BDF8" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
             <TextBlock Text="Depot Dumper &amp; sharing" VerticalAlignment="Center" FontWeight="SemiBold" />
           </StackPanel>
         </Border>
@@ -894,7 +894,7 @@
             <StackPanel Orientation="Horizontal">
               <ui:SymbolIcon Symbol="Info24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
                              VerticalAlignment="Top" Margin="0,1,9,0" />
-              <TextBlock Text="Dumps are sent into one private repository with a fine-grained token that only has Contents: Read and write on it. A contributor can therefore send, but cannot read what others sent — only the repository owner can open it."
+              <TextBlock Text="Shares are committed to one GitHub repository with a fine-grained token that only has Contents: Read and write on that repository. Keep the repository private: everyone who has access to it can see what was shared."
                          Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
@@ -944,7 +944,7 @@
                          PasswordChanged="ShareTokenBox_PasswordChanged"
                          Style="{StaticResource CredentialBoxStyle}" />
           </Grid>
-          <TextBlock Text="Dumping only reads the selected source. Nothing is uploaded or shared until you press Send to repository on the Depot Dumper page."
+          <TextBlock Text="Dumping only reads the selected source. Nothing is uploaded until you press Share on the Share page or Send to repository on the Depot Dumper page."
                      Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
         </StackPanel>
       </Border>

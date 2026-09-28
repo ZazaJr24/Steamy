@@ -13,7 +13,7 @@
   <CubicEase x:Key="SmoothEaseInOut" EasingMode="EaseInOut" />
   <!-- Core typography -->
   <Style x:Key="PageTitleStyle" TargetType="TextBlock">
-    <Setter Property="FontSize" Value="26" />
+    <Setter Property="FontSize" Value="28" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="Margin" Value="0,0,0,6" />
@@ -479,4 +479,300 @@
         <DataTrigger Binding="{Binding IsActive}" Value="True"><Setter Property="UIElement.Visibility" Value="Visible" /></DataTrigger>
       </Style.Triggers>
     </Style>
+
+  <!-- ====================================================================================== -->
+  <!-- Steamy design system. Pages build on these instead of defining their own copies, so a   -->
+  <!-- card, a header or a hover looks and moves the same everywhere in the app.                -->
+  <!-- ====================================================================================== -->
+
+  <!-- Entrance motion: opacity + a 12 px rise, staggered by the number in the key. Integer
+       translation and no effects, so text and art stay sharp while it plays. -->
+  <Style x:Key="EnterStyle1" TargetType="FrameworkElement">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="RenderTransform"><Setter.Value><TranslateTransform Y="12" /></Setter.Value></Setter>
+    <Style.Triggers>
+      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+        <BeginStoryboard>
+          <Storyboard>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.38" BeginTime="0:0:0.02" EasingFunction="{StaticResource SmoothEase}" />
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.42" BeginTime="0:0:0.02" EasingFunction="{StaticResource SmoothEase}" />
+          </Storyboard>
+        </BeginStoryboard>
+      </EventTrigger>
+    </Style.Triggers>
+  </Style>
+  <Style x:Key="EnterStyle2" TargetType="FrameworkElement" BasedOn="{StaticResource EnterStyle1}">
+    <Style.Triggers>
+      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+        <BeginStoryboard>
+          <Storyboard>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.38" BeginTime="0:0:0.08" EasingFunction="{StaticResource SmoothEase}" />
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.42" BeginTime="0:0:0.08" EasingFunction="{StaticResource SmoothEase}" />
+          </Storyboard>
+        </BeginStoryboard>
+      </EventTrigger>
+    </Style.Triggers>
+  </Style>
+  <Style x:Key="EnterStyle3" TargetType="FrameworkElement" BasedOn="{StaticResource EnterStyle1}">
+    <Style.Triggers>
+      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+        <BeginStoryboard>
+          <Storyboard>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.38" BeginTime="0:0:0.14" EasingFunction="{StaticResource SmoothEase}" />
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.42" BeginTime="0:0:0.14" EasingFunction="{StaticResource SmoothEase}" />
+          </Storyboard>
+        </BeginStoryboard>
+      </EventTrigger>
+    </Style.Triggers>
+  </Style>
+  <Style x:Key="EnterStyle4" TargetType="FrameworkElement" BasedOn="{StaticResource EnterStyle1}">
+    <Style.Triggers>
+      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+        <BeginStoryboard>
+          <Storyboard>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.38" BeginTime="0:0:0.2" EasingFunction="{StaticResource SmoothEase}" />
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.42" BeginTime="0:0:0.2" EasingFunction="{StaticResource SmoothEase}" />
+          </Storyboard>
+        </BeginStoryboard>
+      </EventTrigger>
+    </Style.Triggers>
+  </Style>
+  <Style x:Key="EnterStyle5" TargetType="FrameworkElement" BasedOn="{StaticResource EnterStyle1}">
+    <Style.Triggers>
+      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+        <BeginStoryboard>
+          <Storyboard>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.38" BeginTime="0:0:0.26" EasingFunction="{StaticResource SmoothEase}" />
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.42" BeginTime="0:0:0.26" EasingFunction="{StaticResource SmoothEase}" />
+          </Storyboard>
+        </BeginStoryboard>
+      </EventTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- Typography scale -->
+  <Style x:Key="DisplayTitleStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="30" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style x:Key="CardHeaderStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style x:Key="BodyTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style x:Key="CaptionStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style x:Key="OverlineStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <Style x:Key="KpiValueStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="22" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <!-- Surfaces -->
+  <Style x:Key="CardStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="20" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+  </Style>
+  <Style x:Key="InteractiveCardStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+  <Style x:Key="InsetPanelStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="14,12" />
+  </Style>
+  <Style x:Key="IconChipStyle" TargetType="Border">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style x:Key="DividerStyle" TargetType="Border">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+  </Style>
+  <Style x:Key="TagStyle" TargetType="Border">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="7,2" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style x:Key="TagTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style x:Key="CountBadgeStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="8,2" />
+    <Setter Property="Margin" Value="10,0,0,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- Buttons -->
+  <Style x:Key="LinkButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+    <Setter Property="Appearance" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style x:Key="HeroButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+    <Setter Property="Padding" Value="18,9" />
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Margin" Value="0,0,8,0" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- Clickable tile: surface card that washes and lifts 2 px under the cursor, with a chevron
+       sliding in on the right. The content (icon + text) is supplied by the page. -->
+  <Style x:Key="TileButtonStyle" TargetType="Button">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Focusable" Value="True" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Grid x:Name="Lift" Background="Transparent">
+            <Grid.RenderTransform><TranslateTransform Y="0" /></Grid.RenderTransform>
+            <Border CornerRadius="14" Background="{DynamicResource SurfaceElevatedBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" />
+            <Border x:Name="Hover" CornerRadius="14" Background="{DynamicResource SurfaceSubtleBrush}"
+                    BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Opacity="0" />
+            <ContentPresenter Margin="14,12,30,12" VerticalAlignment="Center" />
+            <ui:SymbolIcon x:Name="Chev" Symbol="ChevronRight20" FontSize="13"
+                           Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Right"
+                           VerticalAlignment="Center" Margin="0,0,12,0" Opacity="0" />
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Trigger.EnterActions>
+                <BeginStoryboard>
+                  <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="1" Duration="{StaticResource HoverAnimationDuration}" EasingFunction="{StaticResource SmoothEaseInOut}" />
+                    <DoubleAnimation Storyboard.TargetName="Chev" Storyboard.TargetProperty="Opacity" To="1" Duration="{StaticResource HoverAnimationDuration}" EasingFunction="{StaticResource SmoothEaseInOut}" />
+                    <DoubleAnimation Storyboard.TargetName="Lift" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="-2" Duration="{StaticResource HoverAnimationDuration}" EasingFunction="{StaticResource SmoothEaseInOut}" />
+                  </Storyboard>
+                </BeginStoryboard>
+              </Trigger.EnterActions>
+              <Trigger.ExitActions>
+                <BeginStoryboard>
+                  <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0" Duration="{StaticResource HoverAnimationDuration}" EasingFunction="{StaticResource SmoothEaseInOut}" />
+                    <DoubleAnimation Storyboard.TargetName="Chev" Storyboard.TargetProperty="Opacity" To="0" Duration="{StaticResource HoverAnimationDuration}" EasingFunction="{StaticResource SmoothEaseInOut}" />
+                    <DoubleAnimation Storyboard.TargetName="Lift" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="{StaticResource HoverAnimationDuration}" EasingFunction="{StaticResource SmoothEaseInOut}" />
+                  </Storyboard>
+                </BeginStoryboard>
+              </Trigger.ExitActions>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Hover" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Hover" Property="Opacity" Value="1" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Flat list row with a soft wash on hover -->
+  <Style x:Key="RowButtonStyle" TargetType="Button">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Bg" CornerRadius="10" Padding="10,9" Background="Transparent">
+            <ContentPresenter HorizontalAlignment="Stretch" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Bg" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Segmented control: RadioButtons inside a SegmentHostStyle border read as one switch. -->
+  <Style x:Key="SegmentHostStyle" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style x:Key="SegmentButtonStyle" TargetType="RadioButton">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="RadioButton">
+          <Border x:Name="Chip" CornerRadius="8" Padding="12,6" Background="Transparent"
+                  BorderBrush="Transparent" BorderThickness="1">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Chip" Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+              <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+              <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
 </ResourceDictionary>

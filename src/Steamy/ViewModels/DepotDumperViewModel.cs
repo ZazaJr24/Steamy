@@ -43,7 +43,8 @@ public sealed class DepotDumperViewModel : ObservableObject
         IManifestSourceService sources,
         ISettingsService settings,
         IGameLocatorService gameLocator,
-        ILoggingService logging)
+        ILoggingService logging,
+        INavigationService navigation)
     {
         _sharing = sharing;
         _sources = sources;
@@ -61,6 +62,7 @@ public sealed class DepotDumperViewModel : ObservableObject
         CancelCommand = new RelayCommand(Cancel, () => IsBusy);
         RefreshGamesCommand = new AsyncRelayCommand(LoadGamesAsync);
         RevealFolderCommand = new RelayCommand(RevealFolder);
+        OpenShareCommand = new RelayCommand(() => navigation.Navigate<Pages.SharePage>());
 
         _ = LoadGamesAsync();
     }
@@ -238,6 +240,7 @@ public sealed class DepotDumperViewModel : ObservableObject
     public IRelayCommand CancelCommand { get; }
     public IAsyncRelayCommand RefreshGamesCommand { get; }
     public ICommand RevealFolderCommand { get; }
+    public ICommand OpenShareCommand { get; }
 
     private async Task LoadGamesAsync()
     {

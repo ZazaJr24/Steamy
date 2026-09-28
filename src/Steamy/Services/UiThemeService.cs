@@ -13,6 +13,7 @@ public static class UiThemeService
     private static readonly ResourceDictionary LightPalette = new() { Source = new Uri(PalettePackBase + "Light.xaml") };
 
     private static string _currentBackdrop = "None";
+    private static bool _isLight;
 
     public static void Apply(string? appearance)
     {
@@ -20,6 +21,7 @@ public static class UiThemeService
             ? IsSystemUsingLightApps()
             : string.Equals(appearance, "Light", StringComparison.OrdinalIgnoreCase);
 
+        _isLight = light;
         try { SwapPalette(light); } catch { }
 
         try
@@ -74,7 +76,10 @@ public static class UiThemeService
         if (app is null) return;
 
         app.Resources["AppBackgroundBrush"] = new SolidColorBrush(Colors.Transparent);
-        app.Resources["SidebarBackgroundBrush"] = new SolidColorBrush(Color.FromArgb(0x40, 0x0A, 0x0B, 0x0E));
+        // A light tint in the light theme; the old fixed dark tint turned the sidebar grey there.
+        app.Resources["SidebarBackgroundBrush"] = _isLight
+            ? new SolidColorBrush(Color.FromArgb(0x73, 0xFF, 0xFF, 0xFF))
+            : new SolidColorBrush(Color.FromArgb(0x40, 0x09, 0x0B, 0x10));
     }
 
     private static void RestoreOpaqueBackgrounds()
@@ -99,9 +104,11 @@ public static class UiThemeService
         }
     }
 
+    // Brand blue for every Fluent accent surface (primary buttons, toggles, check boxes, focus
+    // rings). WPF-UI lightens it a little in the dark theme, so both themes get the same hue.
     private static void ApplyAccent(bool light)
     {
-        var accent = light ? Color.FromRgb(0x5C, 0x6B, 0x84) : Color.FromRgb(0x8C, 0x99, 0xAE);
+        var accent = light ? Color.FromRgb(0x25, 0x63, 0xEB) : Color.FromRgb(0x2F, 0x6F, 0xEB);
         ApplicationAccentColorManager.Apply(accent, light ? ApplicationTheme.Light : ApplicationTheme.Dark);
     }
 

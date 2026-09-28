@@ -105,6 +105,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<IManifestSourceService>(),
             sp.GetRequiredService<ILoggingService>()));
         services.AddSingleton<DepotDumperViewModel>();
+        services.AddSingleton<ShareViewModel>();
         services.AddSingleton<GameFixesViewModel>();
         services.AddSingleton<GreenLumaViewModel>();
         services.AddSingleton<FamilyShareViewModel>(sp => new FamilyShareViewModel(

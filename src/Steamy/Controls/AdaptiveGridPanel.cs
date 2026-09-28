@@ -23,6 +23,13 @@ public sealed class AdaptiveGridPanel : Panel
         nameof(FooterHeight), typeof(double), typeof(AdaptiveGridPanel),
         new FrameworkPropertyMetadata(56.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
+    /// <summary>Shows at most this many full rows (0 = all). Extra children are not arranged, so a
+    /// preview grid never ends in a half-filled row whatever the window width.</summary>
+    public static readonly DependencyProperty MaxRowsProperty = DependencyProperty.Register(
+        nameof(MaxRows), typeof(int), typeof(AdaptiveGridPanel),
+        new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
+    public int MaxRows { get => (int)GetValue(MaxRowsProperty); set => SetValue(MaxRowsProperty, value); }
     public double MinItemWidth { get => (double)GetValue(MinItemWidthProperty); set => SetValue(MinItemWidthProperty, value); }
     public double Spacing { get => (double)GetValue(SpacingProperty); set => SetValue(SpacingProperty, value); }
     public double CoverRatio { get => (double)GetValue(CoverRatioProperty); set => SetValue(CoverRatioProperty, value); }
@@ -40,7 +47,7 @@ public sealed class AdaptiveGridPanel : Panel
     {
         var (columns, w, h) = Layout(availableSize.Width);
         foreach (UIElement child in InternalChildren) child.Measure(new Size(w, h));
-        var rows = (InternalChildren.Count + columns - 1) / columns;
+        var rows = (VisibleCount(columns) + columns - 1) / columns;
         var width = double.IsInfinity(availableSize.Width) ? columns * w + (columns - 1) * Spacing : availableSize.Width;
         return new Size(width, rows == 0 ? 0 : rows * h + (rows - 1) * Spacing);
     }
@@ -48,12 +55,26 @@ public sealed class AdaptiveGridPanel : Panel
     protected override Size ArrangeOverride(Size finalSize)
     {
         var (columns, w, h) = Layout(finalSize.Width);
+        var visible = VisibleCount(columns);
         for (var i = 0; i < InternalChildren.Count; i++)
         {
+            if (i >= visible)
+            {
+                InternalChildren[i].Arrange(new Rect(0, 0, 0, 0));
+                continue;
+            }
+
             var col = i % columns;
             var row = i / columns;
             InternalChildren[i].Arrange(new Rect(col * (w + Spacing), row * (h + Spacing), w, h));
         }
         return finalSize;
+    }
+
+    private int VisibleCount(int columns)
+    {
+        var count = InternalChildren.Count;
+        if (MaxRows <= 0 || count <= columns) return count;
+        return Math.Min(MaxRows, count / columns) * columns;
     }
 }

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests for the platform-independent parts of Steamy (sharing, VDF parsing). The sources are
+       linked instead of referencing the WPF project, so the tests also run on Linux and macOS. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\src\Steamy\Services\Steam\VdfParser.cs" Link="Linked\VdfParser.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Sharing\ShareModels.cs" Link="Linked\ShareModels.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Sharing\ManifestLibraryScanner.cs" Link="Linked\ManifestLibraryScanner.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Sharing\ShareArchiveBuilder.cs" Link="Linked\ShareArchiveBuilder.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Sharing\GitHubBatchUploader.cs" Link="Linked\GitHubBatchUploader.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Sharing\ShareHistoryStore.cs" Link="Linked\ShareHistoryStore.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+</Project>

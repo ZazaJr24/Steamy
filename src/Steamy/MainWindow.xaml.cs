@@ -14,6 +14,7 @@ public partial class MainWindow : FluentWindow
     public MainWindow()
     {
         InitializeComponent();
+        VersionLabel.Text = $"Version {BuildStamp.Version} · .NET {Environment.Version.Major}";
         _navigationService = (NavigationService)App.Services.GetService(typeof(INavigationService))!;
         _navigationService.Attach(route => RootNavigation.Navigate(route));
         Loaded += (_, _) => RootNavigation.Navigate(typeof(Pages.DashboardPage));
