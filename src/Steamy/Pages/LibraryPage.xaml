@@ -172,7 +172,7 @@
 
                     <Border CornerRadius="13,13,0,0" Background="#0B0C0F">
                       <Grid>
-                        <Border CornerRadius="13,13,0,0" CacheMode="BitmapCache" RenderOptions.BitmapScalingMode="HighQuality">
+                        <Border CornerRadius="13,13,0,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
                           <Border.Background>
                             <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
                           </Border.Background>
@@ -279,7 +279,8 @@
 
           <!-- Hero banner -->
           <Grid Grid.Row="0" Height="140">
-            <Image x:Name="OverlayCover" Stretch="UniformToFill" VerticalAlignment="Center" />
+            <Image x:Name="OverlayCover" Stretch="UniformToFill" VerticalAlignment="Center"
+                   RenderOptions.BitmapScalingMode="HighQuality" />
             <Border Background="{StaticResource HeroBannerFade}" />
             <ui:Button Style="{StaticResource IconButtonStyle}"
                        Icon="{ui:SymbolIcon Dismiss24}"

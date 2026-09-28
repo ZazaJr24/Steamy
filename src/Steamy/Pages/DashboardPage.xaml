@@ -188,8 +188,10 @@
                 <TextBlock Text="{Binding CoverGlyph}" FontSize="48" Foreground="#30FFFFFF"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            Visibility="{Binding IsArtworkFallback, Converter={StaticResource BoolToVis}}" />
-                <Border Margin="1" CornerRadius="13" CacheMode="BitmapCache"
-                        RenderOptions.BitmapScalingMode="HighQuality">
+                <!-- No CacheMode here: a BitmapCache renders the cover at 1x and WPF then scales
+                     that bitmap on >100% displays, which is exactly what made covers blurry. -->
+                <Border Margin="1" CornerRadius="13"
+                        RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
                   <Border.Background>
                     <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
                   </Border.Background>
@@ -537,7 +539,7 @@
           </Grid>
 
           <!-- Game artwork + readability shades -->
-          <Border CacheMode="BitmapCache" RenderOptions.BitmapScalingMode="HighQuality"
+          <Border RenderOptions.BitmapScalingMode="HighQuality"
                   Visibility="{Binding HasHeroArt, Converter={StaticResource BoolToVis}}">
             <Border.Background>
               <ImageBrush ImageSource="{Binding HeroImage}" Stretch="UniformToFill" />

@@ -3,100 +3,388 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       ScrollViewer.CanContentScroll="False"
+      UseLayoutRounding="True"
+      SnapsToDevicePixels="True"
       Background="{DynamicResource AppBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+    <!-- ===== Motion presets (same language as the Dashboard) ============================= -->
+    <!-- Entrances animate opacity and whole pixels only, so text stays crisp. -->
+    <Style x:Key="RiseIn1" TargetType="FrameworkElement">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="RenderTransform"><Setter.Value><TranslateTransform Y="12" /></Setter.Value></Setter>
+      <Style.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.42" BeginTime="0:0:0.02">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.46" BeginTime="0:0:0.02">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="RiseIn2" TargetType="FrameworkElement" BasedOn="{StaticResource RiseIn1}">
+      <Style.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.42" BeginTime="0:0:0.10">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.46" BeginTime="0:0:0.10">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="RiseIn3" TargetType="FrameworkElement" BasedOn="{StaticResource RiseIn1}">
+      <Style.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.42" BeginTime="0:0:0.18">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.46" BeginTime="0:0:0.18">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="RiseIn4" TargetType="FrameworkElement" BasedOn="{StaticResource RiseIn1}">
+      <Style.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.42" BeginTime="0:0:0.26">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.46" BeginTime="0:0:0.26">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="RiseIn5" TargetType="FrameworkElement" BasedOn="{StaticResource RiseIn1}">
+      <Style.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.42" BeginTime="0:0:0.34">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.46" BeginTime="0:0:0.34">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <!-- Very slow, very soft glow that drifts behind the page header. -->
+    <Style x:Key="AmbientOrb" TargetType="Ellipse">
+      <Setter Property="IsHitTestVisible" Value="False" />
+      <Setter Property="CacheMode"><Setter.Value><BitmapCache /></Setter.Value></Setter>
+      <Style.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.45" To="1" Duration="0:0:7"
+                               AutoReverse="True" RepeatBehavior="Forever">
+                <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <!-- Cards lift their border colour instead of moving, so nothing on the page ever shifts.
+         The three variants only differ in when they fade in, which gives the page its cascade. -->
+    <Style x:Key="SettingsCardBase" TargetType="Border" BasedOn="{StaticResource SurfaceCardStyle}">
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="BorderBrush" Value="{DynamicResource ControlHoverBrush}" />
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="SettingsCard" TargetType="Border" BasedOn="{StaticResource SettingsCardBase}">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="RenderTransform"><Setter.Value><TranslateTransform Y="12" /></Setter.Value></Setter>
+      <Style.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.42" BeginTime="0:0:0.06">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.46" BeginTime="0:0:0.06">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="SettingsCardMid" TargetType="Border" BasedOn="{StaticResource SettingsCardBase}">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="RenderTransform"><Setter.Value><TranslateTransform Y="12" /></Setter.Value></Setter>
+      <Style.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.42" BeginTime="0:0:0.14">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.46" BeginTime="0:0:0.14">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="SettingsCardLate" TargetType="Border" BasedOn="{StaticResource SettingsCardBase}">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="RenderTransform"><Setter.Value><TranslateTransform Y="12" /></Setter.Value></Setter>
+      <Style.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.42" BeginTime="0:0:0.22">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.46" BeginTime="0:0:0.22">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <Style x:Key="SectionChip" TargetType="Border">
+      <Setter Property="Width" Value="28" />
+      <Setter Property="Height" Value="28" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="SectionHeading" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="SectionHint" TargetType="TextBlock" BasedOn="{StaticResource TertiaryTextStyle}">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="VerticalAlignment" Value="Bottom" />
+      <Setter Property="Margin" Value="10,0,0,3" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <Style x:Key="RowIcon" TargetType="Border">
+      <Setter Property="Width" Value="30" />
+      <Setter Property="Height" Value="30" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,11,0" />
+    </Style>
+    <Style x:Key="TestButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+      <Setter Property="Appearance" Value="Secondary" />
+      <Setter Property="CornerRadius" Value="9" />
+    </Style>
   </Page.Resources>
   <!-- StringVis registered in code-behind -->
 
   <ScrollViewer Style="{StaticResource PageScrollHostStyle}"
                 HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto"
-                Padding="26,22,26,36">
+                Padding="26,22,26,40">
     <StackPanel MaxWidth="1100" HorizontalAlignment="Stretch">
 
-      <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" />
-      <TextBlock Text="Appearance, credentials, local paths, app DNS and download behaviour. Changes are saved automatically."
-                 Style="{StaticResource PageSubtitleStyle}" />
-
-      <!-- Save status and actions, right where the page starts -->
-      <Border Style="{StaticResource SurfaceCardStyle}"
-              CornerRadius="18"
-              Padding="16,14"
-              Margin="0,14,0,14">
+      <!-- ===== Header: title, live save state and the page actions ====================== -->
+      <Border Style="{StaticResource RiseIn1}"
+              CornerRadius="20"
+              Margin="0,0,0,18"
+              ClipToBounds="True"
+              Background="{DynamicResource SurfaceElevatedBrush}"
+              BorderBrush="{DynamicResource BorderSubtleBrush}"
+              BorderThickness="1">
         <Grid>
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-          </Grid.ColumnDefinitions>
-          <Border Width="32" Height="32" CornerRadius="18" Background="{DynamicResource AccentSoftBrush}">
-            <TextBlock Text="✓" FontSize="15" Foreground="{DynamicResource AccentBrush}"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Border>
-          <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">
-            <TextBlock Text="{Binding SaveStatus}" FontSize="13" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
-            <TextBlock Text="Credentials are stored separately and encrypted; they are never exported."
-                       Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,2,0,0" />
-          </StackPanel>
-          <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-            <ui:ProgressRing Width="18" Height="18" Margin="0,0,8,0" IsIndeterminate="{Binding IsBusy}"
-                             Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
-            <ui:Button Content="Save now" Command="{Binding SaveCommand}" Appearance="Primary"
-                       ToolTip="Everything is already saved automatically; this writes immediately." />
-            <ui:Button Content="Export settings" Click="ExportButton_Click" Appearance="Secondary" Margin="6,0,0,0"
-                       ToolTip="Writes a readable JSON file — settings only, no credentials." />
-            <ui:Button Content="Reset" Command="{Binding ResetCommand}" Appearance="Secondary" Margin="6,0,0,0"
-                       ToolTip="Restores the defaults" />
-          </StackPanel>
+          <Ellipse Style="{StaticResource AmbientOrb}" Width="420" Height="220" Margin="-140,-90,0,0"
+                   HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Ellipse.Fill>
+              <RadialGradientBrush>
+                <GradientStop Color="#4C38BDF8" Offset="0" />
+                <GradientStop Color="#0038BDF8" Offset="1" />
+              </RadialGradientBrush>
+            </Ellipse.Fill>
+          </Ellipse>
+          <Ellipse Style="{StaticResource AmbientOrb}" Width="380" Height="200" Margin="0,-80,-120,0"
+                   HorizontalAlignment="Right" VerticalAlignment="Top">
+            <Ellipse.Fill>
+              <RadialGradientBrush>
+                <GradientStop Color="#3C6366F1" Offset="0" />
+                <GradientStop Color="#006366F1" Offset="1" />
+              </RadialGradientBrush>
+            </Ellipse.Fill>
+          </Ellipse>
+
+          <Grid Margin="22,20">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel VerticalAlignment="Center" Margin="0,0,18,0">
+              <StackPanel Orientation="Horizontal">
+                <Border Width="38" Height="38" CornerRadius="12" Background="{DynamicResource AccentSoftBrush}"
+                        VerticalAlignment="Center" Margin="0,0,12,0">
+                  <ui:SymbolIcon Symbol="Settings24" FontSize="18" Foreground="{DynamicResource AccentBrush}"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="Settings" FontSize="26" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="Appearance, credentials, local paths, app DNS and download behaviour."
+                             Style="{StaticResource MutedTextStyle}" FontSize="12.5" Margin="0,1,0,0" />
+                </StackPanel>
+              </StackPanel>
+
+              <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                <Border Background="{DynamicResource SuccessSoftBrush}" CornerRadius="9" Padding="9,4"
+                        VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="✓" FontSize="11.5" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding SaveStatus}" FontSize="11.5" FontWeight="SemiBold" Margin="6,0,0,0"
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </Border>
+                <TextBlock Text="Credentials are encrypted and never exported."
+                           Style="{StaticResource TertiaryTextStyle}" FontSize="11"
+                           VerticalAlignment="Center" Margin="10,0,0,0" />
+              </StackPanel>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <ui:ProgressRing Width="18" Height="18" Margin="0,0,8,0" IsIndeterminate="{Binding IsBusy}"
+                                 Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <ui:Button Content="Save now" Command="{Binding SaveCommand}" Appearance="Primary" CornerRadius="9"
+                           ToolTip="Everything is already saved automatically; this writes immediately." />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                <ui:Button Content="Export settings" Click="ExportButton_Click" Appearance="Secondary" CornerRadius="9"
+                           Icon="{ui:SymbolIcon Document24}"
+                           ToolTip="Writes a readable JSON file — settings only, no credentials." />
+                <ui:Button Content="Reset" Command="{Binding ResetCommand}" Appearance="Secondary" CornerRadius="9"
+                           Margin="6,0,0,0" Icon="{ui:SymbolIcon ArrowSync24}"
+                           ToolTip="Restores the defaults" />
+              </StackPanel>
+            </StackPanel>
+          </Grid>
         </Grid>
       </Border>
 
-      <TextBlock Text="Appearance" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,9" />
-      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+      <!-- ===== Appearance ============================================================== -->
+      <StackPanel Orientation="Horizontal" Margin="0,4,0,10" Style="{StaticResource RiseIn2}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="Settings24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="Appearance" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
+        <TextBlock Text="Theme, backdrop and language" Style="{StaticResource SectionHint}" />
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCard}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
         <StackPanel>
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Theme" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Switch between system, light and dark Fluent appearance. Applied immediately and saved." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+              <Border Style="{StaticResource RowIcon}">
+                <ui:SymbolIcon Symbol="Settings24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Theme" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="Switch between system, light and dark Fluent appearance. Applied immediately and saved." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              </StackPanel>
             </StackPanel>
             <ComboBox Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Appearances}" SelectedItem="{Binding Settings.Appearance}" SelectionChanged="AppearanceComboBox_SelectionChanged" />
           </Grid>
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Window Backdrop" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Mica, Acrylic or Tabbed translucent background effect (Windows 11). Applied immediately." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+              <Border Style="{StaticResource RowIcon}">
+                <ui:SymbolIcon Symbol="TopSpeed24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Window Backdrop" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="Mica, Acrylic or Tabbed translucent background effect (Windows 11). Applied immediately." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              </StackPanel>
             </StackPanel>
             <ComboBox Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding BackdropStyles}" SelectedItem="{Binding Settings.BackdropStyle}" SelectionChanged="BackdropComboBox_SelectionChanged" />
           </Grid>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Language" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="The selected language is applied on the next start." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+              <Border Style="{StaticResource RowIcon}">
+                <ui:SymbolIcon Symbol="Document24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Language" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="The selected language is applied on the next start." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              </StackPanel>
             </StackPanel>
             <ComboBox Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Languages}" SelectedItem="{Binding Settings.Language}" />
           </Grid>
         </StackPanel>
       </Border>
 
-      <TextBlock Text="Steam connection" Style="{StaticResource SectionTitleStyle}" />
-      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+      <!-- ===== Steam connection ======================================================== -->
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn2}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="Games24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="Steam connection" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
+        <TextBlock Text="API key, SteamID64 and endpoint" Style="{StaticResource SectionHint}" />
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCard}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
         <StackPanel>
           <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Steam API key" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="{Binding SteamCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+              <Border Style="{StaticResource RowIcon}">
+                <ui:SymbolIcon Symbol="Key24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Steam API key" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="{Binding SteamCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+              </StackPanel>
             </StackPanel>
             <PasswordBox x:Name="SteamApiKeyBox" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="SteamApiKeyBox_PasswordChanged"
                          ToolTip="Type a key and save; it is encrypted with DPAPI and never leaves this machine in plain text." />
           </Grid>
           <TextBlock Text="Leave the box empty to keep the stored key unchanged."
-                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,0,0,14" />
+                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="41,0,0,14" />
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
@@ -115,15 +403,24 @@
           </Grid>
           <Grid Margin="0,14,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <ui:Button Content="Test endpoint" Command="{Binding TestSteamCommand}" Appearance="Secondary" />
+            <ui:Button Content="Test endpoint" Style="{StaticResource TestButton}" Command="{Binding TestSteamCommand}"
+                       Icon="{ui:SymbolIcon Play24}" />
             <TextBlock Grid.Column="1" Text="{Binding SteamTestStatus}" Style="{StaticResource MutedTextStyle}"
                        FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
           </Grid>
         </StackPanel>
       </Border>
 
-      <TextBlock Text="Ryuu Generator" Style="{StaticResource SectionTitleStyle}" />
-      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+      <!-- ===== Ryuu Generator =========================================================== -->
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn2}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="Ryuu Generator" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
+        <TextBlock Text="Base URL and auth key" Style="{StaticResource SectionHint}" />
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCardMid}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
         <StackPanel>
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
@@ -135,28 +432,47 @@
           </Grid>
           <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Auth key" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="{Binding RyuuCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+              <Border Style="{StaticResource RowIcon}">
+                <ui:SymbolIcon Symbol="Key24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Auth key" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="{Binding RyuuCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+              </StackPanel>
             </StackPanel>
             <PasswordBox x:Name="RyuuAuthKeyBox" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="RyuuAuthKeyBox_PasswordChanged" />
           </Grid>
           <TextBlock Text="Stored separately, never written into logs or exports. Empty means: keep the current key."
-                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,0,0,14" />
+                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="41,0,0,14" />
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <ui:Button Content="Test endpoint" Command="{Binding TestRyuuCommand}" Appearance="Secondary" />
+            <ui:Button Content="Test endpoint" Style="{StaticResource TestButton}" Command="{Binding TestRyuuCommand}"
+                       Icon="{ui:SymbolIcon Play24}" />
             <TextBlock Grid.Column="1" Text="{Binding RyuuTestStatus}" Style="{StaticResource MutedTextStyle}"
                        FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
           </Grid>
         </StackPanel>
       </Border>
 
-      <TextBlock Text="Fixes source" Style="{StaticResource SectionTitleStyle}" />
-      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+      <!-- ===== Fixes source ============================================================= -->
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn2}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="PuzzlePiece24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="Fixes source" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
+        <TextBlock Text="fixes.json catalog and archives" Style="{StaticResource SectionHint}" />
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCardMid}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
         <StackPanel>
           <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
-            <TextBlock Text="Where the Game Fixes page loads its catalog (fixes.json) and archives from. Leave the URL empty to use the built-in source; private repositories need an access token." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal">
+              <ui:SymbolIcon Symbol="Info24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                             VerticalAlignment="Top" Margin="0,1,9,0" />
+              <TextBlock Text="Where the Game Fixes page loads its catalog (fixes.json) and archives from. Leave the URL empty to use the built-in source; private repositories need an access token." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
           </Border>
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
@@ -168,29 +484,48 @@
           </Grid>
           <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Access token" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="{Binding MirrorCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+              <Border Style="{StaticResource RowIcon}">
+                <ui:SymbolIcon Symbol="Key24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Access token" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="{Binding MirrorCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+              </StackPanel>
             </StackPanel>
             <PasswordBox x:Name="MirrorTokenBox" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="MirrorTokenBox_PasswordChanged"
                          ToolTip="GitHub personal access token with read access to the repository. Encrypted with DPAPI." />
           </Grid>
           <TextBlock Text="Required for private repositories. Encrypted with DPAPI, never exported. Empty means: keep the current token."
-                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,0,0,14" />
+                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="41,0,0,14" />
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <ui:Button Content="Test source" Command="{Binding TestMirrorCommand}" Appearance="Secondary" />
+            <ui:Button Content="Test source" Style="{StaticResource TestButton}" Command="{Binding TestMirrorCommand}"
+                       Icon="{ui:SymbolIcon Play24}" />
             <TextBlock Grid.Column="1" Text="{Binding MirrorTestStatus}" Style="{StaticResource MutedTextStyle}"
                        FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
           </Grid>
         </StackPanel>
       </Border>
 
-      <TextBlock Text="Hubcap Manifest" Style="{StaticResource SectionTitleStyle}" />
-      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+      <!-- ===== Hubcap Manifest ========================================================== -->
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn3}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="Rocket24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="Hubcap Manifest" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
+        <TextBlock Text="Games, Lua and depot manifests" Style="{StaticResource SectionHint}" />
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCardLate}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
         <StackPanel>
           <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
-            <TextBlock Text="Hubcap provides fast game search and manifest downloads for Denuvo Activation. An API key is required." Style="{StaticResource MutedTextStyle}" FontSize="12" />
+            <StackPanel Orientation="Horizontal">
+              <ui:SymbolIcon Symbol="Info24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                             VerticalAlignment="Top" Margin="0,1,9,0" />
+              <TextBlock Text="Hubcap provides fast game search and manifest downloads for Denuvo Activation. An API key from hubcapmanifest.com is required." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
           </Border>
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
@@ -202,22 +537,28 @@
           </Grid>
           <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="API key" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="{Binding HubcapCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+              <Border Style="{StaticResource RowIcon}">
+                <ui:SymbolIcon Symbol="Key24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="API key" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="{Binding HubcapCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+              </StackPanel>
             </StackPanel>
             <PasswordBox x:Name="HubcapApiKeyBox" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="HubcapApiKeyBox_PasswordChanged"
                          ToolTip="Type your Hubcap API key and save; encrypted with DPAPI, never exported." />
           </Grid>
           <TextBlock Text="Encrypted with DPAPI, never written into logs or exports. Empty means: keep the current key."
-                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,0,0,14" />
-          <Grid Margin="0,0,0,0">
+                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="41,0,0,14" />
+          <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <ui:Button Content="Test connection" Command="{Binding TestHubcapCommand}" Appearance="Secondary" />
+            <ui:Button Content="Test connection" Style="{StaticResource TestButton}" Command="{Binding TestHubcapCommand}"
+                       Icon="{ui:SymbolIcon Play24}" />
             <TextBlock Grid.Column="1" Text="{Binding HubcapTestStatus}" Style="{StaticResource MutedTextStyle}"
                        FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
           </Grid>
-          <!-- Usage info with progress bar -->
           <Border Margin="0,12,0,0" Padding="14,10" CornerRadius="10"
                   Background="{DynamicResource SurfaceSubtleBrush}"
                   Visibility="{Binding HubcapUsageInfo, Converter={StaticResource StringVis}}">
@@ -238,28 +579,71 @@
         </StackPanel>
       </Border>
 
-      <TextBlock Text="DepotBox" Style="{StaticResource SectionTitleStyle}" />
-      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+      <!-- ===== DepotBox ================================================================= -->
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn3}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="Storage24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="DepotBox" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
+        <TextBlock Text="Lua plus depot manifests in one package" Style="{StaticResource SectionHint}" />
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCardLate}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
         <StackPanel>
           <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
-            <TextBlock Text="DepotBox generates Lua manifests on demand. An API key from depotbox.org is required." Style="{StaticResource MutedTextStyle}" FontSize="12" />
+            <StackPanel Orientation="Horizontal">
+              <ui:SymbolIcon Symbol="Info24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                             VerticalAlignment="Top" Margin="0,1,9,0" />
+              <TextBlock Text="DepotBox builds the Lua script and every depot manifest for an app in one request. An API key from depotbox.org is required." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
           </Border>
           <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="API key" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="{Binding DepotBoxCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+              <Border Style="{StaticResource RowIcon}">
+                <ui:SymbolIcon Symbol="Key24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="API key" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="{Binding DepotBoxCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+              </StackPanel>
             </StackPanel>
             <PasswordBox x:Name="DepotBoxApiKeyBox" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="DepotBoxApiKeyBox_PasswordChanged"
                          ToolTip="Type your DepotBox API key and save; encrypted with DPAPI, never exported." />
           </Grid>
           <TextBlock Text="Encrypted with DPAPI, never written into logs or exports. Empty means: keep the current key."
-                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" />
+                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="41,0,0,14" />
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <ui:Button Content="Test connection" Style="{StaticResource TestButton}" Command="{Binding TestDepotBoxCommand}"
+                       Icon="{ui:SymbolIcon Play24}" />
+            <TextBlock Grid.Column="1" Text="{Binding DepotBoxTestStatus}" Style="{StaticResource MutedTextStyle}"
+                       FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
+          </Grid>
+          <Border Margin="0,12,0,0" Padding="14,10" CornerRadius="10"
+                  Background="{DynamicResource SurfaceSubtleBrush}"
+                  Visibility="{Binding DepotBoxUsageInfo, Converter={StaticResource StringVis}}">
+            <StackPanel Orientation="Horizontal">
+              <ui:SymbolIcon Symbol="TopSpeed24" FontSize="13" Foreground="{DynamicResource AccentBrush}"
+                             VerticalAlignment="Center" Margin="0,0,8,0" />
+              <TextBlock Text="{Binding DepotBoxUsageInfo}" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
         </StackPanel>
       </Border>
 
-      <TextBlock Text="DepotDownloader &amp; downloads" Style="{StaticResource SectionTitleStyle}" />
-      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+      <!-- ===== DepotDownloader & downloads ============================================== -->
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn4}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="DepotDownloader &amp; downloads" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
+        <TextBlock Text="Paths, queue limits and transfer options" Style="{StaticResource SectionHint}" />
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCardLate}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
         <StackPanel>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -268,7 +652,7 @@
               <TextBlock Text="Optional. Empty means the app detects your Steam installation automatically." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
             </StackPanel>
             <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.SteamLibraryPath, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="C:\Program Files (x86)\Steam" Margin="8,0,8,0" />
-            <ui:Button Grid.Column="2" VerticalAlignment="Center" Content="Browse" Click="SteamLibraryBrowseButton_Click" Appearance="Secondary" />
+            <ui:Button Grid.Column="2" VerticalAlignment="Center" Content="Browse" Click="SteamLibraryBrowseButton_Click" Appearance="Secondary" CornerRadius="9" />
           </Grid>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -277,7 +661,7 @@
               <TextBlock Text="Select the unchanged local tool used for content you are authorized to access." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
             </StackPanel>
             <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.DepotDownloaderPath, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="C:\Tools\DepotDownloader.exe" Margin="8,0,8,0" />
-            <ui:Button Grid.Column="2" VerticalAlignment="Center" Content="Browse" Click="DepotDownloaderBrowseButton_Click" Appearance="Secondary" />
+            <ui:Button Grid.Column="2" VerticalAlignment="Center" Content="Browse" Click="DepotDownloaderBrowseButton_Click" Appearance="Secondary" CornerRadius="9" />
           </Grid>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -286,7 +670,7 @@
               <TextBlock Text="Optional process directory; the target folder is used when empty." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
             </StackPanel>
             <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.WorkingDirectory, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="C:\Tools\DepotDownloader" Margin="8,0,8,0" />
-            <ui:Button Grid.Column="2" VerticalAlignment="Center" Content="Browse" Click="WorkingDirectoryBrowseButton_Click" Appearance="Secondary" />
+            <ui:Button Grid.Column="2" VerticalAlignment="Center" Content="Browse" Click="WorkingDirectoryBrowseButton_Click" Appearance="Secondary" CornerRadius="9" />
           </Grid>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -295,7 +679,7 @@
               <TextBlock Text="Files are never deleted silently." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
             </StackPanel>
             <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.DownloadFolder, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="D:\SteamLibrary" Margin="8,0,8,0" />
-            <ui:Button Grid.Column="2" VerticalAlignment="Center" Content="Browse" Click="DownloadFolderBrowseButton_Click" Appearance="Secondary" />
+            <ui:Button Grid.Column="2" VerticalAlignment="Center" Content="Browse" Click="DownloadFolderBrowseButton_Click" Appearance="Secondary" CornerRadius="9" />
           </Grid>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -315,7 +699,6 @@
             <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.InteractiveToolConsole}" />
           </Grid>
 
-          <!-- Three numbers, each with its own live hint so a bad value cannot fail silently -->
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />
@@ -381,11 +764,23 @@
         </StackPanel>
       </Border>
 
-      <TextBlock Text="App DNS" Style="{StaticResource SectionTitleStyle}" />
-      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+      <!-- ===== App DNS ================================================================== -->
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn4}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="Share24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="App DNS" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
+        <TextBlock Text="Encrypted resolver used by the app only" Style="{StaticResource SectionHint}" />
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCardLate}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
         <StackPanel>
           <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
-            <TextBlock Text="App only — Windows DNS and other applications remain unchanged. No administrator privileges are used." Style="{StaticResource MutedTextStyle}" FontSize="12" />
+            <StackPanel Orientation="Horizontal">
+              <ui:SymbolIcon Symbol="Info24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                             VerticalAlignment="Top" Margin="0,1,9,0" />
+              <TextBlock Text="App only — Windows DNS and other applications remain unchanged. No administrator privileges are used." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
           </Border>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
@@ -413,7 +808,8 @@
           </Grid>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <ui:Button Content="Run DNS diagnostic" Command="{Binding TestDnsCommand}" />
+            <ui:Button Content="Run DNS diagnostic" Style="{StaticResource TestButton}" Command="{Binding TestDnsCommand}"
+                       Icon="{ui:SymbolIcon Play24}" />
             <TextBlock Grid.Column="1" Text="{Binding DnsLatency}" Foreground="{DynamicResource AccentBrush}"
                        VerticalAlignment="Center" Margin="10,0,0,0" />
             <TextBlock Grid.Column="2" Text="{Binding DnsStatus}" Style="{StaticResource MutedTextStyle}"
@@ -423,19 +819,33 @@
         </StackPanel>
       </Border>
 
-      <TextBlock Text="Quality of life and security" Style="{StaticResource SectionTitleStyle}" />
-      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="18" Margin="0,0,0,8">
+      <!-- ===== Quality of life and security ============================================= -->
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn5}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="ShieldTask24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="Quality of life and security" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
+        <TextBlock Text="Updates, notifications and logs" Style="{StaticResource SectionHint}" />
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCardLate}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
         <StackPanel>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Automatic updates" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="At startup Steamy looks for a new version on GitHub and installs it with one click." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding AppVersionLabel, Mode=OneWay}" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding UpdateStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="11.5" Margin="0,4,0,0" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+              <Border Style="{StaticResource RowIcon}">
+                <ui:SymbolIcon Symbol="ArrowSync24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Automatic updates" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="At startup Steamy looks for a new version on GitHub and installs it with one click." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding AppVersionLabel, Mode=OneWay}" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding UpdateStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="11.5" Margin="0,4,0,0" TextWrapping="Wrap" />
+              </StackPanel>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-              <ui:Button Content="Check now" Icon="{ui:SymbolIcon ArrowSync24}" Appearance="Secondary"
+              <ui:Button Content="Check now" Icon="{ui:SymbolIcon ArrowSync24}" Appearance="Secondary" CornerRadius="9"
                          Command="{Binding CheckForUpdatesCommand}" Margin="0,0,12,0" />
               <ui:ToggleSwitch IsChecked="{Binding Settings.AutoUpdate}" />
             </StackPanel>
@@ -475,16 +885,22 @@
         </StackPanel>
       </Border>
 
-      <Border Style="{StaticResource SurfaceCardStyle}" CornerRadius="18" Padding="16,14" Margin="0,0,0,8">
+      <Border Style="{StaticResource SettingsCardLate}" CornerRadius="18" Padding="16,14" Margin="0,0,0,8">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
-            <TextBlock Text="Stored credentials" Style="{StaticResource CardTitleStyle}" />
-            <TextBlock Text="Deletes the encrypted Steam API key, Ryuu auth key, Hubcap API key, DepotBox API key and fixes source token from this machine."
-                       Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+            <Border Style="{StaticResource RowIcon}">
+              <ui:SymbolIcon Symbol="Key24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="Stored credentials" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Deletes the encrypted Steam API key, Ryuu auth key, Hubcap API key, DepotBox API key and fixes source token from this machine."
+                         Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+            </StackPanel>
           </StackPanel>
           <ui:Button Grid.Column="1" Content="Clear credentials" Command="{Binding ClearCredentialsCommand}"
-                     Appearance="Danger" VerticalAlignment="Center" />
+                     Appearance="Danger" CornerRadius="9" VerticalAlignment="Center" />
         </Grid>
       </Border>
     </StackPanel>

@@ -143,26 +143,33 @@ public partial class LibraryPage : Page
         _availabilityCts = new CancellationTokenSource();
         var ct = _availabilityCts.Token;
 
-        SourceAvailabilityText.Text = "Checking availability...";
+        SourceAvailabilityText.Text = $"Checking {source}...";
         SourceAvailabilityText.Foreground = TertiaryText;
-        StartButton.IsEnabled = false;
+        // A check that is still running, or that could not reach the API at all, must never lock
+        // the button: the user asked for this download and the source may simply be slow.
+        StartButton.IsEnabled = true;
 
         try
         {
             var service = App.Services.GetRequiredService<IManifestSourceService>();
-            var available = await Task.Run(() => service.IsAvailableAsync(source, appId, ct), ct);
+            var availability = await Task.Run(() => service.CheckAvailabilityAsync(source, appId, ct), ct);
 
             if (ct.IsCancellationRequested) return;
 
-            if (available)
+            SourceAvailabilityText.Text = availability.Message;
+
+            if (availability.Available && availability.Certain)
             {
-                SourceAvailabilityText.Text = $"Available on {source}";
                 SourceAvailabilityText.Foreground = ThemeBrush("SuccessBrush");
+                StartButton.IsEnabled = true;
+            }
+            else if (!availability.Certain)
+            {
+                SourceAvailabilityText.Foreground = ThemeBrush("WarningBrush");
                 StartButton.IsEnabled = true;
             }
             else
             {
-                SourceAvailabilityText.Text = $"Not available on {source}";
                 SourceAvailabilityText.Foreground = ThemeBrush("DangerBrush");
                 StartButton.IsEnabled = false;
             }
