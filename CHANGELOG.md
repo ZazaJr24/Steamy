@@ -3,6 +3,12 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.2
+
+### Fixed
+- DepotBox availability check now uses the correct lightweight API endpoint instead of triggering a full file generation
+- HTTP timeout increased to 15 minutes to match DepotBox API recommendations
+
 ## 0.2.1
 
 ### New
