@@ -72,25 +72,6 @@ public sealed class HvFixesViewModel : ToolRunnerViewModel
     { }
 }
 
-public sealed class BetterSteamToolsViewModel : ToolRunnerViewModel
-{
-    public BetterSteamToolsViewModel(ILocalToolRunner runner, ISettingsService settings, IGitHubToolDownloadService dl)
-        : base(
-            runner, settings,
-            pageKey: "bettersteamtools",
-            title: "BetterSteamTools",
-            subtitle: "Open Source Steam Unlocker — auto-downloads from GitHub.",
-            expectedFileNameHint: "BetterSteamTools.exe",
-            infoText: "BetterSteamTools is an open-source Steam DLC unlocker. Downloads automatically from GitHub releases.",
-            downloadUrl: "https://github.com/madoiscool/BetterSteamTools",
-            showWindow: true,
-            readPath: s => s.BetterSteamToolsPath,
-            writePath: (s, v) => s.BetterSteamToolsPath = v,
-            downloadService: dl,
-            toolDefinition: ToolDefinitions.BetterSteamTools)
-    { }
-}
-
 public sealed class SteamAchievementManagerViewModel : ToolRunnerViewModel
 {
     public SteamAchievementManagerViewModel(ILocalToolRunner runner, ISettingsService settings, IGitHubToolDownloadService dl)
