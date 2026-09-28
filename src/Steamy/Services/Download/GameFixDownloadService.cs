@@ -2,6 +2,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Text;
+using SharpCompress.Archives;
+using SharpCompress.Common;
 
 namespace Steamy.Services;
 
@@ -265,7 +267,7 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
             await Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                ZipFile.ExtractToDirectory(archivePath, extractionRoot, overwriteFiles: false);
+                ExtractAnyArchive(archivePath, extractionRoot);
             }, cancellationToken).ConfigureAwait(false);
 
             var size = FolderSize(extractionRoot);
@@ -339,7 +341,7 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
             await Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                ZipFile.ExtractToDirectory(archivePath, extractionRoot, overwriteFiles: false);
+                ExtractAnyArchive(archivePath, extractionRoot);
             }, cancellationToken).ConfigureAwait(false);
 
             var size = FolderSize(extractionRoot);
@@ -355,6 +357,20 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
         {
             TryDeleteDirectory(extractionRoot);
             return new GameFixApplyResult(false, string.Empty, string.Empty, $"Extraction failed: {exception.GetType().Name}.");
+        }
+    }
+
+    private static void ExtractAnyArchive(string archivePath, string destinationDir)
+    {
+        using var archive = ArchiveFactory.Open(archivePath);
+        foreach (var entry in archive.Entries)
+        {
+            if (entry.IsDirectory) continue;
+            entry.WriteToDirectory(destinationDir, new ExtractionOptions
+            {
+                ExtractFullPath = true,
+                Overwrite = false
+            });
         }
     }
 
