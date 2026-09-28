@@ -49,13 +49,13 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
-## ✨ What's new in 0.1.2
+## ✨ What's new in 0.2.2
 
-- **Downloads like a game launcher** — the current download in a big banner on its game art, with speed, time left and the live internet curve; "Up next" and "Recently finished" below
+- **Redesigned dashboard** — big hero banner, slim stats bar, one tidy System card and animated game covers with hover glow
+- **Smoother UI everywhere** — staggered fade-ins, hover animations and sharp text/covers without lag
+- **DepotBox manifest source** — fast, reliable manifest downloads with the correct lightweight API
 - **Auto-update** — Steamy checks for a new version at startup and updates itself with one click
-- **Live stats** — internet speed with a live graph, download rate and time left
-- **Smooth progress** — downloads move in 0.1 % steps instead of jumping once per file
-- **Fresh dashboard** — calmer layout, colored quick actions, one clean side panel
+- **Downloads like a game launcher** — the current download in a big banner on its game art, with speed, time left and the live internet curve
 
 Full list in the [**CHANGELOG**](CHANGELOG.md).
 

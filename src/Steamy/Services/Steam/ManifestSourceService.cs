@@ -199,14 +199,63 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         try
         {
             var baseUrl = _settings.Load().HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";
+            // /api/v1/status is the free "does a manifest exist" endpoint. Never probe
+            // /api/v1/manifest here — that one downloads the zip and counts against the
+            // daily quota on every single availability check.
             using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{baseUrl}/api/v1/manifest/{appId}");
+                $"{baseUrl}/api/v1/status/{appId}");
             req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
             using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
-            return resp.IsSuccessStatusCode;
+            if (!resp.IsSuccessStatusCode) return false;
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+            return ReadAvailability(doc.RootElement);
         }
         catch (OperationCanceledException) { throw; }
         catch { return false; }
+    }
+
+    /// <summary>
+    /// Reads the various "is there a manifest for this app" answer shapes the APIs use:
+    /// {"available": true}, {"manifest_file_exists": true} or {"status": "available"}.
+    /// </summary>
+    private static bool ReadAvailability(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object) return false;
+        if (root.TryGetProperty("available", out var avail))
+            return avail.ValueKind == JsonValueKind.True;
+        if (root.TryGetProperty("manifest_file_exists", out var exists))
+            return exists.ValueKind == JsonValueKind.True;
+        if (root.TryGetProperty("status", out var status) && status.ValueKind == JsonValueKind.String)
+        {
+            var text = status.GetString() ?? string.Empty;
+            return text.Equals("available", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("ok", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("ready", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("exists", StringComparison.OrdinalIgnoreCase);
+        }
+        return false;
+    }
+
+    /// <summary>Pulls a human-readable error text out of an API JSON body when there is one.</summary>
+    private static string ExtractApiErrorMessage(string? body, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(body)) return fallback;
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return fallback;
+            foreach (var name in new[] { "detail", "message", "error", "reason" })
+            {
+                if (!doc.RootElement.TryGetProperty(name, out var value)) continue;
+                if (value.ValueKind != JsonValueKind.String) continue;
+                var text = value.GetString();
+                if (!string.IsNullOrWhiteSpace(text)) return $"{fallback} {text}";
+            }
+        }
+        catch { }
+        return fallback;
     }
 
     private async Task<string?> ResolveDepotBoxKeyAsync()
@@ -225,18 +274,27 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
 
         try
         {
+            // Lightweight availability endpoint — never the generator endpoint, which would
+            // trigger a full file generation just to answer "is it there?".
             using var req = new HttpRequestMessage(HttpMethod.Get,
                 $"https://depotbox.org/api/games/{appId}/availability");
-            req.Headers.TryAddWithoutValidation("X-API-Key", key);
+            AddDepotBoxAuth(req, key);
             using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode) return false;
 
             var json = await resp.Content.ReadAsStringAsync(ct);
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty("available", out var avail) && avail.GetBoolean();
+            using var doc = JsonDocument.Parse(json);
+            return ReadAvailability(doc.RootElement);
         }
         catch (OperationCanceledException) { throw; }
         catch { return false; }
+    }
+
+    /// <summary>DepotBox accepts the key both as X-API-Key and as a Bearer token — send both.</summary>
+    private static void AddDepotBoxAuth(HttpRequestMessage request, string key)
+    {
+        request.Headers.TryAddWithoutValidation("X-API-Key", key);
+        request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
     }
 
     private async Task<ManifestDownloadResult> DownloadFromHubcapAsync(
@@ -250,56 +308,87 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         var appWorkDir = Path.Combine(_workFolder, "hubcap", appId.ToString(CultureInfo.InvariantCulture));
         Directory.CreateDirectory(appWorkDir);
 
-        progress?.Report("Downloading manifest from Hubcap...");
+        // The Lua script (depot ids, manifest ids, decryption keys) lives on its own endpoint
+        // — the manifest zip only carries the .manifest files.
+        progress?.Report("Fetching Lua manifest from Hubcap...");
+        string? luaContent = null;
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{baseUrl}/api/v1/manifest/{appId}");
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v1/lua/{appId}");
             req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
             using var resp = await _httpClient.SendAsync(req, ct);
             if (!resp.IsSuccessStatusCode)
-                return new ManifestDownloadResult(false,
-                    $"Hubcap returned HTTP {(int)resp.StatusCode} for App {appId}.");
+                return new ManifestDownloadResult(false, ExtractApiErrorMessage(
+                    await resp.Content.ReadAsStringAsync(ct),
+                    $"Hubcap returned HTTP {(int)resp.StatusCode} for the Lua of App {appId}."));
 
-            var contentType = resp.Content.Headers.ContentType?.MediaType ?? "";
-            var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
-
-            if (contentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
-                || contentType.Contains("octet-stream", StringComparison.OrdinalIgnoreCase))
+            var text = await resp.Content.ReadAsStringAsync(ct);
+            if (!string.IsNullOrWhiteSpace(text))
             {
-                var zipPath = Path.Combine(appWorkDir, $"{appId}_hubcap.zip");
-                await File.WriteAllBytesAsync(zipPath, bytes, ct);
-
-                string? luaContent = null;
-                using var zip = ZipFile.OpenRead(zipPath);
-                foreach (var entry in zip.Entries)
-                {
-                    var ext = Path.GetExtension(entry.Name).ToLowerInvariant();
-                    if (ext is ".lua" or ".key" or ".manifest")
-                    {
-                        var destPath = Path.Combine(appWorkDir, entry.Name);
-                        entry.ExtractToFile(destPath, overwrite: true);
-                        if (ext == ".lua")
-                            using (var reader = new StreamReader(entry.Open()))
-                                luaContent = await reader.ReadToEndAsync(ct);
-                    }
-                }
-
-                if (luaContent is null)
-                    return new ManifestDownloadResult(false, $"No Lua script found in Hubcap archive for App {appId}.");
-
-                _logging.Add(Models.LogLevel.Info, "ManifestSource",
-                    $"Downloaded manifest from Hubcap for App {appId}.", appId);
-                return new ManifestDownloadResult(true, "Downloaded from Hubcap.", luaContent, appWorkDir);
+                luaContent = text;
+                await File.WriteAllTextAsync(Path.Combine(appWorkDir, $"{appId}.lua"), luaContent, ct);
             }
-
-            return new ManifestDownloadResult(false, "Hubcap returned unexpected content type.");
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return new ManifestDownloadResult(false, $"Hubcap download failed: {ex.Message}");
+            return new ManifestDownloadResult(false, $"Hubcap Lua download failed: {ex.Message}");
         }
+
+        // The depot .manifest files come from the zip endpoint. A failure here is not fatal:
+        // DepotDownloaderMod falls back to pulling the manifests from Steam itself.
+        progress?.Report("Downloading manifest files from Hubcap...");
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v1/manifest/{appId}");
+            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
+            using var resp = await _httpClient.SendAsync(req, ct);
+            if (resp.IsSuccessStatusCode)
+            {
+                var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
+                var zipPath = Path.Combine(appWorkDir, $"{appId}_hubcap.zip");
+                await File.WriteAllBytesAsync(zipPath, bytes, ct);
+
+                try
+                {
+                    using var zip = ZipFile.OpenRead(zipPath);
+                    foreach (var entry in zip.Entries)
+                    {
+                        var ext = Path.GetExtension(entry.Name).ToLowerInvariant();
+                        if (ext is not ".lua" and not ".key" and not ".manifest") continue;
+
+                        var destPath = Path.Combine(appWorkDir, entry.Name);
+                        entry.ExtractToFile(destPath, overwrite: true);
+                        if (ext == ".lua" && luaContent is null)
+                            using (var reader = new StreamReader(entry.Open()))
+                                luaContent = await reader.ReadToEndAsync(ct);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logging.Add(Models.LogLevel.Warning, "ManifestSource",
+                        $"Hubcap archive for App {appId} could not be unpacked: {ex.Message}", appId);
+                }
+            }
+            else
+            {
+                _logging.Add(Models.LogLevel.Warning, "ManifestSource",
+                    $"Hubcap manifest zip for App {appId}: HTTP {(int)resp.StatusCode}. Continuing with the Lua only.", appId);
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _logging.Add(Models.LogLevel.Warning, "ManifestSource",
+                $"Hubcap manifest zip for App {appId} failed: {ex.Message}. Continuing with the Lua only.", appId);
+        }
+
+        if (luaContent is null)
+            return new ManifestDownloadResult(false, $"No Lua script found for App {appId} on Hubcap.");
+
+        _logging.Add(Models.LogLevel.Info, "ManifestSource",
+            $"Downloaded manifest from Hubcap for App {appId}.", appId);
+        return new ManifestDownloadResult(true, "Downloaded from Hubcap.", luaContent, appWorkDir);
     }
 
     private async Task<ManifestDownloadResult> DownloadFromDepotBoxAsync(
@@ -317,61 +406,128 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         {
             using var req = new HttpRequestMessage(HttpMethod.Get,
                 $"https://depotbox.org/api/direct-lua?appid={appId}");
-            req.Headers.TryAddWithoutValidation("x-api-key", key);
+            AddDepotBoxAuth(req, key);
             using var resp = await _httpClient.SendAsync(req, ct);
             if (!resp.IsSuccessStatusCode)
-                return new ManifestDownloadResult(false,
-                    $"DepotBox returned HTTP {(int)resp.StatusCode} for App {appId}.");
+                return new ManifestDownloadResult(false, ExtractApiErrorMessage(
+                    await resp.Content.ReadAsStringAsync(ct),
+                    $"DepotBox returned HTTP {(int)resp.StatusCode} for App {appId}."));
 
             var contentType = resp.Content.Headers.ContentType?.MediaType ?? "";
             var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
 
-            if (contentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
-                || contentType.Contains("octet-stream", StringComparison.OrdinalIgnoreCase))
+            if (contentType.Contains("json", StringComparison.OrdinalIgnoreCase))
             {
-                var zipPath = Path.Combine(appWorkDir, $"{appId}_depotbox.zip");
-                await File.WriteAllBytesAsync(zipPath, bytes, ct);
-
-                string? luaContent = null;
-                using var zip = ZipFile.OpenRead(zipPath);
-                foreach (var entry in zip.Entries)
+                // DepotBox answers JSON both for errors and for "your file is ready" links.
+                string? luaText = null, fileUrl = null, error = null;
+                try
                 {
-                    var ext = Path.GetExtension(entry.Name).ToLowerInvariant();
-                    if (ext is ".lua" or ".key" or ".manifest")
-                    {
-                        var destPath = Path.Combine(appWorkDir, entry.Name);
-                        entry.ExtractToFile(destPath, overwrite: true);
-                        if (ext == ".lua")
-                            using (var reader = new StreamReader(entry.Open()))
-                                luaContent = await reader.ReadToEndAsync(ct);
-                    }
+                    using var doc = JsonDocument.Parse(bytes);
+                    var root = doc.RootElement;
+                    foreach (var name in new[] { "lua", "content", "text" })
+                        if (root.TryGetProperty(name, out var luaField) && luaField.ValueKind == JsonValueKind.String
+                            && !string.IsNullOrWhiteSpace(luaField.GetString())) { luaText = luaField.GetString(); break; }
+                    foreach (var name in new[] { "download_url", "file_url", "url" })
+                        if (root.TryGetProperty(name, out var urlField) && urlField.ValueKind == JsonValueKind.String
+                            && !string.IsNullOrWhiteSpace(urlField.GetString())) { fileUrl = urlField.GetString(); break; }
+                    foreach (var name in new[] { "detail", "message", "error" })
+                        if (root.TryGetProperty(name, out var errorField) && errorField.ValueKind == JsonValueKind.String) { error = errorField.GetString(); break; }
                 }
+                catch { }
 
-                if (luaContent is null)
-                    return new ManifestDownloadResult(false, $"No Lua script found in DepotBox archive for App {appId}.");
+                if (luaText is not null)
+                    return await SaveDepotBoxLuaAsync(appWorkDir, appId, luaText, ct);
 
-                _logging.Add(Models.LogLevel.Info, "ManifestSource",
-                    $"Downloaded manifest from DepotBox for App {appId}.", appId);
-                return new ManifestDownloadResult(true, "Downloaded from DepotBox.", luaContent, appWorkDir);
+                if (fileUrl is not null)
+                {
+                    progress?.Report("Downloading the generated file from DepotBox...");
+                    using var fileResp = await _httpClient.GetAsync(fileUrl, ct);
+                    if (!fileResp.IsSuccessStatusCode)
+                        return new ManifestDownloadResult(false,
+                            $"DepotBox file download returned HTTP {(int)fileResp.StatusCode} for App {appId}.");
+                    bytes = await fileResp.Content.ReadAsByteArrayAsync(ct);
+                    contentType = fileResp.Content.Headers.ContentType?.MediaType ?? "";
+                }
+                else
+                {
+                    return new ManifestDownloadResult(false,
+                        error is null ? "DepotBox returned unexpected JSON." : $"DepotBox: {error}");
+                }
             }
 
-            var luaText = System.Text.Encoding.UTF8.GetString(bytes);
-            if (!string.IsNullOrWhiteSpace(luaText))
-            {
-                var luaPath = Path.Combine(appWorkDir, $"{appId}.lua");
-                await File.WriteAllTextAsync(luaPath, luaText, ct);
-                _logging.Add(Models.LogLevel.Info, "ManifestSource",
-                    $"Downloaded Lua from DepotBox for App {appId}.", appId);
-                return new ManifestDownloadResult(true, "Downloaded from DepotBox.", luaText, appWorkDir);
-            }
-
-            return new ManifestDownloadResult(false, "DepotBox returned empty content.");
+            return await HandleDepotBoxPayloadAsync(appWorkDir, appId, bytes, contentType, ct);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return new ManifestDownloadResult(false, $"DepotBox download failed: {ex.Message}");
         }
+    }
+
+    /// <summary>Turns a DepotBox payload (zip archive or plain Lua text) into a download result.</summary>
+    private async Task<ManifestDownloadResult> HandleDepotBoxPayloadAsync(
+        string appWorkDir, int appId, byte[] bytes, string contentType, CancellationToken ct)
+    {
+        if (bytes.Length == 0)
+            return new ManifestDownloadResult(false, "DepotBox returned empty content.");
+
+        var looksLikeZip = contentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
+            || contentType.Contains("octet-stream", StringComparison.OrdinalIgnoreCase)
+            || (bytes.Length > 4 && bytes[0] == (byte)'P' && bytes[1] == (byte)'K');
+
+        if (looksLikeZip)
+        {
+            var zipPath = Path.Combine(appWorkDir, $"{appId}_depotbox.zip");
+            await File.WriteAllBytesAsync(zipPath, bytes, ct);
+
+            string? luaContent = null;
+            try
+            {
+                using var zip = ZipFile.OpenRead(zipPath);
+                foreach (var entry in zip.Entries)
+                {
+                    var ext = Path.GetExtension(entry.Name).ToLowerInvariant();
+                    if (ext is not ".lua" and not ".key" and not ".manifest") continue;
+
+                    var destPath = Path.Combine(appWorkDir, entry.Name);
+                    entry.ExtractToFile(destPath, overwrite: true);
+                    if (ext == ".lua")
+                        using (var reader = new StreamReader(entry.Open()))
+                            luaContent = await reader.ReadToEndAsync(ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ManifestDownloadResult(false, $"DepotBox archive could not be unpacked: {ex.Message}");
+            }
+
+            if (luaContent is null)
+                return new ManifestDownloadResult(false, $"No Lua script found in DepotBox archive for App {appId}.");
+
+            _logging.Add(Models.LogLevel.Info, "ManifestSource",
+                $"Downloaded manifest from DepotBox for App {appId}.", appId);
+            return new ManifestDownloadResult(true, "Downloaded from DepotBox.", luaContent, appWorkDir);
+        }
+
+        var luaText = System.Text.Encoding.UTF8.GetString(bytes).TrimStart('\uFEFF');
+        if (luaText.StartsWith('{') || luaText.StartsWith('['))
+            return new ManifestDownloadResult(false,
+                ExtractApiErrorMessage(luaText, $"DepotBox returned unexpected content for App {appId}."));
+
+        return await SaveDepotBoxLuaAsync(appWorkDir, appId, luaText, ct);
+    }
+
+    private async Task<ManifestDownloadResult> SaveDepotBoxLuaAsync(
+        string appWorkDir, int appId, string luaText, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(luaText))
+            return new ManifestDownloadResult(false, "DepotBox returned empty content.");
+
+        var luaPath = Path.Combine(appWorkDir, $"{appId}.lua");
+        await File.WriteAllTextAsync(luaPath, luaText, ct);
+        _logging.Add(Models.LogLevel.Info, "ManifestSource",
+            $"Downloaded Lua from DepotBox for App {appId}.", appId);
+        return new ManifestDownloadResult(true, "Downloaded from DepotBox.", luaText, appWorkDir);
     }
 
     private async Task<ManifestDownloadResult> DownloadFromGitHubAsync(
