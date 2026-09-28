@@ -1,9 +1,6 @@
 using System.IO;
-using System.IO.Compression;
 using System.Net.Http;
 using System.Text;
-using SharpCompress.Archives;
-using SharpCompress.Common;
 
 namespace Steamy.Services;
 
@@ -49,7 +46,7 @@ public interface IGameFixDownloadService
     Task<bool> ResetAsync(string archiveFileName, string targetFolder, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Extracts a ZIP archive into <paramref name="targetFolder"/>. The contents go into a
+    /// Extracts a ZIP, 7z or RAR archive into <paramref name="targetFolder"/>. The contents go into a
     /// subfolder named after the archive (without extension) so each extraction is isolated.
     /// Returns the extraction root and a best-effort total size of the extracted files.
     /// </summary>
@@ -86,13 +83,16 @@ public sealed record GameFixApplyResult(
     string Message);
 
 /// <summary>
-/// Concrete implementation that downloads fix archives via HTTP and extracts them with
-/// <see cref="System.IO.Compression.ZipFile"/>. It owns its own <see cref="HttpClient"/> unless one
+/// Concrete implementation that downloads fix archives via HTTP and extracts ZIP, 7z and RAR
+/// archives with <see cref="ArchiveExtractor"/>. It owns its own <see cref="HttpClient"/> unless one
 /// is supplied, and it mirrors the rest of the app's conventions: timeout, User-Agent and error
 /// handling are all local and read-only.
 /// </summary>
 public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposable
 {
+    // Public passwords the common fix sites put on their archives.
+    private static readonly string[] KnownFixPasswords = { "online-fix.me", "cs.rin.ru", "www.cs.rin.ru" };
+
     private readonly ISettingsService _settings;
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
@@ -106,7 +106,7 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
         _httpClient.Timeout = TimeSpan.FromMinutes(20);
         _httpClient.DefaultRequestHeaders.UserAgent.Clear();
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
-        _httpClient.DefaultRequestHeaders.Accept.ParseAdd("application/octet-stream, application/zip, */*;q=0.5");
+        _httpClient.DefaultRequestHeaders.Accept.ParseAdd("application/octet-stream, application/zip, application/x-7z-compressed, application/vnd.rar, */*;q=0.5");
 
         var configured = _settings.Load().DownloadFolder;
         if (!string.IsNullOrWhiteSpace(configured) && Directory.Exists(configured))
@@ -259,31 +259,7 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
             return new GameFixApplyResult(true, extractionRoot, FormatSize(size), "Already applied.");
         }
 
-        try
-        {
-            Directory.CreateDirectory(extractionRoot);
-            progress?.Report($"Extracting to {extractionRoot}…");
-
-            await Task.Run(() =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                ExtractAnyArchive(archivePath, extractionRoot);
-            }, cancellationToken).ConfigureAwait(false);
-
-            var size = FolderSize(extractionRoot);
-            progress?.Report($"Extracted {FormatSize(size)} into {extractionRoot}");
-            return new GameFixApplyResult(true, extractionRoot, FormatSize(size), "Applied.");
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            TryDeleteDirectory(extractionRoot);
-            return new GameFixApplyResult(false, string.Empty, string.Empty, "Extraction cancelled.");
-        }
-        catch (Exception exception)
-        {
-            TryDeleteDirectory(extractionRoot);
-            return new GameFixApplyResult(false, string.Empty, string.Empty, $"Extraction failed: {exception.GetType().Name}.");
-        }
+        return await ExtractIntoAsync(archivePath, extractionRoot, progress, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> ResetAsync(string archiveFileName, string targetFolder, CancellationToken cancellationToken = default)
@@ -333,16 +309,31 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
             return new GameFixApplyResult(true, extractionRoot, FormatSize(size), "Already applied.");
         }
 
+        return await ExtractIntoAsync(archivePath, extractionRoot, progress, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Extracts ZIP, 7z or RAR (also RAR5, solid and multi-part) into a fresh folder. Fix archives
+    /// are often protected with their site's public password, so those are tried automatically.
+    /// </summary>
+    private static async Task<GameFixApplyResult> ExtractIntoAsync(string archivePath, string extractionRoot,
+        IProgress<string>? progress, CancellationToken cancellationToken)
+    {
         try
         {
             Directory.CreateDirectory(extractionRoot);
             progress?.Report($"Extracting to {extractionRoot}…");
 
-            await Task.Run(() =>
+            var extractProgress = progress is null ? null : new Progress<ArchiveExtractProgress>(update =>
+                progress.Report($"Extracting {update.Done}/{update.Total} · {Path.GetFileName(update.CurrentFile)}"));
+            var result = await Task.Run(() => ArchiveExtractor.Extract(archivePath, extractionRoot, KnownFixPasswords,
+                extractProgress, cancellationToken), cancellationToken).ConfigureAwait(false);
+
+            if (!result.Succeeded)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                ExtractAnyArchive(archivePath, extractionRoot);
-            }, cancellationToken).ConfigureAwait(false);
+                TryDeleteDirectory(extractionRoot);
+                return new GameFixApplyResult(false, string.Empty, string.Empty, result.Message);
+            }
 
             var size = FolderSize(extractionRoot);
             progress?.Report($"Extracted {FormatSize(size)} into {extractionRoot}");
@@ -356,21 +347,7 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
         catch (Exception exception)
         {
             TryDeleteDirectory(extractionRoot);
-            return new GameFixApplyResult(false, string.Empty, string.Empty, $"Extraction failed: {exception.GetType().Name}.");
-        }
-    }
-
-    private static void ExtractAnyArchive(string archivePath, string destinationDir)
-    {
-        using var archive = ArchiveFactory.Open(archivePath);
-        foreach (var entry in archive.Entries)
-        {
-            if (entry.IsDirectory) continue;
-            entry.WriteToDirectory(destinationDir, new ExtractionOptions
-            {
-                ExtractFullPath = true,
-                Overwrite = false
-            });
+            return new GameFixApplyResult(false, string.Empty, string.Empty, $"Extraction failed: {exception.Message}");
         }
     }
 

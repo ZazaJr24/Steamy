@@ -802,7 +802,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             {
                 var bytes = await _downloadHttpClient.GetByteArrayAsync(archiveUrl);
                 using var stream = new MemoryStream(bytes);
-                using var archive = ArchiveFactory.Open(stream);
+                using var archive = ArchiveFactory.OpenArchive(stream);
                 foreach (var entry in archive.Entries)
                 {
                     if (entry.IsDirectory) continue;
@@ -979,7 +979,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             Status = "Downloading Goldberg emulator…";
             var bytes = await _downloadHttpClient.GetByteArrayAsync(dlUrl);
             using var ms = new MemoryStream(bytes);
-            using var arc = ArchiveFactory.Open(ms);
+            using var arc = ArchiveFactory.OpenArchive(ms);
             Directory.CreateDirectory(gbeDir);
 
             foreach (var entry in arc.Entries)

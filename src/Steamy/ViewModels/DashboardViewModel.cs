@@ -302,7 +302,6 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand NavigateSteamlessCommand => new RelayCommand(() => Navigation.Navigate<SteamlessPage>());
     public ICommand NavigateDenuvoActivationCommand => new RelayCommand(() => Navigation.Navigate<DenuvoActivationPage>());
     public ICommand NavigateDepotDownloaderCommand => new RelayCommand(() => Navigation.Navigate<DepotDownloaderPage>());
-    public ICommand NavigateDepotDumperCommand => new RelayCommand(() => Navigation.Navigate<DepotDumperPage>());
     public ICommand NavigateFamilyShareCommand => new RelayCommand(() => Navigation.Navigate<FamilySharePage>());
     public ICommand OpenManifestFolderCommand => new RelayCommand(OpenManifestFolder);
     public ICommand NavigateShareCommand => new RelayCommand(() => Navigation.Navigate<SharePage>());

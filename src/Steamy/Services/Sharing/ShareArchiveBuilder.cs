@@ -90,7 +90,12 @@ public static class ShareArchiveBuilder
         return text == cleaned ? content : Encoding.UTF8.GetBytes(cleaned);
     }
 
-    public static string SourceLabel(ShareSourceKind source) => source == ShareSourceKind.SteamLibrary ? "steam-library" : "dump";
+    public static string SourceLabel(ShareSourceKind source) => source switch
+    {
+        ShareSourceKind.SteamLibrary => "steam-library",
+        ShareSourceKind.Lua => "lua",
+        _ => "manifests"
+    };
 
     /// <summary>File-system friendly version of a game name.</summary>
     public static string SafeName(string name)

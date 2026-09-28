@@ -8,9 +8,6 @@ using System.Text.Json.Nodes;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
-using SharpCompress.Archives;
-using SharpCompress.Common;
-using SharpCompress.Readers;
 using Steamy.Models;
 using Steamy.Services;
 
@@ -19,6 +16,11 @@ namespace Steamy.ViewModels;
 public sealed class GoldbergViewModel : ViewModelBase
 {
     private const string ReleasesApi = "https://api.github.com/repos/Detanup01/gbe_fork/releases/latest";
+    // Used when the API refuses (it allows 60 unauthenticated calls per hour and IP): the release
+    // page redirects to the latest tag and the assets have stable names.
+    private const string LatestReleasePage = "https://github.com/Detanup01/gbe_fork/releases/latest";
+    private const string ReleaseDownloadBase = "https://github.com/Detanup01/gbe_fork/releases/download/";
+    private static readonly string[] KnownWindowsAssets = { "emu-win-release-vs26.7z", "emu-win-release.7z", "emu-win-release-vs22.7z" };
     private const string WebApiKeyName = "steam-web-api-key";
     private const string ManifestName = ".resonance_gbe.json";
     private const string BackupSuffix = ".gbe_bak";
@@ -86,8 +88,8 @@ public sealed class GoldbergViewModel : ViewModelBase
     {
         _settings = settings;
         _credentials = credentials;
-        _http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
+        _http = new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(10) };
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd($"Steamy/{BuildStamp.Version}");
 
         InstallEmuCommand = new AsyncRelayCommand(() => InstallEmuAsync(force: true), () => !IsBusy);
         BrowseGameCommand = new RelayCommand(BrowseGame);
@@ -261,55 +263,65 @@ public sealed class GoldbergViewModel : ViewModelBase
         try
         {
             BusyText = "Checking GitHub…";
-            using var resp = await _http.GetAsync(ReleasesApi);
-            if (!resp.IsSuccessStatusCode)
+            var release = await ResolveLatestReleaseAsync();
+            if (release.Error is not null)
             {
-                ActionStatus = $"GitHub: HTTP {(int)resp.StatusCode}" + (IsEmuInstalled ? " — keeping installed version." : "");
+                ActionStatus = release.Error + (IsEmuInstalled ? " — keeping the installed version." : string.Empty);
                 return;
             }
 
-            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-            var tag = doc.RootElement.GetProperty("tag_name").GetString() ?? "unknown";
+            var tag = release.Tag;
             if (!force && IsEmuInstalled && tag == EmuVersion)
             {
                 ActionStatus = $"Goldberg {tag} is up to date.";
                 return;
             }
 
-            var assets = doc.RootElement.GetProperty("assets").EnumerateArray()
-                .Select(a => (Name: a.GetProperty("name").GetString() ?? "", Url: a.GetProperty("browser_download_url").GetString() ?? ""))
-                .ToList();
-            var asset = PickWindowsAsset(assets);
-            if (string.IsNullOrEmpty(asset.Url))
+            Directory.CreateDirectory(EmuRoot);
+            string? archive = null;
+            string? lastError = null;
+            foreach (var (name, url) in release.Assets)
             {
-                ActionStatus = assets.Count == 0
-                    ? $"Release {tag} on GitHub has no files attached yet."
-                    : $"No Windows build in release {tag} ({string.Join(", ", assets.Select(a => a.Name))}).";
-                return;
+                var target = Path.Combine(EmuRoot, name);
+                ActionStatus = $"Downloading {name} ({tag})…";
+                try
+                {
+                    await DownloadWithProgressAsync(url, target);
+                    archive = target;
+                    break;
+                }
+                catch (HttpRequestException exception) when (exception.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    // Asset names change between releases; try the next known name.
+                    lastError = $"{name} is not part of release {tag}.";
+                    TryDeleteFile(target);
+                }
             }
 
-            Directory.CreateDirectory(EmuRoot);
-            var archive = Path.Combine(EmuRoot, asset.Name);
-            ActionStatus = $"Downloading {asset.Name} ({tag})…";
-            await DownloadWithProgressAsync(asset.Url, archive);
+            if (archive is null)
+            {
+                ActionStatus = lastError ?? $"No Windows build found in release {tag}.";
+                return;
+            }
 
             BusyText = "Extracting…";
             var tmp = Path.Combine(EmuRoot, "extract_tmp");
             if (Directory.Exists(tmp)) Directory.Delete(tmp, true);
             Directory.CreateDirectory(tmp);
-            await Task.Run(() =>
-            {
-                // Solid 7z: per-entry extraction re-decompresses from the start each time, so stream it once
-                using var arc = ArchiveFactory.Open(archive);
-                using var reader = arc.ExtractAllEntries();
-                var options = new ExtractionOptions { ExtractFullPath = true, Overwrite = true };
-                while (reader.MoveToNextEntry())
-                    if (!reader.Entry.IsDirectory) reader.WriteEntryToDirectory(tmp, options);
-            });
+
+            var extractProgress = new Progress<ArchiveExtractProgress>(update =>
+                BusyText = $"Extracting… {update.Done}/{update.Total} files");
+            var extracted = await Task.Run(() => ArchiveExtractor.Extract(archive, tmp, progress: extractProgress));
+            if (!extracted.Succeeded) throw new IOException(extracted.Message);
+
+            // Defender tends to delete the emulator DLLs right after they are written, which leaves
+            // an install that looks complete but cannot work.
+            if (!Directory.EnumerateFiles(tmp, "steam_api64.dll", SearchOption.AllDirectories).Any())
+                throw new IOException("Operation did not complete successfully because the file contains a virus or potentially unwanted software.");
 
             if (Directory.Exists(EmuDir)) Directory.Delete(EmuDir, true);
             Directory.Move(tmp, EmuDir);
-            try { File.Delete(archive); } catch { }
+            TryDeleteFile(archive);
             File.WriteAllText(VersionFile, tag);
             EmuVersion = tag;
             RefreshCommands();
@@ -324,12 +336,78 @@ public sealed class GoldbergViewModel : ViewModelBase
         catch (Exception ex)
         {
             ActionStatus = $"Goldberg download failed: {ex.Message}";
+            Logging.Add(LogLevel.Warning, "Goldberg", $"Install failed: {ex}");
         }
         finally
         {
             BusyText = string.Empty;
             IsBusy = false;
         }
+    }
+
+    private sealed record LatestRelease(string Tag, IReadOnlyList<(string Name, string Url)> Assets, string? Error);
+
+    /// <summary>
+    /// The newest gbe_fork release and the Windows archive(s) to try. The API gives the exact asset;
+    /// when it is unavailable (rate limit, outage) the tag comes from the release page redirect and
+    /// the known asset names are tried in order.
+    /// </summary>
+    private async Task<LatestRelease> ResolveLatestReleaseAsync()
+    {
+        string? apiProblem;
+        try
+        {
+            using var resp = await _http.GetAsync(ReleasesApi);
+            if (resp.IsSuccessStatusCode)
+            {
+                using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+                var tag = doc.RootElement.GetProperty("tag_name").GetString() ?? "unknown";
+                var assets = doc.RootElement.GetProperty("assets").EnumerateArray()
+                    .Select(a => (Name: a.GetProperty("name").GetString() ?? "", Url: a.GetProperty("browser_download_url").GetString() ?? ""))
+                    .ToList();
+                var asset = PickWindowsAsset(assets);
+                if (!string.IsNullOrEmpty(asset.Url)) return new LatestRelease(tag, new[] { asset }, null);
+                return new LatestRelease(tag, Array.Empty<(string, string)>(), assets.Count == 0
+                    ? $"Release {tag} on GitHub has no files attached yet."
+                    : $"No Windows build in release {tag} ({string.Join(", ", assets.Select(a => a.Name))}).");
+            }
+
+            apiProblem = (int)resp.StatusCode is 403 or 429 ? "GitHub API limit reached" : $"GitHub API: HTTP {(int)resp.StatusCode}";
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException)
+        {
+            apiProblem = $"GitHub API unavailable ({exception.GetType().Name})";
+        }
+
+        try
+        {
+            using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
+            client.DefaultRequestHeaders.UserAgent.ParseAdd($"Steamy/{BuildStamp.Version}");
+            using var page = await client.GetAsync(LatestReleasePage, HttpCompletionOption.ResponseHeadersRead);
+            var location = page.Headers.Location?.ToString() ?? string.Empty;
+            var marker = location.LastIndexOf("/tag/", StringComparison.OrdinalIgnoreCase);
+            if (marker >= 0)
+            {
+                var tag = Uri.UnescapeDataString(location[(marker + 5)..].TrimEnd('/'));
+                var assets = KnownWindowsAssets
+                    .Select(name => (name, $"{ReleaseDownloadBase}{Uri.EscapeDataString(tag)}/{name}"))
+                    .ToList();
+                return new LatestRelease(tag, assets, null);
+            }
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or UriFormatException)
+        {
+            return new LatestRelease(string.Empty, Array.Empty<(string, string)>(), $"{apiProblem}; GitHub could not be reached: {exception.Message}");
+        }
+
+        return new LatestRelease(string.Empty, Array.Empty<(string, string)>(), $"{apiProblem} and the release page gave no version. Try again later.");
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
     }
 
     private async Task DownloadWithProgressAsync(string url, string target)

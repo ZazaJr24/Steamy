@@ -13,9 +13,11 @@
     <Compile Include="..\..\src\Steamy\Services\Steam\VdfParser.cs" Link="Linked\VdfParser.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ShareModels.cs" Link="Linked\ShareModels.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ManifestLibraryScanner.cs" Link="Linked\ManifestLibraryScanner.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Sharing\AppListIndex.cs" Link="Linked\AppListIndex.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ShareArchiveBuilder.cs" Link="Linked\ShareArchiveBuilder.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\GitHubBatchUploader.cs" Link="Linked\GitHubBatchUploader.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ShareHistoryStore.cs" Link="Linked\ShareHistoryStore.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Storage\ArchiveExtractor.cs" Link="Linked\ArchiveExtractor.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,8 +25,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="SharpCompress" Version="0.50.4" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
 </Project>

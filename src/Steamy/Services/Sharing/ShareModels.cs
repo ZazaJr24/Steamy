@@ -3,14 +3,17 @@ using System.Text;
 
 namespace Steamy.Services;
 
-/// <summary>Where a shareable set of manifests comes from.</summary>
+/// <summary>Where a shareable set of manifests comes from. When several apply, the first wins.</summary>
 public enum ShareSourceKind
 {
-    /// <summary>A folder the Depot Dumper wrote (Lua, manifests, keys).</summary>
-    Dump,
+    /// <summary>A game installed in the local Steam library (appmanifest + depot cache).</summary>
+    SteamLibrary,
 
-    /// <summary>The manifests Steam itself keeps for a game installed in the local library.</summary>
-    SteamLibrary
+    /// <summary>A Lua script (SteamTools, Steamy downloads) with the manifests it points to.</summary>
+    Lua,
+
+    /// <summary>Depot manifests in a cache folder that belong to no installed game and no Lua.</summary>
+    Manifests
 }
 
 /// <summary>One file that goes into a share and the name it gets inside the archive.</summary>

@@ -242,7 +242,7 @@ public sealed class FamilyShareViewModel : ViewModelBase
             await Task.Run(() =>
             {
                 using var stream = File.OpenRead(archivePath);
-                using var archive = ArchiveFactory.Open(stream);
+                using var archive = ArchiveFactory.OpenArchive(stream);
 
                 string? rootPrefix = null;
                 var entries = archive.Entries.Where(e => !e.IsDirectory).ToList();

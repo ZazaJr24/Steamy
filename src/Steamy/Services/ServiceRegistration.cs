@@ -102,9 +102,7 @@ public static class ServiceRegistration
         services.AddSingleton<IManifestShareService>(sp => new ManifestShareService(
             sp.GetRequiredService<ISettingsService>(),
             sp.GetRequiredService<ISecureCredentialService>(),
-            sp.GetRequiredService<IManifestSourceService>(),
             sp.GetRequiredService<ILoggingService>()));
-        services.AddSingleton<DepotDumperViewModel>();
         services.AddSingleton<ShareViewModel>();
         services.AddSingleton<GameFixesViewModel>();
         services.AddSingleton<GreenLumaViewModel>();

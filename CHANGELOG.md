@@ -3,6 +3,20 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.8
+
+### New
+- **Share: every game, not only installed ones.** The Share page now finds the depot manifests of every game you have them for — Steam's `depotcache`, SteamTools' `config/depotcache` and `config/stplug-in` Lua scripts, and the Lua + manifests of Steamy's own downloads. Each Lua brings the manifests it pins with `setManifestid`, loose manifests are assigned to their game through the bundled app list, and everything is grouped into one entry per game. New filters: **Installed**, **Lua**, **Other**.
+- **Game Fixes: 7z, RAR and ZIP.** Downloaded and manually picked fixes are extracted in any of the three formats — RAR5, solid and multi-part archives (`.part1.rar`, `.7z.001`) included. Password-protected fixes are opened with the usual fix-site passwords. **Apply ZIP** is now **Apply archive**.
+
+### Fixed
+- **Goldberg can be downloaded again.** SharpCompress 1.0.0 (0.2.7) decoded 7z about seven times slower, so the emulator install seemed to hang at "Extracting…"; SharpCompress 0.50.4 takes a few seconds again and has no known vulnerability. Empty files in the gbe_fork archive are no longer mistaken for encrypted ones.
+- Goldberg falls back to the GitHub release page when the API limit (60 requests per hour) is reached, tries the current and older asset names (`emu-win-release-vs26.7z`, `emu-win-release.7z`), shows extraction progress and reports a Defender block when the emulator DLLs vanish right after extraction.
+- Archive extraction never writes outside the target folder (entries with `../` or absolute paths are skipped).
+
+### Removed
+- **Depot Dumper** (page, sidebar entry, Dashboard tile and its Settings row). Sharing lives on the Share page; Lua files an earlier Depot Dumper wrote are still picked up there. The Dashboard tile is now **Denuvo Activation**.
+
 ## 0.2.7
 
 ### New

@@ -8,9 +8,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Steamy</RootNamespace>
     <AssemblyName>Steamy</AssemblyName>
-    <Version>0.2.7</Version>
-    <FileVersion>0.2.7</FileVersion>
-    <AssemblyVersion>0.2.7</AssemblyVersion>
+    <Version>0.2.8</Version>
+    <FileVersion>0.2.8</FileVersion>
+    <AssemblyVersion>0.2.8</AssemblyVersion>
     <Product>Steamy</Product>
     <Company>ZazaJr24</Company>
     <Authors>ZazaJr24</Authors>
@@ -27,7 +27,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.20" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.20" />
-    <PackageReference Include="SharpCompress" Version="1.0.0" />
+    <PackageReference Include="SharpCompress" Version="0.50.4" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.20" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
     <PackageReference Include="WPF-UI" Version="4.2.0" />

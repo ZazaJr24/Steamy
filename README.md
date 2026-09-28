@@ -52,9 +52,16 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
+## ✨ What's new in 0.2.8
+
+- **Share everything** — the Share page now lists **every** game you have manifests for, installed or not: Steam's depot caches, SteamTools Lua scripts (`config/stplug-in`) and Steamy's own downloads, each Lua with the manifests it pins
+- **Game Fixes: 7z, RAR, ZIP** — fixes in any of the three formats (also RAR5, multi-part and password-protected with the usual fix-site passwords) are applied directly
+- **Goldberg download fixed** — the emulator installs again in seconds; if GitHub's API limit is hit, the download falls back to the release page
+- **Depot Dumper removed** — sharing now lives entirely on the Share page
+
 ## ✨ What's new in 0.2.7
 
-- **Share page** — every manifest you have in one list: Depot Dumper folders *and* the manifests of your installed games. **Select new**, press **Share**, done — the whole selection goes to the dump repository in **one commit**
+- **Share page** — every manifest you have in one list. **Select new**, press **Share**, done — the whole selection goes to the dump repository in **one commit**
 - **Nothing twice** — Steamy remembers what you already shared, so *New* only shows games whose manifests changed
 - **Save as ZIP** — export any selection as one ZIP (a folder per game + `index.json`), no token needed
 - **Privacy by default** — SteamID (`LastOwner`) and local paths are stripped before anything is packed; every pack carries a `steamy.json` with depots, manifest ids and SHA-256 hashes
@@ -78,9 +85,9 @@ Full list in the [**CHANGELOG**](CHANGELOG.md).
 <summary><strong>📤 Share</strong> — Send all your manifests at once</summary>
 <br/>
 
-One list with everything you can share: the folders the Depot Dumper wrote and the depot manifests Steam keeps for every installed game.
+One list with everything you can share — installed or not: the depot manifests in Steam's caches, SteamTools Lua scripts and Steamy's own downloads, grouped into one entry per game.
 
-- Search and filter by **New**, **Dumps** or **Steam library**; **Select new** picks everything not shared yet
+- Search and filter by **New**, **Installed**, **Lua** or **Other**; **Select new** picks everything not shared yet
 - **Share** sends the selection to the dump repository in a **single commit** (one ZIP per game + a batch index)
 - **Save as ZIP** writes the selection into one archive you can pass on anywhere
 - Share history per repository — the same manifests are never sent twice
@@ -165,7 +172,7 @@ Complete integration of [gbe_fork](https://github.com/Detanup01/gbe_fork) — th
 
 | | |
 |---|---|
-| **Game Fixes** | Browse fixes from your own fixes source (a GitHub repository) and apply them to a game folder |
+| **Game Fixes** | Browse fixes from your own fixes source (a GitHub repository) and apply them to a game folder — ZIP, 7z and RAR (also RAR5, multi-part and password protected) |
 
 <br/>
 
@@ -248,7 +255,7 @@ Steamy keeps itself up to date. At startup it asks GitHub for the latest release
 | **UI** | [WPF-UI 4.2](https://github.com/lepoco/wpfui) — Fluent Design, Mica/Acrylic |
 | **Pattern** | MVVM — [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) |
 | **DI** | Microsoft.Extensions.DependencyInjection |
-| **Compression** | SharpCompress 1.0 — 7z, zip, rar |
+| **Compression** | SharpCompress 0.50 — 7z, zip, rar (RAR5, solid, multi-volume) |
 | **Security** | Windows DPAPI encrypted credential store |
 | **Tests** | xUnit — sharing core and VDF parser, cross-platform |
 | **CI** | GitHub Actions — build + tests on every push, release on tags |

@@ -264,8 +264,8 @@ public partial class GameFixesPage : Page
 
         var dialog = new OpenFileDialog
         {
-            Title = "Select the downloaded fix ZIP",
-            Filter = "ZIP archives|*.zip|All files|*.*",
+            Title = "Select the downloaded fix (ZIP, 7z or RAR)",
+            Filter = ArchiveExtractor.DialogFilter,
             InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")
         };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;

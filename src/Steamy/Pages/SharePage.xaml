@@ -4,6 +4,7 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:pages="clr-namespace:Steamy.Pages"
       xmlns:vm="clr-namespace:Steamy.ViewModels"
+      xmlns:services="clr-namespace:Steamy.Services"
       ScrollViewer.CanContentScroll="False"
       UseLayoutRounding="True"
       SnapsToDevicePixels="True"
@@ -85,17 +86,23 @@
     </Style>
 
     <Style x:Key="SourceTag" TargetType="Border" BasedOn="{StaticResource TagStyle}">
-      <Setter Property="Background" Value="{DynamicResource VioletSoftBrush}" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
       <Style.Triggers>
-        <DataTrigger Binding="{Binding IsDump}" Value="True">
+        <DataTrigger Binding="{Binding SourceKind}" Value="{x:Static services:ShareSourceKind.SteamLibrary}">
+          <Setter Property="Background" Value="{DynamicResource VioletSoftBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding SourceKind}" Value="{x:Static services:ShareSourceKind.Lua}">
           <Setter Property="Background" Value="{DynamicResource PinkSoftBrush}" />
         </DataTrigger>
       </Style.Triggers>
     </Style>
     <Style x:Key="SourceTagText" TargetType="TextBlock" BasedOn="{StaticResource TagTextStyle}">
-      <Setter Property="Foreground" Value="{DynamicResource VioletBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
       <Style.Triggers>
-        <DataTrigger Binding="{Binding IsDump}" Value="True">
+        <DataTrigger Binding="{Binding SourceKind}" Value="{x:Static services:ShareSourceKind.SteamLibrary}">
+          <Setter Property="Foreground" Value="{DynamicResource VioletBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding SourceKind}" Value="{x:Static services:ShareSourceKind.Lua}">
           <Setter Property="Foreground" Value="{DynamicResource PinkBrush}" />
         </DataTrigger>
       </Style.Triggers>
@@ -136,7 +143,7 @@
       <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
         <TextBlock Text="Share manifests" Style="{StaticResource PageTitleStyle}" Margin="0" />
         <TextBlock Style="{StaticResource BodyTextStyle}" Margin="0,4,0,0"
-                   Text="Everything you have in one place — Depot Dumper packs and the manifests of your installed games. Pick what you want, then send it in one go." />
+                   Text="Every manifest you have — installed games, Lua scripts and all cached manifests, installed or not. Pick what you want, then send it in one go." />
       </StackPanel>
       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
         <ui:ProgressRing Width="18" Height="18" Margin="0,0,14,0" IsIndeterminate="True"
@@ -244,8 +251,10 @@
           <StackPanel Orientation="Horizontal">
             <RadioButton Style="{StaticResource SegmentButtonStyle}" GroupName="ShareFilter" Content="All" IsChecked="{Binding ShowAll}" />
             <RadioButton Style="{StaticResource SegmentButtonStyle}" GroupName="ShareFilter" Content="New" IsChecked="{Binding ShowNew}" />
-            <RadioButton Style="{StaticResource SegmentButtonStyle}" GroupName="ShareFilter" Content="Dumps" IsChecked="{Binding ShowDumps}" />
-            <RadioButton Style="{StaticResource SegmentButtonStyle}" GroupName="ShareFilter" Content="Steam library" IsChecked="{Binding ShowSteam}" />
+            <RadioButton Style="{StaticResource SegmentButtonStyle}" GroupName="ShareFilter" Content="Installed" IsChecked="{Binding ShowInstalled}" />
+            <RadioButton Style="{StaticResource SegmentButtonStyle}" GroupName="ShareFilter" Content="Lua" IsChecked="{Binding ShowLua}" />
+            <RadioButton Style="{StaticResource SegmentButtonStyle}" GroupName="ShareFilter" Content="Other" IsChecked="{Binding ShowManifests}"
+                         ToolTip="Manifests of games that are not installed and have no Lua" />
           </StackPanel>
         </Border>
         <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
@@ -333,12 +342,14 @@
           </Border>
           <TextBlock Text="Nothing to share yet" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
                      HorizontalAlignment="Center" Margin="0,14,0,0" />
-          <TextBlock Text="Dump a game with the Depot Dumper, or install games through Steam — their manifests show up here automatically."
+          <TextBlock Text="Install or download games through Steam or Steamy, or put Lua scripts into SteamTools — their manifests show up here automatically."
                      Style="{StaticResource BodyTextStyle}" TextAlignment="Center" Margin="0,6,0,0" />
           <TextBlock Text="{Binding ScanSummary}" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,0" />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,18,0,0">
-            <ui:Button Style="{StaticResource HeroButtonStyle}" Content="Open Depot Dumper" Appearance="Primary"
-                       Icon="{ui:SymbolIcon CloudArrowDown24}" Command="{Binding OpenDumperCommand}" />
+            <ui:Button Style="{StaticResource HeroButtonStyle}" Content="Rescan" Appearance="Primary"
+                       Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding RescanCommand}" />
+            <ui:Button Style="{StaticResource HeroButtonStyle}" Content="Games" Appearance="Secondary"
+                       Icon="{ui:SymbolIcon Apps24}" Command="{Binding OpenLibraryCommand}" />
             <ui:Button Style="{StaticResource HeroButtonStyle}" Content="Settings" Appearance="Secondary" Margin="0"
                        Icon="{ui:SymbolIcon Settings24}" Command="{Binding OpenSettingsCommand}" />
           </StackPanel>

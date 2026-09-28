@@ -98,7 +98,7 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
         {
             var bytes = await File.ReadAllBytesAsync(archivePath, ct);
             using var stream = new MemoryStream(bytes);
-            using var archive = ArchiveFactory.Open(stream);
+            using var archive = ArchiveFactory.OpenArchive(stream);
 
             foreach (var entry in archive.Entries)
             {
@@ -356,7 +356,7 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
     {
         var archiveBytes = await _httpClient.GetByteArrayAsync(downloadUrl, ct);
         using var stream = new MemoryStream(archiveBytes);
-        using var archive = ArchiveFactory.Open(stream);
+        using var archive = ArchiveFactory.OpenArchive(stream);
 
         foreach (var entry in archive.Entries)
         {
@@ -409,7 +409,7 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
 
             var archiveBytes = await _httpClient.GetByteArrayAsync(downloadUrl, ct);
             using var stream = new MemoryStream(archiveBytes);
-            using var archive = ArchiveFactory.Open(stream);
+            using var archive = ArchiveFactory.OpenArchive(stream);
 
             foreach (var entry in archive.Entries)
             {

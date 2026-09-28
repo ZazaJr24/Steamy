@@ -14,6 +14,7 @@ publish/
 
 # Local archives and temporary exports
 *.7z
+!tests/Steamy.Tests/Fixtures/*.7z
 Etmp*.txt
 
 # Backups and utility scripts

@@ -553,7 +553,6 @@ public sealed class AppSettings : ObservableObject
     private string _manifestShareOwner = "ZazaJr24";
     private string _manifestShareRepo = "Steamy-Dumps";
     private string _manifestShareBranch = "main";
-    private string _dumperSteamUsername = string.Empty;
     private int _refreshOnResumeDelay = 2;
 
     private string _steamlessExePath = string.Empty;
@@ -639,7 +638,7 @@ public sealed class AppSettings : ObservableObject
     public string DnsEndpoint { get => _dnsEndpoint; set => SetProperty(ref _dnsEndpoint, value); }
     public string DnsTestHost { get => _dnsTestHost; set => SetProperty(ref _dnsTestHost, value); }
 
-    /// <summary>Where the Depot Dumper writes its Lua and manifest files. Empty means the download folder.</summary>
+    /// <summary>Folder the Depot Dumper of earlier versions wrote into; still searched for Lua files by Share.</summary>
     public string ManifestDumpFolder { get => _manifestDumpFolder; set => SetProperty(ref _manifestDumpFolder, value); }
 
     /// <summary>Owner of the private dump repository that shared dumps are sent to.</summary>
@@ -651,8 +650,6 @@ public sealed class AppSettings : ObservableObject
     /// <summary>Branch the dumps are committed to.</summary>
     public string ManifestShareBranch { get => _manifestShareBranch; set => SetProperty(ref _manifestShareBranch, value); }
 
-    /// <summary>Steam account name used for manifest dumping and downloads (never a password).</summary>
-    public string DumperSteamUsername { get => _dumperSteamUsername; set => SetProperty(ref _dumperSteamUsername, value); }
 
     /// <summary>How long the app waits before it re-fetches manifests after a pause (seconds).</summary>
     public int RefreshOnResumeDelay { get => _refreshOnResumeDelay; set => SetProperty(ref _refreshOnResumeDelay, value); }

@@ -331,11 +331,11 @@
               </Grid.ColumnDefinitions>
               <ui:Button Content="Close" Appearance="Secondary" Click="OverlayCloseButton_Click" />
               <ui:Button Grid.Column="2"
-                       Content="Apply ZIP"
-                       Icon="{ui:SymbolIcon FolderOpen24}"
+                       Content="Apply archive"
+                       Icon="{ui:SymbolIcon FolderZip24}"
                        Appearance="Secondary"
                        Margin="0,0,8,0"
-                       ToolTip="Select a ZIP you already downloaded"
+                       ToolTip="Select a fix you already downloaded — ZIP, 7z or RAR (also multi-part and password protected)"
                        Click="ApplyZipButton_Click" />
               <ui:Button Grid.Column="3"
                        x:Name="ApplyAllButton"

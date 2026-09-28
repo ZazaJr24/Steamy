@@ -24,11 +24,12 @@ public enum ShareFilter
 {
     All,
     New,
-    Dumps,
-    SteamLibrary
+    Installed,
+    Lua,
+    Manifests
 }
 
-/// <summary>One row of the Share page: an app from a dump folder or the local Steam library.</summary>
+/// <summary>One row of the Share page: one app with its manifests (and Lua, when there is one).</summary>
 public sealed class ShareItemViewModel : ObservableObject
 {
     private readonly Action _selectionChanged;
@@ -47,8 +48,13 @@ public sealed class ShareItemViewModel : ObservableObject
     public ShareCandidate Candidate { get; }
     public int AppId => Candidate.AppId;
     public string Name { get; }
-    public bool IsDump => Candidate.Source == ShareSourceKind.Dump;
-    public string SourceLabel => IsDump ? "Dump" : "Steam library";
+    public ShareSourceKind SourceKind => Candidate.Source;
+    public string SourceLabel => Candidate.Source switch
+    {
+        ShareSourceKind.SteamLibrary => "Installed",
+        ShareSourceKind.Lua => "Lua",
+        _ => "Manifests"
+    };
     public string AppIdLabel => $"App {AppId}";
     public string SizeLabel => DownloadFormat.Bytes(Candidate.TotalBytes);
     public string CapsuleUrl => $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{AppId}/capsule_184x69.jpg";
@@ -107,9 +113,9 @@ public sealed class ShareItemViewModel : ObservableObject
 }
 
 /// <summary>
-/// The Share page: lists everything the user can share — Depot Dumper folders and the manifests
-/// of installed games — and sends any selection to the dump repository in one commit, or saves
-/// it as one ZIP to pass on anywhere.
+/// The Share page: lists everything the user can share — installed games, Lua scripts and every
+/// cached depot manifest, installed or not — and sends any selection to the dump repository in
+/// one commit, or saves it as one ZIP to pass on anywhere.
 /// </summary>
 public sealed class ShareViewModel : ViewModelBase
 {
@@ -159,7 +165,7 @@ public sealed class ShareViewModel : ViewModelBase
         SelectNewCommand = new RelayCommand(() => SetSelection(item => item.IsNew, visibleOnly: false));
         ClearSelectionCommand = new RelayCommand(() => SetSelection(_ => false, visibleOnly: false));
         OpenSettingsCommand = new RelayCommand(() => Navigation.Navigate<SettingsPage>());
-        OpenDumperCommand = new RelayCommand(() => Navigation.Navigate<DepotDumperPage>());
+        OpenLibraryCommand = new RelayCommand(() => Navigation.Navigate<LibraryPage>());
         OpenResultCommand = new RelayCommand(OpenResult, () => _resultUrl is not null);
     }
 
@@ -173,7 +179,7 @@ public sealed class ShareViewModel : ViewModelBase
     public ICommand SelectNewCommand { get; }
     public ICommand ClearSelectionCommand { get; }
     public ICommand OpenSettingsCommand { get; }
-    public ICommand OpenDumperCommand { get; }
+    public ICommand OpenLibraryCommand { get; }
     public IRelayCommand OpenResultCommand { get; }
 
     // ---- filter ---------------------------------------------------------------------------------
@@ -189,15 +195,16 @@ public sealed class ShareViewModel : ViewModelBase
 
     public bool ShowAll { get => _filter == ShareFilter.All; set { if (value) SetFilter(ShareFilter.All); } }
     public bool ShowNew { get => _filter == ShareFilter.New; set { if (value) SetFilter(ShareFilter.New); } }
-    public bool ShowDumps { get => _filter == ShareFilter.Dumps; set { if (value) SetFilter(ShareFilter.Dumps); } }
-    public bool ShowSteam { get => _filter == ShareFilter.SteamLibrary; set { if (value) SetFilter(ShareFilter.SteamLibrary); } }
+    public bool ShowInstalled { get => _filter == ShareFilter.Installed; set { if (value) SetFilter(ShareFilter.Installed); } }
+    public bool ShowLua { get => _filter == ShareFilter.Lua; set { if (value) SetFilter(ShareFilter.Lua); } }
+    public bool ShowManifests { get => _filter == ShareFilter.Manifests; set { if (value) SetFilter(ShareFilter.Manifests); } }
 
     // ---- numbers --------------------------------------------------------------------------------
 
     public int TotalCount => _items.Count;
     public int NewCount => _items.Count(item => item.IsNew);
-    public int DumpCount => _items.Count(item => item.IsDump);
-    public int SteamCount => _items.Count(item => !item.IsDump);
+    public int InstalledCount => _items.Count(item => item.SourceKind == ShareSourceKind.SteamLibrary);
+    public int LuaCount => _items.Count(item => item.Candidate.HasLua);
     public int SelectedCount => _items.Count(item => item.IsSelected);
     public bool HasItems => _items.Count > 0;
     public bool ShowEmpty => _items.Count == 0 && !IsScanning;
@@ -205,7 +212,7 @@ public sealed class ShareViewModel : ViewModelBase
 
     public string TotalCountLabel => TotalCount.ToString("N0");
     public string NewCountLabel => NewCount.ToString("N0");
-    public string SourcesLabel => $"{DumpCount:N0} dumps · {SteamCount:N0} from Steam";
+    public string SourcesLabel => $"{InstalledCount:N0} installed · {LuaCount:N0} with Lua · {TotalCount - InstalledCount:N0} not installed";
     public string TotalSizeLabel => DownloadFormat.Bytes(_items.Sum(item => item.Candidate.TotalBytes));
     public string TotalFilesLabel
     {
@@ -375,7 +382,7 @@ public sealed class ShareViewModel : ViewModelBase
             _items.Clear();
             foreach (var candidate in result.Items)
             {
-                var name = candidate.Name.StartsWith("App ", StringComparison.Ordinal) && names.TryGetValue(candidate.AppId, out var known)
+                var name = !ManifestLibraryScanner.HasRealName(candidate.Name) && names.TryGetValue(candidate.AppId, out var known)
                     ? known
                     : candidate.Name;
                 var item = new ShareItemViewModel(candidate, name, _sharing.FindShared(candidate), OnSelectionChanged);
@@ -512,8 +519,9 @@ public sealed class ShareViewModel : ViewModelBase
         _filter = filter;
         OnPropertyChanged(nameof(ShowAll));
         OnPropertyChanged(nameof(ShowNew));
-        OnPropertyChanged(nameof(ShowDumps));
-        OnPropertyChanged(nameof(ShowSteam));
+        OnPropertyChanged(nameof(ShowInstalled));
+        OnPropertyChanged(nameof(ShowLua));
+        OnPropertyChanged(nameof(ShowManifests));
         RefreshView();
     }
 
@@ -523,8 +531,9 @@ public sealed class ShareViewModel : ViewModelBase
         var passesFilter = _filter switch
         {
             ShareFilter.New => item.IsNew,
-            ShareFilter.Dumps => item.IsDump,
-            ShareFilter.SteamLibrary => !item.IsDump,
+            ShareFilter.Installed => item.SourceKind == ShareSourceKind.SteamLibrary,
+            ShareFilter.Lua => item.Candidate.HasLua,
+            ShareFilter.Manifests => item.SourceKind == ShareSourceKind.Manifests,
             _ => true
         };
         if (!passesFilter) return false;
@@ -561,8 +570,8 @@ public sealed class ShareViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(TotalCount));
         OnPropertyChanged(nameof(NewCount));
-        OnPropertyChanged(nameof(DumpCount));
-        OnPropertyChanged(nameof(SteamCount));
+        OnPropertyChanged(nameof(InstalledCount));
+        OnPropertyChanged(nameof(LuaCount));
         OnPropertyChanged(nameof(TotalCountLabel));
         OnPropertyChanged(nameof(NewCountLabel));
         OnPropertyChanged(nameof(SourcesLabel));
@@ -579,11 +588,11 @@ public sealed class ShareViewModel : ViewModelBase
     {
         var parts = new List<string>();
         parts.Add(result.SteamRoot.Length > 0 ? $"Steam library at {result.SteamRoot}" : "no Steam installation found");
-        parts.Add(result.DumpRoots.Count switch
+        parts.Add(result.LuaFolders.Count switch
         {
-            0 => "no dump folder yet",
-            1 => $"dumps in {result.DumpRoots[0]}",
-            var count => $"{count} dump folders"
+            0 => "no Lua folder",
+            1 => $"Luas in {result.LuaFolders[0]}",
+            var count => $"{count} Lua folders"
         });
         return "Looked at " + string.Join(" and ", parts) + ".";
     }
