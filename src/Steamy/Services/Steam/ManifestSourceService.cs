@@ -189,28 +189,28 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         }
     }
 
+    private async Task<string?> ResolveHubcapKeyAsync()
+    {
+        string? key = null;
+        try { key = await _credentials.ReadAsync("hubcap-api-key"); } catch { }
+        if (string.IsNullOrWhiteSpace(key))
+            key = _settings.Load().HubcapApiKey;
+        return string.IsNullOrWhiteSpace(key) ? null : key;
+    }
+
     private async Task<bool> CheckHubcapAvailabilityAsync(int appId, CancellationToken ct)
     {
-        var key = await _credentials.ReadAsync("hubcap-api-key");
-        if (string.IsNullOrWhiteSpace(key)) return false;
+        var key = await ResolveHubcapKeyAsync();
+        if (key is null) return false;
 
         try
         {
             var baseUrl = _settings.Load().HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";
             using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{baseUrl}/api/v1/search?q={appId}&limit=1");
+                $"{baseUrl}/api/v1/manifest/{appId}");
             req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
-            using var resp = await _httpClient.SendAsync(req, ct);
-            if (!resp.IsSuccessStatusCode) return false;
-
-            var json = await resp.Content.ReadAsStringAsync(ct);
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("results", out var results) && results.GetArrayLength() > 0)
-                return true;
-            if (root.TryGetProperty("games", out var games) && games.GetArrayLength() > 0)
-                return true;
-            return false;
+            using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+            return resp.IsSuccessStatusCode;
         }
         catch (OperationCanceledException) { throw; }
         catch { return false; }
@@ -219,8 +219,8 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     private async Task<ManifestDownloadResult> DownloadFromHubcapAsync(
         int appId, IProgress<string>? progress, CancellationToken ct)
     {
-        var key = await _credentials.ReadAsync("hubcap-api-key");
-        if (string.IsNullOrWhiteSpace(key))
+        var key = await ResolveHubcapKeyAsync();
+        if (key is null)
             return new ManifestDownloadResult(false, "No Hubcap API key configured. Set it in Settings → Hubcap API Key.");
 
         var baseUrl = _settings.Load().HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";

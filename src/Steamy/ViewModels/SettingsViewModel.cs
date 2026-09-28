@@ -371,7 +371,9 @@ public sealed class SettingsViewModel : ViewModelBase
 
         if (!string.IsNullOrWhiteSpace(HubcapApiKeyInput))
         {
-            await _credentials.SaveAsync(HubcapApiKeyName, HubcapApiKeyInput.Trim());
+            var trimmed = HubcapApiKeyInput.Trim();
+            try { await _credentials.SaveAsync(HubcapApiKeyName, trimmed); } catch { }
+            Settings.HubcapApiKey = trimmed;
             storedSomething = true;
         }
 
@@ -502,7 +504,10 @@ public sealed class SettingsViewModel : ViewModelBase
         try
         {
             var baseUrl = Settings.HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";
-            var key = await _credentials.ReadAsync(HubcapApiKeyName);
+            string? key = null;
+            try { key = await _credentials.ReadAsync(HubcapApiKeyName); } catch { }
+            if (string.IsNullOrWhiteSpace(key))
+                key = Settings.HubcapApiKey;
 
             var healthResult = await _probe.ProbeAsync($"{baseUrl}/api/v1/health");
             HubcapTestStatus = $"Health: {healthResult.Message} ({healthResult.ElapsedMilliseconds} ms)";
