@@ -94,6 +94,9 @@ public static class ServiceRegistration
             sp.GetRequiredService<IRyuuSecureDownloadService>(),
             sp.GetRequiredService<IManifestSourceService>(),
             sp.GetRequiredService<ILoggingService>()));
+        services.AddSingleton<IManifestRefetchService>(sp => new ManifestRefetchService(
+            sp.GetRequiredService<IManifestSourceService>(),
+            sp.GetRequiredService<ILoggingService>()));
         services.AddSingleton<ICreamApiService>(sp => new CreamApiService(sp.GetRequiredService<ILoggingService>()));
         services.AddSingleton<CreamApiViewModel>();
         services.AddSingleton<IManifestShareService>(sp => new ManifestShareService(

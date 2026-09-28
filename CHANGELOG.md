@@ -3,6 +3,18 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.6
+
+### New
+- **Depot Dumper with your own account**: a switch on the dump card adds a DepotDownloaderMod pass under your own Steam login, so licensed depots are dumped too. The password and the 2FA / Steam Guard code are typed in the tool's own console window — Steamy never asks for, reads or stores them.
+- **Cache & temp in Settings**: one card shows the current size of artwork cache, manifest work folder, Ryuu archives and update packages, and **Clean now** removes them on request. The DepotDownloaderMod download and your dump folders are kept unless you clean those separately.
+- **Refresh manifests on resume**: a paused download re-fetches the Lua and depot manifests before it continues, so a pause that lasted days does not run on outdated data. The delay is configurable (Settings › Downloads).
+
+### Improved
+- **.NET 9**: the app now targets `net9.0-windows` and the release build runs on the .NET 9 SDK; Microsoft.Data.Sqlite, DependencyInjection and ProtectedData moved to 9.0.9.
+- **Frame-rate friendly downloads page**: the internet sparkline geometry is rebuilt once per second instead of twice, and progress bars stop animating on sub-pixel steps — less composition work while a download runs, smoother counters.
+- Settings hints updated for the new .NET 9 output path.
+
 ## 0.2.5
 
 ### New

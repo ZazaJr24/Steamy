@@ -776,6 +776,43 @@
             </StackPanel>
             <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.AutoResume}" />
           </Grid>
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Refresh manifests on resume" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="A resumed download re-fetches the Lua and depot manifests first, so a pause that lasted days does not continue with outdated data. Delay in seconds between refresh and continue."
+                         Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+            <ui:TextBox Grid.Column="1" Width="90" VerticalAlignment="Center"
+                        Text="{Binding Settings.RefreshOnResumeDelay, UpdateSourceTrigger=PropertyChanged}"
+                        LostFocus="NumberBox_LostFocus" ToolTip="0–60 seconds" />
+          </Grid>
+          <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="12" Margin="0,4,0,0">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                <StackPanel Orientation="Horizontal">
+                  <ui:SymbolIcon Symbol="ArrowSync24" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,9,0" />
+                  <TextBlock Text="Cache &amp; temp" Style="{StaticResource CardTitleStyle}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding CacheSizeLabel}" FontSize="12" Foreground="{DynamicResource AccentBrush}"
+                             VerticalAlignment="Center" Margin="10,0,0,0" Typography.NumeralAlignment="Tabular" />
+                </StackPanel>
+                <TextBlock Text="Cleans artwork cache, manifest work folder, Ryuu archives and update packages. Your DepotDownloaderMod download and your dumps are kept."
+                           Style="{StaticResource MutedTextStyle}" FontSize="11.5" Margin="0,3,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding CleanupStatus}" FontSize="11.5" Foreground="{DynamicResource SuccessBrush}"
+                           Margin="0,4,0,0" TextWrapping="Wrap"
+                           Visibility="{Binding CleanupStatus, Converter={StaticResource StringVis}}" />
+              </StackPanel>
+              <ui:Button Grid.Column="1" Content="Clean now" Appearance="Secondary" CornerRadius="10"
+                         Icon="{ui:SymbolIcon Dismiss24}" Command="{Binding CleanCacheCommand}" Margin="0,0,8,0" />
+              <ui:ProgressRing Grid.Column="2" Width="18" Height="18" IsIndeterminate="True"
+                               Visibility="{Binding IsCleaning, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </Grid>
+          </Border>
         </StackPanel>
       </Border>
 

@@ -49,8 +49,13 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
-## ✨ What's new in 0.2.5
+## ✨ What's new in 0.2.6
 
+- **.NET 9** — Steamy now runs on .NET 9 (still a single self-contained ZIP, no runtime install needed)
+- **Depot Dumper with your own account** — a switch adds a DepotDownloaderMod pass under your Steam login so licensed depots are dumped too; the password and 2FA / Steam Guard code are typed in the tool's own console, Steamy never sees them
+- **Cache & temp cleanup** — Settings shows what artwork cache, manifest work folder, Ryuu archives and update packages occupy, and one button frees it
+- **Resume re-fetches manifests** — a paused download refreshes its Lua and manifests before continuing, so long pauses don't run on outdated data
+- **Smoother Downloads page** — the internet curve rebuilds once per second and progress bars idle on sub-pixel steps: less GPU/CPU work while downloading
 - **Depot Dumper** — new page and sidebar entry: dump the Lua and every depot manifest of a game, then send the pack to the project's private dump repository. Write-only by design: contributors can send, but only the repository owner can read it
 - **Real download size** — a multi-depot download now shows the actual data across all depots ("12.6 GB in 14 depots") instead of a depot count, and the size grows in as each depot is measured
 - **Calmer speed readout** — the measured rate is smoothed over several seconds with a small dead-band, so the number glides instead of flickering; the internet curve is smoother too
@@ -227,7 +232,7 @@ Steamy keeps itself up to date. At startup it asks GitHub for the latest release
 
 | | |
 |---|---|
-| **Runtime** | .NET 8 (Windows Desktop) |
+| **Runtime** | .NET 9 (Windows Desktop) |
 | **UI** | [WPF-UI 4.2](https://github.com/lepoco/wpfui) — Fluent Design, Mica/Acrylic |
 | **Pattern** | MVVM — [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) |
 | **DI** | Microsoft.Extensions.DependencyInjection |
@@ -261,7 +266,7 @@ cd Steamy
 dotnet build src/Steamy/Steamy.csproj -c Release
 ```
 
-> Output: `src/Steamy/bin/Release/net8.0-windows/Steamy.exe`
+> Output: `src/Steamy/bin/Release/net9.0-windows/Steamy.exe`
 
 **Releasing a new version**
 
