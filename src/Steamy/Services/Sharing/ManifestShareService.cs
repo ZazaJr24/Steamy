@@ -23,6 +23,10 @@ public interface IManifestShareService
     Task<ManifestDumpResult> DumpAsync(int appId, ManifestSource source, string? targetFolder = null,
         IProgress<string>? progress = null, CancellationToken cancellationToken = default);
 
+    /// <summary>Dump variant that additionally runs the tool under the user's own Steam account.</summary>
+    Task<ManifestDumpResult> DumpAsync(int appId, ManifestSource source, string? targetFolder,
+        string? steamUsername, IProgress<string>? progress = null, CancellationToken cancellationToken = default);
+
     Task<ManifestShareResult> ShareAsync(int appId, string folder,
         IProgress<string>? progress = null, CancellationToken cancellationToken = default);
 }
