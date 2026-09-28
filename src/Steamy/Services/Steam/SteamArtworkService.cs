@@ -23,7 +23,7 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
 
     public SteamArtworkService(HttpClient? httpClient = null, string? cacheDirectory = null)
     {
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
         _ownsHttpClient = httpClient is null;
         _httpClient.Timeout = TimeSpan.FromSeconds(8);
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)

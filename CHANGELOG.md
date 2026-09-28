@@ -3,6 +3,24 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.5
+
+### New
+- **Depot Dumper** (new page, sidebar entry and Dashboard card): dumps the Lua script plus every depot `.manifest` of an app into one folder and can send the packed ZIP into a private dump repository through the GitHub contents API. The upload is write-only on purpose — a contributor needs a fine-grained token with `Contents: Read and write` on that one repository, so dumps can be sent but not read by other contributors, and only the repository owner can open them.
+- Settings → **Depot Dumper & sharing**: repository owner, repository, branch, dump folder and the sharing token (encrypted with DPAPI, never part of the settings file or an export).
+
+### Fixed
+- A multi-depot download shows the real amount of data across **all** depots ("12.6 GB in 14 depots") instead of "4 depots". The size of every depot the tool reports is added up, and the running depot is added on top, so the number is exact and grows as the download progresses.
+- **Stable DNS**: the resolver mode chosen in Settings is now actually applied. Every HTTP client the app creates resolves host names through the selected DoH endpoint, reuses cached answers for five minutes and silently falls back to the machine's resolver, so a slow or unreachable resolver can no longer break catalogs, sources, updates or artwork.
+
+### Improved
+- The speed readout is smoothed over several seconds and holds its value within four percent, so it no longer dances between samples; the internet graph uses a longer smoothing window as well.
+- The downloaded/speed numbers prefer the measured rate over the tool's instantaneous text.
+- Left and bottom gutters are wider on the Dashboard and the Downloads page so cards no longer sit against the window edge, and the game tiles no longer use negative margins.
+- A game without portrait cover art now falls back to its wide store header instead of a bare placeholder tile.
+- DLC Unlocker rebuilt from scratch: header with Apply/Restore, a strip for unlocker mode, game folder and DLL pack (with an import button and a pack-status dot), game list with avatars, a DLC list with a proper empty state, and a dismissable result banner.
+- Game covers keep `HighQuality` scaling everywhere (no cached bitmaps) and the Depot Dumper page uses the same motion and card language as the Dashboard.
+
 ## 0.2.4
 
 ### Fixed

@@ -61,7 +61,7 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
         Version? currentVersion = null)
     {
         _ownsHttp = http is null;
-        _http = http ?? new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
+        _http = http ?? new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(30) };
         _installDirectory = installDirectory ?? AppContext.BaseDirectory;
         _workDirectory = workDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "updates");

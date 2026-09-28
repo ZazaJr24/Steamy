@@ -82,7 +82,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         _credentials = credentials;
         _ryuuDownload = ryuuDownload;
         _logging = logging;
-        _httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
+        _httpClient = new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(15) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
 
         _workFolder = Path.Combine(

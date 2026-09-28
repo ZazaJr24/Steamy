@@ -51,7 +51,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
 
     public SteamCatalogService(HttpClient? httpClient = null, string? cacheDirectory = null, string? bundledAppIdJsonPath = null)
     {
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
         _ownsHttpClient = httpClient is null;
         _httpClient.Timeout = TimeSpan.FromSeconds(12);
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)

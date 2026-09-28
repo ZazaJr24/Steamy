@@ -189,12 +189,16 @@ public sealed class JsonSettingsService : ISettingsService
             }
         }
 
+        // Keep the app's DNS behaviour in step with the setting: every load (startup, page change)
+        // and every save re-points the HTTP handlers at the selected resolver.
+        StableDnsHandler.Configure(settings.DnsMode, settings.DnsEndpoint);
         return settings;
     }
 
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+        StableDnsHandler.Configure(settings.DnsMode, settings.DnsEndpoint);
         var json = System.Text.Json.JsonSerializer.Serialize(settings, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(_path, json, cancellationToken);
     }

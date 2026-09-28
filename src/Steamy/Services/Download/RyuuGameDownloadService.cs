@@ -77,7 +77,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         _ryuuDownload = ryuuDownload;
         _manifestSource = manifestSource;
         _logging = logging;
-        _httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+        _httpClient = new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(5) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
 
         var appData = Path.Combine(
@@ -654,16 +654,25 @@ public static class GameDownloadProgressMessage
 
         if (hasDepots && count > 1)
         {
+            // Every depot reports its own size, so the job can show the real amount of data the whole
+            // download covers. Finished depots are added up, the running one is added on top.
+            var depotBytes = DownloadFormat.TryParseSize(depotTotal);
+            if (job.DepotsSeen != index)
+            {
+                if (job.DepotTotalBytes > 0) job.DepotBytesCompleted += job.DepotTotalBytes;
+                job.DepotsSeen = index;
+            }
+            if (depotBytes > 0) job.DepotTotalBytes = depotBytes;
+
             if (cumulativeBytes > 0)
-            {
-                job.Downloaded = $"{DownloadFormat.Bytes(cumulativeBytes)}";
-                job.TotalSize = $"{count} depots";
-            }
+                job.Downloaded = DownloadFormat.Bytes(cumulativeBytes);
             else if (depotDownloaded.Length > 0)
-            {
                 job.Downloaded = depotDownloaded;
-                job.TotalSize = string.IsNullOrWhiteSpace(depotTotal) ? $"{count} depots" : $"{depotTotal} ({count} depots)";
-            }
+
+            var exactTotal = job.DepotBytesCompleted + job.DepotTotalBytes;
+            job.TotalSize = exactTotal > 0
+                ? $"{DownloadFormat.Bytes(exactTotal)} in {count} depots"
+                : $"{count} depots";
 
             if (depotDownloaded.Length > 0 && depotTotal.Length > 0)
                 job.Status = $"Downloading depot {index} of {count}  ·  {depotDownloaded} / {depotTotal}";
@@ -677,7 +686,14 @@ public static class GameDownloadProgressMessage
             job.Status = "Downloading";
         }
 
-        if (parts[7].Length > 0) job.Speed = parts[7];
+        // Prefer the measured, smoothed rate so the speed readout and the graph glide.
+        var measuredRate = parts.Length >= 11
+            && double.TryParse(parts[10], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedRate)
+                ? parsedRate
+                : 0;
+        if (measuredRate > 4096) job.Speed = DownloadFormat.Speed(measuredRate);
+        else if (parts[7].Length > 0) job.Speed = parts[7];
+
         if (parts[8].Length > 0)
         {
             job.Eta = hasDepots && count > 1 ? $"{parts[8]} (depot {index}/{count})" : parts[8];

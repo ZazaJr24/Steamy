@@ -204,6 +204,15 @@ public sealed class DownloadJob : UiObservableObject
         }
     }
 
+    /// <summary>Size the tool reported for the depot that is currently running; 0 when unknown.</summary>
+    public long DepotTotalBytes { get; set; }
+
+    /// <summary>Sum of every depot that already ran, so the job can show the download's real size.</summary>
+    public long DepotBytesCompleted { get; set; }
+
+    /// <summary>The depot index the totals were last updated for, so a depot is counted once.</summary>
+    public int DepotsSeen { get; set; }
+
     public string Speed
     {
         get => _speed;
@@ -540,6 +549,10 @@ public sealed class AppSettings : ObservableObject
     private string _dnsMode = "System resolver";
     private string _dnsEndpoint = "https://cloudflare-dns.com/dns-query";
     private string _dnsTestHost = "api.steampowered.com";
+    private string _manifestDumpFolder = string.Empty;
+    private string _manifestShareOwner = "ZazaJr24";
+    private string _manifestShareRepo = "Steamy-Dumps";
+    private string _manifestShareBranch = "main";
 
     private string _steamlessExePath = string.Empty;
     private string _steamlessTargetExePath = string.Empty;
@@ -623,4 +636,16 @@ public sealed class AppSettings : ObservableObject
     public string DnsMode { get => _dnsMode; set => SetProperty(ref _dnsMode, value); }
     public string DnsEndpoint { get => _dnsEndpoint; set => SetProperty(ref _dnsEndpoint, value); }
     public string DnsTestHost { get => _dnsTestHost; set => SetProperty(ref _dnsTestHost, value); }
+
+    /// <summary>Where the Depot Dumper writes its Lua and manifest files. Empty means the download folder.</summary>
+    public string ManifestDumpFolder { get => _manifestDumpFolder; set => SetProperty(ref _manifestDumpFolder, value); }
+
+    /// <summary>Owner of the private dump repository that shared dumps are sent to.</summary>
+    public string ManifestShareOwner { get => _manifestShareOwner; set => SetProperty(ref _manifestShareOwner, value); }
+
+    /// <summary>Name of the private dump repository that shared dumps are sent to.</summary>
+    public string ManifestShareRepo { get => _manifestShareRepo; set => SetProperty(ref _manifestShareRepo, value); }
+
+    /// <summary>Branch the dumps are committed to.</summary>
+    public string ManifestShareBranch { get => _manifestShareBranch; set => SetProperty(ref _manifestShareBranch, value); }
 }
