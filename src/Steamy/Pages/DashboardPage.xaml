@@ -38,34 +38,18 @@
       <Setter Property="Margin" Value="0,18" />
     </Style>
 
-    <!-- Plain clickable content for game cover cards with smooth hover scale -->
+    <!-- Game cover card with lightweight hover border glow -->
     <Style x:Key="DashPlainButton" TargetType="Button">
       <Setter Property="Cursor" Value="Hand" />
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Grid x:Name="CardRoot" RenderTransformOrigin="0.5,0.5">
-              <Grid.RenderTransform><ScaleTransform ScaleX="1" ScaleY="1" /></Grid.RenderTransform>
+            <Border x:Name="CardBorder" CornerRadius="18" BorderThickness="2" BorderBrush="Transparent">
               <ContentPresenter />
-            </Grid>
+            </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Trigger.EnterActions>
-                  <BeginStoryboard>
-                    <Storyboard>
-                      <DoubleAnimation Storyboard.TargetName="CardRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.03" Duration="0:0:0.18" />
-                      <DoubleAnimation Storyboard.TargetName="CardRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.03" Duration="0:0:0.18" />
-                    </Storyboard>
-                  </BeginStoryboard>
-                </Trigger.EnterActions>
-                <Trigger.ExitActions>
-                  <BeginStoryboard>
-                    <Storyboard>
-                      <DoubleAnimation Storyboard.TargetName="CardRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.2" />
-                      <DoubleAnimation Storyboard.TargetName="CardRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.2" />
-                    </Storyboard>
-                  </BeginStoryboard>
-                </Trigger.ExitActions>
+                <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -73,7 +57,7 @@
       </Setter>
     </Style>
 
-    <!-- Insane Quick action tile: cyber-gradient, glass reflection, dynamic hover lift -->
+    <!-- Quick action tile with lightweight hover highlight -->
     <Style x:Key="QuickTile" TargetType="Button">
       <Setter Property="Cursor" Value="Hand" />
       <Setter Property="Height" Value="140" />
@@ -81,44 +65,23 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
-              <Grid.RenderTransform><ScaleTransform ScaleX="1" ScaleY="1" /></Grid.RenderTransform>
-              <Border CornerRadius="22" Background="{TemplateBinding Background}"
+            <Grid>
+              <Border x:Name="BaseBorder" CornerRadius="22" Background="{TemplateBinding Background}"
                       BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" />
-              <Border x:Name="HoverGlow" CornerRadius="22" BorderBrush="#5038BDF8" BorderThickness="1.5" Opacity="0" />
-              <Border x:Name="GlassShine" CornerRadius="22" Opacity="0">
-                <Border.Background>
-                  <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#25FFFFFF" Offset="0" />
-                    <GradientStop Color="#00FFFFFF" Offset="0.6" />
-                  </LinearGradientBrush>
-                </Border.Background>
-              </Border>
+              <Border x:Name="HoverBorder" CornerRadius="22" BorderBrush="#5038BDF8" BorderThickness="1.5" Opacity="0" />
               <ContentPresenter Margin="22,20" />
             </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="GlassShine" Property="Opacity" Value="1" />
-                <Setter TargetName="HoverGlow" Property="Opacity" Value="1" />
-                <Trigger.EnterActions>
-                  <BeginStoryboard>
-                    <Storyboard>
-                      <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.03" Duration="0:0:0.18" />
-                      <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.03" Duration="0:0:0.18" />
-                    </Storyboard>
-                  </BeginStoryboard>
-                </Trigger.EnterActions>
-                <Trigger.ExitActions>
-                  <BeginStoryboard>
-                    <Storyboard>
-                      <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.2" />
-                      <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.2" />
-                    </Storyboard>
-                  </BeginStoryboard>
-                </Trigger.ExitActions>
+                <Setter TargetName="HoverBorder" Property="Opacity" Value="1" />
+                <Setter TargetName="BaseBorder" Property="Background">
+                  <Setter.Value>
+                    <SolidColorBrush Color="#15FFFFFF" />
+                  </Setter.Value>
+                </Setter>
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="GlassShine" Property="Opacity" Value="0.5" />
+                <Setter TargetName="BaseBorder" Property="Opacity" Value="0.8" />
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -126,7 +89,7 @@
       </Setter>
     </Style>
 
-    <!-- Telemetry Stat Card: glass container with colored top indicator line -->
+    <!-- Stat card with clean hover accent border -->
     <Style x:Key="StatCard" TargetType="Border">
       <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
@@ -134,33 +97,10 @@
       <Setter Property="CornerRadius" Value="20" />
       <Setter Property="Padding" Value="20,18" />
       <Setter Property="Margin" Value="6" />
-      <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
-      <Setter Property="RenderTransform"><Setter.Value><ScaleTransform ScaleX="1" ScaleY="1" /></Setter.Value></Setter>
       <Style.Triggers>
         <Trigger Property="IsMouseOver" Value="True">
           <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-          <Setter Property="Effect">
-            <Setter.Value>
-              <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.3" />
-            </Setter.Value>
-          </Setter>
         </Trigger>
-        <EventTrigger RoutedEvent="MouseEnter">
-          <BeginStoryboard>
-            <Storyboard>
-              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.02" Duration="0:0:0.15" />
-              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.02" Duration="0:0:0.15" />
-            </Storyboard>
-          </BeginStoryboard>
-        </EventTrigger>
-        <EventTrigger RoutedEvent="MouseLeave">
-          <BeginStoryboard>
-            <Storyboard>
-              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.2" />
-              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.2" />
-            </Storyboard>
-          </BeginStoryboard>
-        </EventTrigger>
       </Style.Triggers>
     </Style>
 
@@ -223,12 +163,12 @@
 
     <LinearGradientBrush x:Key="HeroShade" StartPoint="0,0" EndPoint="1,0">
       <GradientStop Color="#F80A0D14" Offset="0" />
-      <GradientStop Color="#D00A0D14" Offset="0.45" />
-      <GradientStop Color="#100A0D14" Offset="1" />
+      <GradientStop Color="#E00A0D14" Offset="0.45" />
+      <GradientStop Color="#200A0D14" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="HeroBottomShade" StartPoint="0,0" EndPoint="0,1">
-      <GradientStop Color="#000A0D14" Offset="0.3" />
-      <GradientStop Color="#E00A0D14" Offset="1" />
+      <GradientStop Color="#000A0D14" Offset="0.15" />
+      <GradientStop Color="#F00A0D14" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="WelcomeGlow" StartPoint="0,0" EndPoint="1,1">
       <GradientStop Color="#350284C7" Offset="0" />
@@ -495,7 +435,7 @@
       <Grid Height="270" Margin="0,0,0,32">
         <Border CornerRadius="26" Background="{DynamicResource SurfaceElevatedBrush}"
                 BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" />
-        <Border CornerRadius="26" Visibility="{Binding HasHeroArt, Converter={StaticResource BoolToVis}}">
+        <Border CornerRadius="26" CacheMode="BitmapCache" Visibility="{Binding HasHeroArt, Converter={StaticResource BoolToVis}}">
           <Border.Background>
             <ImageBrush ImageSource="{Binding HeroImage}" Stretch="UniformToFill" />
           </Border.Background>
@@ -550,16 +490,8 @@
             </StackPanel>
           </Border>
           <TextBlock Text="{Binding HeroGame.Name}" FontSize="36" FontWeight="Bold" Foreground="White"
-                     Margin="0,10,0,0" TextTrimming="CharacterEllipsis">
-            <TextBlock.Effect>
-              <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.9" />
-            </TextBlock.Effect>
-          </TextBlock>
-          <TextBlock Text="{Binding HeroGameDetail}" Foreground="#CBD5E1" FontSize="14" Margin="0,4,0,0">
-            <TextBlock.Effect>
-              <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.8" />
-            </TextBlock.Effect>
-          </TextBlock>
+                     Margin="0,10,0,0" TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding HeroGameDetail}" Foreground="#CBD5E1" FontSize="14" Margin="0,4,0,0" />
           <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
             <ui:Button Style="{StaticResource HeroButton}" Content="Play Now" Appearance="Primary" Icon="{ui:SymbolIcon Play24}"
                        Command="{Binding PlayGameCommand}" CommandParameter="{Binding HeroGame}" />
@@ -765,13 +697,20 @@
                     <TextBlock Text="{Binding CoverGlyph}" FontSize="56" Foreground="#35FFFFFF"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                Visibility="{Binding IsArtworkFallback, Converter={StaticResource BoolToVis}}" />
-                    <Border CornerRadius="18">
+                    <Border CornerRadius="18" CacheMode="BitmapCache">
                       <Border.Background>
                         <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
                       </Border.Background>
                     </Border>
-                    <!-- Bottom fade for clean text readability -->
-                    <Border CornerRadius="0,0,18,18" Height="150" VerticalAlignment="Bottom" Background="{StaticResource CoverFadeBrush}" />
+                    <Border CornerRadius="0,0,18,18" Height="120" VerticalAlignment="Bottom">
+                      <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                          <GradientStop Color="#000A0D14" Offset="0" />
+                          <GradientStop Color="#CC0A0D14" Offset="0.5" />
+                          <GradientStop Color="#EE0A0D14" Offset="1" />
+                        </LinearGradientBrush>
+                      </Border.Background>
+                    </Border>
                     
                     <!-- Update tag -->
                     <Border Background="#F00F172A" CornerRadius="8" Padding="8,3" Margin="10"
@@ -784,18 +723,10 @@
                       </StackPanel>
                     </Border>
 
-                    <!-- Title & details with shadow -->
+                    <!-- Title & details -->
                     <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,16">
-                      <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="Bold" Foreground="White" TextTrimming="CharacterEllipsis">
-                        <TextBlock.Effect>
-                          <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.9" />
-                        </TextBlock.Effect>
-                      </TextBlock>
-                      <TextBlock Text="{Binding Size}" FontSize="11" Foreground="#CBD5E1" Margin="0,3,0,0">
-                        <TextBlock.Effect>
-                          <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.8" />
-                        </TextBlock.Effect>
-                      </TextBlock>
+                      <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="Bold" Foreground="White" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Size}" FontSize="11" Foreground="#CBD5E1" Margin="0,3,0,0" />
                     </StackPanel>
                   </Grid>
                 </Button>

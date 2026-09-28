@@ -225,7 +225,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
 
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Head,
+            using var req = new HttpRequestMessage(HttpMethod.Get,
                 $"https://depotbox.org/api/direct-lua?appid={appId}");
             req.Headers.TryAddWithoutValidation("x-api-key", key);
             using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);

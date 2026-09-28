@@ -163,19 +163,16 @@
                         SnapsToDevicePixels="True"
                         MouseLeftButtonUp="GameCard_MouseLeftButtonUp"
                         Tag="{Binding}"
-                        ToolTip="{Binding Name}"
-                        RenderTransformOrigin="0.5,0.5">
-                  <Border.RenderTransform><ScaleTransform ScaleX="1" ScaleY="1" /></Border.RenderTransform>
+                        ToolTip="{Binding Name}">
                   <Grid>
                     <Grid.RowDefinitions>
                       <RowDefinition Height="*" />
                       <RowDefinition Height="58" />
                     </Grid.RowDefinitions>
 
-                    <!-- Cover: rounded via brush instead of a clip geometry (cheaper, scales with the card) -->
                     <Border CornerRadius="13,13,0,0" Background="#0B0C0F">
                       <Grid>
-                        <Border CornerRadius="13,13,0,0">
+                        <Border CornerRadius="13,13,0,0" CacheMode="BitmapCache">
                           <Border.Background>
                             <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
                           </Border.Background>
@@ -225,27 +222,6 @@
                   <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
                     <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                     <Setter TargetName="Shine" Property="Opacity" Value="0.06" />
-                    <Setter TargetName="Card" Property="Effect">
-                      <Setter.Value>
-                        <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Color="#000000" Opacity="0.35" />
-                      </Setter.Value>
-                    </Setter>
-                    <Trigger.EnterActions>
-                      <BeginStoryboard>
-                        <Storyboard>
-                          <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.03" Duration="0:0:0.15" />
-                          <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.03" Duration="0:0:0.15" />
-                        </Storyboard>
-                      </BeginStoryboard>
-                    </Trigger.EnterActions>
-                    <Trigger.ExitActions>
-                      <BeginStoryboard>
-                        <Storyboard>
-                          <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.2" />
-                          <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.2" />
-                        </Storyboard>
-                      </BeginStoryboard>
-                    </Trigger.ExitActions>
                   </Trigger>
                 </DataTemplate.Triggers>
               </DataTemplate>
@@ -294,9 +270,6 @@
         <Border.Clip>
           <RectangleGeometry Rect="0,0,560,720" RadiusX="20" RadiusY="20" />
         </Border.Clip>
-        <Border.Effect>
-          <DropShadowEffect BlurRadius="60" ShadowDepth="14" Direction="270" Color="#000000" Opacity="0.6" />
-        </Border.Effect>
         <Grid>
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -315,26 +288,15 @@
                        Margin="0,12,14,0"
                        ToolTip="Close"
                        Click="OverlayCloseButton_Click">
-              <ui:Button.Effect>
-                <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#000000" Opacity="0.5" />
-              </ui:Button.Effect>
             </ui:Button>
             <StackPanel VerticalAlignment="Bottom" Margin="24,0,24,14">
               <TextBlock x:Name="OverlayTitle" Text="Download Game"
                          Foreground="White"
                          FontSize="20" FontWeight="SemiBold"
-                         TextTrimming="CharacterEllipsis">
-                <TextBlock.Effect>
-                  <DropShadowEffect BlurRadius="12" ShadowDepth="0" Color="#000000" Opacity="0.7" />
-                </TextBlock.Effect>
-              </TextBlock>
+                         TextTrimming="CharacterEllipsis" />
               <TextBlock x:Name="OverlayAppId" Text="App 0"
                          Foreground="#C7CBD8"
-                         FontSize="11.5" Margin="0,3,0,0">
-                <TextBlock.Effect>
-                  <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#000000" Opacity="0.6" />
-                </TextBlock.Effect>
-              </TextBlock>
+                         FontSize="11.5" Margin="0,3,0,0" />
             </StackPanel>
           </Grid>
 
