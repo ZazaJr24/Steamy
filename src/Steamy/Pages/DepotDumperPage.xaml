@@ -146,6 +146,28 @@
                       SelectedItem="{Binding SelectedSource}" Height="34" Margin="0,8,0,0" />
             <TextBlock Text="{Binding SourceHint}" Style="{StaticResource FieldHint}" />
 
+            <!-- Own-account dump -->
+            <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="12" Margin="0,16,0,0">
+              <StackPanel>
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Dump from your own account" Style="{StaticResource FieldLabel}" FontSize="12.5" />
+                    <TextBlock Text="Also grabs depots only your licensed account can see. Steamy never touches your password — the tool's own console asks for it and the 2FA / Steam Guard code."
+                               Style="{StaticResource FieldHint}" FontSize="11.5" />
+                  </StackPanel>
+                  <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding UseSteamLogin}" VerticalAlignment="Center" Margin="10,0,0,0" />
+                </Grid>
+                <ui:TextBox Text="{Binding SteamUsername, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="Steam account name (no password)"
+                            Height="32" Margin="0,10,0,0"
+                            Visibility="{Binding UseSteamLogin, Converter={StaticResource BoolToVis}}" />
+              </StackPanel>
+            </Border>
+
             <TextBlock Text="Dump folder" Style="{StaticResource FieldLabel}" Margin="0,16,0,0" />
             <Grid Margin="0,8,0,0">
               <Grid.ColumnDefinitions>
@@ -184,7 +206,8 @@
 
             <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
               <ui:Button Content="Dump manifest + Lua" Appearance="Primary" CornerRadius="10" Padding="18,9"
-                         Icon="{ui:SymbolIcon CloudArrowDown24}" Command="{Binding DumpCommand}" Margin="0,0,8,0" />
+                         Icon="{ui:SymbolIcon CloudArrowDown24}" Command="{Binding DumpCommand}" Margin="0,0,8,0"
+                         ToolTip="Fetches the Lua and every depot manifest of this app. With your own account on, licensed depots are included." />
               <ui:Button Content="Send to repository" Appearance="Secondary" CornerRadius="10" Padding="18,9"
                          Icon="{ui:SymbolIcon Share24}" Command="{Binding ShareCommand}" />
             </StackPanel>

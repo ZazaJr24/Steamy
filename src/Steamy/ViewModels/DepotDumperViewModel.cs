@@ -35,6 +35,8 @@ public sealed class DepotDumperViewModel : ObservableObject
     private string _targetFolder = string.Empty;
     private InstalledGameEntry? _selectedGame;
     private string? _lastDumpFolder;
+    private string _steamUsername = string.Empty;
+    private bool _useSteamLogin;
 
     public DepotDumperViewModel(
         IManifestShareService sharing,
@@ -52,6 +54,7 @@ public sealed class DepotDumperViewModel : ObservableObject
         AvailableSources = new ObservableCollection<ManifestSourceInfo>(sources.Sources);
         _selectedSource = AvailableSources.FirstOrDefault();
         _targetFolder = settings.Load().ManifestDumpFolder;
+        _steamUsername = settings.Load().DumperSteamUsername;
 
         DumpCommand = new AsyncRelayCommand(DumpAsync, () => CanRun);
         ShareCommand = new AsyncRelayCommand(ShareAsync, () => CanShare);
@@ -60,6 +63,30 @@ public sealed class DepotDumperViewModel : ObservableObject
         RevealFolderCommand = new RelayCommand(RevealFolder);
 
         _ = LoadGamesAsync();
+    }
+
+    /// <summary>
+    /// Optional Steam account for the dump. The name is only passed to the tool; the password and
+    /// the 2FA/Steam Guard code are typed by the user in the tool's own console window and are never
+    /// seen, asked for or stored by Steamy.
+    /// </summary>
+    public string SteamUsername
+    {
+        get => _steamUsername;
+        set
+        {
+            if (!SetProperty(ref _steamUsername, value)) return;
+            var settings = _settings.Load();
+            settings.DumperSteamUsername = value.Trim();
+            _ = _settings.SaveAsync(settings);
+        }
+    }
+
+    /// <summary>When set, the dump runs through your own Steam login (with Steam Guard in the console).</summary>
+    public bool UseSteamLogin
+    {
+        get => _useSteamLogin;
+        set => SetProperty(ref _useSteamLogin, value);
     }
 
     public ObservableCollection<ManifestSourceInfo> AvailableSources { get; }
@@ -259,7 +286,11 @@ public sealed class DepotDumperViewModel : ObservableObject
         var progress = new Progress<string>(line => Append(line));
         try
         {
-            var result = await _sharing.DumpAsync(appId, source, TargetFolder, progress, _runCts.Token);
+            var account = UseSteamLogin && !string.IsNullOrWhiteSpace(SteamUsername) ? SteamUsername.Trim() : null;
+            if (UseSteamLogin && string.IsNullOrWhiteSpace(SteamUsername))
+                Append("Steam login is on but no account name is set — dumping without it.");
+
+            var result = await _sharing.DumpAsync(appId, source, TargetFolder, account, progress, _runCts.Token);
             ShowResult(result.Succeeded, result.Succeeded ? "Dump ready" : "Dump failed",
                 result.Message,
                 result.FileCount > 0

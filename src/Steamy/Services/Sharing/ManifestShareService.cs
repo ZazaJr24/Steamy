@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -72,6 +73,16 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
 
     public async Task<ManifestDumpResult> DumpAsync(int appId, ManifestSource source, string? targetFolder = null,
         IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+        => await DumpAsync(appId, source, targetFolder, steamUsername: null, progress, cancellationToken).ConfigureAwait(false);
+
+    /// <summary>
+    /// Dumps the Lua and manifests of an app. When <paramref name="steamUsername"/> is set, the
+    /// DepotDownloaderMod run is done with that account afterwards, so licensed depots can be
+    /// dumped from the user's own Steam login. The password and the 2FA/Steam Guard code are typed
+    /// by the user in the tool's own console window — Steamy never asks for, reads or stores them.
+    /// </summary>
+    public async Task<ManifestDumpResult> DumpAsync(int appId, ManifestSource source, string? targetFolder,
+        string? steamUsername, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
         if (appId <= 0)
             return new ManifestDumpResult(false, "Enter a Steam App ID first.", appId, string.Empty, 0, 0);
@@ -105,6 +116,12 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
         progress?.Report("Collecting files…");
         CopyFromWorkDirectory(download.WorkDirectory, folder, appId);
 
+        if (!string.IsNullOrWhiteSpace(steamUsername))
+        {
+            progress?.Report($"Depot keys from your own account ({steamUsername})…");
+            await RunLicensedDumpAsync(appId, steamUsername, download, folder, progress, cancellationToken).ConfigureAwait(false);
+        }
+
         var files = EnumerateDumpFiles(folder);
         var bytes = files.Sum(file => SafeLength(file));
 
@@ -116,6 +133,62 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
         var summary = $"{files.Count} files, {DownloadFormat.Bytes(bytes)}";
         _logging.Add(LogLevel.Info, "DepotDumper", $"Dumped App {appId} from {source}: {summary}");
         return new ManifestDumpResult(true, $"Dumped {summary} for App {appId}.", appId, folder, files.Count, bytes);
+    }
+
+    /// <summary>
+    /// Licensed part of the dump: runs DepotDownloaderMod once for the app with the user's account
+    /// so its console window can ask for the password and Steam Guard code. The tool writes its
+    /// session data next to the executable, nothing is captured or stored by Steamy.
+    /// </summary>
+    private async Task RunLicensedDumpAsync(int appId, string steamUsername, ManifestDownloadResult download,
+        string folder, IProgress<string>? progress, CancellationToken cancellationToken)
+    {
+        var workDirectory = !string.IsNullOrWhiteSpace(download.WorkDirectory) ? download.WorkDirectory : folder;
+        var tool = Directory.EnumerateFiles(AppDomain.CurrentDomain.BaseDirectory, "DepotDownloader*.exe", SearchOption.AllDirectories)
+            .FirstOrDefault();
+        if (tool is null)
+        {
+            progress?.Report("DepotDownloaderMod not found — licensed depots were skipped.");
+            return;
+        }
+
+        try
+        {
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = tool,
+                WorkingDirectory = workDirectory,
+                UseShellExecute = true,
+                CreateNoWindow = false
+            };
+            startInfo.ArgumentList.Add("-app");
+            startInfo.ArgumentList.Add(appId.ToString(CultureInfo.InvariantCulture));
+            startInfo.ArgumentList.Add("-username");
+            startInfo.ArgumentList.Add(steamUsername);
+            startInfo.ArgumentList.Add("-remember-password");
+            startInfo.ArgumentList.Add("-manifest-only");
+            startInfo.ArgumentList.Add("-dir");
+            startInfo.ArgumentList.Add(Path.GetFullPath(folder));
+
+            progress?.Report("DepotDownloaderMod opens in its own window — log in there (password + Steam Guard). It closes when the dump is done.");
+            using var process = System.Diagnostics.Process.Start(startInfo);
+            if (process is null) return;
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+
+            CopyFromWorkDirectory(workDirectory, folder, appId);
+            progress?.Report(process.ExitCode == 0
+                ? "Account dump finished."
+                : "Account dump ended with an error — check the tool's window.");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            progress?.Report($"Account dump could not run: {exception.Message}");
+            _logging.Add(LogLevel.Warning, "DepotDumper", $"Licensed dump failed for App {appId}: {exception.Message}");
+        }
     }
 
     public async Task<ManifestShareResult> ShareAsync(int appId, string folder,

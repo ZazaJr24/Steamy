@@ -553,6 +553,8 @@ public sealed class AppSettings : ObservableObject
     private string _manifestShareOwner = "ZazaJr24";
     private string _manifestShareRepo = "Steamy-Dumps";
     private string _manifestShareBranch = "main";
+    private string _dumperSteamUsername = string.Empty;
+    private int _refreshOnResumeDelay = 2;
 
     private string _steamlessExePath = string.Empty;
     private string _steamlessTargetExePath = string.Empty;
@@ -648,4 +650,10 @@ public sealed class AppSettings : ObservableObject
 
     /// <summary>Branch the dumps are committed to.</summary>
     public string ManifestShareBranch { get => _manifestShareBranch; set => SetProperty(ref _manifestShareBranch, value); }
+
+    /// <summary>Steam account name used for manifest dumping and downloads (never a password).</summary>
+    public string DumperSteamUsername { get => _dumperSteamUsername; set => SetProperty(ref _dumperSteamUsername, value); }
+
+    /// <summary>How long the app waits before it re-fetches manifests after a pause (seconds).</summary>
+    public int RefreshOnResumeDelay { get => _refreshOnResumeDelay; set => SetProperty(ref _refreshOnResumeDelay, value); }
 }

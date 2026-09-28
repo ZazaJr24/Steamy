@@ -54,6 +54,9 @@ public sealed class SettingsViewModel : ViewModelBase
     private double _hubcapUsagePercent;
     private string _depotBoxTestStatus = "Not checked yet.";
     private string _depotBoxUsageInfo = string.Empty;
+    private string _cleanupStatus = string.Empty;
+    private string _cacheSizeLabel = "—";
+    private bool _isCleaning;
     private string _dnsStatus = "App-only DNS diagnostics are ready.";
     private string _dnsAddresses = "—";
     private string _dnsLatency = "—";
@@ -95,6 +98,8 @@ public sealed class SettingsViewModel : ViewModelBase
         TestHubcapCommand = new AsyncRelayCommand(TestHubcapAsync);
         TestDepotBoxCommand = new AsyncRelayCommand(TestDepotBoxAsync);
         TestDnsCommand = new AsyncRelayCommand(TestDnsAsync);
+        CleanCacheCommand = new AsyncRelayCommand(CleanCacheAsync);
+        _ = MeasureCacheAsync();
         TestMirrorCommand = new AsyncRelayCommand(TestMirrorAsync);
         CheckForUpdatesCommand = new AsyncRelayCommand(CheckForUpdatesAsync);
 
@@ -380,6 +385,77 @@ public sealed class SettingsViewModel : ViewModelBase
     public IAsyncRelayCommand TestHubcapCommand { get; }
     public IAsyncRelayCommand TestDepotBoxCommand { get; }
     public IAsyncRelayCommand TestDnsCommand { get; }
+    public IAsyncRelayCommand CleanCacheCommand { get; }
+
+    /// <summary>What the last cleanup removed, human readable.</summary>
+    public string CleanupStatus
+    {
+        get => _cleanupStatus;
+        private set => SetProperty(ref _cleanupStatus, value);
+    }
+
+    /// <summary>Cache + temp + dumps size, measured when the page opens and after a cleanup.</summary>
+    public string CacheSizeLabel
+    {
+        get => _cacheSizeLabel;
+        private set => SetProperty(ref _cacheSizeLabel, value);
+    }
+
+    public bool IsCleaning
+    {
+        get => _isCleaning;
+        private set
+        {
+            if (!SetProperty(ref _isCleaning, value)) return;
+            CleanCacheCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private async Task MeasureCacheAsync()
+    {
+        try
+        {
+            var bytes = await Task.Run(() => CacheTempService.Measure(_settingsService));
+            CacheSizeLabel = bytes > 0 ? DownloadFormat.Bytes(bytes) : "Empty";
+        }
+        catch
+        {
+            CacheSizeLabel = "—";
+        }
+    }
+
+    /// <summary>Deletes caches and temp files. The tool download and the dumps stay unless asked for.</summary>
+    private async Task CleanCacheAsync()
+    {
+        if (IsCleaning) return;
+        IsCleaning = true;
+        CleanupStatus = "Cleaning…";
+        try
+        {
+            var result = await Task.Run(() => CacheTempService.Clean(
+                _settingsService,
+                artwork: true,
+                manifests: true,
+                archives: true,
+                updates: true,
+                dumps: false,
+                includeTools: false));
+
+            CleanupStatus = result.FreedBytes > 0
+                ? $"Freed {DownloadFormat.Bytes(result.FreedBytes)} · {result.DeletedFiles} files"
+                : result.Notes.Count > 0 ? "Nothing to clean." : "Already clean.";
+            Logging.Add(LogLevel.Info, "Settings", $"Cache cleanup freed {DownloadFormat.Bytes(result.FreedBytes)} in {result.DeletedFiles} files.");
+        }
+        catch (Exception exception)
+        {
+            CleanupStatus = $"Cleanup failed: {exception.Message}";
+        }
+        finally
+        {
+            IsCleaning = false;
+            await MeasureCacheAsync();
+        }
+    }
     public IAsyncRelayCommand TestMirrorCommand { get; }
     public IAsyncRelayCommand CheckForUpdatesCommand { get; }
 

@@ -47,6 +47,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     private const double SparklineHeight = 40;
     private readonly NetworkThroughputSampler _network = new();
     private readonly DispatcherTimer _liveTimer;
+    private int _liveTick;
 
     public string InternetSpeedLabel { get; private set; } = "—";
     public string InternetPeakLabel { get; private set; } = string.Empty;
@@ -67,15 +68,20 @@ public sealed class DownloadsViewModel : ViewModelBase
 
     public void StopLiveStats() => _liveTimer.Stop();
 
+    // Frame-rate friendly live stats: labels refresh twice a second, the sparkline geometry is
+    // only rebuilt once per second — new PointCollections invalidate the canvas, and doing that
+    // every tick doubled the render cost for a curve that crawls anyway.
     private void UpdateLiveStats()
     {
         _network.Sample();
         var active = Jobs.Where(job => job.IsActive).ToList();
+        _liveTick++;
 
         InternetSpeedLabel = _network.IsAvailable ? DownloadFormat.Speed(_network.BytesPerSecond) : "—";
         InternetPeakLabel = !_network.IsAvailable ? "Not measurable on this system"
             : _network.PeakBytesPerSecond > 0 ? $"Peak {DownloadFormat.Speed(_network.PeakBytesPerSecond)}" : "Measuring…";
-        (InternetSparkline, InternetSparklineArea) = BuildSparkline(_network.History, _network.HistoryLength);
+        if (_liveTick % 2 == 1)
+            (InternetSparkline, InternetSparklineArea) = BuildSparkline(_network.History, _network.HistoryLength);
 
         var jobRate = active.Sum(job => job.BytesPerSecond);
         JobsSpeedLabel = active.Count == 0 ? "Idle" : DownloadFormat.Speed(jobRate);
@@ -269,7 +275,7 @@ public sealed class DownloadsViewModel : ViewModelBase
             }
 
             job.State = DownloadJobState.Preparing;
-            job.Status = "Resuming — loading cached manifests";
+            job.Status = "Resuming — refreshing manifests first";
             var progress = new Progress<string>(msg => System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
             {
                 if (!GameDownloadProgressMessage.TryApply(job, msg)) job.Status = msg;
@@ -278,6 +284,12 @@ public sealed class DownloadsViewModel : ViewModelBase
             _manager.RegisterJob(job.Id, cts);
             try
             {
+                // A paused download can be days old. Steam may have new manifests in the meantime,
+                // so resume always re-fetches them first (cached set is used when that fails).
+                var refetch = App.Services?.GetService(typeof(IManifestRefetchService)) as IManifestRefetchService;
+                if (refetch is not null)
+                    await refetch.RefreshBeforeResumeAsync(job, progress, cts.Token);
+
                 var result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress, cts.Token));
                 job.State = result.Succeeded ? DownloadJobState.Completed : DownloadJobState.Failed;
                 job.Status = result.Message;
