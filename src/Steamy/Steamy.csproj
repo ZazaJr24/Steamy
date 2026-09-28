@@ -8,9 +8,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Steamy</RootNamespace>
     <AssemblyName>Steamy</AssemblyName>
-    <Version>0.2.0</Version>
-    <FileVersion>0.2.0</FileVersion>
-    <AssemblyVersion>0.2.0</AssemblyVersion>
+    <Version>0.1.6</Version>
+    <FileVersion>0.1.6</FileVersion>
+    <AssemblyVersion>0.1.6</AssemblyVersion>
     <Product>Steamy</Product>
     <Copyright>Copyright (c) 2026 ZazaJr24 · Steamy License</Copyright>
     <ApplicationIcon />

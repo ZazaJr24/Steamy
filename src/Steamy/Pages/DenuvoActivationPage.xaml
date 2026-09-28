@@ -159,7 +159,23 @@
           <Border Height="1" Margin="0,14,0,14"
                   Background="{DynamicResource BorderSubtleBrush}" />
 
-          <!-- Row 2: Launch script toggle -->
+          <!-- Row 2: Skip token toggle -->
+          <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="ZIP without token" FontSize="12.5"
+                         Foreground="{DynamicResource TextPrimaryBrush}" />
+              <TextBlock Text="Skip token generation — creates the package with ColdLoader, proxy and Goldberg only."
+                         FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}"
+                         TextWrapping="Wrap" Margin="0,2,0,0" />
+            </StackPanel>
+            <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding SkipToken}" />
+          </Grid>
+
+          <!-- Row 3: Launch script toggle -->
           <Grid>
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />

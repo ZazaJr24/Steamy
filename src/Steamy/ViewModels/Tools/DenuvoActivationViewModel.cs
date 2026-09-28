@@ -47,6 +47,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
     private bool _isCapcomGame;
     private bool _isDebugColdLoader;
     private bool _createLaunchScript;
+    private bool _skipToken;
     private LaunchOption? _selectedLaunchOption;
     private string _customLaunchParameters = string.Empty;
     private string _manualExePath = string.Empty;
@@ -179,6 +180,12 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
         set => SetProperty(ref _createLaunchScript, value);
     }
 
+    public bool SkipToken
+    {
+        get => _skipToken;
+        set => SetProperty(ref _skipToken, value);
+    }
+
     public ObservableCollection<LaunchOption> LaunchOptions { get; } = new();
     public ObservableCollection<string> LaunchExeList { get; } = new();
     public ObservableCollection<string> LaunchConfigList { get; } = new();
@@ -306,7 +313,10 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
 
     private async Task<bool> SearchHubcapAsync(string query, CancellationToken ct)
     {
-        var key = await _credentials.ReadAsync("hubcap-api-key");
+        string? key = null;
+        try { key = await _credentials.ReadAsync("hubcap-api-key"); } catch { }
+        if (string.IsNullOrWhiteSpace(key))
+            key = _settings.Load().HubcapApiKey;
         if (string.IsNullOrWhiteSpace(key)) return false;
 
         var appSettings = _settings.Load();
@@ -427,28 +437,31 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
 
         try
         {
-            Status = "Generating activation token…";
-            await EnsureToolDownloadedAsync();
-            if (string.IsNullOrWhiteSpace(_toolExecutablePath) || !File.Exists(_toolExecutablePath))
+            if (!_skipToken)
             {
-                Status = "Token generator not available — use Browse to locate it.";
-                return;
+                Status = "Generating activation token…";
+                await EnsureToolDownloadedAsync();
+                if (string.IsNullOrWhiteSpace(_toolExecutablePath) || !File.Exists(_toolExecutablePath))
+                {
+                    Status = "Token generator not available — use Browse to locate it.";
+                    return;
+                }
+
+                var workDir = Path.GetDirectoryName(_toolExecutablePath) ?? string.Empty;
+                var stdin = $"{appId}{Environment.NewLine}{Environment.NewLine}{Environment.NewLine}";
+                var req = new LocalToolRunRequest(_toolExecutablePath, string.Empty, workDir, stdin);
+                var result = await _runner.RunAsync(req, _cts.Token);
+
+                var parsed = ParseToolOutput(result.Output);
+                if (parsed is null)
+                {
+                    Status = "Token generation failed — check the generator tool.";
+                    return;
+                }
+
+                _rawSteamId = parsed.Value.steamId;
+                _rawTicket = parsed.Value.ticket;
             }
-
-            var workDir = Path.GetDirectoryName(_toolExecutablePath) ?? string.Empty;
-            var stdin = $"{appId}{Environment.NewLine}{Environment.NewLine}{Environment.NewLine}";
-            var req = new LocalToolRunRequest(_toolExecutablePath, string.Empty, workDir, stdin);
-            var result = await _runner.RunAsync(req, _cts.Token);
-
-            var parsed = ParseToolOutput(result.Output);
-            if (parsed is null)
-            {
-                Status = "Token generation failed — check the generator tool.";
-                return;
-            }
-
-            _rawSteamId = parsed.Value.steamId;
-            _rawTicket = parsed.Value.ticket;
 
             Status = "Fetching DLC list…";
             List<(int AppId, string Name)> dlcs;
@@ -511,8 +524,10 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             var userIni = new StringBuilder();
             userIni.AppendLine("[user::general]");
             userIni.AppendLine("account_name=Player");
-            userIni.AppendLine($"account_steamid={_rawSteamId}");
-            userIni.AppendLine($"ticket={_rawTicket}");
+            if (!_skipToken && !string.IsNullOrWhiteSpace(_rawSteamId))
+                userIni.AppendLine($"account_steamid={_rawSteamId}");
+            if (!_skipToken && !string.IsNullOrWhiteSpace(_rawTicket))
+                userIni.AppendLine($"ticket={_rawTicket}");
             userIni.AppendLine("language=english");
             File.WriteAllText(Path.Combine(ssDir, "configs.user.ini"),
                 userIni.ToString(), Encoding.UTF8);

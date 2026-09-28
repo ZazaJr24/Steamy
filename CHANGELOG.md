@@ -3,6 +3,24 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.1.6
+
+### New
+- **BetterSteamTools** integration: dedicated game-aware page with add/remove/search games, auto-download from GitHub, launch per game
+- **Steam Achievement Manager (SAM)** integration: auto-download from GitHub, launch with one click
+- **SteamAutoCracker** integration: auto-download from GitHub, automatic Steam DRM cracking
+- **Denuvo Activation — ZIP without token**: new toggle to generate the ColdLoader package (proxy, Goldberg, configs) without running the token generator — useful for manual token injection later
+- **Multi-language UI**: i18n infrastructure with .resx resource files; German translation included, language selector in Settings with support for Deutsch, Français, Español, Русский, 中文, 日本語, Türkçe
+
+### Fixed
+- **ScreamAPI**: changed from manual-only browse to auto-download from GitHub (acidicoala/ScreamAPI)
+- **Hubcap availability**: fixed always showing "not available" — was using the wrong API endpoint (search by name instead of manifest by ID) and had no fallback when DPAPI credential store was unavailable
+- **Hubcap API key**: added AppSettings fallback so the key works even when DPAPI is not available; applied the same fallback to the catalog service and settings test
+
+### Improved
+- Navigation: Tools group expanded with BetterSteamTools, ScreamAPI, SteamAutoCracker; new "Utilities" group for Achievement Manager
+- All nav items and common UI strings use localized resource strings
+
 ## 0.1.5
 
 ### Fixed
