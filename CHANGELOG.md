@@ -3,6 +3,14 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.4
+
+### Fixed
+- API keys and tokens typed into Settings are stored straight away. Secrets are not part of the settings file, so the autosave never saw them: a key only landed on disk when the user pressed Save by hand, and "Test connection" kept answering "No API key stored" no matter what was in the box.
+- "Test connection" now stores a key that was just typed before it runs, so it always checks the value in the box instead of an older one.
+- Every test button reports the API's own error text ("· Key rejected: HTTP 403 — Invalid API key") instead of only an HTTP code, and a missing key now says where to type it.
+- A key typed right before leaving the page is stored instead of being lost to the debounce.
+
 ## 0.2.3
 
 ### Fixed

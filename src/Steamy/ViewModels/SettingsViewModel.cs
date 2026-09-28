@@ -22,6 +22,9 @@ public sealed class SettingsViewModel : ViewModelBase
     /// <summary>How long the page waits for further changes before it writes to disk.</summary>
     private static readonly TimeSpan AutosaveDelay = TimeSpan.FromMilliseconds(700);
 
+    /// <summary>Typing a secret is a little more expensive to store, so it waits slightly longer.</summary>
+    private static readonly TimeSpan CredentialAutosaveDelay = TimeSpan.FromMilliseconds(900);
+
     private const string SteamApiKeyName = "steam-api-key";
     private const string RyuuAuthKeyName = "ryuu-auth-key";
     private const string HubcapApiKeyName = "hubcap-api-key";
@@ -34,6 +37,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private readonly IEndpointProbeService _probe;
 
     private CancellationTokenSource? _autosaveCts;
+    private CancellationTokenSource? _credentialAutosaveCts;
     private System.ComponentModel.PropertyChangedEventHandler? _settingsChangedHandler;
     private string _status = "Changes are saved automatically.";
     private string _steamCredentialStatus = "Not configured";
@@ -97,6 +101,37 @@ public sealed class SettingsViewModel : ViewModelBase
 
     /// <summary>Raised after credentials were stored or deleted so the page can clear its boxes.</summary>
     public event EventHandler? CredentialInputsCleared;
+
+    /// <summary>
+    /// Called by the page whenever a password box changes. Secrets are deliberately not part of the
+    /// <see cref="AppSettings"/> object, so the settings autosave never sees them — without this a
+    /// typed key was only ever written when the user pressed Save by hand, and "Test connection"
+    /// kept reporting "no key stored".
+    /// </summary>
+    public void OnCredentialInputChanged(string what)
+    {
+        _credentialAutosaveCts?.Cancel();
+        _credentialAutosaveCts?.Dispose();
+        _credentialAutosaveCts = new CancellationTokenSource();
+        SaveStatus = $"{what} typed — storing it…";
+        _ = StoreCredentialsAfterDelayAsync(_credentialAutosaveCts.Token);
+    }
+
+    private async Task StoreCredentialsAfterDelayAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(CredentialAutosaveDelay, token);
+            if (token.IsCancellationRequested) return;
+
+            await SaveCredentialsAsync();
+            SaveStatus = $"Credential stored · {DateTime.Now:HH:mm:ss}";
+        }
+        catch (TaskCanceledException)
+        {
+            // A newer keystroke is on its way; that one stores the final value.
+        }
+    }
 
     public AppSettings Settings { get; private set; }
 
@@ -516,8 +551,30 @@ public sealed class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Turns an API error body into a short " — message" suffix for the status line.</summary>
+    private static string ApiDetail(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body)) return string.Empty;
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            foreach (var name in new[] { "detail", "message", "error" })
+            {
+                if (!doc.RootElement.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.String)
+                    continue;
+                var text = value.GetString();
+                if (!string.IsNullOrWhiteSpace(text)) return $" — {text}";
+            }
+        }
+        catch { }
+        return string.Empty;
+    }
+
     private async Task TestRyuuAsync()
     {
+        // A key that was just typed is stored first, so the check never runs against an old value.
+        await SaveCredentialsAsync();
+
         IsBusy = true;
         RyuuTestStatus = "Checking the generator endpoint…";
 
@@ -542,6 +599,9 @@ public sealed class SettingsViewModel : ViewModelBase
 
     private async Task TestHubcapAsync()
     {
+        // A key that was just typed is stored first, so the check never runs against an old value.
+        await SaveCredentialsAsync();
+
         IsBusy = true;
         HubcapTestStatus = "Checking Hubcap API…";
         HubcapUsageInfo = string.Empty;
@@ -577,10 +637,10 @@ public sealed class SettingsViewModel : ViewModelBase
                     HubcapTestStatus += " · Key valid.";
                 }
                 else
-                    HubcapTestStatus += $" · Key check: HTTP {(int)resp.StatusCode}";
+                    HubcapTestStatus += $" · Key rejected: HTTP {(int)resp.StatusCode}{ApiDetail(await resp.Content.ReadAsStringAsync())}";
             }
             else
-                HubcapTestStatus += " · No API key stored.";
+                HubcapTestStatus += " · No API key stored — type it into the box above.";
         }
         catch (Exception ex)
         {
@@ -594,6 +654,9 @@ public sealed class SettingsViewModel : ViewModelBase
 
     private async Task TestDepotBoxAsync()
     {
+        // A key that was just typed is stored first, so the check never runs against an old value.
+        await SaveCredentialsAsync();
+
         IsBusy = true;
         DepotBoxTestStatus = "Checking DepotBox API…";
         DepotBoxUsageInfo = string.Empty;
@@ -648,7 +711,7 @@ public sealed class SettingsViewModel : ViewModelBase
             }
             else
             {
-                DepotBoxTestStatus += $" · Key check: HTTP {(int)usageResponse.StatusCode}";
+                DepotBoxTestStatus += $" · Key rejected: HTTP {(int)usageResponse.StatusCode}{ApiDetail(await usageResponse.Content.ReadAsStringAsync())}";
             }
         }
         catch (Exception ex)
@@ -663,6 +726,9 @@ public sealed class SettingsViewModel : ViewModelBase
 
     private async Task TestMirrorAsync()
     {
+        // A token that was just typed is stored first, so the check never runs against an old value.
+        await SaveCredentialsAsync();
+
         IsBusy = true;
         MirrorTestStatus = "Checking the fixes source…";
 
@@ -674,9 +740,6 @@ public sealed class SettingsViewModel : ViewModelBase
                 MirrorTestStatus = "That URL is not valid. Use a GitHub repository URL (https://github.com/owner/repo) or leave it empty for the built-in source.";
                 return;
             }
-
-            if (!string.IsNullOrWhiteSpace(MirrorTokenInput))
-                await SaveCredentialsAsync();
 
             using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
@@ -835,6 +898,9 @@ public sealed class SettingsViewModel : ViewModelBase
     /// <summary>Leaves the page: pending changes are written immediately.</summary>
     public override async Task OnNavigatedFromAsync()
     {
+        // A key typed moments before leaving must not be lost to the debounce.
+        _credentialAutosaveCts?.Cancel();
+        await SaveCredentialsAsync();
         if (HasUnsavedChanges) await SaveAsync("Saved when leaving the page");
         await base.OnNavigatedFromAsync();
     }

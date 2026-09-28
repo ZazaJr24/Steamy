@@ -49,9 +49,11 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
-## ✨ What's new in 0.2.3
+## ✨ What's new in 0.2.4
 
-- **Hubcap and DepotBox actually work now** — the Lua parser was dropping every depot because both services write a third argument on `setManifestid`, and DepotBox now uses its one-request `/api/direct-download` package that already contains the Lua plus all depot manifests
+- **API keys are stored as you type** — no more "No API key stored" while the key sits in the box, and **Test connection** always checks the key you just entered
+- **Clearer key errors** — the test shows the API's own message (e.g. "Invalid API key") instead of a bare HTTP code
+- **Hubcap and DepotBox actually work** — the Lua parser was dropping every depot because both services write a third argument on `setManifestid`, and DepotBox now uses its one-request `/api/direct-download` package that already contains the Lua plus all depot manifests
 - **No more locked Start button** — an availability check that cannot reach the API says "you can still try" instead of "not available", and a missing key names the exact Settings section
 - **Sharp covers everywhere** — the cached bitmap that made game art blurry on scaled displays is gone
 - **Settings looks like the Dashboard** — aurora header, icon section headers, hover cards and staggered fade-ins, plus a DepotBox test connection with your live request counts
