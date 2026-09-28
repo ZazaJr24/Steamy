@@ -55,7 +55,7 @@ public class SmoothProgressBar : ProgressBar
 
         // Sub-pixel changes would keep the composition loop hot for a bar that cannot visually
         // move; such steps are applied instantly instead of animating.
-        if (Math.Abs(bar._target - bar.Value) < bar.SnapDistance * 4)
+        if (Math.Abs(bar._target - bar.Value) < SnapDistance * 4)
         {
             bar.Value = bar._target;
             return;
