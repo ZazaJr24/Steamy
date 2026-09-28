@@ -47,6 +47,8 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _hubcapTestStatus = "Not checked yet.";
     private string _hubcapUsageInfo = string.Empty;
     private double _hubcapUsagePercent;
+    private string _depotBoxTestStatus = "Not checked yet.";
+    private string _depotBoxUsageInfo = string.Empty;
     private string _dnsStatus = "App-only DNS diagnostics are ready.";
     private string _dnsAddresses = "—";
     private string _dnsLatency = "—";
@@ -85,6 +87,7 @@ public sealed class SettingsViewModel : ViewModelBase
         TestSteamCommand = new AsyncRelayCommand(TestSteamAsync);
         TestRyuuCommand = new AsyncRelayCommand(TestRyuuAsync);
         TestHubcapCommand = new AsyncRelayCommand(TestHubcapAsync);
+        TestDepotBoxCommand = new AsyncRelayCommand(TestDepotBoxAsync);
         TestDnsCommand = new AsyncRelayCommand(TestDnsAsync);
         TestMirrorCommand = new AsyncRelayCommand(TestMirrorAsync);
         CheckForUpdatesCommand = new AsyncRelayCommand(CheckForUpdatesAsync);
@@ -169,6 +172,18 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         get => _hubcapUsagePercent;
         private set => SetProperty(ref _hubcapUsagePercent, value);
+    }
+
+    public string DepotBoxTestStatus
+    {
+        get => _depotBoxTestStatus;
+        private set => SetProperty(ref _depotBoxTestStatus, value);
+    }
+
+    public string DepotBoxUsageInfo
+    {
+        get => _depotBoxUsageInfo;
+        private set => SetProperty(ref _depotBoxUsageInfo, value);
     }
 
     public string SteamTestStatus
@@ -317,6 +332,7 @@ public sealed class SettingsViewModel : ViewModelBase
     public IAsyncRelayCommand TestSteamCommand { get; }
     public IAsyncRelayCommand TestRyuuCommand { get; }
     public IAsyncRelayCommand TestHubcapCommand { get; }
+    public IAsyncRelayCommand TestDepotBoxCommand { get; }
     public IAsyncRelayCommand TestDnsCommand { get; }
     public IAsyncRelayCommand TestMirrorCommand { get; }
     public IAsyncRelayCommand CheckForUpdatesCommand { get; }
@@ -569,6 +585,75 @@ public sealed class SettingsViewModel : ViewModelBase
         catch (Exception ex)
         {
             HubcapTestStatus = $"Check failed: {ex.GetType().Name}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task TestDepotBoxAsync()
+    {
+        IsBusy = true;
+        DepotBoxTestStatus = "Checking DepotBox API…";
+        DepotBoxUsageInfo = string.Empty;
+
+        try
+        {
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
+
+            // /api/stats is public, so it proves the service is reachable before the key is tested.
+            var statsResponse = await http.GetAsync("https://depotbox.org/api/stats");
+            if (statsResponse.IsSuccessStatusCode)
+            {
+                using var stats = JsonDocument.Parse(await statsResponse.Content.ReadAsStringAsync());
+                var data = stats.RootElement.TryGetProperty("data", out var d) ? d : stats.RootElement;
+                var tracked = data.TryGetProperty("tracked_games_db1", out var t) ? t.GetInt64() : 0;
+                var requests = data.TryGetProperty("api_requests_last_24h", out var r) ? r.GetInt64() : 0;
+                DepotBoxTestStatus = $"Online · {tracked:N0} games tracked · {requests:N0} API requests today";
+            }
+            else
+            {
+                DepotBoxTestStatus = $"depotbox.org answered HTTP {(int)statsResponse.StatusCode}";
+            }
+
+            string? key = null;
+            try { key = await _credentials.ReadAsync(DepotBoxApiKeyName); } catch { }
+            if (string.IsNullOrWhiteSpace(key))
+                key = Settings.DepotBoxApiKey;
+
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                DepotBoxTestStatus += " · No API key stored.";
+                return;
+            }
+
+            // DepotBox accepts the key as X-API-Key and as a Bearer token — send both, exactly
+            // like the download path does.
+            http.DefaultRequestHeaders.TryAddWithoutValidation("X-API-Key", key);
+            http.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Bearer {key}");
+
+            var usageResponse = await http.GetAsync("https://depotbox.org/api/usage/stats");
+            if (usageResponse.IsSuccessStatusCode)
+            {
+                using var usage = JsonDocument.Parse(await usageResponse.Content.ReadAsStringAsync());
+                if (usage.RootElement.TryGetProperty("stats", out var s))
+                {
+                    var allTime = s.TryGetProperty("allTime", out var a) ? a.GetInt64() : 0;
+                    var last24h = s.TryGetProperty("last24h", out var l) ? l.GetInt64() : 0;
+                    DepotBoxUsageInfo = $"{last24h:N0} requests in the last 24 h · {allTime:N0} total";
+                }
+                DepotBoxTestStatus += " · Key valid.";
+            }
+            else
+            {
+                DepotBoxTestStatus += $" · Key check: HTTP {(int)usageResponse.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            DepotBoxTestStatus = $"Check failed: {ex.GetType().Name}";
         }
         finally
         {

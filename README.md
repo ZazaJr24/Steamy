@@ -49,13 +49,13 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
-## ✨ What's new in 0.2.2
+## ✨ What's new in 0.2.3
 
-- **Redesigned dashboard** — big hero banner, slim stats bar, one tidy System card and animated game covers with hover glow
-- **Smoother UI everywhere** — staggered fade-ins, hover animations and sharp text/covers without lag
-- **DepotBox manifest source** — fast, reliable manifest downloads with the correct lightweight API
-- **Auto-update** — Steamy checks for a new version at startup and updates itself with one click
-- **Downloads like a game launcher** — the current download in a big banner on its game art, with speed, time left and the live internet curve
+- **Hubcap and DepotBox actually work now** — the Lua parser was dropping every depot because both services write a third argument on `setManifestid`, and DepotBox now uses its one-request `/api/direct-download` package that already contains the Lua plus all depot manifests
+- **No more locked Start button** — an availability check that cannot reach the API says "you can still try" instead of "not available", and a missing key names the exact Settings section
+- **Sharp covers everywhere** — the cached bitmap that made game art blurry on scaled displays is gone
+- **Settings looks like the Dashboard** — aurora header, icon section headers, hover cards and staggered fade-ins, plus a DepotBox test connection with your live request counts
+- **DepotBox API key check** — new **Test connection** button next to the key, using the free DepotBox stats endpoints
 
 Full list in the [**CHANGELOG**](CHANGELOG.md).
 

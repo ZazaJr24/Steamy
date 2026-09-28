@@ -40,12 +40,18 @@ public interface IRyuuGameDownloadService
 
 public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposable
 {
+    // Lua manifests come in several dialects. Hubcap, DepotBox and Ryuu all emit
+    //   addappid(<depot>, 1, "<key>")
+    //   setManifestid(<depot>, "<manifest>")
+    //   setManifestid(<depot>, "<manifest>", <size>)     <-- DepotBox adds a third argument
+    // so every trailing argument after the one we need is allowed here. Requiring an exact
+    // closing parenthesis right after the manifest id is what broke DepotBox and Hubcap.
     private static readonly Regex AddAppIdPattern = new(
-        @"addappid\(\s*(\d+)\s*(?:,\s*\d+\s*,\s*""([a-fA-F0-9]+)"")?\s*\)",
+        @"addappid\(\s*(\d+)(?:\s*,\s*\d+\s*,\s*""([a-fA-F0-9]{8,})"")?[^)]*\)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex SetManifestPattern = new(
-        @"setManifestid\(\s*(\d+)\s*,\s*""(\d+)""\s*\)",
+        @"setManifestid\(\s*(\d+)\s*,\s*""(\d+)""[^)]*\)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private const string GitHubReleasesApi = "https://api.github.com/repos/SteamAutoCracks/DepotDownloaderMod/releases/latest";
@@ -105,8 +111,10 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 depots[depotId] = (string.Empty, manifestId);
         }
 
+        // A depot without a manifest id cannot be requested at all. A depot without a key can
+        // still be downloaded when the app does not encrypt it, so only the manifest is required.
         return depots
-            .Where(kv => !string.IsNullOrEmpty(kv.Value.Manifest) && !string.IsNullOrEmpty(kv.Value.Key))
+            .Where(kv => !string.IsNullOrEmpty(kv.Value.Manifest))
             .Select(kv => new RyuuDepotInfo(kv.Key, kv.Value.Manifest, kv.Value.Key))
             .ToList();
     }
@@ -170,9 +178,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
 
         _logging.Add(Models.LogLevel.Info, "RyuuDownload", $"Parsed {depots.Count} depot(s) for App {appId}.", appId);
 
-        var keyFilePath = Path.Combine(appWorkDir, $"{appId}.key");
-        var keyLines = depots.Select(d => $"{d.DepotId};{d.DecryptionKey}");
-        await File.WriteAllLinesAsync(keyFilePath, keyLines, cancellationToken);
+        await WriteDepotKeysAsync(appWorkDir, appId, depots, cancellationToken);
 
         Directory.CreateDirectory(targetFolder);
         return await RunDepotDownloaderModAsync(ddPath, appId, depots, appWorkDir, targetFolder, progress, cancellationToken);
@@ -200,18 +206,36 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         if (depots.Count == 0)
             depots = BuildDepotsFromDirectory(manifestResult.LuaContent, manifestResult.WorkDirectory);
         if (depots.Count == 0)
-            return new RyuuGameDownloadResult(false, "No depots with keys and manifests found from this source.");
+            return new RyuuGameDownloadResult(false,
+                $"{source} delivered a Lua script without any usable depot, so there is nothing to download for App {appId}.");
 
         _logging.Add(Models.LogLevel.Info, "GameDownload",
             $"Parsed {depots.Count} depot(s) for App {appId} from {source}.", appId);
 
         var appWorkDir = manifestResult.WorkDirectory ?? _workFolder;
-        var keyFilePath = Path.Combine(appWorkDir, $"{appId}.key");
-        var keyLines = depots.Select(d => $"{d.DepotId};{d.DecryptionKey}");
-        await File.WriteAllLinesAsync(keyFilePath, keyLines, cancellationToken);
+        await WriteDepotKeysAsync(appWorkDir, appId, depots, cancellationToken);
 
         Directory.CreateDirectory(targetFolder);
         return await RunDepotDownloaderModAsync(ddPath, appId, depots, appWorkDir, targetFolder, progress, cancellationToken);
+    }
+
+    /// <summary>Writes the "<depot>;<key>" depot-keys file DepotDownloaderMod reads via -depotkeys.</summary>
+    private static async Task WriteDepotKeysAsync(
+        string appWorkDir, int appId, IReadOnlyList<RyuuDepotInfo> depots, CancellationToken ct)
+    {
+        var keyFilePath = Path.Combine(appWorkDir, $"{appId}.key");
+        var keyLines = depots
+            .Where(d => !string.IsNullOrWhiteSpace(d.DecryptionKey))
+            .Select(d => $"{d.DepotId};{d.DecryptionKey}")
+            .ToList();
+
+        if (keyLines.Count == 0)
+        {
+            try { File.Delete(keyFilePath); } catch { }
+            return;
+        }
+
+        await File.WriteAllLinesAsync(keyFilePath, keyLines, ct);
     }
 
     public async Task<RyuuGameDownloadResult> ResumeDownloadAsync(

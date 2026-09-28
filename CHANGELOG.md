@@ -3,6 +3,24 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.3
+
+### Fixed
+- Hubcap and DepotBox downloads work now. The Lua parser only accepted `setManifestid(depot, "id")`, but both services write a third argument (`setManifestid(depot, "id", size)`), so every depot was silently dropped and the download stopped with "no depots found". A depot now also counts when its Lua has no key.
+- DepotBox uses its documented one-request flow: `/api/direct-download?appid=` returns a ZIP with the Lua *and* every depot `.manifest`. The Lua-only endpoint stays as a fallback, so the source still works when the package cannot be built.
+- A source that cannot be reached no longer locks the Start button. Only a definite answer from the API ("no manifest for this app", "no key configured") disables it; anything else says "you can still try".
+- A missing API key now names the exact Settings section instead of failing with a technical message.
+- Hubcap sends its key as both `Authorization: Bearer` and `X-API-Key`, and an answer that only contains the Lua or only the ZIP is no longer treated as a failure.
+- Game covers are sharp on scaled displays again. The `BitmapCache` on the cover frames rendered the art at 1x and WPF then scaled that bitmap, which is exactly what made the covers blurry.
+
+### Improved
+- Settings now looks like the Dashboard: aurora header with the live save state and the page actions, icon section headers, cards that light up on hover and a staggered fade-in.
+- DepotBox has its own **Test connection** button: it calls the free `/api/stats` endpoint and then shows your own request counts for the stored key.
+- Game Fixes, Hubcap and DepotBox cards show where to get the key, and every test button now carries an icon and a shorter label.
+
+### New
+- Settings: DepotBox test connection, usage line and a clearer credential status per service.
+
 ## 0.2.2
 
 ### Fixed
