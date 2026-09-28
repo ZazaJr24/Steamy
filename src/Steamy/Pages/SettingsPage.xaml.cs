@@ -36,6 +36,20 @@ public partial class SettingsPage : Page
 
     private SettingsViewModel ViewModel => (SettingsViewModel)DataContext;
 
+    /// <summary>
+    /// Secrets are not part of the settings object, so the settings autosave never notices them.
+    /// Every password box therefore hands its value to the view model and asks it to store it.
+    /// An emptied box is ignored: that is either the page clearing itself after a save or the
+    /// "empty means keep the current key" case, and neither should write anything.
+    /// </summary>
+    private void CredentialTyped(PasswordBox box, string what, Action<string> assign)
+    {
+        if (string.IsNullOrWhiteSpace(box.Password)) return;
+
+        assign(box.Password);
+        ViewModel.OnCredentialInputChanged(what);
+    }
+
     private void AppearanceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         // The first event comes from filling in the saved value when the page is built, not from the user.
@@ -66,31 +80,31 @@ public partial class SettingsPage : Page
     private void SteamApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
         if (sender is PasswordBox passwordBox)
-            ViewModel.SteamApiKeyInput = passwordBox.Password;
+            CredentialTyped(passwordBox, "Steam API key", value => ViewModel.SteamApiKeyInput = value);
     }
 
     private void RyuuAuthKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
         if (sender is PasswordBox passwordBox)
-            ViewModel.RyuuAuthKeyInput = passwordBox.Password;
+            CredentialTyped(passwordBox, "Ryuu auth key", value => ViewModel.RyuuAuthKeyInput = value);
     }
 
     private void HubcapApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
         if (sender is PasswordBox passwordBox)
-            ViewModel.HubcapApiKeyInput = passwordBox.Password;
+            CredentialTyped(passwordBox, "Hubcap API key", value => ViewModel.HubcapApiKeyInput = value);
     }
 
     private void DepotBoxApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
         if (sender is PasswordBox passwordBox)
-            ViewModel.DepotBoxApiKeyInput = passwordBox.Password;
+            CredentialTyped(passwordBox, "DepotBox API key", value => ViewModel.DepotBoxApiKeyInput = value);
     }
 
     private void MirrorTokenBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
         if (sender is PasswordBox passwordBox)
-            ViewModel.MirrorTokenInput = passwordBox.Password;
+            CredentialTyped(passwordBox, "Access token", value => ViewModel.MirrorTokenInput = value);
     }
 
     private void SteamLibraryBrowseButton_Click(object sender, RoutedEventArgs e)
