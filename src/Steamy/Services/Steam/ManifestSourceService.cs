@@ -140,13 +140,10 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     private async Task<ManifestDownloadResult> DownloadFromRyuuAsync(
         int appId, IProgress<string>? progress, CancellationToken ct)
     {
-        var appSettings = _settings.Load();
-        var authCode = appSettings.RyuuApiKey;
+        string? authCode = null;
+        try { authCode = await _credentials.ReadAsync("ryuu-auth-key"); } catch { }
         if (string.IsNullOrWhiteSpace(authCode))
-        {
-            var stored = await _credentials.ReadAsync("ryuu-auth-key");
-            authCode = stored ?? string.Empty;
-        }
+            authCode = _settings.Load().RyuuApiKey;
 
         if (string.IsNullOrWhiteSpace(authCode))
             return new ManifestDownloadResult(false, "No Ryuu auth code configured. Set it in Settings → Ryuu Auth Key.");
