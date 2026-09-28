@@ -11,6 +11,7 @@
 
     <!-- Secret boxes: one look for every key and token on the page. The value never leaves the
          encrypted store, so the box only has to look like the other fields. -->
+
     <Style x:Key="CredentialBoxStyle" TargetType="PasswordBox">
       <Setter Property="Height" Value="34" />
       <Setter Property="Padding" Value="10,0" />
@@ -844,8 +845,10 @@
       <!-- ===== Depot Dumper and sharing ================================================= -->
       <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn5}">
         <Border Style="{StaticResource SectionChip}">
-          <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="14" Foreground="#38BDF8" VerticalAlignment="Center" Margin="0,0,8,0" />
-          <TextBlock Text="Depot Dumper &amp; sharing" VerticalAlignment="Center" FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal">
+            <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="14" Foreground="#38BDF8" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <TextBlock Text="Depot Dumper &amp; sharing" VerticalAlignment="Center" FontWeight="SemiBold" />
+          </StackPanel>
         </Border>
       </StackPanel>
       <Border Style="{StaticResource SettingsCardLate}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
