@@ -3,7 +3,7 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
-## 0.1.6
+## 0.2.0
 
 ### New
 - **BetterSteamTools** integration: dedicated game-aware page with add/remove/search games, auto-download from GitHub, launch per game
