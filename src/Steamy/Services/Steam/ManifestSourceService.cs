@@ -71,7 +71,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         _credentials = credentials;
         _ryuuDownload = ryuuDownload;
         _logging = logging;
-        _httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
+        _httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
 
         _workFolder = Path.Combine(
@@ -226,10 +226,14 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"https://depotbox.org/api/direct-lua?appid={appId}");
-            req.Headers.TryAddWithoutValidation("x-api-key", key);
+                $"https://depotbox.org/api/games/{appId}/availability");
+            req.Headers.TryAddWithoutValidation("X-API-Key", key);
             using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
-            return resp.IsSuccessStatusCode;
+            if (!resp.IsSuccessStatusCode) return false;
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty("available", out var avail) && avail.GetBoolean();
         }
         catch (OperationCanceledException) { throw; }
         catch { return false; }
