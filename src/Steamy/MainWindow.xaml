@@ -11,6 +11,7 @@
                  WindowState="Maximized"
                  WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
+                 Icon="pack://application:,,,/Steamy;component/Resources/Brand/steamy.ico"
                  Background="{DynamicResource AppBackgroundBrush}">
   <Grid Background="{DynamicResource AppBackgroundBrush}">
     <Grid.RowDefinitions>
@@ -21,13 +22,14 @@
     <ui:TitleBar Grid.Row="0"
                  Title="Steamy"
                  Height="34"
+                 Icon="{ui:ImageIcon '/Steamy;component/Resources/Brand/steamy-256.png'}"
                  Background="{DynamicResource AppBackgroundBrush}"
                  Foreground="{DynamicResource TextSecondaryBrush}" />
 
     <Grid Grid.Row="1">
         <ui:NavigationView x:Name="RootNavigation"
                         PaneDisplayMode="Left"
-                        OpenPaneLength="184"
+                        OpenPaneLength="208"
                         CompactPaneLength="52"
                         IsBackButtonVisible="Collapsed"
                         IsPaneToggleVisible="True"
@@ -40,32 +42,24 @@
           <Border Height="0" Visibility="Collapsed" />
         </ui:NavigationView.Header>
         <ui:NavigationView.PaneHeader>
-          <Border Margin="12,12,12,14"
-                  Padding="10,9"
-                  Background="{DynamicResource SurfaceElevatedBrush}"
-                  BorderBrush="{DynamicResource BorderSubtleBrush}"
-                  BorderThickness="1"
-                  CornerRadius="14">
-            <StackPanel Orientation="Horizontal">
-              <Border Width="34" Height="34" CornerRadius="10">
-                <Border.Background>
-                  <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#0284C7" Offset="0" />
-                    <GradientStop Color="#6366F1" Offset="1" />
-                  </LinearGradientBrush>
-                </Border.Background>
-                <ui:SymbolIcon Symbol="Games24" Foreground="White" FontSize="18"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-              </Border>
-              <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                <TextBlock Text="Steamy" Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontSize="14" FontWeight="Bold" />
-                <TextBlock Text="Steam Modding Suite" Foreground="{DynamicResource TextTertiaryBrush}"
-                           FontSize="10.5" Margin="0,1,0,0" />
-              </StackPanel>
+          <Grid Margin="14,10,14,16">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Image Source="/Steamy;component/Resources/Brand/steamy-256.png" Width="36" Height="36"
+                   RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Margin="11,0,0,0" VerticalAlignment="Center">
+              <TextBlock Text="Steamy" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="15" FontWeight="Bold" />
+              <TextBlock Text="Steam toolkit" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,1,0,0" />
             </StackPanel>
-          </Border>
+          </Grid>
         </ui:NavigationView.PaneHeader>
+
+        <ui:NavigationView.PaneFooter>
+          <TextBlock x:Name="VersionLabel" Margin="18,6,14,12" FontSize="10.5"
+                     Foreground="{DynamicResource TextTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+        </ui:NavigationView.PaneFooter>
 
         <ui:NavigationView.MenuItems>
           <ui:NavigationViewItem Content="Dashboard"
@@ -74,6 +68,9 @@
           <ui:NavigationViewItem Content="Games"
                                  Icon="{ui:SymbolIcon Apps24}"
                                  TargetPageType="{x:Type pages:LibraryPage}" />
+          <ui:NavigationViewItem Content="Share"
+                                 Icon="{ui:SymbolIcon Share24}"
+                                 TargetPageType="{x:Type pages:SharePage}" />
           <ui:NavigationViewItem Content="Depot Dumper"
                                  Icon="{ui:SymbolIcon CloudArrowDown24}"
                                  TargetPageType="{x:Type pages:DepotDumperPage}" />
@@ -121,7 +118,7 @@
     </Grid>
 
     <!-- Dimmed layer for cards shown on top of the app, e.g. the update prompt -->
-    <Grid x:Name="OverlayLayer" Grid.Row="1" Visibility="Collapsed" Background="#B8050608" Opacity="0">
+    <Grid x:Name="OverlayLayer" Grid.Row="1" Visibility="Collapsed" Background="{DynamicResource ScrimBrush}" Opacity="0">
       <ContentControl x:Name="OverlayHost" HorizontalAlignment="Center" VerticalAlignment="Center" Focusable="False" />
     </Grid>
   </Grid>

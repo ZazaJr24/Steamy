@@ -3,6 +3,29 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.7
+
+### New
+- **Share page** (new sidebar entry): every manifest you have in one list — Depot Dumper folders *and* the manifests Steam keeps for your installed games. Search, filter (All / New / Dumps / Steam library), **Select new** or **Select all**, then send everything in one go.
+- **One commit per share**: a selection of any size goes to the dump repository as a single commit (Git Data API) with one ZIP per game plus a batch index, instead of one commit per file. Rate limits are waited out automatically; an empty repository is initialised on the first share.
+- **Already shared is remembered**: Steamy keeps a local share history per repository, so "New" only shows games whose manifests changed since your last share — nothing is sent twice.
+- **Save as ZIP**: export any selection into one ZIP (a folder per game plus `index.json`) to pass on anywhere — no token needed.
+- **steamy.json in every pack**: app, depots, manifest ids and a SHA-256 per file, so a pack can be checked without unpacking it.
+- **Privacy by default**: appmanifest files are cleaned before packing (`LastOwner` / SteamID and `LauncherPath` are removed) and no local folder names end up in the metadata.
+- **Dashboard share card** with the number of games that have new manifests and a **Share all new** button.
+- New app icon, window icon and version footer in the sidebar.
+
+### Improved
+- **Complete UI rework**: new Steamy Night / Steamy Day palettes, a real blue accent for all primary buttons, toggles and check boxes (it was grey), white text on accent buttons, and one shared design system (cards, headers, tiles, segmented controls, motion) instead of per-page copies.
+- **Dashboard rebuilt**: cleaner header with date, hero for the running download or latest game, four KPI cards with their details visible, a responsive game grid that always shows full rows, a quick-actions grid for all tools, and side panels for Share, Downloads and System. On narrow windows the side panels move below the games.
+- **.NET 9 everywhere**: Microsoft packages on 9.0.20, SDK pinned through `global.json`, `run.ps1` points at the `net9.0-windows` output, README badges fixed.
+- **SharpCompress 1.0.0**: removes the known vulnerability warning of 0.39.
+- Tool console runs no longer block the calling thread while waiting for the tool to exit.
+
+### Developer
+- New `tests/Steamy.Tests` project (xUnit) for the sharing core and the VDF parser — runs on Windows, Linux and macOS.
+- New **CI** workflow builds the solution and runs the tests on every push and pull request.
+
 ## 0.2.6
 
 ### New

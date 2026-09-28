@@ -10,11 +10,30 @@ namespace Steamy.Pages;
 
 public partial class DashboardPage : Page
 {
+    // Below this width the side panels move under the games instead of squeezing them.
+    private const double StackedLayoutWidth = 1180;
+    private const double TwoColumnKpiWidth = 900;
+    private const double SideColumnWidth = 360;
+    private const double GutterWidth = 28;
+
     public DashboardPage()
     {
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<DashboardViewModel>();
         Loaded += (_, _) => _ = ((DashboardViewModel)DataContext).RefreshAsync(force: false);
+        SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
+    }
+
+    private void ApplyResponsiveLayout(double width)
+    {
+        KpiGrid.Columns = width < TwoColumnKpiWidth ? 2 : 4;
+
+        var stacked = width < StackedLayoutWidth;
+        Grid.SetColumn(SideColumn, stacked ? 0 : 2);
+        Grid.SetRow(SideColumn, stacked ? 1 : 0);
+        Grid.SetColumnSpan(SideColumn, stacked ? 3 : 1);
+        SideColumnDefinition.Width = new GridLength(stacked ? 0 : SideColumnWidth);
+        GutterColumn.Width = new GridLength(stacked ? 0 : GutterWidth);
     }
 
     private void GameCover_Click(object sender, RoutedEventArgs e)

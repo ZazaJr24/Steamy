@@ -100,8 +100,8 @@
         </Grid.ColumnDefinitions>
         <StackPanel VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal">
-            <Border Width="36" Height="36" CornerRadius="11" Background="#1FC084FC" VerticalAlignment="Center" Margin="0,0,12,0">
-              <ui:SymbolIcon Symbol="PuzzlePiece24" FontSize="18" Foreground="#C084FC"
+            <Border Width="36" Height="36" CornerRadius="11" Background="{DynamicResource VioletSoftBrush}" VerticalAlignment="Center" Margin="0,0,12,0">
+              <ui:SymbolIcon Symbol="PuzzlePiece24" FontSize="18" Foreground="{DynamicResource VioletBrush}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
             <TextBlock Text="DLC Unlocker" Style="{StaticResource PageTitleStyle}" Margin="0" VerticalAlignment="Center" />
@@ -317,8 +317,8 @@
                       </Style.Triggers>
                     </Style>
                   </StackPanel.Style>
-                  <Border Width="52" Height="52" CornerRadius="26" Background="#1FC084FC" HorizontalAlignment="Center">
-                    <ui:SymbolIcon Symbol="PuzzlePiece24" FontSize="22" Foreground="#C084FC"
+                  <Border Width="52" Height="52" CornerRadius="26" Background="{DynamicResource VioletSoftBrush}" HorizontalAlignment="Center">
+                    <ui:SymbolIcon Symbol="PuzzlePiece24" FontSize="22" Foreground="{DynamicResource VioletBrush}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                   </Border>
                   <TextBlock Text="No DLCs loaded yet" FontSize="14" FontWeight="SemiBold" Margin="0,12,0,0"

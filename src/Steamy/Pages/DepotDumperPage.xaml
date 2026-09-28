@@ -92,8 +92,8 @@
         </Grid.ColumnDefinitions>
         <StackPanel VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal">
-            <Border Width="36" Height="36" CornerRadius="11" Background="#1F38BDF8" VerticalAlignment="Center" Margin="0,0,12,0">
-              <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="18" Foreground="#38BDF8"
+            <Border Width="36" Height="36" CornerRadius="11" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center" Margin="0,0,12,0">
+              <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="18" Foreground="{DynamicResource AccentBrush}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
             <TextBlock Text="Depot Dumper" Style="{StaticResource PageTitleStyle}" Margin="0" VerticalAlignment="Center" />
@@ -190,12 +190,12 @@
           <!-- Right: what happens -->
           <StackPanel Grid.Column="2">
             <TextBlock Text="Dump &amp; share" Style="{StaticResource FieldLabel}" />
-            <TextBlock Text="Dumping only reads the source. Sharing moves the packed ZIP into the repository below — write-only, so a contributor can send but never look at what is in there."
+            <TextBlock Text="Dumping only reads the source. Sending commits the packed ZIP to the repository below; your Steam account and local paths are never included."
                        Style="{StaticResource FieldHint}" />
 
             <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="12" Margin="0,14,0,0">
               <StackPanel Orientation="Horizontal">
-                <ui:SymbolIcon Symbol="Share24" FontSize="14" Foreground="#F472B6" VerticalAlignment="Center" Margin="0,0,9,0" />
+                <ui:SymbolIcon Symbol="Share24" FontSize="14" Foreground="{DynamicResource PinkBrush}" VerticalAlignment="Center" Margin="0,0,9,0" />
                 <StackPanel>
                   <TextBlock Text="{Binding ShareTarget}" FontSize="12.5" FontWeight="SemiBold"
                              Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -211,6 +211,9 @@
               <ui:Button Content="Send to repository" Appearance="Secondary" CornerRadius="10" Padding="18,9"
                          Icon="{ui:SymbolIcon Share24}" Command="{Binding ShareCommand}" />
             </StackPanel>
+            <ui:Button Style="{StaticResource LinkButtonStyle}" Margin="-10,8,0,0" HorizontalAlignment="Left"
+                       Content="Share all your dumps and installed games at once" Icon="{ui:SymbolIcon ArrowRight24}"
+                       Command="{Binding OpenShareCommand}" />
 
             <TextBlock Text="{Binding Status}" Style="{StaticResource MutedTextStyle}" FontSize="12"
                        Margin="0,14,0,0" TextWrapping="Wrap" />

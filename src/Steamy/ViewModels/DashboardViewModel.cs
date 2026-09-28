@@ -19,13 +19,14 @@ public sealed record DashboardStatusItem(string Title, string Detail, bool IsOk,
 
 public sealed class DashboardViewModel : ViewModelBase
 {
-    private const int RecentGameCount = 8;
+    private const int RecentGameCount = 12;
     private const int JobPreviewCount = 4;
     private static readonly TimeSpan RefreshDebounce = TimeSpan.FromSeconds(3);
 
     private readonly ILibrarySyncService _librarySync;
     private readonly ISettingsService _settings;
     private readonly IDepotDownloaderCheckService _depotCheck;
+    private readonly ShareViewModel _share;
     private readonly HashSet<DownloadJob> _watchedJobs = new();
 
     private SteamLibraryScanResult? _scan;
@@ -51,12 +52,21 @@ public sealed class DashboardViewModel : ViewModelBase
         ILibrarySyncService librarySync,
         ISettingsService settings,
         IDepotDownloaderCheckService depotCheck,
-        DownloadsViewModel downloadActions) : base(store, navigation, logging)
+        DownloadsViewModel downloadActions,
+        ShareViewModel share) : base(store, navigation, logging)
     {
         _librarySync = librarySync;
         _settings = settings;
         _depotCheck = depotCheck;
+        _share = share;
         DownloadActions = downloadActions;
+
+        _share.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(ShareViewModel.TotalCount) or nameof(ShareViewModel.NewCount)
+                or nameof(ShareViewModel.IsScanning) or nameof(ShareViewModel.LastShareLabel))
+                RaiseShareStats();
+        };
 
         Store.Games.CollectionChanged += (_, _) => QueueLibraryRefresh();
         Store.Downloads.CollectionChanged += OnDownloadsChanged;
@@ -81,6 +91,8 @@ public sealed class DashboardViewModel : ViewModelBase
         >= 12 and < 18 => "Good afternoon",
         _ => "Good evening"
     };
+
+    public string DateLabel => DateTime.Now.ToString("dddd, d MMMM", System.Globalization.CultureInfo.CurrentCulture).ToUpperInvariant();
 
     public string HeaderSummary
     {
@@ -238,6 +250,23 @@ public sealed class DashboardViewModel : ViewModelBase
         ? "Never"
         : _lastRefresh.ToLocalTime().ToString("HH:mm");
 
+    // ---- sharing --------------------------------------------------------------------------------
+
+    public string ShareNewCount => _share.NewCount.ToString("N0");
+    public string ShareTotalLabel => _share.TotalCount == 1 ? "1 game ready to share" : $"{_share.TotalCount:N0} games ready to share";
+    public bool HasShareNew => _share.NewCount > 0;
+    public bool IsShareScanning => _share.IsScanning;
+    public string ShareLastLabel => _share.LastShareLabel;
+
+    public string ShareHeadline => _share.NewCount switch
+    {
+        _ when _share.IsScanning && _share.TotalCount == 0 => "Looking for your manifests…",
+        0 when _share.TotalCount == 0 => "Nothing to share yet",
+        0 => "Everything is shared",
+        1 => "1 game has new manifests",
+        var count => $"{count:N0} games have new manifests"
+    };
+
     // ---- lists ----------------------------------------------------------------------------------
 
     public bool HasRecentGames => RecentGames.Count > 0;
@@ -276,6 +305,9 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand NavigateDepotDumperCommand => new RelayCommand(() => Navigation.Navigate<DepotDumperPage>());
     public ICommand NavigateFamilyShareCommand => new RelayCommand(() => Navigation.Navigate<FamilySharePage>());
     public ICommand OpenManifestFolderCommand => new RelayCommand(OpenManifestFolder);
+    public ICommand NavigateShareCommand => new RelayCommand(() => Navigation.Navigate<SharePage>());
+    public ICommand ShareAllNewCommand => new RelayCommand(_share.PrepareShareAllNew);
+    public ICommand NavigateGoldbergCommand => new RelayCommand(() => Navigation.Navigate<GoldbergPage>());
 
     public override Task OnNavigatedToAsync() => RefreshAsync(force: false);
 
@@ -294,6 +326,7 @@ public sealed class DashboardViewModel : ViewModelBase
             RefreshDownloads();
             RefreshStatus();
 
+            _ = RefreshShareAsync();
             await RefreshDepotStatusAsync(force);
             RefreshStatus();
         }
@@ -301,6 +334,7 @@ public sealed class DashboardViewModel : ViewModelBase
         {
             IsRefreshing = false;
             OnPropertyChanged(nameof(Greeting));
+            OnPropertyChanged(nameof(DateLabel));
             OnPropertyChanged(nameof(DepotToolVersionLabel));
             OnPropertyChanged(nameof(IsDepotReady));
             OnPropertyChanged(nameof(LastScanLabel));
@@ -411,6 +445,30 @@ public sealed class DashboardViewModel : ViewModelBase
         {
             _depotStatus = new DepotDownloaderToolStatus(false, path, string.Empty, $"Check failed ({exception.GetType().Name}).", DateTime.Now);
         }
+    }
+
+    private async Task RefreshShareAsync()
+    {
+        try
+        {
+            await _share.EnsureScannedAsync();
+        }
+        catch (Exception exception)
+        {
+            Logging.Add(LogLevel.Debug, "Dashboard", $"Share scan skipped: {exception.GetType().Name}.");
+        }
+
+        RaiseShareStats();
+    }
+
+    private void RaiseShareStats()
+    {
+        OnPropertyChanged(nameof(ShareNewCount));
+        OnPropertyChanged(nameof(ShareTotalLabel));
+        OnPropertyChanged(nameof(HasShareNew));
+        OnPropertyChanged(nameof(IsShareScanning));
+        OnPropertyChanged(nameof(ShareLastLabel));
+        OnPropertyChanged(nameof(ShareHeadline));
     }
 
     private void RefreshStatus()

@@ -35,7 +35,6 @@ internal static class ConPtyToolRunner
     private static readonly IntPtr ProcThreadAttributePseudoConsole = new(0x00020016);
 
     private static readonly TimeSpan ReaderGrace = TimeSpan.FromSeconds(5);
-    private const uint WaitObject0 = 0;
     private const uint WaitTimeout = 258;
     private const uint WaitPollMilliseconds = 200;
 
@@ -177,24 +176,21 @@ internal static class ConPtyToolRunner
         }
     }
 
+    // Polls with a zero timeout and awaits between checks, so the calling thread (often the UI
+    // thread) is never blocked while the tool runs.
     private static async Task WaitForExitAsync(IntPtr processHandle, CancellationToken cancellationToken)
     {
-        while (true)
+        while (WaitForSingleObject(processHandle, 0) == WaitTimeout)
         {
-            var waited = WaitForSingleObject(processHandle, WaitPollMilliseconds);
-            if (waited == WaitObject0)
-                return;
-
-            if (waited == WaitTimeout && !cancellationToken.IsCancellationRequested)
-                continue;
-
-            if (cancellationToken.IsCancellationRequested)
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(WaitPollMilliseconds), cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
             {
                 TryTerminate(processHandle);
-                cancellationToken.ThrowIfCancellationRequested();
+                throw;
             }
-
-            return;
         }
     }
 

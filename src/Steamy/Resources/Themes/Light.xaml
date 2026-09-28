@@ -1,32 +1,67 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <!-- Cool, neutral light palette that mirrors the graphite dark theme: soft blue-greys,
-       a muted steel accent, no warm tint. -->
-  <SolidColorBrush x:Key="AppBackgroundBrush" Color="#EEF0F3" />
-  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F7F8FA" />
-  <SolidColorBrush x:Key="SidebarHoverBrush" Color="#E6E9EE" />
-  <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#DDE2EA" />
+  <!-- Steamy Day: cool paper-white surfaces with the same blue accent and brand gradient as the
+       dark palette. Keys must match Dark.xaml one to one. -->
+  <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F5F9" />
+  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#FAFBFD" />
+  <SolidColorBrush x:Key="SidebarHoverBrush" Color="#EBEEF4" />
+  <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#E1E7F2" />
   <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#FBFCFD" />
-  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#EAEDF1" />
-  <SolidColorBrush x:Key="ControlHoverBrush" Color="#E1E5EB" />
-  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#D4D9E1" />
-  <SolidColorBrush x:Key="AccentBrush" Color="#0284C7" />
-  <SolidColorBrush x:Key="AccentSoftBrush" Color="#E0F2FE" />
+  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#EEF1F6" />
+  <SolidColorBrush x:Key="ControlHoverBrush" Color="#E4E8F0" />
+  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#DCE1EA" />
+  <SolidColorBrush x:Key="BorderStrongBrush" Color="#C5CDDA" />
+
+  <SolidColorBrush x:Key="AccentBrush" Color="#2563EB" />
+  <SolidColorBrush x:Key="AccentStrongBrush" Color="#1D4ED8" />
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="#E3ECFD" />
   <SolidColorBrush x:Key="SuccessBrush" Color="#059669" />
-  <SolidColorBrush x:Key="SuccessSoftBrush" Color="#DCFCE7" />
-  <SolidColorBrush x:Key="WarningBrush" Color="#D97706" />
-  <SolidColorBrush x:Key="WarningSoftBrush" Color="#FEF3C7" />
-  <SolidColorBrush x:Key="DangerBrush" Color="#E11D48" />
-  <SolidColorBrush x:Key="DangerSoftBrush" Color="#FFE4E6" />
+  <SolidColorBrush x:Key="SuccessSoftBrush" Color="#DDF6EC" />
+  <SolidColorBrush x:Key="WarningBrush" Color="#B45309" />
+  <SolidColorBrush x:Key="WarningSoftBrush" Color="#FDF1D8" />
+  <SolidColorBrush x:Key="DangerBrush" Color="#DC2626" />
+  <SolidColorBrush x:Key="DangerSoftBrush" Color="#FDE4E4" />
+  <SolidColorBrush x:Key="VioletBrush" Color="#7C3AED" />
+  <SolidColorBrush x:Key="VioletSoftBrush" Color="#EEE7FD" />
+  <SolidColorBrush x:Key="PinkBrush" Color="#DB2777" />
+  <SolidColorBrush x:Key="PinkSoftBrush" Color="#FCE4F1" />
+
   <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0F172A" />
   <SolidColorBrush x:Key="TextSecondaryBrush" Color="#475569" />
   <SolidColorBrush x:Key="TextTertiaryBrush" Color="#64748B" />
+  <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
 
-  <!-- Softly rounded Fluent controls. WPF-UI reads these theme keys for every control
-       template (buttons, text boxes, combo boxes, popups, content dialogs), so overriding
-       them here rounds the whole app at once. -->
-  <CornerRadius x:Key="ControlCornerRadius">12,12,12,12</CornerRadius>
+  <LinearGradientBrush x:Key="BrandGradientBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#38BDF8" Offset="0" />
+    <GradientStop Color="#6366F1" Offset="0.6" />
+    <GradientStop Color="#A855F7" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="BrandWashBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#3038BDF8" Offset="0" />
+    <GradientStop Color="#1C6366F1" Offset="0.55" />
+    <GradientStop Color="#00A855F7" Offset="1" />
+  </LinearGradientBrush>
+  <!-- Hero art stays dark in both themes so the white title on top of it is always readable. -->
+  <LinearGradientBrush x:Key="HeroShadeBrush" StartPoint="0,0" EndPoint="1,0">
+    <GradientStop Color="#EB0B0D12" Offset="0" />
+    <GradientStop Color="#A60B0D12" Offset="0.48" />
+    <GradientStop Color="#100B0D12" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="HeroBottomShadeBrush" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="#000B0D12" Offset="0.35" />
+    <GradientStop Color="#D90B0D12" Offset="1" />
+  </LinearGradientBrush>
+  <SolidColorBrush x:Key="ScrimBrush" Color="#990F172A" />
+
+  <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#E6FFFFFF" />
+  <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush" Color="#FFFFFF" />
+
+  <!-- WPF-UI reads these theme keys for every control template (buttons, text boxes, combo
+       boxes, popups, content dialogs), so overriding them here rounds the whole app at once. -->
+  <CornerRadius x:Key="ControlCornerRadius">10,10,10,10</CornerRadius>
   <CornerRadius x:Key="PopupCornerRadius">14,14,14,14</CornerRadius>
   <CornerRadius x:Key="DialogOverlayCornerRadius">20,20,20,20</CornerRadius>
   <CornerRadius x:Key="DialogFooterCornerRadius">12,12,12,12</CornerRadius>

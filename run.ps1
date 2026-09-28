@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = $PSScriptRoot
 $project = Join-Path $root 'src\Steamy\Steamy.csproj'
-$exe = Join-Path $root 'src\Steamy\bin\Release\net8.0-windows\Steamy.exe'
+$exe = Join-Path $root 'src\Steamy\bin\Release\net9.0-windows\Steamy.exe'
 
 Write-Host 'Stopping running instances...'
 Get-Process -Name Steamy -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue

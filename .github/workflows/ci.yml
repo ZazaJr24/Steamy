@@ -1,0 +1,31 @@
+name: CI
+
+# Builds the app and runs the tests on every push and pull request, so a broken build shows up
+# on the branch instead of first appearing in the release workflow.
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Steamy.sln
+
+      - name: Build
+        run: dotnet build Steamy.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test Steamy.sln -c Release --no-build --logger "console;verbosity=normal"
