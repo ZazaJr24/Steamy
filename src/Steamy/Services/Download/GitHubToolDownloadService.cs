@@ -179,7 +179,7 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
         try
         {
             using var stream = new MemoryStream(archiveBytes);
-            using var archive = ArchiveFactory.Open(stream);
+            using var archive = ArchiveFactory.OpenArchive(stream);
             foreach (var entry in archive.Entries)
             {
                 if (entry.IsDirectory) continue;

@@ -444,15 +444,15 @@
                 </StackPanel>
               </Grid>
             </Button>
-            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateDepotDumperCommand}">
+            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateDenuvoActivationCommand}">
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource IconChipStyle}" Width="40" Height="40" Background="{DynamicResource VioletSoftBrush}">
-                  <ui:SymbolIcon Symbol="BoxArrowUp24" FontSize="20" Foreground="{DynamicResource VioletBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Style="{StaticResource IconChipStyle}" Width="40" Height="40" Background="{DynamicResource WarningSoftBrush}">
+                  <ui:SymbolIcon Symbol="Key24" FontSize="20" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="Depot Dumper" Style="{StaticResource ToolName}" />
-                  <TextBlock Text="Lua + every depot manifest" Style="{StaticResource ToolHint}" />
+                  <TextBlock Text="Denuvo Activation" Style="{StaticResource ToolName}" />
+                  <TextBlock Text="Activation tickets for your games" Style="{StaticResource ToolHint}" />
                 </StackPanel>
               </Grid>
             </Button>

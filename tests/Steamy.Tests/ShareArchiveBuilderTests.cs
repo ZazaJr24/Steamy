@@ -28,7 +28,7 @@ public class ShareArchiveBuilderTests
         using var temp = new TempFolder();
         var lua = temp.Write("app-730/730.lua", "addappid(730)");
         var acf = temp.Write("app-730/appmanifest_730.acf", "\"AppState\"\n{\n\t\"appid\" \"730\"\n\t\"LastOwner\" \"76561198000000000\"\n}\n");
-        var candidate = new ShareCandidate(730, "Counter-Strike 2", ShareSourceKind.Dump, Path.Combine(temp.Path, "app-730"),
+        var candidate = new ShareCandidate(730, "Counter-Strike 2", ShareSourceKind.Lua, Path.Combine(temp.Path, "app-730"),
             new[] { new ShareFile(lua, "730.lua", 13), new ShareFile(acf, "appmanifest_730.acf", new FileInfo(acf).Length) },
             new[] { new DepotManifestRef(731, "111", 5) }, DateTime.UtcNow);
 
@@ -44,7 +44,7 @@ public class ShareArchiveBuilderTests
         using var json = JsonDocument.Parse(zip.GetEntry("steamy.json")!.Open());
         var root = json.RootElement;
         Assert.Equal(730, root.GetProperty("appId").GetInt32());
-        Assert.Equal("dump", root.GetProperty("source").GetString());
+        Assert.Equal("lua", root.GetProperty("source").GetString());
         Assert.Equal("111", root.GetProperty("depots")[0].GetProperty("manifest").GetString());
         Assert.Equal(2, root.GetProperty("files").GetArrayLength());
         Assert.Equal(64, root.GetProperty("files")[0].GetProperty("sha256").GetString()!.Length);
@@ -60,7 +60,7 @@ public class ShareArchiveBuilderTests
         var items = new[]
         {
             new ShareCandidate(1, "Same: Name", ShareSourceKind.SteamLibrary, temp.Path, new[] { new ShareFile(a, "1_1.manifest", 1) }, Array.Empty<DepotManifestRef>(), DateTime.UtcNow),
-            new ShareCandidate(1, "Same: Name", ShareSourceKind.Dump, temp.Path, new[] { new ShareFile(b, "2_2.manifest", 1) }, Array.Empty<DepotManifestRef>(), DateTime.UtcNow)
+            new ShareCandidate(1, "Same: Name", ShareSourceKind.Lua, temp.Path, new[] { new ShareFile(b, "2_2.manifest", 1) }, Array.Empty<DepotManifestRef>(), DateTime.UtcNow)
         };
 
         using var buffer = new MemoryStream();

@@ -569,7 +569,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             }
 
             progress?.Report("Extracting DepotDownloaderMod...");
-            using (var archive = ArchiveFactory.Open(archivePath))
+            using (var archive = ArchiveFactory.OpenArchive(archivePath))
             {
                 foreach (var entry in archive.Entries.Where(e => !e.IsDirectory))
                 {

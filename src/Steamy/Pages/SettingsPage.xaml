@@ -879,12 +879,12 @@
         </StackPanel>
       </Border>
 
-      <!-- ===== Depot Dumper and sharing ================================================= -->
+      <!-- ===== Sharing ================================================================== -->
       <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn5}">
         <Border Style="{StaticResource SectionChip}">
           <StackPanel Orientation="Horizontal">
-            <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-            <TextBlock Text="Depot Dumper &amp; sharing" VerticalAlignment="Center" FontWeight="SemiBold" />
+            <ui:SymbolIcon Symbol="Share24" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <TextBlock Text="Sharing" VerticalAlignment="Center" FontWeight="SemiBold" />
           </StackPanel>
         </Border>
       </StackPanel>
@@ -903,7 +903,7 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
               <TextBlock Text="Repository owner" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="GitHub account that owns the dump repository." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              <TextBlock Text="GitHub account that owns the share repository." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
             </StackPanel>
             <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestShareOwner, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="ZazaJr24" />
           </Grid>
@@ -911,7 +911,7 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
               <TextBlock Text="Repository" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Keep it private so only you can see the dumps." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              <TextBlock Text="Keep it private so only people with access can see the shares." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
             </StackPanel>
             <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestShareRepo, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Steamy-Dumps" />
           </Grid>
@@ -919,17 +919,9 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
               <TextBlock Text="Branch" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Branch the dumps are committed to." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              <TextBlock Text="Branch the shares are committed to." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
             </StackPanel>
             <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestShareBranch, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="main" />
-          </Grid>
-          <Grid Margin="0,0,0,12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Dump folder" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Where the Depot Dumper collects Lua and manifests. Empty uses the download folder." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
-            </StackPanel>
-            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestDumpFolder, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Leave empty" />
           </Grid>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
@@ -944,7 +936,7 @@
                          PasswordChanged="ShareTokenBox_PasswordChanged"
                          Style="{StaticResource CredentialBoxStyle}" />
           </Grid>
-          <TextBlock Text="Dumping only reads the selected source. Nothing is uploaded until you press Share on the Share page or Send to repository on the Depot Dumper page."
+          <TextBlock Text="Nothing is uploaded until you press Share on the Share page. Your SteamID and local paths are removed from every pack."
                      Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
         </StackPanel>
       </Border>

@@ -221,7 +221,7 @@ public partial class LibraryPage : Page
             return;
         }
         using var stream = File.OpenRead(archivePath);
-        using var archive = ArchiveFactory.Open(stream);
+        using var archive = ArchiveFactory.OpenArchive(stream);
         foreach (var entry in archive.Entries)
         {
             if (entry.IsDirectory) continue;

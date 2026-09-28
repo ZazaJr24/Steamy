@@ -71,9 +71,6 @@
           <ui:NavigationViewItem Content="Share"
                                  Icon="{ui:SymbolIcon Share24}"
                                  TargetPageType="{x:Type pages:SharePage}" />
-          <ui:NavigationViewItem Content="Depot Dumper"
-                                 Icon="{ui:SymbolIcon CloudArrowDown24}"
-                                 TargetPageType="{x:Type pages:DepotDumperPage}" />
 
           <ui:NavigationViewItemSeparator />
 
