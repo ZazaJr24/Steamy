@@ -17,6 +17,8 @@
     <Compile Include="..\..\src\Steamy\Services\Sharing\ShareArchiveBuilder.cs" Link="Linked\ShareArchiveBuilder.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\GitHubBatchUploader.cs" Link="Linked\GitHubBatchUploader.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ShareHistoryStore.cs" Link="Linked\ShareHistoryStore.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Sharing\OwnedGames.cs" Link="Linked\OwnedGames.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Steam\SteamIdLookup.cs" Link="Linked\SteamIdLookup.cs" />
     <Compile Include="..\..\src\Steamy\Services\Storage\ArchiveExtractor.cs" Link="Linked\ArchiveExtractor.cs" />
   </ItemGroup>
 

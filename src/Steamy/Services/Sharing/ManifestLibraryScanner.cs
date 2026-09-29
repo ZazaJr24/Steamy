@@ -24,6 +24,9 @@ public static class ManifestLibraryScanner
     // Shared runtimes every game pulls in; they are not games and would only add noise.
     private static readonly HashSet<int> IgnoredApps = new() { 228980 };
 
+    /// <summary>True for ids that are no games (shared runtimes) and only add noise.</summary>
+    public static bool IgnoredApp(int appId) => IgnoredApps.Contains(appId);
+
     private static readonly Regex ManifestName = new(@"^(\d+)_(\d+)\.manifest$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex AddAppId = new(@"addappid\s*\(\s*(\d+)\s*(,)?", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex SetManifestId = new(@"setManifestid\s*\(\s*(\d+)\s*,\s*""?(\d+)""?", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);

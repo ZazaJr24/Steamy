@@ -104,6 +104,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<ISecureCredentialService>(),
             sp.GetRequiredService<ILoggingService>(),
             new ShareManifestFetcher(sp.GetRequiredService<IManifestSourceService>())));
+        services.AddSingleton<IOwnedGamesService>(sp => new OwnedGamesService(sp.GetRequiredService<ILoggingService>()));
         services.AddSingleton<ShareViewModel>();
         services.AddSingleton<GameFixesViewModel>();
         services.AddSingleton<GreenLumaViewModel>();

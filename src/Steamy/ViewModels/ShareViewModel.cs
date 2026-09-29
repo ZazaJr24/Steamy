@@ -135,6 +135,7 @@ public sealed class ShareViewModel : ViewModelBase
 
     private readonly IManifestShareService _sharing;
     private readonly ISettingsService _settings;
+    private readonly IOwnedGamesService _ownedGames;
     private readonly ObservableCollection<ShareItemViewModel> _items = new();
     private CancellationTokenSource? _runCts;
     private Task? _scanTask;
@@ -153,16 +154,21 @@ public sealed class ShareViewModel : ViewModelBase
     private string? _resultUrl;
     private string _scanSummary = "Not scanned yet.";
     private bool _selectNewAfterScan;
+    private IReadOnlyList<OwnedGame> _owned = Array.Empty<OwnedGame>();
+    private bool _ownedLoaded;
+    private bool _ownedFailed;
 
     public ShareViewModel(
         IAppDataStore store,
         INavigationService navigation,
         ILoggingService logging,
         IManifestShareService sharing,
-        ISettingsService settings) : base(store, navigation, logging)
+        ISettingsService settings,
+        IOwnedGamesService ownedGames) : base(store, navigation, logging)
     {
         _sharing = sharing;
         _settings = settings;
+        _ownedGames = ownedGames;
 
         // A new dump or share makes the cached scan stale; the next visit scans again.
         _sharing.ShareablesChanged += (_, _) => _lastScan = DateTime.MinValue;
@@ -171,6 +177,7 @@ public sealed class ShareViewModel : ViewModelBase
         Items.Filter = Matches;
 
         RescanCommand = new AsyncRelayCommand(() => ScanAsync(force: true), () => !IsBusy);
+        OwnedGamesCommand = new AsyncRelayCommand(LoadOwnedGamesAsync, () => !IsLoadingOwned && !IsBusy);
         ShareSelectedCommand = new AsyncRelayCommand(ShareSelectedAsync, () => CanShare);
         CancelCommand = new RelayCommand(() => _runCts?.Cancel(), () => IsBusy);
         SelectAllCommand = new RelayCommand(() => SetSelection(_ => true, visibleOnly: true));
@@ -185,6 +192,7 @@ public sealed class ShareViewModel : ViewModelBase
     public ICollectionView Items { get; }
 
     public IAsyncRelayCommand RescanCommand { get; }
+    public IAsyncRelayCommand OwnedGamesCommand { get; }
     public IAsyncRelayCommand ShareSelectedCommand { get; }
     public IRelayCommand CancelCommand { get; }
     public ICommand SelectAllCommand { get; }
@@ -306,6 +314,7 @@ public sealed class ShareViewModel : ViewModelBase
             ShareSelectedCommand.NotifyCanExecuteChanged();
             CancelCommand.NotifyCanExecuteChanged();
             RescanCommand.NotifyCanExecuteChanged();
+            OwnedGamesCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -390,11 +399,15 @@ public sealed class ShareViewModel : ViewModelBase
         try
         {
             var result = await _sharing.ScanAsync();
+
+            // When the account library was loaded once, every scan folds it back in, so the list
+            // keeps covering the whole account even after a rescan.
+            var scanned = _ownedLoaded ? OwnedGamesMerge.MergeOwned(result.Items, _owned) : result.Items;
             var selected = _items.Where(item => item.IsSelected).Select(item => item.Candidate.Fingerprint).ToHashSet();
             var names = Store.Games.GroupBy(game => game.AppId).ToDictionary(group => group.Key, group => group.First().Name);
 
             _items.Clear();
-            foreach (var candidate in result.Items)
+            foreach (var candidate in scanned)
             {
                 var name = !ManifestLibraryScanner.HasRealName(candidate.Name) && names.TryGetValue(candidate.AppId, out var known)
                     ? known
@@ -422,6 +435,66 @@ public sealed class ShareViewModel : ViewModelBase
         {
             IsScanning = false;
             RaiseCounts();
+        }
+    }
+
+    // ---- account library ----------------------------------------------------------------------
+
+    public bool IsLoadingOwned { get => _ownedLoading; private set { if (SetProperty(ref _ownedLoading, value)) { OnPropertyChanged(nameof(ShowEmpty)); OwnedGamesCommand.NotifyCanExecuteChanged(); } } }
+    private bool _ownedLoading;
+
+    /// <summary>True once the account library was loaded (or definitively failed).</summary>
+    public bool OwnedLoaded => _ownedLoaded;
+    public bool OwnedFailed => _ownedFailed;
+
+    public string OwnedStatusLabel => _ownedLoaded
+        ? $"{_owned.Count:N0} account games in the list"
+        : _ownedFailed ? _ownedFailedMessage
+        : "Account games not loaded yet — only installed games and cached manifests are listed.";
+
+    private string _ownedFailedMessage = string.Empty;
+
+    /// <summary>
+    /// Loads the user's whole account library and folds it into the list: every owned game without
+    /// local manifests becomes an auto-fetch entry, so the page covers all games, not only the
+    /// installed ones.
+    /// </summary>
+    public async Task LoadOwnedGamesAsync()
+    {
+        if (IsLoadingOwned) return;
+        IsLoadingOwned = true;
+        try
+        {
+            var result = await _ownedGames.LoadAsync();
+            if (result.Succeeded)
+            {
+                _owned = result.Games;
+                _ownedLoaded = true;
+                _ownedFailed = false;
+                await ScanAsync(force: true);
+                if (SelectedCount == 0)
+                    SetSelection(item => item.Candidate.Files.Count == 0, visibleOnly: false);
+            }
+            else
+            {
+                _ownedFailed = true;
+                _ownedFailedMessage = result.Message;
+                ShowResult(false, result.Message, null);
+            }
+        }
+        catch (Exception exception)
+        {
+            _ownedFailed = true;
+            _ownedFailedMessage = $"The account library could not be loaded: {exception.Message}";
+            Logging.Add(LogLevel.Warning, "Sharing", _ownedFailedMessage);
+            ShowResult(false, _ownedFailedMessage, null);
+        }
+        finally
+        {
+            IsLoadingOwned = false;
+            OnPropertyChanged(nameof(OwnedLoaded));
+            OnPropertyChanged(nameof(OwnedFailed));
+            OnPropertyChanged(nameof(OwnedStatusLabel));
         }
     }
 

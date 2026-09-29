@@ -52,6 +52,11 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
+## ✨ What's new in 0.3.1
+
+- **All your account games on the Share page** — "Load all account games" pulls your whole library from your public Steam profile; every game without local manifests gets shared with auto-fetched manifests
+- Packs of auto-fetch games now carry the Lua (depot ids, manifest ids, keys), not just bare manifests
+
 ## ✨ What's new in 0.3.0
 
 - **Resume really continues** — a resumed download no longer starts over when the source has newer manifests; it continues straight from the files already on disk
