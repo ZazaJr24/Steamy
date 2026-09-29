@@ -25,6 +25,8 @@ public partial class LibraryPage : Page
     private string _downloadPath = string.Empty;
     private string _customArchivePath = string.Empty;
     private CancellationTokenSource? _availabilityCts;
+    private CancellationTokenSource? _downloadCts;
+    private bool _pauseRequested;
 
     private Brush ActiveChipBg => ThemeBrush("AccentSoftBrush");
     private Brush ActiveChipFg => ThemeBrush("AccentBrush");
@@ -106,8 +108,17 @@ public partial class LibraryPage : Page
         _customArchivePath = string.Empty;
         CustomArchiveText.Text = "No archive selected";
         CustomArchiveText.Foreground = TertiaryText;
-        StartButton.Content = "Start download";
+        // A paused download of this app resumes in the same folder with one click.
+        var resumeFolder = Path.Combine(
+            string.IsNullOrWhiteSpace(_downloadPath) ? (settings.DownloadFolder ?? string.Empty) : _downloadPath,
+            SanitizeFolderName(item.Name));
+        var resumable = App.Services.GetRequiredService<IAppDataStore>().Downloads.FirstOrDefault(existing =>
+            existing.AppId == item.AppId
+            && string.Equals(existing.TargetFolder, resumeFolder, StringComparison.OrdinalIgnoreCase)
+            && existing.State is DownloadJobState.Paused or DownloadJobState.Failed or DownloadJobState.Cancelled);
+        StartButton.Content = resumable is null ? "Start download" : "Resume download";
         StartButton.IsEnabled = true;
+        PauseButton.Visibility = Visibility.Collapsed;
         OverlayGrid.Visibility = Visibility.Visible;
     }
 
@@ -242,6 +253,8 @@ public partial class LibraryPage : Page
         _selectedItem = null;
     }
 
+    private bool _downloadRunning;
+
     private async void StartDownloadButton_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -254,7 +267,34 @@ public partial class LibraryPage : Page
         }
     }
 
+    /// <summary>Pause asks the running download to stop; Resume later continues in the same folder.</summary>
+    private void PauseButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_downloadCts is null) return;
+        _pauseRequested = true;
+        try { _downloadCts.Cancel(); } catch (ObjectDisposedException) { }
+        PauseButton.IsEnabled = false;
+        OverlayStatus.Text = "Pausing…";
+    }
+
     private async Task StartDownloadAsync()
+    {
+        if (_selectedItem is null) return;
+        // A second click on Start/Resume while the download runs must not spawn a second
+        // DepotDownloaderMod over the same files.
+        if (_downloadRunning) return;
+        _downloadRunning = true;
+        try
+        {
+            await RunDownloadAsync();
+        }
+        finally
+        {
+            _downloadRunning = false;
+        }
+    }
+
+    private async Task RunDownloadAsync()
     {
         if (_selectedItem is null) return;
 
@@ -270,7 +310,12 @@ public partial class LibraryPage : Page
         var store = App.Services.GetRequiredService<IAppDataStore>();
         var queueStore = App.Services.GetRequiredService<IDownloadQueueStore>();
 
-        var job = new DownloadJob
+        // Reuse the job of a paused download of this app so Resume keeps its identity, target
+        // folder and progress instead of piling up duplicate rows for the same game.
+        var job = store.Downloads.FirstOrDefault(existing => existing.AppId == item.AppId
+                && string.Equals(existing.TargetFolder, targetFolder, StringComparison.OrdinalIgnoreCase)
+                && existing.State is DownloadJobState.Paused or DownloadJobState.Failed or DownloadJobState.Cancelled)
+            ?? new DownloadJob
         {
             AppId = item.AppId,
             GameName = item.Name,
@@ -280,19 +325,30 @@ public partial class LibraryPage : Page
             DownloadMode = $"DepotDownloaderMod ({_selectedSource})",
             AuthorizationConfirmed = true
         };
+        var isResume = job.State is DownloadJobState.Paused or DownloadJobState.Failed or DownloadJobState.Cancelled;
+        if (isResume)
+        {
+            // Continue with the source the user just picked; the mode reflects it.
+            job.DownloadMode = $"DepotDownloaderMod ({_selectedSource})";
+            job.Finished = null;
+        }
         job.State = DownloadJobState.Preparing;
-        job.Status = $"Starting download from {_selectedSource}...";
+        job.Status = isResume ? $"Resuming download from {_selectedSource}..." : $"Starting download from {_selectedSource}...";
 
-        store.Downloads.Insert(0, job);
+        if (!store.Downloads.Contains(job)) store.Downloads.Insert(0, job);
         await queueStore.SaveAsync(job);
 
         StartButton.IsEnabled = false;
         StartButton.Content = "Downloading...";
-        OverlayStatus.Text = $"Download queued — check Downloads tab for progress.";
+        PauseButton.Visibility = Visibility.Visible;
+        PauseButton.IsEnabled = true;
+        OverlayStatus.Text = job.Status;
 
         var ryuuService = App.Services.GetRequiredService<IRyuuGameDownloadService>();
         var downloadManager = App.Services.GetRequiredService<IDownloadManager>();
+        _pauseRequested = false;
         using var cts = new CancellationTokenSource();
+        _downloadCts = cts;
         downloadManager.RegisterJob(job.Id, cts);
 
         var source = _selectedSource;
@@ -308,8 +364,9 @@ public partial class LibraryPage : Page
         try
         {
             var archivePath = _customArchivePath;
-            var result = await Task.Run(() =>
-                ryuuService.DownloadGameAsync(item.AppId, targetFolder, source, progress, cts.Token));
+            var result = isResume
+                ? await Task.Run(() => ryuuService.ResumeDownloadAsync(item.AppId, targetFolder, progress, cts.Token))
+                : await Task.Run(() => ryuuService.DownloadGameAsync(item.AppId, targetFolder, source, progress, cts.Token));
 
             if (result.Succeeded && !string.IsNullOrEmpty(archivePath) && File.Exists(archivePath))
             {
@@ -349,35 +406,39 @@ public partial class LibraryPage : Page
             });
         }
         catch (OperationCanceledException)
-        {
-            var wasPaused = downloadManager.IsPauseRequested(job.Id);
-            job.State = wasPaused ? DownloadJobState.Paused : DownloadJobState.Cancelled;
-            job.Status = wasPaused ? "Paused — resume will continue from existing files" : "Download cancelled.";
-            job.ClearLiveStats();
-            if (_selectedItem == item)
             {
-                OverlayStatus.Text = job.Status;
-                StartButton.Content = wasPaused ? "Resume download" : "Start download";
-                StartButton.IsEnabled = true;
+                // The app-level pause flag wins over a plain cancel: both arrive as an
+                // OperationCanceledException here, so the flag tells the two apart.
+                var wasPaused = _pauseRequested || downloadManager.IsPauseRequested(job.Id);
+                job.State = wasPaused ? DownloadJobState.Paused : DownloadJobState.Cancelled;
+                job.Status = wasPaused ? "Paused — resume will continue from existing files" : "Download cancelled.";
+                job.ClearLiveStats();
+                if (_selectedItem == item)
+                {
+                    OverlayStatus.Text = job.Status;
+                    StartButton.Content = wasPaused ? "Resume download" : "Start download";
+                    StartButton.IsEnabled = true;
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            job.State = DownloadJobState.Failed;
-            job.Status = ex.Message;
-            job.Finished = DateTime.Now;
-            if (_selectedItem == item)
+            catch (Exception ex)
             {
-                OverlayStatus.Text = $"Error: {ex.Message}";
-                StartButton.Content = "Retry";
-                StartButton.IsEnabled = true;
+                job.State = DownloadJobState.Failed;
+                job.Status = ex.Message;
+                job.Finished = DateTime.Now;
+                if (_selectedItem == item)
+                {
+                    OverlayStatus.Text = $"Error: {ex.Message}";
+                    StartButton.Content = "Retry";
+                    StartButton.IsEnabled = true;
+                }
             }
-        }
-        finally
-        {
-            downloadManager.UnregisterJob(job.Id);
-            await queueStore.SaveAsync(job);
-        }
+            finally
+            {
+                downloadManager.UnregisterJob(job.Id);
+                _downloadCts = null;
+                if (_selectedItem == item) PauseButton.Visibility = Visibility.Collapsed;
+                await queueStore.SaveAsync(job);
+            }
     }
 
     private static string SanitizeFolderName(string name)

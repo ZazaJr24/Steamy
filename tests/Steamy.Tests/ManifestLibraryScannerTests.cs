@@ -189,7 +189,7 @@ public class ManifestLibraryScannerTests
     {
         var files = new[] { new ShareFile("a", "1_1.manifest", 10), new ShareFile("b", "1.lua", 3) };
         var first = new ShareCandidate(1, "A", ShareSourceKind.Lua, "x", files, Array.Empty<DepotManifestRef>(), DateTime.UtcNow);
-        var reordered = new ShareCandidate(1, "Renamed", ShareSourceKind.Lua, "y", files.Reverse().ToList(), Array.Empty<DepotManifestRef>(), DateTime.MinValue);
+        var reordered = new ShareCandidate(1, "Renamed", ShareSourceKind.Lua, "y", Enumerable.Reverse(files).ToArray(), Array.Empty<DepotManifestRef>(), DateTime.MinValue);
         var updated = new ShareCandidate(1, "A", ShareSourceKind.Lua, "x",
             new[] { new ShareFile("a", "1_2.manifest", 10), files[1] }, Array.Empty<DepotManifestRef>(), DateTime.UtcNow);
 

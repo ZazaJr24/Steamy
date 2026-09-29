@@ -3,6 +3,20 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.2.9
+
+### Fixed
+- **Resume works again for every source.** A paused download continued looking for its manifests only in Ryuu's own work folder, so resuming a Zaza, Hubcap or DepotBox download always stopped with "No cached manifests found". Resume now searches every manifest work folder, re-reads the Lua script (depot decryption keys are kept) and writes a fresh key file before it continues.
+- **Resume refreshes from the original source.** The manifest refresh before a resume fetched from Zaza no matter where the download came from; it now uses the source the job was started with (Zaza stays the fallback for old jobs).
+- **Pause in the library download window.** The overlay gained a Pause button; the Start button becomes Resume and reuses the paused job instead of creating a duplicate row for the same game.
+- **No more double starts.** Clicking Resume twice no longer runs two DepotDownloaderMod processes over the same files — neither on the Downloads page nor in the library overlay.
+- **"Auto resume after restart" now does something.** The setting was saved but never passed to the queue restore; interrupted downloads are restored as queued (one click to continue) instead of always paused.
+- Pure DepotDownloader jobs are no longer routed into the Mod resume path, where they failed with "DepotDownloaderMod not found".
+- Sharing a ZIP no longer dies with the page when packing throws; the error is shown as a dismissable result.
+
+### Improved
+- **Share finds every game again.** Steamy's own `ryuu-workdir` (Lua + manifests of Ryuu downloads) is now scanned next to the shared manifest work directory, so games that were never installed also show up with their Lua and manifests.
+
 ## 0.2.8
 
 ### New

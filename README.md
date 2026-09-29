@@ -52,6 +52,14 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
+## ✨ What's new in 0.2.9
+
+- **Resume fixed for every source** — a paused download continues from its files again, no matter whether it started from Ryuu, Zaza, Hubcap or DepotBox; the Lua and depot keys survive the pause
+- **Pause in the library window** — the download overlay gained a Pause button and a real Resume that reuses the paused job
+- **Manifest refresh on resume** now asks the source the download came from, not always Zaza
+- **Share finds every game** — Steamy's own Ryuu download folder is scanned too, so Lua + manifests of never-installed games show up on the Share page
+- **"Auto resume after restart" works** — interrupted downloads are restored as queued, ready to continue
+
 ## ✨ What's new in 0.2.8
 
 - **Share everything** — the Share page now lists **every** game you have manifests for, installed or not: Steam's depot caches, SteamTools Lua scripts (`config/stplug-in`) and Steamy's own downloads, each Lua with the manifests it pins
