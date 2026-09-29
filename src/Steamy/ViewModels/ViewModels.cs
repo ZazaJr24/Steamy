@@ -228,18 +228,24 @@ public sealed class DownloadsViewModel : ViewModelBase
     public ICommand RefreshCommand => new RelayCommand(RefreshFilter);
     public ICommand NavigateLibraryCommand => new RelayCommand(()=>Navigation.Navigate<LibraryPage>());
 
+    /// <summary>
+    /// True for jobs the Ryuu/Mod resume path handles. A pure DepotDownloader job always has a
+    /// depot (or was started from the tool page) — routing it here would run it without the
+    /// DepotDownloader executable configured. The DepotId fallback stays for Mod downloads of
+    /// several depots, which never carry a single depot id.
+    /// </summary>
     private static bool IsRyuuOrModJob(DownloadJob job)
     {
         var mode = job.DownloadMode ?? "";
         if (mode.Contains("Ryuu", StringComparison.OrdinalIgnoreCase)
+            || mode.Contains("Mod", StringComparison.OrdinalIgnoreCase)
             || mode.Contains("Hubcap", StringComparison.OrdinalIgnoreCase)
-            || mode.Contains("DepotDownloaderMod", StringComparison.OrdinalIgnoreCase))
+            || mode.Contains("Zaza", StringComparison.OrdinalIgnoreCase)
+            || mode.Contains("DepotBox", StringComparison.OrdinalIgnoreCase))
             return true;
 
-        if (job.DepotId is null && !string.IsNullOrWhiteSpace(job.TargetFolder))
-            return true;
-
-        return false;
+        // Mod downloads cover a whole app (every depot), so they never carry a depot id.
+        return job.DepotId is null && !string.IsNullOrWhiteSpace(job.TargetFolder);
     }
 
     private async Task StartAsync(DownloadJob? job)
@@ -267,52 +273,92 @@ public sealed class DownloadsViewModel : ViewModelBase
         if (job is null) return;
         if (IsRyuuOrModJob(job))
         {
-            if (string.IsNullOrWhiteSpace(job.DownloadMode)
-                || job.DownloadMode.Equals("DepotDownloader", StringComparison.OrdinalIgnoreCase)
-                || job.DownloadMode.Equals("Not configured", StringComparison.OrdinalIgnoreCase))
+            // A second Resume click while one is still running must not start a second
+            // DepotDownloaderMod for the same job — the two would race on the same files.
+            if (Interlocked.CompareExchange(ref _resuming, 1, 0) != 0)
             {
-                job.DownloadMode = "DepotDownloaderMod (Ryuu)";
+                job.Status = "Resume is already running for this job.";
+                return;
             }
-
-            job.State = DownloadJobState.Preparing;
-            job.Status = "Resuming — refreshing manifests first";
-            var progress = new Progress<string>(msg => System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
-            {
-                if (!GameDownloadProgressMessage.TryApply(job, msg)) job.Status = msg;
-            }));
-            using var cts = new CancellationTokenSource();
-            _manager.RegisterJob(job.Id, cts);
             try
             {
-                // A paused download can be days old. Steam may have new manifests in the meantime,
-                // so resume always re-fetches them first (cached set is used when that fails).
-                var refetch = App.Services?.GetService(typeof(IManifestRefetchService)) as IManifestRefetchService;
-                if (refetch is not null)
-                    await refetch.RefreshBeforeResumeAsync(job, progress, cts.Token);
-
-                var result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress, cts.Token));
-                job.State = result.Succeeded ? DownloadJobState.Completed : DownloadJobState.Failed;
-                job.Status = result.Message;
-                job.ClearLiveStats();
-                job.Finished = DateTime.Now;
-                if (result.Succeeded) job.Progress = 100;
-            }
-            catch (OperationCanceledException)
-            {
-                var wasPaused = _manager.IsPauseRequested(job.Id);
-                job.State = wasPaused ? DownloadJobState.Paused : DownloadJobState.Cancelled;
-                job.Status = wasPaused ? "Paused — resume will continue from existing files" : "Download cancelled.";
-                job.ClearLiveStats();
+                await ResumeModJobAsync(job);
             }
             finally
             {
-                _manager.UnregisterJob(job.Id);
-                var queueStore = App.Services?.GetService(typeof(IDownloadQueueStore)) as IDownloadQueueStore;
-                if (queueStore != null) await queueStore.SaveAsync(job);
+                Interlocked.Exchange(ref _resuming, 0);
             }
         }
         else { await _manager.StartAsync(job); }
         RefreshFilter();
+    }
+
+    private int _resuming;
+
+    private async Task ResumeModJobAsync(DownloadJob job)
+    {
+        var source = DownloadModeSource(job);
+        if (string.IsNullOrWhiteSpace(job.DownloadMode)
+            || job.DownloadMode.Equals("DepotDownloader", StringComparison.OrdinalIgnoreCase)
+            || job.DownloadMode.Equals("Not configured", StringComparison.OrdinalIgnoreCase))
+        {
+            job.DownloadMode = source is null ? "DepotDownloaderMod (Ryuu)" : $"DepotDownloaderMod ({source})";
+        }
+
+        job.State = DownloadJobState.Preparing;
+        job.Status = "Resuming — refreshing manifests first";
+        var progress = new Progress<string>(msg => System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
+        {
+            if (!GameDownloadProgressMessage.TryApply(job, msg)) job.Status = msg;
+        }));
+        using var cts = new CancellationTokenSource();
+        _manager.RegisterJob(job.Id, cts);
+        try
+        {
+            // A paused download can be days old. Steam may have new manifests in the meantime,
+            // so resume re-fetches them first — from the source the download started with, not
+            // always Zaza. A failed refresh keeps the cached set and resumes anyway.
+            var refetch = App.Services?.GetService(typeof(IManifestRefetchService)) as IManifestRefetchService;
+            if (refetch is not null)
+                await refetch.RefreshBeforeResumeAsync(job, progress, cts.Token, source);
+
+            var result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress, cts.Token));
+            job.State = result.Succeeded ? DownloadJobState.Completed : DownloadJobState.Failed;
+            job.Status = result.Message;
+            job.ClearLiveStats();
+            job.Finished = DateTime.Now;
+            if (result.Succeeded) job.Progress = 100;
+        }
+        catch (OperationCanceledException)
+        {
+            var wasPaused = _manager.IsPauseRequested(job.Id);
+            job.State = wasPaused ? DownloadJobState.Paused : DownloadJobState.Cancelled;
+            job.Status = wasPaused ? "Paused — resume will continue from existing files" : "Download cancelled.";
+            job.ClearLiveStats();
+        }
+        finally
+        {
+            _manager.UnregisterJob(job.Id);
+            var queueStore = App.Services?.GetService(typeof(IDownloadQueueStore)) as IDownloadQueueStore;
+            if (queueStore != null) await queueStore.SaveAsync(job);
+        }
+    }
+
+    /// <summary>
+    /// The manifest source a download was started with, read from its download mode
+    /// ("DepotDownloaderMod (Zaza)" → Zaza). Null when the mode names no known source.
+    /// </summary>
+    private static ManifestSource? DownloadModeSource(DownloadJob job)
+    {
+        var mode = job.DownloadMode ?? string.Empty;
+        foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox" })
+        {
+            if (mode.Contains(name, StringComparison.OrdinalIgnoreCase)
+                && Enum.TryParse<ManifestSource>(name, out var source))
+                return source;
+        }
+
+        return null;
     }
     public int ActiveCount => Jobs.Count(x=>x.IsActive);
     public int CompletedCount => Jobs.Count(x=>x.State==DownloadJobState.Completed);

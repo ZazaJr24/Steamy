@@ -474,6 +474,13 @@ public sealed class ShareViewModel : ViewModelBase
             var result = await _sharing.ExportAsync(selected, zipPath);
             ShowResult(result.Succeeded, result.Message, result.Succeeded ? Path.GetDirectoryName(zipPath) : null);
         }
+        catch (Exception exception)
+        {
+            // Packing itself is guarded inside the service; this catches everything around it
+            // (dialog, disk full, unexpected IO) so the page never dies on an export.
+            Logging.Add(LogLevel.Warning, "Sharing", $"Export failed: {exception.Message}");
+            ShowResult(false, $"The ZIP could not be written: {exception.Message}", null);
+        }
         finally
         {
             IsBusy = false;

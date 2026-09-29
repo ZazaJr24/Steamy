@@ -371,12 +371,16 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <ui:Button Content="Close" Appearance="Secondary" Click="OverlayCloseButton_Click" />
-                <ui:Button Grid.Column="2"
-                           x:Name="StartButton"
-                           Content="Start download"
-                           Icon="{ui:SymbolIcon ArrowDownload24}"
-                           Appearance="Primary"
-                           Click="StartDownloadButton_Click" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                  <ui:Button x:Name="PauseButton" Content="Pause" Icon="{ui:SymbolIcon Pause24}"
+                             Appearance="Secondary" Margin="0,0,8,0"
+                             Visibility="Collapsed" Click="PauseButton_Click" />
+                  <ui:Button x:Name="StartButton"
+                             Content="Start download"
+                             Icon="{ui:SymbolIcon ArrowDownload24}"
+                             Appearance="Primary"
+                             Click="StartDownloadButton_Click" />
+                </StackPanel>
               </Grid>
             </StackPanel>
           </Border>
