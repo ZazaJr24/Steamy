@@ -11,7 +11,7 @@ public interface IManifestRefetchService
     /// True when fresh data is in place (or nothing needed doing), false when it failed.
     /// </summary>
     Task<bool> RefreshBeforeResumeAsync(DownloadJob job, IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default, ManifestSource? source = null);
 }
 
 /// <summary>
@@ -33,7 +33,7 @@ public sealed class ManifestRefetchService : IManifestRefetchService
     }
 
     public async Task<bool> RefreshBeforeResumeAsync(DownloadJob job, IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, ManifestSource? source = null)
     {
         if (job.AppId <= 0) return true;
 
@@ -42,21 +42,20 @@ public sealed class ManifestRefetchService : IManifestRefetchService
             && job.DownloadMode.Contains("Mod", StringComparison.OrdinalIgnoreCase);
         if (!modeUsesLocalManifests) return true;
 
-        var workDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy", "ryuu-workdir", job.AppId.ToString(CultureInfo.InvariantCulture));
+        // The source the download started with is refreshed; Zaza is only the fallback when the
+        // mode does not name a source (older jobs) — it needs no key, so it is the safest guess.
+        var manifestSource = source ?? ReadSourceFromMode(job.DownloadMode) ?? ManifestSource.Zaza;
 
         progress?.Report("Refreshing manifests before resume…");
         try
         {
-            // Zaza needs no key and is the safest default when the original source is unknown.
-            var result = await _sources.DownloadManifestsAsync(ManifestSource.Zaza, job.AppId, progress, cancellationToken)
+            var result = await _sources.DownloadManifestsAsync(manifestSource, job.AppId, progress, cancellationToken)
                 .ConfigureAwait(false);
 
             if (result.Succeeded)
             {
                 progress?.Report("Manifests are up to date — continuing.");
-                _logging.Add(LogLevel.Info, "Resume", $"Refreshed manifests for App {job.AppId} before resume.", job.AppId, job.Id);
+                _logging.Add(LogLevel.Info, "Resume", $"Refreshed manifests for App {job.AppId} from {manifestSource} before resume.", job.AppId, job.Id);
                 return true;
             }
 
@@ -75,5 +74,18 @@ public sealed class ManifestRefetchService : IManifestRefetchService
             _logging.Add(LogLevel.Warning, "Resume", $"Manifest refresh error for App {job.AppId}: {exception.Message}", job.AppId, job.Id);
             return true;
         }
+    }
+
+    private static ManifestSource? ReadSourceFromMode(string? mode)
+    {
+        if (string.IsNullOrWhiteSpace(mode)) return null;
+        foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox" })
+        {
+            if (mode.Contains(name, StringComparison.OrdinalIgnoreCase)
+                && Enum.TryParse<ManifestSource>(name, out var source))
+                return source;
+        }
+
+        return null;
     }
 }

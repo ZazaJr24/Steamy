@@ -124,11 +124,13 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
             ? SteamLibraryService.ReadLibraryFolders(Path.Combine(steamRoot, "steamapps"))
             : Array.Empty<string>();
 
-        // Lua scripts: SteamTools' plug-in folder, Steamy's own manifest downloads and the folders
-        // the old Depot Dumper wrote. Their manifests are searched next to them as well.
+        // Lua scripts: SteamTools' plug-in folder, Steamy's own manifest downloads (both work
+        // folders, so downloads from every source are found — not only installed games) and the
+        // folders the old Depot Dumper wrote. Their manifests are searched next to them as well.
         var luaFolders = new List<string>();
         if (steamRoot.Length > 0) luaFolders.Add(Path.Combine(steamRoot, "config", "stplug-in"));
         luaFolders.Add(ManifestWorkFolder);
+        luaFolders.Add(RyuuWorkFolder);
         luaFolders.AddRange(LegacyDumpRoots(settings));
         luaFolders = luaFolders.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
@@ -141,6 +143,10 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
     /// <summary>Where Steamy's manifest sources put the Lua and manifests of a download.</summary>
     private static string ManifestWorkFolder =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "manifest-workdir");
+
+    /// <summary>Where the Ryuu/Mod download path keeps the Lua and manifests it fetched.</summary>
+    private static string RyuuWorkFolder =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "ryuu-workdir");
 
     public async Task<ManifestBatchShareResult> ShareManyAsync(IReadOnlyList<ShareCandidate> items,
         IProgress<ShareBatchProgress>? progress = null, CancellationToken cancellationToken = default)

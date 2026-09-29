@@ -120,7 +120,7 @@ public partial class App : Application
         {
             var store = Services.GetRequiredService<IAppDataStore>();
             var queueStore = Services.GetRequiredService<IDownloadQueueStore>();
-            await queueStore.RestoreAsync(store.Downloads, autoResume: false);
+            await queueStore.RestoreAsync(store.Downloads, Services.GetRequiredService<ISettingsService>().Load().AutoResume);
         }
         catch (Exception exception)
         {
