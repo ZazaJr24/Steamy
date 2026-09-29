@@ -56,13 +56,25 @@ public sealed class ShareItemViewModel : ObservableObject
         _ => "Manifests"
     };
     public string AppIdLabel => $"App {AppId}";
-    public string SizeLabel => DownloadFormat.Bytes(Candidate.TotalBytes);
+    public string SizeLabel => Candidate.NeedsManifestFetch ? "—" : DownloadFormat.Bytes(Candidate.TotalBytes);
     public string CapsuleUrl => $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{AppId}/capsule_184x69.jpg";
+
+    /// <summary>True for an installed game whose manifests get fetched from a source when shared.</summary>
+    public bool NeedsFetch => Candidate.NeedsManifestFetch;
 
     public string ContentSummary
     {
         get
         {
+            if (Candidate.NeedsManifestFetch)
+            {
+                var depots = Candidate.Depots.Count;
+                return Candidate.Depots.Count == 0
+                    ? "manifests are fetched on share"
+                    : depots == 1 ? "1 depot · manifests are fetched on share"
+                    : $"{depots} depots · manifests are fetched on share";
+            }
+
             var manifests = Candidate.ManifestCount;
             var parts = new List<string> { manifests == 1 ? "1 manifest" : $"{manifests} manifests" };
             if (Candidate.HasLua) parts.Add("Lua");
@@ -205,15 +217,17 @@ public sealed class ShareViewModel : ViewModelBase
     public int NewCount => _items.Count(item => item.IsNew);
     public int InstalledCount => _items.Count(item => item.SourceKind == ShareSourceKind.SteamLibrary);
     public int LuaCount => _items.Count(item => item.Candidate.HasLua);
+    public int FetchCount => _items.Count(item => item.NeedsFetch);
     public int SelectedCount => _items.Count(item => item.IsSelected);
     public bool HasItems => _items.Count > 0;
     public bool ShowEmpty => _items.Count == 0 && !IsScanning;
     public bool HasNoMatches => _items.Count > 0 && Items.IsEmpty;
+    public string FetchCountLabel => FetchCount.ToString("N0");
 
     public string TotalCountLabel => TotalCount.ToString("N0");
     public string NewCountLabel => NewCount.ToString("N0");
     public string SourcesLabel => $"{InstalledCount:N0} installed · {LuaCount:N0} with Lua · {TotalCount - InstalledCount:N0} not installed";
-    public string TotalSizeLabel => DownloadFormat.Bytes(_items.Sum(item => item.Candidate.TotalBytes));
+    public string TotalSizeLabel => DownloadFormat.Bytes(_items.Where(item => !item.NeedsFetch).Sum(item => item.Candidate.TotalBytes));
     public string TotalFilesLabel
     {
         get
@@ -548,7 +562,8 @@ public sealed class ShareViewModel : ViewModelBase
         var search = _searchText.Trim();
         return search.Length == 0
             || item.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
-            || item.AppId.ToString().Contains(search, StringComparison.Ordinal);
+            || item.AppId.ToString().Contains(search, StringComparison.Ordinal)
+            || (item.Name.Length > 0 && item.AppIdLabel.Contains(search, StringComparison.OrdinalIgnoreCase));
     }
 
     private void RefreshView()
@@ -579,6 +594,8 @@ public sealed class ShareViewModel : ViewModelBase
         OnPropertyChanged(nameof(NewCount));
         OnPropertyChanged(nameof(InstalledCount));
         OnPropertyChanged(nameof(LuaCount));
+        OnPropertyChanged(nameof(FetchCount));
+        OnPropertyChanged(nameof(FetchCountLabel));
         OnPropertyChanged(nameof(TotalCountLabel));
         OnPropertyChanged(nameof(NewCountLabel));
         OnPropertyChanged(nameof(SourcesLabel));

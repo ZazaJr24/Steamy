@@ -109,7 +109,9 @@ public static class ManifestLibraryScanner
 
     /// <summary>
     /// The installed app described by one appmanifest, with the depot manifests the cache has for
-    /// it; null when the cache has none of them.
+    /// it. Games whose manifests Steam no longer keeps on disk are returned with an empty file
+    /// list as well — the share step fetches those manifests from a source. Null only when the
+    /// appmanifest cannot be read or the app is on the ignore list.
     /// </summary>
     public static ShareCandidate? ReadInstalledApp(string acfPath, string steamAppsFolder, IReadOnlyDictionary<string, FileInfo> depotCache)
     {
@@ -142,8 +144,6 @@ public static class ManifestLibraryScanner
             files.Add(new ShareFile(info.FullName, info.Name, info.Length));
             if (info.LastWriteTimeUtc > newest) newest = info.LastWriteTimeUtc;
         }
-
-        if (files.Count == 0) return null;
 
         var name = state.GetString("name");
         return new ShareCandidate(appId, string.IsNullOrWhiteSpace(name) ? $"App {appId}" : name!.Trim(),

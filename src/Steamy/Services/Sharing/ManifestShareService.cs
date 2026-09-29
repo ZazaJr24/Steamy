@@ -57,6 +57,17 @@ public interface IManifestShareService
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>Answers "which manifests exist on a source and where do they land locally?".</summary>
+public interface IShareManifestFetcher
+{
+    /// <summary>
+    /// Fetches the Lua and depot manifests of one app from a source into a local work folder.
+    /// Returns the folder that now holds the files, or null when the source has nothing.
+    /// </summary>
+    Task<string?> FetchAsync(int appId, ManifestSource source,
+        IProgress<string>? progress = null, CancellationToken cancellationToken = default);
+}
+
 /// <summary>
 /// Share: finds everything shareable (installed games, Lua scripts and every cached depot
 /// manifest, installed or not) and sends any selection, packed as one ZIP per app, to the dump
@@ -77,6 +88,7 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
     private readonly ISettingsService _settings;
     private readonly ISecureCredentialService _credentials;
     private readonly ILoggingService _logging;
+    private readonly IShareManifestFetcher? _fetcher;
     private readonly HttpClient _httpClient;
     private readonly ShareHistoryStore _history = new(ShareHistoryStore.DefaultPath);
     private readonly AppListIndex _apps = new(AppListIndex.BundledPath);
@@ -84,11 +96,13 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
     public ManifestShareService(
         ISettingsService settings,
         ISecureCredentialService credentials,
-        ILoggingService logging)
+        ILoggingService logging,
+        IShareManifestFetcher? fetcher = null)
     {
         _settings = settings;
         _credentials = credentials;
         _logging = logging;
+        _fetcher = fetcher;
         _httpClient = new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(5) };
     }
 
@@ -168,13 +182,27 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
 
         try
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 for (var index = 0; index < items.Count; index++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var item = items[index];
-                    progress?.Report(new ShareBatchProgress(0.2 * index / items.Count, $"Packing {item.Name}…"));
+
+                    // An installed game whose manifests Steam does not keep on disk gets them
+                    // fetched from a source first — the game is shared all the same.
+                    if (item.NeedsManifestFetch)
+                    {
+                        var fetched = await FetchMissingManifestsAsync(item, progress, cancellationToken).ConfigureAwait(false);
+                        if (fetched is not null) item = fetched;
+                        else
+                        {
+                            skipped.Add($"{item.Name} (manifests could not be fetched)");
+                            continue;
+                        }
+                    }
+
+                    progress?.Report(new ShareBatchProgress(0.2 * index / Math.Max(1, items.Count), $"Packing {item.Name}…"));
 
                     var archive = ShareArchiveBuilder.BuildAppArchive(item, BuildStamp.Version, created);
                     if (archive.LongLength > MaxArchiveBytes)
@@ -267,16 +295,83 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
             packed.Select(entry => entry.Path).ToList());
     }
 
-    public Task<ManifestExportResult> ExportAsync(IReadOnlyList<ShareCandidate> items, string zipPath,
-        CancellationToken cancellationToken = default) => Task.Run(() =>
+    /// <summary>
+    /// Fetches the manifests of a game that has none on disk from the first source that answers.
+    /// Returns the candidate with the local files filled in, or null when no source has them.
+    /// </summary>
+    private async Task<ShareCandidate?> FetchMissingManifestsAsync(ShareCandidate item,
+        IProgress<ShareBatchProgress>? progress, CancellationToken cancellationToken)
     {
-        if (items.Count == 0) return new ManifestExportResult(false, "Select at least one game to export.", zipPath);
+        if (_fetcher is null) return null;
 
-        var temp = zipPath + ".partial";
-        try
+        foreach (var source in new[] { ManifestSource.Zaza, ManifestSource.Hubcap, ManifestSource.DepotBox, ManifestSource.Ryuu })
         {
-            using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
-                ShareArchiveBuilder.WriteBundle(stream, items, BuildStamp.Version, DateTime.UtcNow);
+            cancellationToken.ThrowIfCancellationRequested();
+            progress?.Report(new ShareBatchProgress(0, $"Fetching manifests for {item.Name} from {source}…"));
+            _logging.Add(LogLevel.Info, "Sharing", $"Fetching missing manifests of App {item.AppId} from {source}.", item.AppId);
+            try
+            {
+                var folder = await _fetcher.FetchAsync(item.AppId, source, null, cancellationToken).ConfigureAwait(false);
+                if (folder is null) continue;
+
+                var files = new List<ShareFile>();
+                var newest = DateTime.MinValue;
+                foreach (var path in Directory.EnumerateFiles(folder, "*.manifest"))
+                {
+                    var info = new FileInfo(path);
+                    if (!info.Exists) continue;
+                    files.Add(new ShareFile(info.FullName, info.Name, info.Length));
+                    if (info.LastWriteTimeUtc > newest) newest = info.LastWriteTimeUtc;
+                }
+
+                if (files.Count == 0) continue;
+                _logging.Add(LogLevel.Info, "Sharing", $"Fetched {files.Count} manifest(s) of App {item.AppId} from {source}.", item.AppId);
+                return item with { Files = files, LastModifiedUtc = newest == DateTime.MinValue ? item.LastModifiedUtc : newest };
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logging.Add(LogLevel.Warning, "Sharing", $"Fetching manifests of App {item.AppId} from {source} failed: {exception.Message}", item.AppId);
+            }
+        }
+
+        return null;
+    }
+
+    public Task<ManifestExportResult> ExportAsync(IReadOnlyList<ShareCandidate> items, string zipPath,
+        CancellationToken cancellationToken = default) => Task.Run(async () =>
+        {
+            if (items.Count == 0) return new ManifestExportResult(false, "Select at least one game to export.", zipPath);
+
+            // A game without local manifests is fetched first so the ZIP is complete; when the
+            // source has nothing, the game is left out instead of failing the whole export.
+            var exportable = new List<ShareCandidate>();
+            var leftOut = new List<string>();
+            foreach (var item in items)
+            {
+                if (!item.NeedsManifestFetch)
+                {
+                    exportable.Add(item);
+                    continue;
+                }
+
+                var fetched = await FetchMissingManifestsAsync(item, null, cancellationToken).ConfigureAwait(false);
+                if (fetched is not null) exportable.Add(fetched);
+                else leftOut.Add(item.Name);
+            }
+
+            if (exportable.Count == 0)
+                return new ManifestExportResult(false,
+                    leftOut.Count > 0 ? $"No manifests could be fetched for {string.Join(", ", leftOut)}." : "Nothing to export.", zipPath);
+
+            var temp = zipPath + ".partial";
+            try
+            {
+                using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+                    ShareArchiveBuilder.WriteBundle(stream, exportable, BuildStamp.Version, DateTime.UtcNow);
             File.Move(temp, zipPath, overwrite: true);
 
             var bytes = new FileInfo(zipPath).Length;
@@ -337,4 +432,29 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
         string.IsNullOrWhiteSpace(settings.ManifestShareRepo) ? "Steamy-Dumps" : settings.ManifestShareRepo.Trim();
 
     public void Dispose() => _httpClient.Dispose();
+}
+
+/// <summary>
+/// Pulls Lua and depot manifests of one app from a manifest source into the shared manifest work
+/// directory, so a share can include games whose manifests Steam does not keep on disk.
+/// </summary>
+public sealed class ShareManifestFetcher : IShareManifestFetcher
+{
+    private readonly IManifestSourceService _sources;
+
+    public ShareManifestFetcher(IManifestSourceService sources) => _sources = sources;
+
+    public async Task<string?> FetchAsync(int appId, ManifestSource source,
+        IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+    {
+        var result = await _sources.DownloadManifestsAsync(source, appId, progress, cancellationToken).ConfigureAwait(false);
+        if (!result.Succeeded || string.IsNullOrWhiteSpace(result.WorkDirectory)) return null;
+
+        var workDirectory = result.WorkDirectory!;
+        if (Directory.EnumerateFiles(workDirectory, "*.manifest").Any()) return workDirectory;
+
+        // A Lua without manifests still tells the downloader what to fetch, but a share can only
+        // pack real .manifest files — so a Lua-only answer is not enough here.
+        return null;
+    }
 }
