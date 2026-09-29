@@ -131,19 +131,22 @@
     </Grid.RowDefinitions>
 
     <!-- Header -->
-    <Grid Style="{StaticResource EnterStyle1}" Margin="0,0,0,22">
+    <Grid Style="{StaticResource EnterStyle1}" Margin="0,0,0,20">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="Auto" />
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="Auto" />
       </Grid.ColumnDefinitions>
-      <Border Width="46" Height="46" CornerRadius="13" Background="{DynamicResource BrandGradientBrush}" VerticalAlignment="Center">
-        <ui:SymbolIcon Symbol="Share24" FontSize="22" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <Border Width="52" Height="52" CornerRadius="15" Background="{DynamicResource BrandGradientBrush}" VerticalAlignment="Center">
+        <Border.Effect>
+          <DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.35" Color="#6366F1" />
+        </Border.Effect>
+        <ui:SymbolIcon Symbol="Share24" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
       </Border>
-      <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
+      <StackPanel Grid.Column="1" Margin="18,0,0,0" VerticalAlignment="Center">
         <TextBlock Text="Share manifests" Style="{StaticResource PageTitleStyle}" Margin="0" />
         <TextBlock Style="{StaticResource BodyTextStyle}" Margin="0,4,0,0"
-                   Text="Every manifest you have — installed games, Lua scripts and all cached manifests, installed or not. Pick what you want, then send it in one go." />
+                   Text="Your whole Steam library plus every Lua and cached manifest — pick games and send them in one go. Missing manifests are fetched automatically." />
       </StackPanel>
       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
         <ui:ProgressRing Width="18" Height="18" Margin="0,0,14,0" IsIndeterminate="True"
@@ -257,6 +260,13 @@
                          ToolTip="Manifests of games that are not installed and have no Lua" />
           </StackPanel>
         </Border>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
+                    ToolTip="Installed games whose manifests Steam does not keep on disk — sharing them fetches the manifests automatically.">
+          <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+          <TextBlock Style="{StaticResource CaptionStyle}" Margin="6,0,0,0" VerticalAlignment="Center">
+            <Run Text="{Binding FetchCountLabel, Mode=OneWay}" /><Run Text=" auto-fetch" />
+          </TextBlock>
+        </StackPanel>
         <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
           <ui:Button Style="{StaticResource LinkButtonStyle}" Content="Select new" Icon="{ui:SymbolIcon Sparkle24}"
                      Command="{Binding SelectNewCommand}" />
@@ -291,18 +301,13 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <CheckBox IsChecked="{Binding IsSelected, Mode=OneWay}" IsHitTestVisible="False" Focusable="False"
-                          VerticalAlignment="Center" MinWidth="0" Margin="0,0,6,0" />
-                <Grid Grid.Column="1" Width="112" Height="42" VerticalAlignment="Center">
-                  <Border CornerRadius="7" Background="{DynamicResource SurfaceSubtleBrush}">
-                    <ui:SymbolIcon Symbol="Games24" FontSize="16" Foreground="{DynamicResource TextTertiaryBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                  </Border>
-                  <Border CornerRadius="7" RenderOptions.BitmapScalingMode="HighQuality">
-                    <Border.Background>
-                      <ImageBrush ImageSource="{Binding CapsuleUrl}" Stretch="UniformToFill" />
-                    </Border.Background>
-                  </Border>
-                </Grid>
+                          VerticalAlignment="Center" MinWidth="0" Margin="0,0,10,0" />
+                <Border Grid.Column="1" Width="120" Height="45" CornerRadius="8" VerticalAlignment="Center"
+                        RenderOptions.BitmapScalingMode="HighQuality">
+                  <Border.Background>
+                    <ImageBrush ImageSource="{Binding CapsuleUrl}" Stretch="UniformToFill" />
+                  </Border.Background>
+                </Border>
                 <StackPanel Grid.Column="2" Margin="14,0,12,0" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
                              Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
@@ -312,6 +317,12 @@
                     </Border>
                     <Border Style="{StaticResource TagStyle}" Margin="6,0,0,0">
                       <TextBlock Text="{Binding AppIdLabel}" Style="{StaticResource TagTextStyle}" Typography.NumeralAlignment="Tabular" />
+                    </Border>
+                    <Border Style="{StaticResource TagStyle}" Margin="6,0,0,0" Background="{DynamicResource AccentSoftBrush}"
+                            Visibility="{Binding NeedsFetch, Converter={StaticResource BoolToVis}}"
+                            ToolTip="Steam keeps no manifests for this game on disk — they are fetched from a manifest source when you share it.">
+                      <TextBlock Text="auto-fetch" FontSize="10.5" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource AccentBrush}" />
                     </Border>
                     <TextBlock Text="{Binding ContentSummary}" Style="{StaticResource CaptionStyle}" Margin="10,0,0,0" VerticalAlignment="Center" />
                   </StackPanel>
@@ -421,7 +432,7 @@
           <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
             <ui:SymbolIcon Symbol="ShieldCheckmark24" FontSize="13" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
             <TextBlock Style="{StaticResource CaptionStyle}" TextWrapping="Wrap"
-                       Text="Only manifests, Lua and keys are packed. Your Steam account, SteamID and local paths are never included." />
+                       Text="Only manifests, Lua and keys are packed. SteamIDs and local paths are removed first — missing manifests are fetched automatically." />
           </StackPanel>
         </StackPanel>
 

@@ -52,6 +52,12 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
+## ✨ What's new in 0.3.0
+
+- **Resume really continues** — a resumed download no longer starts over when the source has newer manifests; it continues straight from the files already on disk
+- **Share your whole Steam library** — every installed game appears on the Share page, even without cached manifests; missing ones are fetched automatically when you share ("auto-fetch" badge)
+- **Share page redesign** — glowing header, sharper game rows with bigger capsule art and an auto-fetch counter in the toolbar
+
 ## ✨ What's new in 0.2.9
 
 - **Resume fixed for every source** — a paused download continues from its files again, no matter whether it started from Ryuu, Zaza, Hubcap or DepotBox; the Lua and depot keys survive the pause

@@ -306,8 +306,8 @@ public sealed class DownloadsViewModel : ViewModelBase
         }
 
         job.State = DownloadJobState.Preparing;
-        job.Status = "Resuming — refreshing manifests first";
-        var progress = new Progress<string>(msg => System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
+        job.Status = "Resuming from existing files";
+        IProgress<string> progress = new Progress<string>(msg => System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
         {
             if (!GameDownloadProgressMessage.TryApply(job, msg)) job.Status = msg;
         }));
@@ -315,14 +315,22 @@ public sealed class DownloadsViewModel : ViewModelBase
         _manager.RegisterJob(job.Id, cts);
         try
         {
-            // A paused download can be days old. Steam may have new manifests in the meantime,
-            // so resume re-fetches them first — from the source the download started with, not
-            // always Zaza. A failed refresh keeps the cached set and resumes anyway.
-            var refetch = App.Services?.GetService(typeof(IManifestRefetchService)) as IManifestRefetchService;
-            if (refetch is not null)
-                await refetch.RefreshBeforeResumeAsync(job, progress, cts.Token, source);
-
+            // Continue from the cached manifests first — that is what "resume" means. Refreshing
+            // first would pick up newer manifests from the source and DepotDownloader would
+            // re-validate every file against them, i.e. start over. The source is only asked
+            // when there is nothing cached at all (fresh download of a resumed job).
             var result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress, cts.Token));
+            if (!result.Succeeded && result.Message.Contains("No cached manifests", StringComparison.OrdinalIgnoreCase))
+            {
+                var refetch = App.Services?.GetService(typeof(IManifestRefetchService)) as IManifestRefetchService;
+                if (refetch is not null)
+                {
+                    progress.Report("No cached manifests — fetching them from " + (DownloadModeSource(job)?.ToString() ?? "the source") + "…");
+                    await refetch.RefreshBeforeResumeAsync(job, progress, cts.Token, DownloadModeSource(job));
+                    result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress, cts.Token));
+                }
+            }
+
             job.State = result.Succeeded ? DownloadJobState.Completed : DownloadJobState.Failed;
             job.Status = result.Message;
             job.ClearLiveStats();

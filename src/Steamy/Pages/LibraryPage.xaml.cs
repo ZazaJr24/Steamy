@@ -364,9 +364,19 @@ public partial class LibraryPage : Page
         try
         {
             var archivePath = _customArchivePath;
+            // Resume continues from the cached manifests — no refresh first, otherwise the source
+            // hands out newer manifests and DepotDownloader re-downloads everything.
             var result = isResume
                 ? await Task.Run(() => ryuuService.ResumeDownloadAsync(item.AppId, targetFolder, progress, cts.Token))
                 : await Task.Run(() => ryuuService.DownloadGameAsync(item.AppId, targetFolder, source, progress, cts.Token));
+            if (isResume && !result.Succeeded && result.Message.Contains("No cached manifests", StringComparison.OrdinalIgnoreCase))
+            {
+                // Nothing cached (e.g. the app was reinstalled): fetch manifests once, then resume.
+                await Dispatcher.BeginInvoke(() => job.Status = "No cached manifests — fetching from " + source + "…");
+                await Task.Run(() => App.Services.GetRequiredService<IManifestSourceService>()
+                    .DownloadManifestsAsync(source, item.AppId, progress, cts.Token));
+                result = await Task.Run(() => ryuuService.ResumeDownloadAsync(item.AppId, targetFolder, progress, cts.Token));
+            }
 
             if (result.Succeeded && !string.IsNullOrEmpty(archivePath) && File.Exists(archivePath))
             {

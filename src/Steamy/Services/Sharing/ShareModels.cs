@@ -42,6 +42,13 @@ public sealed record ShareCandidate(
     public bool HasLua => Files.Any(file => file.EntryName.EndsWith(".lua", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
+    /// True for an installed game whose depot manifests Steam does not keep on disk (the cache
+    /// was cleaned or the game was installed through a tool that skips them). The game still
+    /// shows on the Share page; sharing it fetches the manifests from a source first.
+    /// </summary>
+    public bool NeedsManifestFetch => Source == ShareSourceKind.SteamLibrary && Files.Count == 0 && Depots.Count > 0;
+
+    /// <summary>
     /// Identity of this exact set of files. Steam names manifests after their manifest id, so a
     /// game update yields new names and therefore a new fingerprint, while re-scanning the same
     /// files yields the same one. That is what "already shared" is decided on.

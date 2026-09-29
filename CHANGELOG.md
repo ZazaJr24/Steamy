@@ -3,6 +3,17 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.3.0
+
+### Fixed
+- **Resume really continues.** The resume path refreshed manifests from the source first, and whenever the source had a newer manifest DepotDownloader re-validated every file against it — the download started over. Resume now continues from the cached manifests directly; the source is only asked when there is nothing cached at all.
+
+### New
+- **Share lists your whole Steam library.** Every installed game shows up, even when Steam no longer keeps its depot manifests on disk. Those games carry an "auto-fetch" badge; sharing them fetches the missing manifests from a manifest source (Zaza → Hubcap → DepotBox → Ryuu) and packs them like any other game. Save as ZIP fetches the same way and leaves out only what no source has.
+
+### Improved
+- **Share page redesign**: glowing header badge, sharper game rows with a bigger capsule and an auto-fetch badge, an auto-fetch counter in the toolbar and clearer action-bar hints.
+
 ## 0.2.9
 
 ### Fixed
