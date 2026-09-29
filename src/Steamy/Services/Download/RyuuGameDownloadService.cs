@@ -354,6 +354,16 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             var manifestFileName = $"{depot.DepotId}_{depot.ManifestId}.manifest";
             var manifestFilePath = Path.Combine(appWorkDir, manifestFileName);
 
+            // ManifestHub is a free, always-on manifest API (one request per depot). When a depot's
+            // .manifest is not on disk yet — a fresh job, or a source that only shipped the Lua — pull
+            // it from there so DepotDownloaderMod gets an exact manifest instead of guessing from Steam.
+            if (!File.Exists(manifestFilePath)
+                && !string.IsNullOrWhiteSpace(depot.ManifestId)
+                && depot.ManifestId.Any(char.IsAsciiDigit))
+            {
+                await TryFetchManifestHubManifestAsync(depot.DepotId, depot.ManifestId, manifestFilePath, progress, cancellationToken);
+            }
+
             var args = new List<string>
             {
                 "-app", appId.ToString(CultureInfo.InvariantCulture),
@@ -368,6 +378,9 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 args.Add(manifestFilePath);
             }
             DepotDownloaderArgumentBuilder.AddTransferOptions(args, settings.DownloadConnections, settings.UseLancache);
+            // -verify-all makes DepotDownloaderMod re-check the files already in the target folder and
+            // only download what is missing. Without it a resumed depot restarts from zero.
+            args.Add("-verify-all");
 
             try
             {
@@ -444,6 +457,48 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 $"{completedDepots}/{depots.Count} depots downloaded. Failed:\n{string.Join("\n", failedDepots)}");
 
         return new RyuuGameDownloadResult(true, $"All {depots.Count} depots downloaded to {targetFolder}.");
+    }
+
+    /// <summary>
+    /// ManifestHub (api.manifesthub2.filegear-sg.me) is a free, always-on manifest API: one request
+    /// per depot returns the exact .manifest file. The app asks for it whenever the manifest is not
+    /// already on disk, so a source that only ships the Lua still gets a precise manifest. No key is
+    /// required to be present — without one the normal flow runs unchanged.
+    /// </summary>
+    private async Task TryFetchManifestHubManifestAsync(
+        int depotId, string manifestId, string destPath, IProgress<string>? progress, CancellationToken ct)
+    {
+        string? key = null;
+        try { key = await _credentials.ReadAsync("manifesthub-api-key"); } catch { }
+        if (string.IsNullOrWhiteSpace(key)) key = _settings.Load().ManifestHubApiKey;
+        if (string.IsNullOrWhiteSpace(key)) return; // No key configured: stay quiet and use the normal flow.
+
+        try
+        {
+            progress?.Report($"Fetching manifest {manifestId} for depot {depotId} from ManifestHub...");
+            var url = "https://api.manifesthub2.filegear-sg.me/manifest"
+                + $"?apikey={Uri.EscapeDataString(key)}"
+                + $"&depotid={depotId.ToString(CultureInfo.InvariantCulture)}"
+                + $"&manifestid={Uri.EscapeDataString(manifestId)}";
+
+            using var resp = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!resp.IsSuccessStatusCode) return;
+
+            var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
+            // A JSON body means the API answered with an error, not a manifest.
+            if (bytes.Length < 8 || bytes[0] == (byte)'{' || bytes[0] == (byte)'[') return;
+
+            await File.WriteAllBytesAsync(destPath, bytes, ct);
+            _logging.Add(Models.LogLevel.Info, "GameDownload",
+                $"ManifestHub supplied manifest {manifestId} for depot {depotId}.", depotId);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            // Non-fatal: DepotDownloaderMod can still fetch the manifest from Steam itself.
+            _logging.Add(Models.LogLevel.Debug, "GameDownload",
+                $"ManifestHub manifest fetch for depot {depotId} failed: {ex.Message}", depotId);
+        }
     }
 
     private static readonly TimeSpan StallTimeout = TimeSpan.FromMinutes(3);
@@ -710,8 +765,6 @@ public static class GameDownloadProgressMessage
 
         job.State = Models.DownloadJobState.Downloading;
         var hasDepots = int.TryParse(parts[2], out var index) & int.TryParse(parts[3], out var count) && count > 0;
-        var overall = hasDepots ? ((index - 1) * 100.0 + percent) / count : percent;
-        job.Progress = Math.Max(job.Progress, overall);
 
         var depotDownloaded = parts[5];
         var depotTotal = parts[6];
@@ -774,6 +827,19 @@ public static class GameDownloadProgressMessage
             job.BytesPerSecond = double.TryParse(parts[10], NumberStyles.Float, CultureInfo.InvariantCulture, out var rate) ? rate : 0;
             job.EtaSeconds = double.TryParse(parts[11], NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) ? seconds : null;
         }
+
+        // The percentage uses the very same two numbers the size readout shows (downloaded / total),
+        // so the bar, the GB text and the % can never disagree. A byte-based value is preferred; the
+        // depot-averaged one is only a fallback while no total size is known yet.
+        var downloadedBytes = cumulativeBytes > 0 ? cumulativeBytes : DownloadFormat.TryParseSize(job.Downloaded);
+        var totalBytes = hasDepots && count > 1
+            ? job.DepotBytesCompleted + job.DepotTotalBytes
+            : DownloadFormat.TryParseSize(job.TotalSize);
+        double overall = downloadedBytes > 0 && totalBytes > 0
+            ? downloadedBytes * 100.0 / totalBytes
+            : hasDepots && count > 0 ? ((index - 1) * 100.0 + percent) / count
+            : percent;
+        job.Progress = Math.Max(job.Progress, Math.Clamp(overall, 0, 100));
         return true;
     }
 

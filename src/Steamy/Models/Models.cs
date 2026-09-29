@@ -573,6 +573,7 @@ public sealed class AppSettings : ObservableObject
     private string _hubcapBaseUrl = "https://hubcapmanifest.com";
     private string _hubcapApiKey = string.Empty;
     private string _depotBoxApiKey = string.Empty;
+    private string _manifestHubApiKey = string.Empty;
     private string _fixMirrorUrl = string.Empty;
 
     public string CreamApiProxy { get => _creamApiProxy; set => SetProperty(ref _creamApiProxy, value); }
@@ -582,6 +583,8 @@ public sealed class AppSettings : ObservableObject
     public string HubcapApiKey { get => _hubcapApiKey; set => SetProperty(ref _hubcapApiKey, value); }
     [JsonIgnore]
     public string DepotBoxApiKey { get => _depotBoxApiKey; set => SetProperty(ref _depotBoxApiKey, value); }
+    [JsonIgnore]
+    public string ManifestHubApiKey { get => _manifestHubApiKey; set => SetProperty(ref _manifestHubApiKey, value); }
     public string FixMirrorUrl { get => _fixMirrorUrl; set => SetProperty(ref _fixMirrorUrl, value); }
 
     [JsonIgnore]

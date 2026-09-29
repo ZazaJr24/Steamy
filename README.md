@@ -52,6 +52,12 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
+## ✨ What's new in 0.3.2
+
+- **Downloads resume instead of restarting** — DepotDownloader(Mod) now runs with `-verify-all`, so a paused download continues from the files already on disk
+- **Accurate progress** — the % now matches the GB readout (byte-based), so the bar, the size and the % never disagree
+- **ManifestHub + mirrors** — missing depot manifests are fetched from the free ManifestHub API, and GitHub downloads fall back across fast mirrors when a CDN is slow
+
 ## ✨ What's new in 0.3.1
 
 - **All your account games on the Share page** — "Load all account games" pulls your whole library from your public Steam profile; every game without local manifests gets shared with auto-fetched manifests

@@ -29,6 +29,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private const string RyuuAuthKeyName = "ryuu-auth-key";
     private const string HubcapApiKeyName = "hubcap-api-key";
     private const string DepotBoxApiKeyName = "depotbox-api-key";
+    private const string ManifestHubApiKeyName = "manifesthub-api-key";
     private const string MirrorTokenName = FixSource.TokenCredentialName;
     private const string ShareTokenName = ManifestShareService.TokenCredentialName;
 
@@ -45,6 +46,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _ryuuCredentialStatus = "Not configured";
     private string _hubcapCredentialStatus = "Not configured";
     private string _depotBoxCredentialStatus = "Not configured";
+    private string _manifestHubCredentialStatus = "Not configured";
     private string _mirrorCredentialStatus = "Not configured";
     private string _mirrorTestStatus = "Not checked yet.";
     private string _steamTestStatus = "Not checked yet.";
@@ -159,6 +161,9 @@ public sealed class SettingsViewModel : ViewModelBase
     /// <summary>Bound to the password box; only ever written into the encrypted store.</summary>
     public string DepotBoxApiKeyInput { get; set; } = string.Empty;
 
+    /// <summary>Free ManifestHub API key (valid 24 h) used to fetch exact depot manifests.</summary>
+    public string ManifestHubApiKeyInput { get; set; } = string.Empty;
+
     /// <summary>Bound to the password box; only ever written into the encrypted store.</summary>
     public string MirrorTokenInput { get; set; } = string.Empty;
 
@@ -193,6 +198,12 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         get => _depotBoxCredentialStatus;
         private set => SetProperty(ref _depotBoxCredentialStatus, value);
+    }
+
+    public string ManifestHubCredentialStatus
+    {
+        get => _manifestHubCredentialStatus;
+        private set => SetProperty(ref _manifestHubCredentialStatus, value);
     }
 
     public string MirrorCredentialStatus
@@ -534,6 +545,14 @@ public sealed class SettingsViewModel : ViewModelBase
             storedSomething = true;
         }
 
+        if (!string.IsNullOrWhiteSpace(ManifestHubApiKeyInput))
+        {
+            var trimmed = ManifestHubApiKeyInput.Trim();
+            try { await _credentials.SaveAsync(ManifestHubApiKeyName, trimmed); } catch { }
+            Settings.ManifestHubApiKey = trimmed;
+            storedSomething = true;
+        }
+
         if (!string.IsNullOrWhiteSpace(MirrorTokenInput))
         {
             await _credentials.SaveAsync(MirrorTokenName, MirrorTokenInput.Trim());
@@ -552,6 +571,7 @@ public sealed class SettingsViewModel : ViewModelBase
         RyuuAuthKeyInput = string.Empty;
         HubcapApiKeyInput = string.Empty;
         DepotBoxApiKeyInput = string.Empty;
+        ManifestHubApiKeyInput = string.Empty;
         MirrorTokenInput = string.Empty;
         ShareTokenInput = string.Empty;
         CredentialInputsCleared?.Invoke(this, EventArgs.Empty);
@@ -571,17 +591,19 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public async Task RefreshCredentialStatusAsync()
     {
-        string? steam = null, ryuu = null, hubcap = null, depotBox = null, mirror = null;
+        string? steam = null, ryuu = null, hubcap = null, depotBox = null, manifestHub = null, mirror = null;
         try { steam = await _credentials.ReadAsync(SteamApiKeyName); } catch { }
         try { ryuu = await _credentials.ReadAsync(RyuuAuthKeyName); } catch { }
         try { hubcap = await _credentials.ReadAsync(HubcapApiKeyName); } catch { }
         try { depotBox = await _credentials.ReadAsync(DepotBoxApiKeyName); } catch { }
+        try { manifestHub = await _credentials.ReadAsync(ManifestHubApiKeyName); } catch { }
         try { mirror = await _credentials.ReadAsync(MirrorTokenName); } catch { }
 
         SteamCredentialStatus = DescribeCredential(steam);
         RyuuCredentialStatus = DescribeCredential(ryuu);
         HubcapCredentialStatus = DescribeCredential(hubcap, Settings.HubcapApiKey);
         DepotBoxCredentialStatus = DescribeCredential(depotBox, Settings.DepotBoxApiKey);
+        ManifestHubCredentialStatus = DescribeCredential(manifestHub, Settings.ManifestHubApiKey);
         MirrorCredentialStatus = DescribeCredential(mirror);
 
         static string DescribeCredential(string? value, string? fallback = null)
@@ -600,12 +622,14 @@ public sealed class SettingsViewModel : ViewModelBase
         try { await _credentials.DeleteAsync(RyuuAuthKeyName); } catch { }
         try { await _credentials.DeleteAsync(HubcapApiKeyName); } catch { }
         try { await _credentials.DeleteAsync(DepotBoxApiKeyName); } catch { }
+        try { await _credentials.DeleteAsync(ManifestHubApiKeyName); } catch { }
         try { await _credentials.DeleteAsync(MirrorTokenName); } catch { }
 
         SteamApiKeyInput = string.Empty;
         RyuuAuthKeyInput = string.Empty;
         HubcapApiKeyInput = string.Empty;
         DepotBoxApiKeyInput = string.Empty;
+        ManifestHubApiKeyInput = string.Empty;
         MirrorTokenInput = string.Empty;
         CredentialInputsCleared?.Invoke(this, EventArgs.Empty);
 

@@ -711,19 +711,32 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             progress?.Report($"Downloading {file.Name}...");
             try
             {
-                using var resp = await _httpClient.GetAsync(file.DownloadUrl, ct);
-                if (!resp.IsSuccessStatusCode) continue;
+                // Try the primary CDN first, then the mirrors. A slow or blocked host no longer
+                // fails or crawls the download — it just moves on to the next one.
+                byte[]? payload = null;
+                foreach (var url in RawUrlCandidates(file.DownloadUrl))
+                {
+                    try
+                    {
+                        using var resp = await _httpClient.GetAsync(url, ct);
+                        if (!resp.IsSuccessStatusCode) continue;
+                        payload = await resp.Content.ReadAsByteArrayAsync(ct);
+                        if (payload.Length > 0) break;
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch { }
+                }
+
+                if (payload is null) continue;
 
                 if (ext == ".lua")
                 {
-                    luaContent = await resp.Content.ReadAsStringAsync(ct);
+                    luaContent = System.Text.Encoding.UTF8.GetString(payload).TrimStart('\uFEFF');
                     await File.WriteAllTextAsync(Path.Combine(appWorkDir, file.Name), luaContent, ct);
                 }
                 else
                 {
-                    var destPath = Path.Combine(appWorkDir, file.Name);
-                    await using var fs = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
-                    await resp.Content.CopyToAsync(fs, ct);
+                    await File.WriteAllBytesAsync(Path.Combine(appWorkDir, file.Name), payload, ct);
                 }
                 downloadedCount++;
             }
@@ -738,6 +751,31 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             $"Downloaded {downloadedCount} file(s) from {sourceName} for App {appId}.", appId);
 
         return new ManifestDownloadResult(true, $"Downloaded from {sourceName}.", luaContent, appWorkDir);
+    }
+
+    /// <summary>
+    /// One raw GitHub file can be fetched from several mirrors. The primary CDN is tried first and,
+    /// when it is slow or unreachable, the download continues from the next host. The first two
+    /// mirrors are the ones DepotDownloaderMod's own scripts fall back to and are the fastest for
+    /// users far from GitHub's CDN.
+    /// </summary>
+    private static IEnumerable<string> RawUrlCandidates(string downloadUrl)
+    {
+        yield return downloadUrl;
+
+        // raw.githubusercontent.com/{owner}/{repo}/{ref}/{path...}
+        var match = Regex.Match(downloadUrl,
+            @"^https?://raw\.githubusercontent\.com/(?<owner>[^/]+)/(?<repo>[^/]+)/(?<ref>[^/]+)/(?<path>.+)$",
+            RegexOptions.CultureInvariant);
+        if (!match.Success) yield break;
+
+        var slug = $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}";
+        var reference = match.Groups["ref"].Value;
+        var path = match.Groups["path"].Value;
+
+        yield return $"https://raw.gitmirror.com/{slug}/{reference}/{path}";
+        yield return $"https://cdn.jsdmirror.com/gh/{slug}@{reference}/{path}";
+        yield return $"https://raw.dgithub.xyz/{slug}/{reference}/{path}";
     }
 
     public void Dispose() => _httpClient.Dispose();

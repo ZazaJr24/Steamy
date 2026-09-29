@@ -649,6 +649,44 @@
         </StackPanel>
       </Border>
 
+      <!-- ===== ManifestHub =============================================================== -->
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn3}">
+        <Border Style="{StaticResource SectionChip}">
+          <ui:SymbolIcon Symbol="Cloud24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="ManifestHub" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
+        <TextBlock Text="Free exact depot manifests" Style="{StaticResource SectionHint}" />
+      </StackPanel>
+      <Border Style="{StaticResource SettingsCardLate}" CornerRadius="18" Padding="18" Margin="0,0,0,6">
+        <StackPanel>
+          <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
+            <StackPanel Orientation="Horizontal">
+              <ui:SymbolIcon Symbol="Info24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                             VerticalAlignment="Top" Margin="0,1,9,0" />
+              <TextBlock Text="ManifestHub hands out the exact .manifest for a depot over a free, always-on API (a key is valid for 24 h). Whenever a manifest is missing while downloading, Steamy asks ManifestHub for it before falling back to Steam." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+              <Border Style="{StaticResource RowIcon}">
+                <ui:SymbolIcon Symbol="Key24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="API key" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="{Binding ManifestHubCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
+              </StackPanel>
+            </StackPanel>
+            <PasswordBox x:Name="ManifestHubApiKeyBox" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="ManifestHubApiKeyBox_PasswordChanged"
+                         ToolTip="Free key from manifesthub2.filegear-sg.me (valid 24 h); encrypted with DPAPI, never exported." />
+          </Grid>
+          <TextBlock Text="Optional. Encrypted with DPAPI, never written into logs or exports. Empty means: keep the current key."
+                     Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="41,0,0,0" />
+        </StackPanel>
+      </Border>
+
       <!-- ===== DepotDownloader & downloads ============================================== -->
       <StackPanel Orientation="Horizontal" Margin="0,20,0,10" Style="{StaticResource RiseIn4}">
         <Border Style="{StaticResource SectionChip}">
