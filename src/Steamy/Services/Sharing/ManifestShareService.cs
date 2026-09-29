@@ -2,6 +2,8 @@ using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using System.Xml;
+using System.Xml.Linq;
 using Steamy.Models;
 
 namespace Steamy.Services;
@@ -287,7 +289,12 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
         var summary = packed.Count == 1 ? packed[0].Item.Name : $"{packed.Count} games";
         var text = $"Sent {summary} · {DownloadFormat.Bytes(totalBytes)} to {target}"
             + (upload.UsedContentsApi ? " (first share on an empty repository, sent file by file)." : " in one commit.");
-        if (skipped.Count > 0) text += $" Skipped: {string.Join(", ", skipped)}.";
+        if (skipped.Count > 0)
+        {
+            // A whole-library share can skip hundreds of games; the result line stays readable.
+            text += $" Skipped {skipped.Count}: {string.Join(", ", skipped.Take(3))}";
+            text += skipped.Count > 3 ? $" and {skipped.Count - 3} more." : ".";
+        }
 
         _logging.Add(LogLevel.Info, "Sharing", $"Shared {packed.Count} app(s) to {target}: {upload.CommitSha}");
         progress?.Report(new ShareBatchProgress(1, "Done."));
@@ -315,18 +322,34 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
                 if (folder is null) continue;
 
                 var files = new List<ShareFile>();
+                var depots = new List<DepotManifestRef>();
                 var newest = DateTime.MinValue;
-                foreach (var path in Directory.EnumerateFiles(folder, "*.manifest"))
+                foreach (var path in Directory.EnumerateFiles(folder))
                 {
                     var info = new FileInfo(path);
                     if (!info.Exists) continue;
+                    var extension = info.Extension.Equals(".manifest", StringComparison.OrdinalIgnoreCase)
+                        || info.Extension.Equals(".lua", StringComparison.OrdinalIgnoreCase)
+                        || info.Extension.Equals(".key", StringComparison.OrdinalIgnoreCase)
+                        ? info.Extension : null;
+                    if (extension is null) continue;
+
                     files.Add(new ShareFile(info.FullName, info.Name, info.Length));
                     if (info.LastWriteTimeUtc > newest) newest = info.LastWriteTimeUtc;
+
+                    // Depot refs from the file name keep steamy.json complete even without a Lua.
+                    if (extension == ".manifest" && ManifestLibraryScanner.ParseManifestName(info.Name) is { } parsed)
+                        depots.Add(new DepotManifestRef(parsed.Depot, parsed.ManifestId, info.Length));
                 }
 
                 if (files.Count == 0) continue;
-                _logging.Add(LogLevel.Info, "Sharing", $"Fetched {files.Count} manifest(s) of App {item.AppId} from {source}.", item.AppId);
-                return item with { Files = files, LastModifiedUtc = newest == DateTime.MinValue ? item.LastModifiedUtc : newest };
+                _logging.Add(LogLevel.Info, "Sharing", $"Fetched {files.Count} file(s) of App {item.AppId} from {source}.", item.AppId);
+                return item with
+                {
+                    Files = files,
+                    Depots = depots.Count > 0 ? depots : item.Depots,
+                    LastModifiedUtc = newest == DateTime.MinValue ? item.LastModifiedUtc : newest
+                };
             }
             catch (OperationCanceledException)
             {

@@ -3,6 +3,16 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.3.1
+
+### New
+- **The whole account library on the Share page.** A new **Load all account games** button pulls every game of your Steam account from your public profile (no key, no login — only the SteamID the local client keeps). Every owned game that has no local manifests yet joins the list as an auto-fetch entry, so the page covers all your games — the installed ones, the ones you never installed and everything with a Lua.
+- Sharing an auto-fetch game reads the Lua from the source as well, so the pack carries depot ids, manifest ids and keys instead of bare manifest files.
+- The share result line caps the skipped list at three names instead of printing hundreds.
+
+### Fixed
+- The account library requires your Steam **game details** to be public; a clear message says so when the profile keeps them private.
+
 ## 0.3.0
 
 ### Fixed

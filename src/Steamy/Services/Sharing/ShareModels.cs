@@ -42,11 +42,11 @@ public sealed record ShareCandidate(
     public bool HasLua => Files.Any(file => file.EntryName.EndsWith(".lua", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// True for an installed game whose depot manifests Steam does not keep on disk (the cache
-    /// was cleaned or the game was installed through a tool that skips them). The game still
-    /// shows on the Share page; sharing it fetches the manifests from a source first.
+    /// True for a game with nothing local to pack yet: an installed game whose depot manifests
+    /// Steam does not keep on disk, or an owned game the user has but never installed. The game
+    /// still shows on the Share page; sharing it fetches the manifests from a source first.
     /// </summary>
-    public bool NeedsManifestFetch => Source == ShareSourceKind.SteamLibrary && Files.Count == 0 && Depots.Count > 0;
+    public bool NeedsManifestFetch => Files.Count == 0 && !HasLua;
 
     /// <summary>
     /// Identity of this exact set of files. Steam names manifests after their manifest id, so a

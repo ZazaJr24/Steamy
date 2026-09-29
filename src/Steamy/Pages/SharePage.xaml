@@ -125,6 +125,7 @@
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
@@ -151,13 +152,28 @@
       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
         <ui:ProgressRing Width="18" Height="18" Margin="0,0,14,0" IsIndeterminate="True"
                          Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}" />
+        <ui:Button Content="Load all account games" Appearance="Primary" Icon="{ui:SymbolIcon Games24}"
+                   Margin="0,0,8,0" Command="{Binding OwnedGamesCommand}"
+                   ToolTip="Loads every game of your Steam account from your public profile — installed or not. Sharing a game without local manifests fetches them automatically."
+                   Visibility="{Binding OwnedLoaded, Converter={StaticResource InverseBoolToVis}}" />
         <ui:Button Content="Rescan" Appearance="Secondary" Icon="{ui:SymbolIcon ArrowClockwise24}"
                    Command="{Binding RescanCommand}" />
       </StackPanel>
     </Grid>
 
+    <!-- Account library status -->
+    <Border Grid.Row="1" Padding="14,9" Margin="0,0,0,10" CornerRadius="12"
+            Background="{DynamicResource AccentSoftBrush}"
+            Visibility="{Binding IsLoadingOwned, Converter={StaticResource BoolToVis}}">
+      <StackPanel Orientation="Horizontal">
+        <ui:ProgressRing Width="14" Height="14" IsIndeterminate="True" VerticalAlignment="Center" />
+        <TextBlock Text="Loading your whole account library from Steam…" FontSize="12" FontWeight="SemiBold"
+                   Foreground="{DynamicResource AccentBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
+      </StackPanel>
+    </Border>
+
     <!-- Numbers -->
-    <UniformGrid Grid.Row="1" Columns="4" Margin="-7,0,-7,16" Style="{StaticResource EnterStyle2}">
+    <UniformGrid Grid.Row="2" Columns="4" Margin="-7,0,-7,16" Style="{StaticResource EnterStyle2}">
       <Border Style="{StaticResource CardStyle}" Margin="7,0" Padding="18,16">
         <Grid>
           <Grid.ColumnDefinitions>
@@ -240,7 +256,7 @@
     </UniformGrid>
 
     <!-- Toolbar -->
-    <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="10" Margin="0,0,0,12" CornerRadius="14">
+    <Border Grid.Row="3" Style="{StaticResource CardStyle}" Padding="10" Margin="0,0,0,12" CornerRadius="14">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" MaxWidth="360" />
@@ -279,7 +295,7 @@
     </Border>
 
     <!-- List -->
-    <Border Grid.Row="3" Style="{StaticResource CardStyle}" Padding="8" Margin="0,0,0,12">
+    <Border Grid.Row="4" Style="{StaticResource CardStyle}" Padding="8" Margin="0,0,0,12">
       <Grid>
         <ListBox ItemsSource="{Binding Items}"
                  SelectionMode="Multiple"
@@ -386,7 +402,7 @@
     </Border>
 
     <!-- Result -->
-    <Border Grid.Row="4" Style="{StaticResource ResultBanner}" Margin="0,0,0,12"
+    <Border Grid.Row="5" Style="{StaticResource ResultBanner}" Margin="0,0,0,12"
             Visibility="{Binding HasResult, Converter={StaticResource BoolToVis}}">
       <Grid>
         <Grid.ColumnDefinitions>
@@ -420,7 +436,7 @@
     </Border>
 
     <!-- Action bar -->
-    <Border Grid.Row="5" Style="{StaticResource CardStyle}" Padding="18,14">
+    <Border Grid.Row="6" Style="{StaticResource CardStyle}" Padding="18,14">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" />
