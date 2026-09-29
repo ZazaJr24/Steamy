@@ -3,6 +3,16 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.3.2
+
+### Fixed
+- **Downloads resume instead of starting over.** DepotDownloader(Mod) is now started with `-verify-all` (the same flag its own scripts use), so it re-validates the files already on disk and only downloads what is missing. A paused or interrupted download continues where it stopped.
+- **Progress % matches the GB readout.** The percentage used to be averaged over the number of depots (a 3.91 GB / 22 GB download could show 1.4 %). It is now byte-based and uses the very same two numbers as the size text, so the bar, the GB figure and the % always agree.
+
+### New
+- **ManifestHub as a manifest source.** Steamy now asks the free, always-on ManifestHub API for the exact `.manifest` of any depot that is not on disk yet, before falling back to Steam. Add your free 24 h API key under Settings → ManifestHub.
+- **Mirrors for the GitHub manifest source.** File downloads fall back across two fast mirrors (raw.gitmirror.com, cdn.jsdmirror.com, raw.dgithub.xyz) when the primary CDN is slow or blocked, so downloads stay stable and quick.
+
 ## 0.3.1
 
 ### New

@@ -188,6 +188,11 @@ public static class DepotDownloaderArgumentBuilder
 
         AddTransferOptions(arguments, request.MaxDownloads, request.UseLancache);
 
+        // DepotDownloaderMod's own scripts always pass -verify-all. It re-validates the files that
+        // are already on disk and only fetches what is missing or wrong, which is exactly what makes
+        // a resumed download continue where it stopped instead of starting over.
+        arguments.Add("-verify-all");
+
         var workingDirectory = string.IsNullOrWhiteSpace(request.WorkingDirectory)
             ? Path.GetFullPath(request.TargetFolder)
             : Path.GetFullPath(request.WorkingDirectory);

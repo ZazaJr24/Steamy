@@ -29,6 +29,7 @@ public partial class SettingsPage : Page
         RyuuAuthKeyBox.Clear();
         HubcapApiKeyBox.Clear();
         DepotBoxApiKeyBox.Clear();
+        ManifestHubApiKeyBox.Clear();
         MirrorTokenBox.Clear();
         ShareTokenBox.Clear();
     }
@@ -100,6 +101,12 @@ public partial class SettingsPage : Page
     {
         if (sender is PasswordBox passwordBox)
             CredentialTyped(passwordBox, "DepotBox API key", value => ViewModel.DepotBoxApiKeyInput = value);
+    }
+
+    private void ManifestHubApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox passwordBox)
+            CredentialTyped(passwordBox, "ManifestHub API key", value => ViewModel.ManifestHubApiKeyInput = value);
     }
 
     private void MirrorTokenBox_PasswordChanged(object sender, RoutedEventArgs e)
