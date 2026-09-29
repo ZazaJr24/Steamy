@@ -247,13 +247,39 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         if (ddPath is null)
             return new RyuuGameDownloadResult(false, "Could not find DepotDownloaderMod.");
 
-        var appWorkDir = Path.Combine(_workFolder, appId.ToString(CultureInfo.InvariantCulture));
-        if (!Directory.Exists(appWorkDir))
+        var appWorkDirs = FindManifestWorkDirs(appId).Where(Directory.Exists).ToList();
+        if (appWorkDirs.Count == 0)
             return new RyuuGameDownloadResult(false, "No cached manifests found — start a fresh download.");
 
-        var depots = BuildDepotsFromDirectory(string.Empty, appWorkDir);
-        if (depots.Count == 0)
+        // The Lua carries the depot keys. Without it every encrypted depot fails on resume,
+        // so it is read even when the manifests themselves are already on disk.
+        string? luaContent = null;
+        foreach (var dir in appWorkDirs)
+        {
+            luaContent = TryReadLua(dir, appId);
+            if (luaContent is not null) break;
+        }
+
+        // Depots from the Lua first (they carry the keys), then depots reconstructed from the
+        // manifest files of every work folder, so a resume finds everything the original
+        // download had — no matter which source it came from.
+        var merged = new Dictionary<int, RyuuDepotInfo>();
+        if (luaContent is not null)
+            foreach (var depot in ParseLua(luaContent)) merged.TryAdd(depot.DepotId, depot);
+
+        foreach (var dir in appWorkDirs)
+            foreach (var depot in BuildDepotsFromDirectory(luaContent ?? string.Empty, dir))
+                merged.TryAdd(depot.DepotId, depot);
+
+        if (merged.Count == 0)
             return new RyuuGameDownloadResult(false, "No cached depots found — start a fresh download.");
+
+        var depots = merged.Values.ToList();
+        var appWorkDir = appWorkDirs.FirstOrDefault(dir => TryReadLua(dir, appId) is not null)
+            ?? appWorkDirs.OrderByDescending(dir => Directory.GetFiles(dir, "*.manifest").Length).First();
+
+        // Keep the keys next to the manifests so the -depotkeys file matches what is passed.
+        await WriteDepotKeysAsync(appWorkDir, appId, depots, cancellationToken);
 
         _logging.Add(Models.LogLevel.Info, "GameDownload",
             $"Resuming with {depots.Count} cached depot(s) for App {appId}.", appId);
@@ -261,6 +287,50 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
 
         Directory.CreateDirectory(targetFolder);
         return await RunDepotDownloaderModAsync(ddPath, appId, depots, appWorkDir, targetFolder, progress, cancellationToken);
+    }
+
+    /// <summary>
+    /// Every folder a download may have left its manifests in: Ryuu's own work directory and the
+    /// shared manifest work directory with one sub-folder per source (Zaza, Hubcap, DepotBox).
+    /// A download resumed through a different source than it was started with still finds its data.
+    /// </summary>
+    private IEnumerable<string> FindManifestWorkDirs(int appId)
+    {
+        var app = appId.ToString(CultureInfo.InvariantCulture);
+        yield return Path.Combine(_workFolder, app);
+
+        var manifestRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Steamy", "manifest-workdir");
+        if (!Directory.Exists(manifestRoot)) yield break;
+
+        foreach (var sourceDir in Directory.EnumerateDirectories(manifestRoot))
+            yield return Path.Combine(sourceDir, app);
+        yield return Path.Combine(manifestRoot, app);
+    }
+
+    private static string? TryReadLua(string folder, int appId)
+    {
+        try
+        {
+            var direct = Path.Combine(folder, $"{appId}.lua");
+            if (File.Exists(direct))
+            {
+                var text = File.ReadAllText(direct);
+                if (!string.IsNullOrWhiteSpace(text)) return text;
+            }
+
+            foreach (var path in Directory.EnumerateFiles(folder, "*.lua"))
+            {
+                var text = File.ReadAllText(path);
+                if (!string.IsNullOrWhiteSpace(text)) return text;
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+        }
+
+        return null;
     }
 
     private async Task<RyuuGameDownloadResult> RunDepotDownloaderModAsync(
