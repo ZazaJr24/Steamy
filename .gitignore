@@ -11,6 +11,8 @@ publish/
 # Local probes and generated diagnostics
 .probe-*/
 *.log
+__pycache__/
+*.pyc
 
 # Local archives and temporary exports
 *.7z
