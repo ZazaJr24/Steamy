@@ -34,7 +34,7 @@
                         IsBackButtonVisible="Collapsed"
                         IsPaneToggleVisible="True"
                         IsFooterSeparatorVisible="True"
-                        PaneTitle="Steamy"
+                        PaneTitle=""
                         Transition="None"
                         IsPaneOpen="True"
                         Background="{DynamicResource SidebarBackgroundBrush}">

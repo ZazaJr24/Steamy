@@ -280,17 +280,18 @@ public static class SteamCatalogQuery
         string? searchText,
         string? typeFilter,
         string? sortOption,
-        LibraryNsfwScope nsfwScope = LibraryNsfwScope.Hide)
+        LibraryNsfwScope nsfwScope = LibraryNsfwScope.Hide,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(items);
 
         var search = searchText?.Trim() ?? string.Empty;
-        IEnumerable<SteamCatalogItem> query = items;
-        if (search.Length > 0)
-        {            query = query.Where(item =>
-                item.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
-                || item.AppId.ToString().Contains(search, StringComparison.OrdinalIgnoreCase));
-        }
+        var words = SearchTerms(search);
+        IEnumerable<SteamCatalogItem> query = items.Where(item =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return search.Length == 0 || MatchesSearch(item.Name, item.AppId, search, words);
+        });
 
         if (nsfwScope == LibraryNsfwScope.Hide)
             query = query.Where(item => !item.Nsfw);
@@ -321,6 +322,21 @@ public static class SteamCatalogQuery
                 .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
         };
     }
+    public static string[] SearchTerms(string search) => search.All(char.IsDigit)
+        ? Array.Empty<string>()
+        : search.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    public static bool MatchesSearch(string name, int appId, string search, string[]? words = null)
+    {
+        words ??= SearchTerms(search);
+        if (words.Length == 0) return name.Contains(search, StringComparison.OrdinalIgnoreCase)
+            || appId.ToString(System.Globalization.CultureInfo.InvariantCulture).Contains(search, StringComparison.Ordinal);
+        foreach (var word in words)
+            if (System.Globalization.CultureInfo.InvariantCulture.CompareInfo.IndexOf(name, word,
+                System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreNonSpace) < 0) return false;
+        return true;
+    }
+
 }
 
 public static class PopularityLookup

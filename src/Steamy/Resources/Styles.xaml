@@ -15,7 +15,7 @@
 
   <!-- Core typography -->
   <Style x:Key="PageTitleStyle" TargetType="TextBlock">
-    <Setter Property="FontSize" Value="32" />
+    <Setter Property="FontSize" Value="28" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="Margin" Value="0,0,0,6" />

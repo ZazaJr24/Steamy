@@ -16,31 +16,25 @@
           <ControlTemplate TargetType="Button">
             <Grid x:Name="Card">
               <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
-              <Border Background="{Binding CoverColor}" CornerRadius="16" />
-              <Border CornerRadius="16" RenderOptions.BitmapScalingMode="HighQuality">
-                <Border.Background><ImageBrush ImageSource="{Binding HeaderImage}" Stretch="UniformToFill" /></Border.Background>
-              </Border>
-              <Border CornerRadius="16">
-                <Border.Background>
-                  <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                    <GradientStop Color="#00090D14" Offset="0.1" />
-                    <GradientStop Color="#40090D14" Offset="0.45" />
-                    <GradientStop Color="#F0090D14" Offset="1" />
-                  </LinearGradientBrush>
-                </Border.Background>
-              </Border>
-              <StackPanel Margin="15,12" VerticalAlignment="Bottom">
-                <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding Size}" Foreground="#BFCDDA" FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+              <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+              <Grid>
+                <Border CornerRadius="12" Background="{Binding CoverColor}" />
+                <Border CornerRadius="12" RenderOptions.BitmapScalingMode="HighQuality">
+                  <Border.Background><ImageBrush ImageSource="{Binding HeaderImage}" Stretch="UniformToFill" /></Border.Background>
+                </Border>
+                <Border x:Name="Ring" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5" CornerRadius="12" Opacity="0" />
+              </Grid>
+              <StackPanel Grid.Row="1" Margin="0,10,0,0">
+                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Size}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
               </StackPanel>
-              <Border x:Name="Ring" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5" CornerRadius="16" Opacity="0" />
             </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Opacity" Value="1" /></Trigger>
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter TargetName="Ring" Property="Opacity" Value="1" />
                 <Trigger.EnterActions><BeginStoryboard><Storyboard>
-                  <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="-3" Duration="{StaticResource HoverAnimationDuration}" />
+                  <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="-2" Duration="{StaticResource HoverAnimationDuration}" />
                 </Storyboard></BeginStoryboard></Trigger.EnterActions>
                 <Trigger.ExitActions><BeginStoryboard><Storyboard>
                   <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="{StaticResource HoverAnimationDuration}" />
@@ -59,136 +53,139 @@
     </Style>
   </Page.Resources>
 
-  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" controls:SmoothScroll.Enabled="True" Padding="28,18,28,36">
-    <StackPanel MaxWidth="1600">
-      <Grid Margin="0,0,0,22">
+  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" controls:SmoothScroll.Enabled="True" Padding="28,22,28,32">
+    <StackPanel MaxWidth="1440">
+      <Grid Margin="0,0,0,24">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <TextBlock Text="Home" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-        </StackPanel>
+        <TextBlock Text="Overview" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
         <ui:TextBox x:Name="DashboardSearch" Grid.Column="1" Width="340" Height="38"
-                    PlaceholderText="Search games or App ID…" Icon="{ui:SymbolIcon Search24}"
-                    KeyDown="DashboardSearch_KeyDown" ToolTip="Press Enter to search Games" />
-        <ui:Button Grid.Column="2" Appearance="Transparent" Icon="{ui:SymbolIcon ArrowSync24}" Margin="12,0,0,0"
-                   Command="{Binding RefreshCommand}" ToolTip="Refresh your library" AutomationProperties.Name="Refresh library" />
+                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                    PlaceholderText="Find a game or App ID" Icon="{ui:SymbolIcon Search24}"
+                    KeyDown="DashboardSearch_KeyDown" ToolTip="Type to search. Enter opens Games; Escape clears the search." />
+        <ui:Button Grid.Column="2" Appearance="Transparent" Icon="{ui:SymbolIcon ArrowSync24}" Margin="10,0,0,0"
+                   Command="{Binding RefreshCommand}" ToolTip="Refresh library" AutomationProperties.Name="Refresh library" />
       </Grid>
 
-      <!-- Art fills the whole hero; overlays keep the text readable for every game. -->
-      <Grid x:Name="DashboardHero" Height="450" Margin="0,0,0,28" DataContext="{Binding FeaturedGame}">
-        <Border CornerRadius="24">
-          <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#172B42" /><GradientStop Color="#1B2638" Offset="0.5" /><GradientStop Color="#0C111B" Offset="1" />
-          </LinearGradientBrush></Border.Background>
-        </Border>
-        <Border CornerRadius="24" RenderOptions.BitmapScalingMode="HighQuality">
-          <Border.Background><ImageBrush ImageSource="{Binding HeroArtwork}" Stretch="UniformToFill" AlignmentX="Center" AlignmentY="Center" /></Border.Background>
-        </Border>
-        <Border CornerRadius="24">
-          <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-            <GradientStop Color="#F5090E16" Offset="0" /><GradientStop Color="#BD090E16" Offset="0.28" />
-            <GradientStop Color="#28090E16" Offset="0.72" /><GradientStop Color="#00090E16" Offset="1" />
-          </LinearGradientBrush></Border.Background>
-        </Border>
-        <Border CornerRadius="24">
-          <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#00090E16" Offset="0.35" /><GradientStop Color="#E8090E16" Offset="1" />
-          </LinearGradientBrush></Border.Background>
-        </Border>
-        <Border CornerRadius="24" BorderBrush="#28FFFFFF" BorderThickness="1" IsHitTestVisible="False" />
-        <StackPanel x:Name="HeroCopy" Margin="36,32,36,38" VerticalAlignment="Bottom" HorizontalAlignment="Left" MaxWidth="480">
-          <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
-            <ui:SymbolIcon Symbol="Sparkle24" FontSize="15" Foreground="#90BEFF" Margin="0,0,8,0" />
-            <TextBlock Text="FEATURED" Foreground="#B5D4FF" FontSize="11" FontWeight="Bold" />
-          </StackPanel>
-          <TextBlock x:Name="HeroTitle" Text="{Binding Game.Name}" Foreground="White" FontSize="46" FontWeight="Bold" TextWrapping="Wrap" LineHeight="51" />
-          <TextBlock Text="{Binding Description}" Foreground="#CFD8E3" FontSize="14" LineHeight="23" TextWrapping="Wrap" Margin="0,16,0,0" />
-          <TextBlock Text="{Binding Genres}" Foreground="#A7B9CF" FontSize="11.5" Margin="0,16,0,0" />
-          <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
-            <ui:Button Content="View game" Icon="{ui:SymbolIcon Games24}" Appearance="Primary" Padding="22,12" MinHeight="46"
-                       Command="{Binding DataContext.ViewFeaturedCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
-            <TextBlock Text="Discover in Games" Foreground="#ABBDCF" FontSize="11.5" VerticalAlignment="Center" Margin="16,0,0,0" />
+      <Border CornerRadius="14" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}" Padding="12" Margin="0,0,0,24"
+              Visibility="{Binding HasSearchQuery, Converter={StaticResource BoolToVis}}">
+        <StackPanel>
+          <TextBlock Text="{Binding SearchStatus}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="8,2,0,8" AutomationProperties.LiveSetting="Polite" />
+          <ItemsControl x:Name="SearchMatches" ItemsSource="{Binding SearchResults}">
+            <ItemsControl.ItemTemplate><DataTemplate>
+              <ui:Button Appearance="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="10,7"
+                         CommandParameter="{Binding}" Command="{Binding DataContext.OpenSearchResultCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                <StackPanel>
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="{Binding AppLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,3,0,0" />
+                </StackPanel>
+              </ui:Button>
+            </DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <!-- Steamy's own composition: an editorial intro beside a compact artwork card. -->
+      <Grid x:Name="SpotlightGrid" Margin="0,0,0,32">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition x:Name="SpotlightGutter" Width="28" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <StackPanel x:Name="HeroCopy" VerticalAlignment="Center" MaxWidth="480" HorizontalAlignment="Left" Margin="0,12,0,12">
+          <TextBlock Text="{Binding Greeting}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" Margin="0,0,0,14" />
+          <TextBlock x:Name="HomeHeading" Text="One place.&#x0a;More play." FontSize="42" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" LineHeight="49" />
+          <TextBlock Text="Your games, downloads and tools. Ready when you are." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" LineHeight="21" TextWrapping="Wrap" Margin="0,14,0,22" />
+          <StackPanel Orientation="Horizontal">
+            <ui:Button Content="Open library" Appearance="Primary" Foreground="#0D131B" Padding="18,9" Command="{Binding NavigateLibraryCommand}" />
+            <ui:Button Content="Downloads" Appearance="Transparent" Margin="8,0,0,0" Command="{Binding NavigateDownloadsCommand}" />
           </StackPanel>
         </StackPanel>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,28,28"
-                    DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
-          <TextBlock Text="{Binding FeaturedPosition}" Foreground="#BAC8DA" FontSize="11" VerticalAlignment="Center" Margin="0,0,14,0" />
-          <ui:Button Icon="{ui:SymbolIcon ChevronLeft24}" Appearance="Secondary" Width="38" Height="38" Padding="0"
-                     Command="{Binding PreviousFeaturedCommand}" ToolTip="Previous featured game" AutomationProperties.Name="Previous featured game" />
-          <ui:Button Icon="{ui:SymbolIcon ChevronRight24}" Appearance="Secondary" Width="38" Height="38" Padding="0" Margin="8,0,0,0"
-                     Command="{Binding NextFeaturedCommand}" ToolTip="Next featured game" AutomationProperties.Name="Next featured game" />
-        </StackPanel>
+        <Border x:Name="DashboardHero" Grid.Column="2" Height="280" CornerRadius="16" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" DataContext="{Binding FeaturedGame}">
+          <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <Border CornerRadius="15,15,0,0" Background="#24354A" />
+            <Border CornerRadius="15,15,0,0" RenderOptions.BitmapScalingMode="HighQuality">
+              <Border.Background><ImageBrush ImageSource="{Binding HeroArtwork}" Stretch="UniformToFill" /></Border.Background>
+            </Border>
+            <Border CornerRadius="6" Background="#C90D131B" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14" Padding="8,4">
+              <TextBlock Text="IN THE SPOTLIGHT" Foreground="#DAE7F9" FontSize="9" FontWeight="SemiBold" />
+            </Border>
+            <Grid Grid.Row="1" Margin="16,13">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <StackPanel Margin="0,0,8,0">
+                <TextBlock Text="{Binding Game.Name}" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                <ui:Button Content="Explore game →" Appearance="Transparent" HorizontalAlignment="Left" Padding="0,5" FontSize="11" Foreground="{DynamicResource AccentBrush}"
+                           Command="{Binding DataContext.ViewFeaturedCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
+                <ui:Button Icon="{ui:SymbolIcon ChevronLeft24}" Appearance="Transparent" Padding="6" Command="{Binding PreviousFeaturedCommand}" AutomationProperties.Name="Previous spotlight" />
+                <ui:Button Icon="{ui:SymbolIcon ChevronRight24}" Appearance="Transparent" Padding="6" Command="{Binding NextFeaturedCommand}" AutomationProperties.Name="Next spotlight" />
+              </StackPanel>
+            </Grid>
+          </Grid>
+        </Border>
       </Grid>
 
       <StackPanel Visibility="{Binding HasRecentGames, Converter={StaticResource BoolToVis}}" Margin="0,0,0,28">
-        <Grid Margin="0,0,0,16">
-          <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="History24" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" /><TextBlock Text="Jump back in" Style="{StaticResource SectionTitle}" /></StackPanel>
-          <ui:Button Content="Your library" Appearance="Transparent" HorizontalAlignment="Right" Command="{Binding NavigateLibraryCommand}" Icon="{ui:SymbolIcon ChevronRight24}" />
+        <Grid Margin="0,0,0,14">
+          <TextBlock Text="Your library" Style="{StaticResource SectionTitle}" />
+          <ui:Button Content="See all →" Appearance="Transparent" HorizontalAlignment="Right" Command="{Binding NavigateLibraryCommand}" FontSize="12" />
         </Grid>
         <ItemsControl ItemsSource="{Binding RecentGames}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="210" MaxColumns="4" Spacing="16" CoverRatio="0.5" FooterHeight="0" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="200" MaxColumns="4" Spacing="18" CoverRatio="0.44" FooterHeight="44" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate><DataTemplate>
             <Button Tag="{Binding}" Click="GameCover_Click" Style="{StaticResource LandscapeGameCard}" ToolTip="{Binding Name}" />
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
       </StackPanel>
 
-      <StackPanel Margin="0,0,0,28">
-        <Grid Margin="0,0,0,16">
-          <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Sparkle24" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" /><TextBlock Text="Find your next adventure" Style="{StaticResource SectionTitle}" /></StackPanel>
-          <ui:Button Content="Browse all" Appearance="Transparent" HorizontalAlignment="Right" Command="{Binding NavigateLibraryCommand}" Icon="{ui:SymbolIcon ChevronRight24}" />
+      <StackPanel Margin="0,0,0,26">
+        <Grid Margin="0,0,0,12">
+          <TextBlock Text="Worth a look" Style="{StaticResource SectionTitle}" />
+          <ui:Button Content="Browse games →" Appearance="Transparent" HorizontalAlignment="Right" Command="{Binding NavigateLibraryCommand}" FontSize="12" />
         </Grid>
         <ItemsControl ItemsSource="{Binding DiscoverGames}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="175" MaxColumns="5" Spacing="16" CoverRatio="0.68" FooterHeight="0" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="240" MaxColumns="3" Spacing="14" CoverRatio="0" FooterHeight="78" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate><DataTemplate>
-            <Button DataContext="{Binding Game}" Tag="{Binding}" Click="GameCover_Click" Style="{StaticResource LandscapeGameCard}" ToolTip="{Binding Name}" />
+            <ui:Button DataContext="{Binding Game}" Tag="{Binding}" Click="GameCover_Click" Appearance="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="8">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="76" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <Border Height="48" CornerRadius="8">
+                  <Border.Background><ImageBrush ImageSource="{Binding HeaderImage}" Stretch="UniformToFill" /></Border.Background>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding AppIdLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" />
+                </StackPanel>
+              </Grid>
+            </ui:Button>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
-        <TextBlock Text="Discover games in the catalog. Source availability is checked when you select a game."
-                   Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,12,0,0" TextWrapping="Wrap" />
       </StackPanel>
 
-      <Border CornerRadius="16" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Padding="20,16" Margin="0,0,0,24"
-              Visibility="{Binding HasActiveJobs, Converter={StaticResource BoolToVis}}">
-        <StackPanel>
-          <Grid Margin="0,0,0,8">
-            <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="ArrowDownload24" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" /><TextBlock Text="Downloads" Style="{StaticResource SectionTitle}" /></StackPanel>
-            <ui:Button Content="Open queue" Appearance="Transparent" HorizontalAlignment="Right" Command="{Binding NavigateDownloadsCommand}" />
+      <StackPanel Visibility="{Binding HasActiveJobs, Converter={StaticResource BoolToVis}}">
+        <Border Height="1" Background="{DynamicResource BorderSubtleBrush}" Margin="0,0,0,16" />
+        <Grid Margin="0,0,0,8">
+          <TextBlock Text="In your queue" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+          <ui:Button Content="Open queue →" Appearance="Transparent" HorizontalAlignment="Right" Command="{Binding NavigateDownloadsCommand}" FontSize="11" />
+        </Grid>
+        <ItemsControl ItemsSource="{Binding ActiveJobs}"><ItemsControl.ItemTemplate><DataTemplate>
+          <Grid Margin="0,6,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,16,0">
+              <TextBlock Text="{Binding GameName}" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,7">
+                <TextBlock Text="{Binding StateLabel}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" />
+                <TextBlock Text="{Binding ProgressLabel}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="10,0,0,0" />
+              </StackPanel>
+              <controls:SmoothProgressBar SmoothValue="{Binding Progress, Mode=OneWay}" Minimum="0" Maximum="100" Height="2" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <ui:Button Content="Pause" Appearance="Transparent" Style="{StaticResource PauseButton}" CommandParameter="{Binding}" Command="{Binding DataContext.DownloadActions.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
+              <ui:Button Content="Resume" Appearance="Transparent" Style="{StaticResource ResumeButton}" CommandParameter="{Binding}" Command="{Binding DataContext.DownloadActions.ResumeCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
+              <ui:Button Content="Start" Appearance="Transparent" Style="{StaticResource StartButton}" CommandParameter="{Binding}" Command="{Binding DataContext.DownloadActions.StartCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
+            </StackPanel>
           </Grid>
-          <ItemsControl ItemsSource="{Binding ActiveJobs}"><ItemsControl.ItemTemplate><DataTemplate>
-            <Grid Margin="0,8,0,4">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="110" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <StackPanel Margin="0,0,18,0">
-                <TextBlock Text="{Binding GameName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding Status}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,4,0,6" TextTrimming="CharacterEllipsis" />
-                <controls:SmoothProgressBar SmoothValue="{Binding Progress, Mode=OneWay}" Minimum="0" Maximum="100" Height="3" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock Text="{Binding ProgressLabel}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" />
-                <TextBlock Text="{Binding SourceLabel}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="10" Margin="0,3,0,0" />
-              </StackPanel>
-              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:Button Content="Pause" Appearance="Transparent" Style="{StaticResource PauseButton}" CommandParameter="{Binding}" Command="{Binding DataContext.DownloadActions.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
-                <ui:Button Content="Resume" Appearance="Transparent" Style="{StaticResource ResumeButton}" CommandParameter="{Binding}" Command="{Binding DataContext.DownloadActions.ResumeCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
-                <ui:Button Content="Start" Appearance="Transparent" Style="{StaticResource StartButton}" CommandParameter="{Binding}" Command="{Binding DataContext.DownloadActions.StartCommand, RelativeSource={RelativeSource AncestorType=Page}}" />
-              </StackPanel>
-            </Grid>
-          </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
-        </StackPanel>
-      </Border>
-
-      <Grid>
-        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-        <StackPanel VerticalAlignment="Center">
-          <TextBlock Text="Explore free manifest sources" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-          <TextBlock Text="Sushi · Zaza · No API key needed" FontSize="11.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,5,0,0" />
-        </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-          <ui:Button Content="SushiTools" Appearance="Secondary" Command="{Binding ExploreSourceCommand}" CommandParameter="Sushi" Margin="12,0,8,0" />
-          <ui:Button Content="Zaza" Appearance="Transparent" Command="{Binding ExploreSourceCommand}" CommandParameter="Zaza" />
-        </StackPanel>
-      </Grid>
-      <TextBlock Text="{Binding LibraryNotice}" Visibility="{Binding ShowLibraryNotice, Converter={StaticResource BoolToVis}}"
-                 Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,22,0,0" />
+        </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+      </StackPanel>
     </StackPanel>
   </ScrollViewer>
 </Page>

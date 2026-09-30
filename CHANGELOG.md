@@ -3,6 +3,19 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.3.7
+
+### Improved
+- A distinct, minimal dashboard with an editorial introduction, compact spotlight card, game labels outside the artwork and quieter catalog suggestions.
+- Removed the free-source promotion and catalog disclaimer from the dashboard.
+- Simplified Settings, smaller shared page headings and less repeated sidebar branding.
+- Home search now shows live results from the cached catalog, supports name/App ID searches, Enter, Escape and keyboard navigation into results.
+
+### Fixed
+- Library search cancels outdated work as soon as the query changes; older results cannot replace newer input while it is being debounced.
+- Visible results update together, retain unchanged rows and reuse their artwork instead of rebuilding every card on each query.
+- Search handles accents and multiple words; query terms are prepared once per search rather than for every catalog entry.
+
 ## 0.3.6
 
 ### Improved

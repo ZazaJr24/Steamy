@@ -52,6 +52,12 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
+## ✨ What's new in 0.3.7
+
+- **A distinct, minimal Home** with a compact spotlight and quieter game suggestions.
+- **Smoother search** — live Home results, canceled outdated queries, retained game cards and accent-friendly name matching.
+- **Less visual clutter** in Settings and the sidebar; source promotion has been removed from Home.
+
 ## ✨ What's new in 0.3.6
 
 - **A new Home** — full-width game artwork, a featured carousel, landscape library cards and a curated discovery row.
