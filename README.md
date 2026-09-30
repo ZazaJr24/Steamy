@@ -52,6 +52,13 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
+## ✨ What's new in 0.3.5
+
+- **Downloads back at the bottom left**, a more compact dashboard and smoother Settings scrolling and search.
+- **Free SushiTools source**, by [sushi-dev55](https://github.com/sushi-dev55/sushitools-games-repo), with [community credits](https://discord.gg/sushitools).
+- **Source filters** in Games and Downloads; Sushi and Zaza require no API key.
+- **Less UI work** from cached settings, batched download output and background disk probing.
+
 ## ✨ What's new in 0.3.4
 
 - **Refreshed dashboard, downloads and settings** — consistent themes, quieter animations, settings categories and search, and a virtualized download history.

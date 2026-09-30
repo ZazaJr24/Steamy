@@ -334,7 +334,12 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         if (!Directory.Exists(manifestRoot)) yield break;
 
         foreach (var sourceDir in Directory.EnumerateDirectories(manifestRoot))
-            yield return Path.Combine(sourceDir, app);
+        {
+            var directory = Path.Combine(sourceDir, app);
+            yield return directory;
+            if (Directory.Exists(directory))
+                foreach (var package in Directory.EnumerateDirectories(directory, "pack-*")) yield return package;
+        }
         yield return Path.Combine(manifestRoot, app);
     }
 
@@ -788,7 +793,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
 /// </summary>
 public static class GameDownloadProgressMessage
 {
-    private const string Prefix = "PROGRESS|";
+    public const string Prefix = "PROGRESS|";
 
     public static string Format(int depotId, int depotIndex, int depotCount, double percent, DepotDownloaderProgress? snapshot, long cumulativeDownloadedBytes = 0) =>
         string.Join('|',

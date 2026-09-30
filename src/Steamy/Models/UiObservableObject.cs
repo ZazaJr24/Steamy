@@ -14,6 +14,9 @@ namespace Steamy.Models;
 /// </summary>
 public abstract class UiObservableObject : ObservableObject
 {
+    private readonly object _notificationGate = new();
+    private readonly HashSet<string?> _pendingProperties = new();
+    private bool _notificationQueued;
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {
         var application = Application.Current;
@@ -21,21 +24,40 @@ public abstract class UiObservableObject : ObservableObject
 
         if (dispatcher is not null && !dispatcher.HasShutdownStarted && !dispatcher.CheckAccess())
         {
+            lock (_notificationGate)
+            {
+                if (string.IsNullOrEmpty(e.PropertyName)) { _pendingProperties.Clear(); _pendingProperties.Add(null); }
+                else if (!_pendingProperties.Contains(null)) _pendingProperties.Add(e.PropertyName);
+                if (_notificationQueued) return;
+                _notificationQueued = true;
+            }
             try
             {
-                dispatcher.BeginInvoke(() => base.OnPropertyChanged(e));
+                dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
+                {
+                    string?[] properties;
+                    lock (_notificationGate)
+                    {
+                        properties = _pendingProperties.ToArray();
+                        _pendingProperties.Clear();
+                        _notificationQueued = false;
+                    }
+                    foreach (var property in properties) base.OnPropertyChanged(new PropertyChangedEventArgs(property));
+                }));
                 return;
             }
             catch (System.ComponentModel.Win32Exception)
             {
-                // Dispatcher is tearing down; fall through and notify inline.
+                // No binding callback is safe once the dispatcher is tearing down.
             }
             catch (InvalidOperationException)
             {
                 // Same: the dispatcher was shutting down between the check and the post.
             }
+            lock (_notificationGate) { _pendingProperties.Clear(); _notificationQueued = false; }
+            return;
         }
-
+        if (dispatcher is not null && dispatcher.HasShutdownStarted && !dispatcher.CheckAccess()) return;
         base.OnPropertyChanged(e);
     }
 }

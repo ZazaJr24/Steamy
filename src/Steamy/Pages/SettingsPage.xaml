@@ -101,9 +101,9 @@
         <Border CornerRadius="22" Background="{DynamicResource BrandWashBrush}" />
         <ui:SymbolIcon Symbol="Settings24" FontSize="100" Foreground="{DynamicResource AccentBrush}" Opacity="0.08"
                        IsHitTestVisible="False" HorizontalAlignment="Right" Margin="0,0,22,0" />
-        <StackPanel Margin="24,18">
+        <StackPanel Margin="22,14">
           <TextBlock Text="MAKE IT YOURS" Style="{StaticResource OverlineStyle}" Foreground="{DynamicResource AccentBrush}" />
-          <TextBlock Text="Settings" Style="{StaticResource DisplayTitleStyle}" Margin="0,2,0,0" />
+          <TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2,0,0" />
           <TextBlock Text="Your look. Your downloads. Your way to play." Style="{StaticResource BodyTextStyle}" Margin="0,4,0,0" />
         </StackPanel>
       </Grid>
@@ -131,8 +131,26 @@
 
     <Grid Grid.Row="2">
       <ScrollViewer x:Name="SettingsScrollViewer" Style="{StaticResource PageScrollHostStyle}"
+                    controls:SmoothScroll.Enabled="True"
                     HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="0,0,4,20">
         <StackPanel x:Name="SectionsPanel">
+          <Border Tag="services" Style="{StaticResource SettingsCard}" Margin="0,0,0,16">
+            <StackPanel>
+              <TextBlock Text="Free manifest sources" Style="{StaticResource SectionHeading}" />
+              <TextBlock Text="Sushi and Zaza work without an API key. Select the source when opening a game, or filter your library by source." Style="{StaticResource BodyTextStyle}" Margin="0,8,0,12" TextWrapping="Wrap" />
+              <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="12" Padding="14">
+                <StackPanel>
+                  <TextBlock Text="SushiTools · by sushi-dev55" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                  <TextBlock Text="Free repository of Lua metadata and depot manifests for DepotDownloaderMod." Style="{StaticResource CaptionStyle}" Margin="0,4,0,10" TextWrapping="Wrap" />
+                  <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap">
+                    <Hyperlink NavigateUri="https://github.com/sushi-dev55/sushitools-games-repo" RequestNavigate="SourceCredit_RequestNavigate">Sushi repository</Hyperlink>
+                    <Run Text=" · " />
+                    <Hyperlink NavigateUri="https://discord.gg/sushitools" RequestNavigate="SourceCredit_RequestNavigate">SushiTools community</Hyperlink>
+                  </TextBlock>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
           <StackPanel Tag="general" controls:EntranceMotion.Delay="0">
       <!-- ===== Appearance ============================================================== -->
       <WrapPanel Margin="0,8,0,12">

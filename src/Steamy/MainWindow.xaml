@@ -68,9 +68,6 @@
           <ui:NavigationViewItem Content="Games"
                                  Icon="{ui:SymbolIcon Apps24}"
                                  TargetPageType="{x:Type pages:LibraryPage}" />
-          <ui:NavigationViewItem Content="Downloads"
-                                 Icon="{ui:SymbolIcon ArrowDownload24}"
-                                 TargetPageType="{x:Type pages:DownloadsPage}" />
           <ui:NavigationViewItem Content="Share"
                                  Icon="{ui:SymbolIcon Share24}"
                                  TargetPageType="{x:Type pages:SharePage}" />
@@ -107,7 +104,9 @@
         </ui:NavigationView.MenuItems>
 
         <ui:NavigationView.FooterMenuItems>
-
+          <ui:NavigationViewItem Content="Downloads"
+                                 Icon="{ui:SymbolIcon ArrowDownload24}"
+                                 TargetPageType="{x:Type pages:DownloadsPage}" />
           <ui:NavigationViewItem Content="Settings"
                                  Icon="{ui:SymbolIcon Settings24}"
                                  TargetPageType="{x:Type pages:SettingsPage}" />

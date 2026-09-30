@@ -12,7 +12,8 @@ public enum ManifestSource
     Ryuu,
     Zaza,
     Hubcap,
-    DepotBox
+    DepotBox,
+    Sushi
 }
 
 public sealed record ManifestSourceInfo(
@@ -61,6 +62,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         new(ManifestSource.Zaza, "Zaza", "ZazaJr24 Game-Files-UpdateR on GitHub", "https://raw.githubusercontent.com/ZazaJr24/Game-Files-UpdateR/main/", RequiresAuthCode: false),
         new(ManifestSource.Hubcap, "Hubcap", "Hubcap Manifest API (requires API key)", "https://hubcapmanifest.com/", RequiresAuthCode: true),
         new(ManifestSource.DepotBox, "DepotBox", "DepotBox manifest generator (requires API key)", "https://depotbox.org/", RequiresAuthCode: true),
+        new(ManifestSource.Sushi, "Sushi", "Free manifests by sushi-dev55 · sushitools-games-repo · no API key", FreeManifestCatalogService.SushiUrl, RequiresAuthCode: false),
     };
 
     private readonly ISettingsService _settings;
@@ -68,6 +70,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     private readonly IRyuuSecureDownloadService _ryuuDownload;
     private readonly ILoggingService _logging;
     private readonly HttpClient _httpClient;
+    private readonly bool _ownsHttpClient;
     private readonly string _workFolder;
 
     public IReadOnlyList<ManifestSourceInfo> Sources => AllSources;
@@ -76,16 +79,17 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         ISettingsService settings,
         ISecureCredentialService credentials,
         IRyuuSecureDownloadService ryuuDownload,
-        ILoggingService logging)
+        ILoggingService logging, HttpClient? httpClient = null, string? workFolder = null)
     {
         _settings = settings;
         _credentials = credentials;
         _ryuuDownload = ryuuDownload;
         _logging = logging;
-        _httpClient = new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(15) };
+        _ownsHttpClient = httpClient is null;
+        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(15) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
 
-        _workFolder = Path.Combine(
+        _workFolder = workFolder ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Steamy",
             "manifest-workdir");
@@ -99,8 +103,26 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             ManifestSource.Zaza => await CheckGitHubAvailabilityAsync("ZazaJr24/Game-Files-UpdateR", appId, cancellationToken),
             ManifestSource.Hubcap => await CheckHubcapAvailabilityAsync(appId, cancellationToken),
             ManifestSource.DepotBox => await CheckDepotBoxAvailabilityAsync(appId, cancellationToken),
+            ManifestSource.Sushi => await CheckSushiAvailabilityAsync(appId, cancellationToken),
             _ => new ManifestAvailability(false, true, $"Unknown source: {source}")
         };
+    }
+
+    private async Task<ManifestAvailability> CheckSushiAvailabilityAsync(int appId, CancellationToken token)
+    {
+        if (appId <= 0) return new(false, true, "Choose a valid app ID.");
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(TimeSpan.FromSeconds(8));
+        try
+        {
+            using var response = await _httpClient.GetAsync($"https://api.github.com/repos/{FreeManifestCatalogService.SushiRepository}/contents/{appId}.zip?ref=main", HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode) return new(true, true, "Available on Sushi · free, no API key");
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return new(false, true, "This app is not available on Sushi.");
+            return new(true, false, "Sushi could not be checked right now — you can still try.");
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException)
+        { return new(true, false, "Sushi could not be reached right now — you can still try."); }
     }
 
     private async Task<ManifestAvailability> CheckRyuuAvailabilityAsync(CancellationToken ct)
@@ -160,8 +182,57 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
                 "ZazaJr24/Game-Files-UpdateR", appId, progress, cancellationToken),
             ManifestSource.Hubcap => await DownloadFromHubcapAsync(appId, progress, cancellationToken),
             ManifestSource.DepotBox => await DownloadFromDepotBoxAsync(appId, progress, cancellationToken),
+            ManifestSource.Sushi => await DownloadFromSushiAsync(appId, progress, cancellationToken),
             _ => new ManifestDownloadResult(false, $"Unknown source: {source}")
         };
+    }
+
+    private async Task<ManifestDownloadResult> DownloadFromSushiAsync(int appId, IProgress<string>? progress, CancellationToken token)
+    {
+        if (appId <= 0) return new(false, "Choose a valid app ID.");
+        var directory = Path.Combine(_workFolder, "sushi", appId.ToString(CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(directory);
+        var archive = Path.Combine(directory, $"{Guid.NewGuid():N}.zip");
+        var staging = Path.Combine(directory, Guid.NewGuid().ToString("N"));
+        try
+        {
+            progress?.Report("Downloading free Sushi manifests · credits: sushi-dev55 / SushiTools.");
+            var url = $"https://raw.githubusercontent.com/{FreeManifestCatalogService.SushiRepository}/main/{appId}.zip";
+            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode) return new(false, $"Sushi archive unavailable (HTTP {(int)response.StatusCode}).");
+            const long maximumBytes = 128L * 1024 * 1024;
+            if (response.Content.Headers.ContentLength > maximumBytes) return new(false, "Sushi archive exceeds the size limit.");
+            await using (var input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false))
+            await using (var output = File.Create(archive))
+            {
+                var buffer = new byte[81920];
+                long received = 0;
+                int read;
+                while ((read = await input.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
+                {
+                    received += read;
+                    if (received > maximumBytes) throw new InvalidDataException("Sushi archive exceeds the size limit.");
+                    await output.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
+                }
+            }
+            var (lua, files) = await ManifestArchiveReader.ExtractAsync(archive, staging, token).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(lua)) return new(false, "The Sushi archive has no Lua metadata for DepotDownloaderMod.");
+            token.ThrowIfCancellationRequested();
+            // Publish a whole coherent package at once. Another target for the same app cannot
+            // replace these manifests while DepotDownloaderMod copies its resume snapshot.
+            var published = Path.Combine(directory, "pack-" + Guid.NewGuid().ToString("N"));
+            Directory.Move(staging, published);
+            return new(true, $"Loaded {files} manifest files from Sushi · free.", lua, published);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or HttpRequestException or OperationCanceledException or UnauthorizedAccessException)
+        { return new(false, $"Sushi manifests could not be loaded: {exception.Message}"); }
+        finally
+        {
+            try { File.Delete(archive); if (Directory.Exists(staging)) Directory.Delete(staging, true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
     }
 
     private async Task<ManifestDownloadResult> DownloadFromRyuuAsync(
@@ -778,5 +849,5 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         yield return $"https://raw.dgithub.xyz/{slug}/{reference}/{path}";
     }
 
-    public void Dispose() => _httpClient.Dispose();
+    public void Dispose() { if (_ownsHttpClient) _httpClient.Dispose(); }
 }

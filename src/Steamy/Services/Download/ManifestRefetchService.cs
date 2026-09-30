@@ -58,6 +58,8 @@ public sealed class ManifestRefetchService : IManifestRefetchService
         {
             directories.Add(Path.Combine(manifestRoot, app));
             directories.AddRange(Directory.EnumerateDirectories(manifestRoot).Select(folder => Path.Combine(folder, app)));
+            foreach (var directory in directories.ToArray())
+                if (Directory.Exists(directory)) directories.AddRange(Directory.EnumerateDirectories(directory, "pack-*"));
         }
         if (directories.Any(folder => Directory.Exists(folder)
             && (Directory.EnumerateFiles(folder, "*.lua").Any()
@@ -103,7 +105,7 @@ public sealed class ManifestRefetchService : IManifestRefetchService
     private static ManifestSource? ReadSourceFromMode(string? mode)
     {
         if (string.IsNullOrWhiteSpace(mode)) return null;
-        foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox" })
+        foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox", "Sushi" })
         {
             if (mode.Contains(name, StringComparison.OrdinalIgnoreCase)
                 && Enum.TryParse<ManifestSource>(name, out var source))

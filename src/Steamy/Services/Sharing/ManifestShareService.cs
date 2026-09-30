@@ -311,7 +311,7 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
     {
         if (_fetcher is null) return null;
 
-        foreach (var source in new[] { ManifestSource.Zaza, ManifestSource.Hubcap, ManifestSource.DepotBox, ManifestSource.Ryuu })
+        foreach (var source in new[] { ManifestSource.Zaza, ManifestSource.Sushi, ManifestSource.Hubcap, ManifestSource.DepotBox, ManifestSource.Ryuu })
         {
             cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(new ShareBatchProgress(0, $"Fetching manifests for {item.Name} from {source}…"));

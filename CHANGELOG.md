@@ -3,6 +3,23 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.3.5
+
+### Improved
+- Downloads is back at the bottom of the left navigation, above Settings.
+- More compact dashboard with a redesigned hero and direct discovery buttons for free Sushi and Zaza sources.
+- Smooth mouse-wheel scrolling, shorter category transitions and debounced search in Settings; Windows reduced-motion preferences are respected.
+- Game and download lists can be filtered by manifest source, alongside existing search and status/type filters.
+
+### Added
+- SushiTools by sushi-dev55 as a free manifest source for DepotDownloaderMod; no API key is required.
+- Cached complete GitHub source indexes, bounded ZIP metadata extraction, author/repository/community credits, and the source's MIT notice.
+
+### Fixed
+- Settings reads are cached instead of repeatedly reading JSON, scanning tool directories and resetting DNS from UI getters. Saves are serialized and atomic.
+- Download output is batched before reaching WPF, and repeated background property changes are coalesced per model.
+- Returning to Games reuses its loaded catalog; optional provider cache parsing and disk-space probing run away from the UI thread.
+
 ## 0.3.4
 
 ### Improved

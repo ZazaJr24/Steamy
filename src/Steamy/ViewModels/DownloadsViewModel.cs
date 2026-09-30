@@ -45,7 +45,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     public DownloadJob? SelectedJob { get => _selectedJob; set => SetProperty(ref _selectedJob, value); }
     public bool ShowEmptyResults => !HasJobs;
     public string ResultLabel => $"{FilteredJobs.Count:N0} of {Jobs.Count:N0} downloads";
-    public ICommand ClearFiltersCommand => new RelayCommand(() => { SearchText = string.Empty; SelectedFilter = "All downloads"; });
+    public ICommand ClearFiltersCommand => new RelayCommand(() => { SearchText = string.Empty; SelectedFilter = "All downloads"; SelectedSourceFilter = "All sources"; });
 
     public string InternetSpeedLabel { get; private set; } = "—";
     public string InternetPeakLabel { get; private set; } = string.Empty;
@@ -154,7 +154,7 @@ public sealed class DownloadsViewModel : ViewModelBase
 
     private void OnJobPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(DownloadJob.State)) QueueRefresh();
+        if (e.PropertyName is nameof(DownloadJob.State) or nameof(DownloadJob.DownloadMode)) QueueRefresh();
     }
 
     private void QueueRefresh()
@@ -218,11 +218,14 @@ public sealed class DownloadsViewModel : ViewModelBase
     public string[] Filters { get; } = { "All downloads", "Active", "Queued", "Paused", "Completed", "Failed", "Cancelled" };
     public string SearchText { get=>_search; set { if(SetProperty(ref _search,value)) RefreshFilter(); } }
     public string SelectedFilter { get=>_filter; set { if(SetProperty(ref _filter,value)) RefreshFilter(); } }
-    public bool HasActiveFilters => !string.IsNullOrWhiteSpace(SearchText) || SelectedFilter != "All downloads";
+    private string _sourceFilter = "All sources";
+    public string[] SourceFilters { get; } = { "All sources", "Sushi", "Zaza", "Ryuu", "Hubcap", "DepotBox", "DepotDownloader", "Custom archive" };
+    public string SelectedSourceFilter { get => _sourceFilter; set { if (SetProperty(ref _sourceFilter, value)) RefreshFilter(); } }
+    public bool HasActiveFilters => !string.IsNullOrWhiteSpace(SearchText) || SelectedFilter != "All downloads" || SelectedSourceFilter != "All sources";
     public string FilterSummary => HasActiveFilters ? "Active filters" : "No filters applied";
     public bool HasJobs => FilteredJobs.Count > 0;
     public string EmptyStateMessage => HasActiveFilters
-        ? "Try a different game name, App ID or status."
+        ? "Try a different game name, App ID, status or source."
         : "Choose a game from your library to start your first download.";
     public string TotalProgress => Jobs.Count == 0 ? "0%" : $"{Jobs.Average(x=>x.Progress):0}%";
     public string DownloadToolStatus => string.IsNullOrWhiteSpace(_settings.Load().DepotDownloaderPath) ? "DepotDownloader: configure it in Settings" : "DepotDownloader: ready for authorized downloads";
@@ -330,11 +333,11 @@ public sealed class DownloadsViewModel : ViewModelBase
             job.DepotBytesCompleted = 0;
             job.DepotsSeen = 0;
             if (repairing) job.Progress = 0;
-            IProgress<string> progress = new Progress<string>(msg => Application.Current?.Dispatcher?.BeginInvoke(() =>
+            using var progress = new Steamy.Controls.BufferedDownloadProgress(msg =>
             {
                 if (Volatile.Read(ref acceptingProgress) == 0 || token.IsCancellationRequested || !job.IsActive) return;
                 if (!GameDownloadProgressMessage.TryApply(job, msg)) job.Status = msg;
-            }));
+            });
 
             var result = await Task.Run(() => _ryuu.ResumeDownloadAsync(job.AppId, job.TargetFolder, progress, token));
             token.ThrowIfCancellationRequested();
@@ -393,7 +396,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     private static ManifestSource? DownloadModeSource(DownloadJob job)
     {
         var mode = job.DownloadMode ?? string.Empty;
-        foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox" })
+        foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox", "Sushi" })
         {
             if (mode.Contains(name, StringComparison.OrdinalIgnoreCase)
                 && Enum.TryParse<ManifestSource>(name, out var source))
@@ -410,6 +413,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     private void RefreshFilter()
     {
         var desired = Jobs.Where(job => DownloadPresentation.Matches(job.GameName, job.AppId, job.State, SearchText, SelectedFilter))
+            .Where(job => GitHubManifestIndex.Matches(job.DownloadMode, SelectedSourceFilter))
             .OrderBy(job => DownloadPresentation.StateOrder(job.State))
             .ThenByDescending(job => job.IsTerminal ? job.Finished ?? job.Started : DateTime.MinValue)
             .ToList();

@@ -120,6 +120,9 @@
             <StackPanel>
               <TextBlock Text="Show" Style="{StaticResource FieldLabelStyle}" />
               <ComboBox ItemsSource="{Binding TypeFilters}" SelectedItem="{Binding SelectedTypeFilter}" Margin="0,0,0,12" />
+              <TextBlock Text="Manifest source" Style="{StaticResource CaptionStyle}" Margin="0,0,0,6" />
+              <ComboBox ItemsSource="{Binding SourceFilters}" SelectedItem="{Binding SelectedSourceFilter}" Margin="0,0,0,12" AutomationProperties.Name="Filter games by manifest source" />
+              <TextBlock Text="{Binding SourceFilterHint}" TextWrapping="Wrap" Style="{StaticResource CaptionStyle}" Margin="0,0,0,12" />
               <TextBlock Text="Sort" Style="{StaticResource FieldLabelStyle}" />
               <ComboBox ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" Margin="0,0,0,12" />
               <TextBlock Text="Cards per page" Style="{StaticResource FieldLabelStyle}" />
@@ -311,8 +314,15 @@
                 <Border Style="{StaticResource HostPill}" x:Name="SourceZaza" MouseLeftButtonUp="Source_Click" Tag="Zaza"><TextBlock Text="Zaza" FontSize="11" FontWeight="SemiBold" /></Border>
                 <Border Style="{StaticResource HostPill}" x:Name="SourceHubcap" MouseLeftButtonUp="Source_Click" Tag="Hubcap"><TextBlock Text="Hubcap" FontSize="11" FontWeight="SemiBold" /></Border>
                 <Border Style="{StaticResource HostPill}" x:Name="SourceDepotBox" MouseLeftButtonUp="Source_Click" Tag="DepotBox" ToolTip="Requires API key"><TextBlock Text="DepotBox" FontSize="11" FontWeight="SemiBold" /></Border>
+                <Border Style="{StaticResource HostPill}" x:Name="SourceSushi" MouseLeftButtonUp="Source_Click" Tag="Sushi" ToolTip="Free · by sushi-dev55 · no API key"><TextBlock Text="Sushi · free" FontSize="11" FontWeight="SemiBold" /></Border>
               </WrapPanel>
               <TextBlock x:Name="SourceAvailabilityText" Text="" FontSize="10.5" Margin="0,2,0,12" TextWrapping="Wrap" />
+              <TextBlock FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12">
+                <Run Text="SushiTools by sushi-dev55 · " />
+                <Hyperlink NavigateUri="https://github.com/sushi-dev55/sushitools-games-repo" RequestNavigate="SourceCredit_RequestNavigate">Repository</Hyperlink>
+                <Run Text=" · " />
+                <Hyperlink NavigateUri="https://discord.gg/sushitools" RequestNavigate="SourceCredit_RequestNavigate">Community</Hyperlink>
+              </TextBlock>
 
               <!-- Download to -->
               <TextBlock Text="Download to" FontSize="11" FontWeight="SemiBold"

@@ -1,0 +1,91 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+
+namespace Steamy.Controls;
+
+public static class SmoothScroll
+{
+    public static readonly DependencyProperty EnabledProperty = DependencyProperty.RegisterAttached("Enabled", typeof(bool), typeof(SmoothScroll), new PropertyMetadata(false, OnEnabledChanged));
+    private static readonly DependencyProperty StateProperty = DependencyProperty.RegisterAttached("State", typeof(ScrollState), typeof(SmoothScroll));
+    private static readonly DependencyProperty OffsetProperty = DependencyProperty.RegisterAttached("Offset", typeof(double), typeof(SmoothScroll), new PropertyMetadata(0d, (owner, args) => ((ScrollViewer)owner).ScrollToVerticalOffset((double)args.NewValue)));
+    public static bool GetEnabled(DependencyObject owner) => (bool)owner.GetValue(EnabledProperty);
+    public static void SetEnabled(DependencyObject owner, bool value) => owner.SetValue(EnabledProperty, value);
+
+    private static void OnEnabledChanged(DependencyObject owner, DependencyPropertyChangedEventArgs args)
+    {
+        if (owner is not ScrollViewer viewer) return;
+        if (viewer.GetValue(StateProperty) is ScrollState previous) previous.Detach();
+        viewer.SetValue(StateProperty, (bool)args.NewValue ? new ScrollState(viewer) : null);
+    }
+
+    private sealed class ScrollState
+    {
+        private readonly ScrollViewer _viewer;
+        private double _target;
+        private int _generation;
+        private bool _animating;
+        public ScrollState(ScrollViewer viewer)
+        {
+            _viewer = viewer;
+            viewer.PreviewMouseWheel += OnWheel;
+            viewer.Unloaded += OnUnloaded;
+            viewer.PreviewMouseDown += OnMouseDown;
+            viewer.PreviewKeyDown += OnKeyDown;
+        }
+        public void Detach()
+        {
+            Stop();
+            _viewer.PreviewMouseWheel -= OnWheel;
+            _viewer.Unloaded -= OnUnloaded;
+            _viewer.PreviewMouseDown -= OnMouseDown;
+            _viewer.PreviewKeyDown -= OnKeyDown;
+        }
+        private void OnMouseDown(object sender, MouseButtonEventArgs args) { if (_animating) Stop(); }
+        private void OnKeyDown(object sender, KeyEventArgs args) { if (_animating) Stop(); }
+        private void OnUnloaded(object sender, RoutedEventArgs args) => Stop();
+        private void Stop()
+        {
+            _generation++;
+            var offset = _viewer.VerticalOffset;
+            _viewer.SetCurrentValue(OffsetProperty, offset);
+            _viewer.BeginAnimation(OffsetProperty, null);
+            _animating = false;
+        }
+        private void OnWheel(object sender, MouseWheelEventArgs args)
+        {
+            if (args.Handled || Keyboard.Modifiers != ModifierKeys.None || _viewer.ScrollableHeight <= 0) return;
+            // Nested lists and text controls retain their own wheel behavior.
+            for (var element = args.OriginalSource as DependencyObject; element is not null && element != _viewer; element = element is Visual ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element))
+                if (element is ComboBox or TextBoxBase || element is ScrollViewer) return;
+            var current = _viewer.VerticalOffset;
+            var lines = SystemParameters.WheelScrollLines;
+            if (lines == 0) return;
+            var distance = lines < 0 ? _viewer.ViewportHeight : Math.Max(1, lines) * 18;
+            _target = Math.Clamp((_animating ? _target : current) - args.Delta / 120d * distance, 0, _viewer.ScrollableHeight);
+            if (Math.Abs(_target - current) < 0.5) return;
+            args.Handled = true;
+            var generation = ++_generation;
+            if (!SystemParameters.ClientAreaAnimation)
+            {
+                _viewer.BeginAnimation(OffsetProperty, null);
+                _viewer.SetCurrentValue(OffsetProperty, _target);
+                _animating = false;
+                return;
+            }
+            _animating = true;
+            var animation = new DoubleAnimation(current, _target, TimeSpan.FromMilliseconds(160)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+            animation.Completed += (_, _) =>
+            {
+                if (generation != _generation) return;
+                _viewer.SetCurrentValue(OffsetProperty, _target);
+                _viewer.BeginAnimation(OffsetProperty, null);
+                _animating = false;
+            };
+            _viewer.BeginAnimation(OffsetProperty, animation, HandoffBehavior.SnapshotAndReplace);
+        }
+    }
+}

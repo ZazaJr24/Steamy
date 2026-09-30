@@ -27,6 +27,39 @@ These are fetched on demand or selected by the user and keep their own licenses:
 [gbe_fork](https://github.com/Detanup01/gbe_fork) (Goldberg), [SmokeAPI](https://github.com/acidicoala/SmokeAPI),
 GreenLuma, [DepotDownloader](https://github.com/SteamRE/DepotDownloader).
 
+## Manifest source attribution
+
+[SushiTools games repository](https://github.com/sushi-dev55/sushitools-games-repo)
+is provided by **sushi-dev55** under the MIT License. Steamy fetches its Lua metadata and
+manifest archives on request; the repository content is not bundled in Steamy releases.
+Credit also appears in the game source picker and Settings → Connections.
+Community: [SushiTools](https://discord.gg/sushitools). This invite is the placeholder supplied
+by the user and has not been verified; update it when a confirmed invite is available.
+
+```text
+MIT License
+
+Copyright (c) 2025 sushi-dev55
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Design attribution
 
 The UI layout and Fluent styling are inspired by [CloudRedirect](https://github.com/Selectively11/CloudRedirect) (MIT).

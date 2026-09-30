@@ -172,7 +172,17 @@ public sealed class DownloadJob : UiObservableObject
     public string DownloadMode
     {
         get => _downloadMode;
-        set => SetProperty(ref _downloadMode, value);
+        set { if (SetProperty(ref _downloadMode, value)) OnPropertyChanged(nameof(SourceLabel)); }
+    }
+
+    public string SourceLabel
+    {
+        get
+        {
+            var start = DownloadMode.LastIndexOf('(');
+            var end = DownloadMode.LastIndexOf(')');
+            return start >= 0 && end > start ? DownloadMode[(start + 1)..end] : DownloadMode;
+        }
     }
 
     public string Downloaded
