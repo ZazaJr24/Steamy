@@ -3,6 +3,24 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## Unreleased
+
+### Improved
+- Redesigned dashboard, downloads and settings with consistent surfaces, readable status cues, shorter entrances and clear keyboard focus.
+- Settings now has categories, search across every section and an always-visible autosave status. Existing settings and encrypted credential controls remain available.
+- Downloads has a recycling list, combined name/App ID and status filters, retained selection, bounded artwork decoding and separate device/download speed telemetry.
+- Added **Verify & repair** using the downloader's saved manifests; **Check local files** is explicitly a read-only presence check.
+
+### Fixed
+- Pause and cancel keep a download reserved until the process and its queue save finish. Repeated start/resume clicks cannot replace the active cancellation token.
+- Resume pins depot/manifest versions per game and target folder, retains its original source and keys, and fails honestly if any required depot fails.
+- Retry starts real work; regular whole-app DepotDownloader jobs are no longer routed to the Mod resume path merely because no depot ID is set.
+- Local checks do not mark paused or failed jobs complete, do not count downloader metadata as game data, and avoid directory-junction loops.
+- Tool detection uses the supported version flag, drains both output streams and reports runtime errors/timeouts as unavailable.
+
+### Development
+- Windows CI now runs offline WPF layout/resource smoke checks and uploads screenshots, test reports and a self-contained Windows ZIP.
+
 ## 0.3.3
 
 ### Fixed

@@ -6,22 +6,33 @@
       xmlns:controls="clr-namespace:Steamy.Controls"
       ScrollViewer.CanContentScroll="False"
       Background="{DynamicResource AppBackgroundBrush}">
-  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="26,22,26,40">
-    <StackPanel MaxWidth="1180" HorizontalAlignment="Stretch">
-      <Grid Margin="0,0,0,18">
+  <Page.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolVis" />
+    <Style x:Key="QueueListItem" TargetType="ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0,0,0,10" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><ContentPresenter /></ControlTemplate></Setter.Value></Setter>
+    </Style>
+  </Page.Resources>
+  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="28,24,28,40">
+    <StackPanel MaxWidth="1440" HorizontalAlignment="Stretch">
+      <Grid Margin="0,0,0,22" controls:EntranceMotion.Delay="0">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel>
+          <TextBlock Text="YOUR DOWNLOAD WORKSPACE" Foreground="{DynamicResource AccentBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,7" />
           <TextBlock Text="DepotDownloader" Style="{StaticResource PageTitleStyle}"/>
-          <TextBlock Text="Authorized local downloads with a controlled process adapter and resumable queue." Style="{StaticResource PageSubtitleStyle}"/>
+          <TextBlock Text="Choose a version. Keep your progress. Pick up where you left off." Style="{StaticResource PageSubtitleStyle}"/>
         </StackPanel>
         <ui:Button Grid.Column="1" Content="Check tool" Command="{Binding CheckToolCommand}" Appearance="Secondary"/>
       </Grid>
 
-      <Border Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="12" Padding="15" Margin="0,0,0,16">
+      <Border Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="20" Padding="22" Margin="0,0,0,20" controls:EntranceMotion.Delay="20">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <Border Width="38" Height="38" CornerRadius="19" Background="{DynamicResource AccentSoftBrush}"><TextBlock Text="↓" FontSize="22" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+          <Border Width="52" Height="52" CornerRadius="16" Background="{DynamicResource AccentSoftBrush}"><TextBlock Text="↓" FontSize="22" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
           <StackPanel Grid.Column="1" Margin="12,0,18,0">
+            <TextBlock Text="DOWNLOAD ENGINE" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,5" />
             <TextBlock Text="{Binding ToolStatus}" Style="{StaticResource CardTitleStyle}"/>
             <TextBlock Text="{Binding ToolPath}" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
           </StackPanel>
@@ -32,12 +43,13 @@
         </Grid>
       </Border>
 
-      <Grid>
-        <Grid.ColumnDefinitions><ColumnDefinition Width="350"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Border Style="{StaticResource SurfaceCardStyle}" Grid.Column="0" Padding="15" Margin="0,0,12,0">
+      <Grid controls:EntranceMotion.Delay="40">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="340"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border Style="{StaticResource SurfaceCardStyle}" Grid.Column="0" Padding="20" Margin="0,0,14,0" VerticalAlignment="Top">
           <StackPanel>
-            <TextBlock Text="New authorized job" Style="{StaticResource CardTitleStyle}"/>
-            <TextBlock Text="Only add content you are entitled to access. No credentials or raw arguments are accepted here." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,5,0,16"/>
+            <TextBlock Text="01 / SET UP A DOWNLOAD" Foreground="{DynamicResource AccentBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,9" />
+            <TextBlock Text="Make it yours" FontSize="23" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="Select your game and where it should live." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,7,0,20"/>
             <TextBlock Text="Game" Style="{StaticResource PillTextStyle}"/>
             <ComboBox ItemsSource="{Binding Games}" DisplayMemberPath="Name" SelectedItem="{Binding SelectedGame}" Margin="0,6,0,11"/>
             <TextBlock Text="Depot" Style="{StaticResource PillTextStyle}"/>
@@ -52,46 +64,47 @@
               <ui:TextBox Text="{Binding TargetFolder, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Choose a local folder"/>
               <ui:Button Grid.Column="1" Content="Browse" Click="BrowseTargetFolderButton_Click" Appearance="Secondary" Margin="7,0,0,0"/>
             </Grid>
-            <ui:ToggleSwitch Content="Verify after download" IsChecked="{Binding VerifyAfterDownload}" Margin="0,0,0,7"/>
+            <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="12" Padding="12" Margin="0,3,0,14">
+              <StackPanel>
+                <TextBlock Text="Ready to resume" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                <TextBlock Text="Existing chunks are checked against the selected manifest before reuse." FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,5,0,0" />
+              </StackPanel>
+            </Border>
             <CheckBox IsChecked="{Binding AuthorizationConfirmed}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,14"><TextBlock Text="I confirm I am authorized to access this content." TextWrapping="Wrap"/></CheckBox>
-            <ui:Button Content="Add to queue" Command="{Binding AddToQueueCommand}"/>
+            <ui:Button Content="Add to queue" Icon="{ui:SymbolIcon Add24}" Appearance="Primary" Command="{Binding AddToQueueCommand}" HorizontalAlignment="Stretch"/>
             <TextBlock Text="{Binding LastMessage}" Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,12,0,0" TextWrapping="Wrap"/>
           </StackPanel>
         </Border>
 
-        <Border Style="{StaticResource SurfaceCardStyle}" Grid.Column="1" Padding="15" Margin="12,0,0,0">
+        <Border Style="{StaticResource SurfaceCardStyle}" Grid.Column="1" Padding="20" Margin="0" VerticalAlignment="Top">
           <Grid>
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
             <Grid Margin="0,0,0,14">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
               <StackPanel>
-                <TextBlock Text="Download queue" Style="{StaticResource CardTitleStyle}"/>
+                <TextBlock Text="02 / YOUR QUEUE" Foreground="{DynamicResource AccentBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,9" />
+                <TextBlock Text="The next things to play" FontSize="21" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <TextBlock Text="{Binding QueueSummary}" Style="{StaticResource TertiaryTextStyle}" FontSize="12" Margin="0,3,0,0"/>
               </StackPanel>
-              <ui:Button Grid.Column="1" Content="Start queued" Command="{Binding StartQueuedCommand}"/>
+              <ui:Button Grid.Column="1" Content="Start queued" Icon="{ui:SymbolIcon Play24}" Command="{Binding StartQueuedCommand}" Appearance="Primary" VerticalAlignment="Center"/>
             </Grid>
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <ItemsControl ItemsSource="{Binding Jobs}">
-                <ItemsControl.ItemTemplate>
+            <Grid Grid.Row="1">
+              <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="16" Padding="26,52" Visibility="{Binding HasNoJobs, Converter={StaticResource BoolVis}}">
+                <StackPanel HorizontalAlignment="Center" MaxWidth="320">
+                  <Border Width="60" Height="60" CornerRadius="20" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Center" Margin="0,0,0,18">
+                    <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="26" Foreground="{DynamicResource AccentBrush}" />
+                  </Border>
+                  <TextBlock Text="Your next adventure starts here" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                  <TextBlock Text="Add a game on the left. Downloads keep their local files when you pause." Style="{StaticResource MutedTextStyle}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,9,0,0" />
+                </StackPanel>
+              </Border>
+              <ListBox ItemsSource="{Binding QueueJobs}" ItemContainerStyle="{StaticResource QueueListItem}" MaxHeight="760"
+                       BorderThickness="0" Background="Transparent" Padding="0" Visibility="{Binding HasJobs, Converter={StaticResource BoolVis}}"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.CanContentScroll="True"
+                       VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel">
+                <ListBox.ItemTemplate>
                   <DataTemplate>
-                    <Border Margin="0,0,0,9">
-                      <Border.Style>
-                        <Style TargetType="Border" BasedOn="{StaticResource SubtlePanelStyle}">
-                          <Setter Property="RenderTransform"><Setter.Value><TranslateTransform /></Setter.Value></Setter>
-                          <Style.Triggers>
-                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                              <BeginStoryboard>
-                                <Storyboard>
-                                  <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.28" />
-                                  <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="8" To="0" Duration="0:0:0.32">
-                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
-                                  </DoubleAnimation>
-                                </Storyboard>
-                              </BeginStoryboard>
-                            </EventTrigger>
-                          </Style.Triggers>
-                        </Style>
-                      </Border.Style>
+                    <Border Style="{StaticResource SubtlePanelStyle}" Padding="16" CornerRadius="14">
                       <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                       <Border Style="{StaticResource JobStateStripe}" Margin="0,2,10,2"/>
@@ -129,11 +142,12 @@
                           <ui:Button Content="Pause" Icon="{ui:SymbolIcon Pause24}" Style="{StaticResource PauseButton}" Margin="6,0,0,5" Command="{Binding DataContext.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
                           <ui:Button Content="Resume" Icon="{ui:SymbolIcon Play24}" Style="{StaticResource ResumeButton}" Margin="6,0,0,5" Command="{Binding DataContext.ResumeCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Primary"/>
                           <ui:Button Content="Retry" Icon="{ui:SymbolIcon ArrowClockwise24}" Style="{StaticResource RetryButton}" Margin="6,0,0,5" Command="{Binding DataContext.RetryCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
-                          <ui:Button Content="Verify" Icon="{ui:SymbolIcon Checkmark24}" Style="{StaticResource CompletedOnlyButton}" Margin="6,0,0,5" Command="{Binding DataContext.VerifyCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
-                          <ui:Button Content="Open folder" Icon="{ui:SymbolIcon FolderOpen24}" Style="{StaticResource CompletedOnlyButton}" Margin="6,0,0,5" Command="{Binding DataContext.CopyFolderCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
+                          <ui:Button Content="Check local files" Icon="{ui:SymbolIcon Checkmark24}" Style="{StaticResource CompletedOnlyButton}" Margin="6,0,0,5" Command="{Binding DataContext.VerifyCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
+                          <ui:Button Content="Copy folder" Icon="{ui:SymbolIcon FolderOpen24}" Style="{StaticResource CompletedOnlyButton}" Margin="6,0,0,5" Command="{Binding DataContext.CopyFolderCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
                           <ui:Button Content="Cancel" Style="{StaticResource CancelButton}" Margin="6,0,0,5" Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Danger"/>
                           <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Style="{StaticResource RemoveButton}" Margin="6,0,0,5" Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
                         </WrapPanel>
+                        <Expander Header="Download details" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,6,0,0">
                         <TextBox Text="{Binding ProcessLog, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="80" FontSize="10.5" FontFamily="Consolas" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto">
                           <TextBox.Style>
                             <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
@@ -144,13 +158,14 @@
                             </Style>
                           </TextBox.Style>
                         </TextBox>
+                        </Expander>
                       </StackPanel>
                       </Grid>
                     </Border>
                   </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </ScrollViewer>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
           </Grid>
         </Border>
       </Grid>

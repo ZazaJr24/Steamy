@@ -309,6 +309,12 @@ public partial class LibraryPage : Page
 
         var store = App.Services.GetRequiredService<IAppDataStore>();
         var queueStore = App.Services.GetRequiredService<IDownloadQueueStore>();
+        if (store.Downloads.Any(existing => existing.AppId == item.AppId && existing.IsActive
+            && string.Equals(existing.TargetFolder, targetFolder, StringComparison.OrdinalIgnoreCase)))
+        {
+            OverlayStatus.Text = "This game already has a download running. Open Downloads to manage it.";
+            return;
+        }
 
         // Reuse the job of a paused download of this app so Resume keeps its identity, target
         // folder and progress instead of piling up duplicate rows for the same game.
@@ -325,11 +331,20 @@ public partial class LibraryPage : Page
             DownloadMode = $"DepotDownloaderMod ({_selectedSource})",
             AuthorizationConfirmed = true
         };
+        var downloadManager = App.Services.GetRequiredService<IDownloadManager>();
+        using var cts = new CancellationTokenSource();
+        try { downloadManager.RegisterJob(job.Id, cts); }
+        catch (InvalidOperationException)
+        {
+            OverlayStatus.Text = "This download is still finishing its previous operation. Please try again shortly.";
+            return;
+        }
+        try
+        {
         var isResume = job.State is DownloadJobState.Paused or DownloadJobState.Failed or DownloadJobState.Cancelled;
         if (isResume)
         {
-            // Continue with the source the user just picked; the mode reflects it.
-            job.DownloadMode = $"DepotDownloaderMod ({_selectedSource})";
+            // A resume belongs to its original source and manifest snapshot.
             job.Finished = null;
         }
         job.State = DownloadJobState.Preparing;
@@ -345,15 +360,21 @@ public partial class LibraryPage : Page
         OverlayStatus.Text = job.Status;
 
         var ryuuService = App.Services.GetRequiredService<IRyuuGameDownloadService>();
-        var downloadManager = App.Services.GetRequiredService<IDownloadManager>();
         _pauseRequested = false;
-        using var cts = new CancellationTokenSource();
         _downloadCts = cts;
-        downloadManager.RegisterJob(job.Id, cts);
 
         var source = _selectedSource;
+        if (isResume)
+        {
+            foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox" })
+                if (job.DownloadMode.Contains(name, StringComparison.OrdinalIgnoreCase)
+                    && Enum.TryParse<ManifestSource>(name, out var originalSource))
+                { source = originalSource; break; }
+        }
+        var token = cts.Token;
         var progress = new Progress<string>(msg => Dispatcher.BeginInvoke(() =>
         {
+            if (token.IsCancellationRequested || !job.IsActive) return;
             if (!GameDownloadProgressMessage.TryApply(job, msg))
                 job.Status = msg;
 
@@ -369,6 +390,7 @@ public partial class LibraryPage : Page
             var result = isResume
                 ? await Task.Run(() => ryuuService.ResumeDownloadAsync(item.AppId, targetFolder, progress, cts.Token))
                 : await Task.Run(() => ryuuService.DownloadGameAsync(item.AppId, targetFolder, source, progress, cts.Token));
+            token.ThrowIfCancellationRequested();
             if (isResume && !result.Succeeded && result.Message.Contains("No cached manifests", StringComparison.OrdinalIgnoreCase))
             {
                 // Nothing cached (e.g. the app was reinstalled): fetch manifests once, then resume.
@@ -378,18 +400,21 @@ public partial class LibraryPage : Page
                 result = await Task.Run(() => ryuuService.ResumeDownloadAsync(item.AppId, targetFolder, progress, cts.Token));
             }
 
+            token.ThrowIfCancellationRequested();
             if (result.Succeeded && !string.IsNullOrEmpty(archivePath) && File.Exists(archivePath))
             {
                 await Dispatcher.BeginInvoke(() =>
                 {
+                    token.ThrowIfCancellationRequested();
                     job.Status = "Extracting custom archive...";
                     if (_selectedItem == item) OverlayStatus.Text = job.Status;
                 });
-                await Task.Run(() => ExtractArchive(archivePath, targetFolder));
+                await Task.Run(() => { token.ThrowIfCancellationRequested(); ExtractArchive(archivePath, targetFolder); }, token);
             }
 
             await Dispatcher.BeginInvoke(() =>
             {
+                token.ThrowIfCancellationRequested();
                 job.ClearLiveStats();
                 if (result.Succeeded)
                 {
@@ -442,12 +467,16 @@ public partial class LibraryPage : Page
                     StartButton.IsEnabled = true;
                 }
             }
-            finally
-            {
-                downloadManager.UnregisterJob(job.Id);
-                _downloadCts = null;
-                if (_selectedItem == item) PauseButton.Visibility = Visibility.Collapsed;
-                await queueStore.SaveAsync(job);
+        }
+        finally
+        {
+                try { await queueStore.SaveAsync(job); }
+                finally
+                {
+                    downloadManager.UnregisterJob(job.Id);
+                    _downloadCts = null;
+                    if (_selectedItem == item) PauseButton.Visibility = Visibility.Collapsed;
+                }
             }
     }
 

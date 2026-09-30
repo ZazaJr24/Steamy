@@ -1,13 +1,11 @@
-using System.Collections.Concurrent;
 using System.IO;
 using Steamy.Models;
 
 namespace Steamy.Services;
 
 /// <summary>
-/// Coordinates queue jobs and delegates real work to the configured, unchanged
-/// DepotDownloader adapter. Without a configured executable it uses a local demo
-/// fallback so the UI remains usable and never starts an unknown process.
+/// Coordinates queue jobs and delegates real work to the configured DepotDownloader adapter.
+/// A job remains reserved until its process, local checks and queue save have all finished.
 /// </summary>
 public sealed class DownloadManager : IDownloadManager, IDisposable
 {
@@ -18,9 +16,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     private readonly IDownloadQueueStore _queueStore;
     private readonly ILoggingService _logging;
     private readonly INotificationService _notifications;
-    private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _cancellations = new();
-    private readonly ConcurrentDictionary<Guid, bool> _pauseRequested = new();
-    private readonly ConcurrentDictionary<Guid, Task> _running = new();
+    private readonly DownloadOperationRegistry _operations = new();
 
     private sealed class InlineProgress<T> : IProgress<T>
     {
@@ -52,20 +48,21 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     public async Task<bool> StartAsync(DownloadJob job, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);
-        if (!_running.TryAdd(job.Id, Task.CompletedTask)) return false;
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (!_operations.TryRegister(job.Id, linked)) return false;
 
         var isResume = job.State == DownloadJobState.Paused;
-
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _cancellations[job.Id] = linked;
-        _pauseRequested.TryRemove(job.Id, out _);
         SetGameState(job, DownloadJobState.Preparing);
-        if (!isResume) job.Started = DateTime.Now;
+        if (job.Started == default) job.Started = DateTime.Now;
+        job.ExitCode = null;
+        ClearLiveStats(job);
         job.Finished = null;
         job.Status = isResume ? "Resuming download — continuing from existing files" : "Preparing download";
 
         try
         {
+            linked.Token.ThrowIfCancellationRequested();
+            await _queueStore.SaveAsync(job, linked.Token).ConfigureAwait(false);
             var settings = _settingsService.Load();
             if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath))
             {
@@ -148,6 +145,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
 
             for (var attempt = 1; attempt <= attempts; attempt++)
             {
+                linked.Token.ThrowIfCancellationRequested();
                 if (attempt > 1)
                 {
                     var delay = TimeSpan.FromSeconds(Math.Min(30, 2 * attempt));
@@ -161,16 +159,19 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
                     ? "Downloading — follow DepotDownloader's own console window"
                     : isResume && attempt == 1 ? "Resuming with DepotDownloader"
                     : attempts == 1 ? "Downloading with DepotDownloader" : $"Downloading with DepotDownloader (attempt {attempt} of {attempts})";
-                var progress = new InlineProgress<DepotDownloaderProgress>(update => ApplyProgress(job, update));
+                var progress = new InlineProgress<DepotDownloaderProgress>(update =>
+                {
+                    if (!linked.IsCancellationRequested && job.State == DownloadJobState.Downloading) ApplyProgress(job, update);
+                });
                 result = await _depotDownloader.DownloadAsync(request, progress, linked.Token).ConfigureAwait(false);
                 AppendProcessOutput(job, result);
                 job.ExitCode = result.ExitCode;
 
-                if (result.Succeeded || result.WasPaused || result.WasCancelled || _pauseRequested.ContainsKey(job.Id) || linked.IsCancellationRequested)
+                if (result.Succeeded || result.WasPaused || result.WasCancelled || _operations.IsPauseRequested(job.Id) || linked.IsCancellationRequested)
                     break;
             }
 
-            if (result.WasPaused || _pauseRequested.ContainsKey(job.Id))
+            if (_operations.IsPauseRequested(job.Id) || result.WasPaused && !linked.IsCancellationRequested)
             {
                 SetGameState(job, DownloadJobState.Paused);
                 job.Status = "Paused — resume will continue from existing files";
@@ -199,12 +200,12 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
                 return false;
             }
 
-            return await CompleteAsync(job, settings.VerifyAfterDownload).ConfigureAwait(false);
+            return await CompleteAsync(job, settings.VerifyAfterDownload, linked.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
             ClearLiveStats(job);
-            if (_pauseRequested.ContainsKey(job.Id))
+            if (_operations.IsPauseRequested(job.Id))
             {
                 SetGameState(job, DownloadJobState.Paused);
                 job.Status = "Paused — resume will continue from existing files";
@@ -225,138 +226,145 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         finally
         {
             job.Finished = job.IsTerminal || job.State == DownloadJobState.Paused ? DateTime.Now : job.Finished;
-            _cancellations.TryRemove(job.Id, out _);
-            _pauseRequested.TryRemove(job.Id, out _);
-            _running.TryRemove(job.Id, out _);
-            await _queueStore.SaveAsync(job).ConfigureAwait(false);
-            linked.Dispose();
+            try { await _queueStore.SaveAsync(job).ConfigureAwait(false); }
+            finally { UnregisterJob(job.Id); }
         }
     }
 
     public void RegisterJob(Guid jobId, CancellationTokenSource cancellationTokenSource)
     {
-        _cancellations[jobId] = cancellationTokenSource;
-        _pauseRequested.TryRemove(jobId, out _);
+        ArgumentNullException.ThrowIfNull(cancellationTokenSource);
+        if (!_operations.TryRegister(jobId, cancellationTokenSource))
+            throw new InvalidOperationException("An operation is already running for this download.");
     }
 
-    public void UnregisterJob(Guid jobId)
-    {
-        _cancellations.TryRemove(jobId, out _);
-        _pauseRequested.TryRemove(jobId, out _);
-    }
+    public void UnregisterJob(Guid jobId) => _operations.Complete(jobId);
 
-    public bool IsPauseRequested(Guid jobId) => _pauseRequested.ContainsKey(jobId);
+    public bool IsPauseRequested(Guid jobId) => _operations.IsPauseRequested(jobId);
 
-    public async Task PauseAsync(DownloadJob job, CancellationToken cancellationToken = default)
+    public Task PauseAsync(DownloadJob job, CancellationToken cancellationToken = default) =>
+        StopAsync(job, pause: true, cancellationToken);
+
+    public Task CancelAsync(DownloadJob job, CancellationToken cancellationToken = default) =>
+        StopAsync(job, pause: false, cancellationToken);
+
+    private async Task StopAsync(DownloadJob job, bool pause, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
-        _pauseRequested[job.Id] = true;
-        SetGameState(job, DownloadJobState.Paused);
-        job.Status = "Paused by user";
+        cancellationToken.ThrowIfCancellationRequested();
+        if (job.IsTerminal || pause && !job.IsActive) return;
+        var operation = _operations.Find(job.Id);
+        operation?.RequestStop(pause);
+        SetGameState(job, pause ? DownloadJobState.Paused : DownloadJobState.Cancelled);
+        job.Status = pause ? "Pausing — keeping downloaded files" : "Cancelling — keeping downloaded files";
         ClearLiveStats(job);
 
-        await _depotDownloader.StopAsync(job.Id, pause: true, cancellationToken).ConfigureAwait(false);
-
-        if (_cancellations.TryGetValue(job.Id, out var cancellation))
+        try
         {
-            try
-            {
-                cancellation.Cancel();
-            }
-            catch (ObjectDisposedException) { }
+            await _depotDownloader.StopAsync(job.Id, pause, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            operation?.Cancel();
         }
 
-        await _queueStore.SaveAsync(job).ConfigureAwait(false);
-    }
-
-    public async Task CancelAsync(DownloadJob job, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(job);
-        _pauseRequested.TryRemove(job.Id, out _);
-        SetGameState(job, DownloadJobState.Cancelled);
-        job.Status = "Cancelled by user";
+        // Resume may only acquire the job after the old process and its queue save have ended.
+        if (operation is not null)
+        {
+            await operation.Completion.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+        job.Status = pause ? "Paused — resume will continue from existing files" : "Cancelled — downloaded files were kept";
+        job.Finished = DateTime.Now;
         ClearLiveStats(job);
-
-        await _depotDownloader.StopAsync(job.Id, pause: false, cancellationToken).ConfigureAwait(false);
-
-        if (_cancellations.TryGetValue(job.Id, out var cancellation))
-        {
-            try
-            {
-                cancellation.Cancel();
-            }
-            catch (ObjectDisposedException) { }
-        }
-
-        await _queueStore.SaveAsync(job).ConfigureAwait(false);
+        await _queueStore.SaveAsync(job, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task RetryAsync(DownloadJob job, CancellationToken cancellationToken = default)
+    public async Task RetryAsync(DownloadJob job, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);
-        if (_running.ContainsKey(job.Id)) return Task.CompletedTask;
-        job.State = DownloadJobState.Queued;
-        job.Status = "Queued for retry";
-        job.Progress = 0;
-        job.ExitCode = null;
-        job.Finished = null;
-        _logging.Add(LogLevel.Info, "DownloadManager", "Job queued for retry.", job.AppId, job.Id);
-        _ = _queueStore.SaveAsync(job);
-        return Task.CompletedTask;
+        if (job.IsActive || _operations.IsRunning(job.Id)) return;
+        _logging.Add(LogLevel.Info, "DownloadManager", "Retrying in the existing download folder.", job.AppId, job.Id);
+        await StartAsync(job, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task ForgetAsync(DownloadJob job, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);
+        if (job.IsActive || _operations.IsRunning(job.Id))
+            throw new InvalidOperationException("Wait until the current download operation has finished before removing it.");
         await _queueStore.RemoveAsync(job, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> VerifyAsync(DownloadJob job, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);
-        if (string.IsNullOrWhiteSpace(job.TargetFolder) || !Directory.Exists(job.TargetFolder))
+        if (job.IsActive) return false;
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (!_operations.TryRegister(job.Id, linked)) return false;
+        var previousState = job.State;
+        try
         {
-            job.Status = "Verification unavailable — target folder does not exist";
-            _logging.Add(LogLevel.Warning, "Verification", "Verification unavailable because the target folder does not exist.", job.AppId, job.Id);
+            SetGameState(job, DownloadJobState.Verifying);
+            job.Status = "Checking local files — no manifest integrity check";
+            ClearLiveStats(job);
+            var result = await _verification.VerifyAsync(job.TargetFolder, linked.Token).ConfigureAwait(false);
+            linked.Token.ThrowIfCancellationRequested();
+            // Presence alone never proves a paused or failed download is complete.
+            SetGameState(job, DownloadJobPolicy.AfterLocalCheck(previousState, result.HasContent));
+            job.Status = result.Message;
+            if (result.HasContent && previousState == DownloadJobState.Completed)
+            {
+                job.Downloaded = DownloadFormat.Bytes(result.TotalBytes);
+                job.TotalSize = job.Downloaded;
+            }
+            _logging.Add(result.HasContent ? LogLevel.Info : LogLevel.Warning, "Verification", result.Message, job.AppId, job.Id);
+            return result.HasContent;
+        }
+        catch (OperationCanceledException)
+        {
+            SetGameState(job, previousState);
+            job.Status = "Local check cancelled — download state preserved";
             return false;
         }
-
-        SetGameState(job, DownloadJobState.Verifying);
-        job.Status = "Checking the local target folder";
-        var result = await _verification.VerifyAsync(job.TargetFolder, cancellationToken).ConfigureAwait(false);
-        SetGameState(job, result.HasContent ? DownloadJobState.Completed : DownloadJobState.Failed);
-        job.Status = result.Message;
-        if (result.HasContent)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            // The measured folder size replaces the running estimate.
+            SetGameState(job, previousState);
+            job.Status = "Local check unavailable — target files could not be read";
+            return false;
+        }
+        finally
+        {
+            try { await _queueStore.SaveAsync(job).ConfigureAwait(false); }
+            finally { UnregisterJob(job.Id); }
+        }
+    }
+
+    private async Task<bool> CompleteAsync(DownloadJob job, bool verifyAfterDownload, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ClearLiveStats(job);
+        if (verifyAfterDownload)
+        {
+            SetGameState(job, DownloadJobState.Verifying);
+            job.Status = "Checking local files after the downloader finished";
+            var result = await _verification.VerifyAsync(job.TargetFolder, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!result.HasContent)
+            {
+                SetFailure(job, result.Message);
+                return false;
+            }
             job.Downloaded = DownloadFormat.Bytes(result.TotalBytes);
             job.TotalSize = job.Downloaded;
         }
-        _logging.Add(result.HasContent ? LogLevel.Info : LogLevel.Warning, "Verification", result.Message, job.AppId, job.Id);
-        return result.HasContent;
-    }
 
-    private async Task<bool> CompleteAsync(DownloadJob job, bool verifyAfterDownload)
-    {
-        ClearLiveStats(job);
-
-        if (verifyAfterDownload && !string.IsNullOrWhiteSpace(job.TargetFolder) && Directory.Exists(job.TargetFolder))
-        {
-            var verified = await VerifyAsync(job).ConfigureAwait(false);
-            if (!verified) return false;
-
-            job.Progress = 100;
-            job.Finished = DateTime.Now;
-            _logging.Add(LogLevel.Info, "DownloadManager", "Download completed and locally checked.", job.AppId, job.Id);
-            _notifications.Show("Download completed", $"{job.GameName}: {job.Status}");
-            return true;
-        }
-
+        cancellationToken.ThrowIfCancellationRequested();
         SetGameState(job, DownloadJobState.Completed);
         job.Progress = 100;
         if (job.TotalSize.StartsWith('~')) job.TotalSize = job.Downloaded;
         job.Status = verifyAfterDownload
-            ? "DepotDownloader finished without errors — no local folder to check"
+            ? "DepotDownloader completed — local game files are present"
             : "DepotDownloader finished without errors";
         job.Finished = DateTime.Now;
         _logging.Add(LogLevel.Info, "DownloadManager", "Download completed.", job.AppId, job.Id);
@@ -416,11 +424,5 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         if (game is not null) game.CurrentState = state;
     }
 
-    public void Dispose()
-    {
-        foreach (var cancellation in _cancellations.Values) cancellation.Cancel();
-        _cancellations.Clear();
-        _pauseRequested.Clear();
-        _running.Clear();
-    }
+    public void Dispose() => _operations.CancelAll();
 }

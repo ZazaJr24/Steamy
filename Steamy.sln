@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steamy.Tests", "tests\Steamy.Tests\Steamy.Tests.csproj", "{82D597F9-33ED-4CEB-B3D2-0D091132FD74}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steamy.UiTests", "tests\Steamy.UiTests\Steamy.UiTests.csproj", "{B33A3573-8BE3-42E8-BB44-358995D68888}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,11 +45,24 @@ Global
 		{82D597F9-33ED-4CEB-B3D2-0D091132FD74}.Release|x64.Build.0 = Release|Any CPU
 		{82D597F9-33ED-4CEB-B3D2-0D091132FD74}.Release|x86.ActiveCfg = Release|Any CPU
 		{82D597F9-33ED-4CEB-B3D2-0D091132FD74}.Release|x86.Build.0 = Release|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Debug|x64.Build.0 = Debug|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Debug|x86.Build.0 = Debug|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Release|x64.ActiveCfg = Release|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Release|x64.Build.0 = Release|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Release|x86.ActiveCfg = Release|Any CPU
+		{B33A3573-8BE3-42E8-BB44-358995D68888}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{82D597F9-33ED-4CEB-B3D2-0D091132FD74} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{B33A3573-8BE3-42E8-BB44-358995D68888} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

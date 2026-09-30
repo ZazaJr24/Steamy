@@ -36,6 +36,16 @@ public sealed class DashboardViewModel : ViewModelBase
     private bool _isRefreshing;
     private bool _libraryRefreshQueued;
     private bool _downloadRefreshQueued;
+    private readonly DispatcherTimer _statsTimer = new(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(500) };
+    private bool _statsDirty;
+
+    public void StartLiveStats()
+    {
+        RaiseDownloadStats();
+        _statsTimer.Start();
+    }
+
+    public void StopLiveStats() => _statsTimer.Stop();
     private DownloadJob? _heroDownload;
     private Game? _heroGame;
     private int _heroImageAppId;
@@ -72,6 +82,12 @@ public sealed class DashboardViewModel : ViewModelBase
         Store.Downloads.CollectionChanged += OnDownloadsChanged;
         foreach (var job in Store.Downloads) Watch(job);
 
+        _statsTimer.Tick += (_, _) =>
+        {
+            if (!_statsDirty) return;
+            _statsDirty = false;
+            RaiseDownloadStats();
+        };
         RefreshLibrary();
         RefreshDownloads();
         RefreshStatus();
@@ -112,8 +128,16 @@ public sealed class DashboardViewModel : ViewModelBase
     public bool IsRefreshing
     {
         get => _isRefreshing;
-        private set => SetProperty(ref _isRefreshing, value);
+        private set
+        {
+            if (!SetProperty(ref _isRefreshing, value)) return;
+            OnPropertyChanged(nameof(ShowLibraryNotice));
+            OnPropertyChanged(nameof(LibraryNotice));
+        }
     }
+
+    public bool ShowLibraryNotice => IsRefreshing || _scan is { Succeeded: false };
+    public string LibraryNotice => IsRefreshing ? "Scanning your library. You can keep browsing while it updates…" : _scan?.Message ?? string.Empty;
 
     // ---- hero -----------------------------------------------------------------------------------
 
@@ -317,7 +341,7 @@ public sealed class DashboardViewModel : ViewModelBase
         _lastRefresh = DateTime.UtcNow;
         try
         {
-            try { _scan = _librarySync.Refresh(); }
+            try { _scan = await _librarySync.RefreshAsync(); }
             catch (Exception exception) { _scan = SteamLibraryScanResult.Failure($"The Steam library could not be read ({exception.GetType().Name})."); }
 
             RefreshLibrary();
@@ -352,8 +376,7 @@ public sealed class DashboardViewModel : ViewModelBase
 
         if (!recent.SequenceEqual(RecentGames))
         {
-            RecentGames.Clear();
-            foreach (var game in recent) RecentGames.Add(game);
+            DownloadPresentation.Synchronize(RecentGames, recent);
         }
 
         HeroGame = recent.FirstOrDefault();
@@ -380,8 +403,7 @@ public sealed class DashboardViewModel : ViewModelBase
         var preview = open.Take(JobPreviewCount).ToList();
         if (!preview.SequenceEqual(ActiveJobs))
         {
-            ActiveJobs.Clear();
-            foreach (var job in preview) ActiveJobs.Add(job);
+            DownloadPresentation.Synchronize(ActiveJobs, preview);
         }
 
         HeroDownload = open.FirstOrDefault();
@@ -559,7 +581,12 @@ public sealed class DashboardViewModel : ViewModelBase
         if (_watchedJobs.Add(job)) job.PropertyChanged += OnJobChanged;
     }
 
-    private void OnJobChanged(object? sender, PropertyChangedEventArgs e) => QueueDownloadRefresh();
+    private void OnJobChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DownloadJob.State)) QueueDownloadRefresh();
+        else if (e.PropertyName is nameof(DownloadJob.BytesPerSecond) or nameof(DownloadJob.Progress)
+                 or nameof(DownloadJob.Speed) or nameof(DownloadJob.SizeSummary)) _statsDirty = true;
+    }
 
     // Progress events arrive many times a second; batch them into one refresh per dispatcher pass.
     private void QueueDownloadRefresh() => Queue(ref _downloadRefreshQueued, () => { _downloadRefreshQueued = false; RefreshDownloads(); });

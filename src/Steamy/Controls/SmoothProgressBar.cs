@@ -30,6 +30,11 @@ public class SmoothProgressBar : ProgressBar
     public SmoothProgressBar()
     {
         Loaded += (_, _) => Value = _target;
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible) StopAnimation();
+            Value = _target;
+        };
         Unloaded += (_, _) => StopAnimation();
     }
 
@@ -46,7 +51,7 @@ public class SmoothProgressBar : ProgressBar
         bar._target = Math.Clamp((double)e.NewValue, bar.Minimum, bar.Maximum);
 
         // A reset (retry, new job in a recycled container) should not crawl backwards.
-        if (!bar.IsLoaded || bar._target < bar.Value - 1)
+        if (!bar.IsLoaded || !bar.IsVisible || !SystemParameters.ClientAreaAnimation || bar._target < bar.Value - 1)
         {
             bar.StopAnimation();
             bar.Value = bar._target;
@@ -57,6 +62,7 @@ public class SmoothProgressBar : ProgressBar
         // move; such steps are applied instantly instead of animating.
         if (Math.Abs(bar._target - bar.Value) < SnapDistance * 4)
         {
+            bar.StopAnimation();
             bar.Value = bar._target;
             return;
         }
@@ -81,6 +87,12 @@ public class SmoothProgressBar : ProgressBar
 
     private void OnRendering(object? sender, EventArgs e)
     {
+        if (!IsVisible || !SystemParameters.ClientAreaAnimation)
+        {
+            StopAnimation();
+            Value = _target;
+            return;
+        }
         var frameTime = e is RenderingEventArgs rendering ? rendering.RenderingTime : TimeSpan.Zero;
         if (frameTime == _lastFrame) return;
 

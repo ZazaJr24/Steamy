@@ -1,4 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Data;
 using System.IO;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
@@ -19,7 +23,6 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
     private Branch? _selectedBranch;
     private Manifest? _selectedManifest;
     private bool _authorizationConfirmed;
-    private bool _verifyAfterDownload = true;
     private bool _isBusy;
     private string _toolStatus = "Not checked";
     private string _toolVersion = "—";
@@ -30,6 +33,10 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
     public ObservableCollection<Branch> Branches { get; }
     public ObservableCollection<Manifest> Manifests { get; } = new();
     public ObservableCollection<DownloadJob> Jobs { get; }
+    public ICollectionView QueueJobs { get; }
+    public bool HasJobs => Jobs.Any(IsManualJob);
+    public bool HasNoJobs => !HasJobs;
+    private static bool IsManualJob(DownloadJob job) => job.DownloadMode is "DepotDownloader" or "Not configured";
 
     public Game? SelectedGame
     {
@@ -40,26 +47,23 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
         }
     }
 
-    public Depot? SelectedDepot { get => _selectedDepot; set => SetProperty(ref _selectedDepot, value); }
+    public Depot? SelectedDepot
+    {
+        get => _selectedDepot;
+        set { if (SetProperty(ref _selectedDepot, value)) RefreshManifests(); }
+    }
     public Branch? SelectedBranch { get => _selectedBranch; set => SetProperty(ref _selectedBranch, value); }
     public Manifest? SelectedManifest { get => _selectedManifest; set => SetProperty(ref _selectedManifest, value); }
     public string TargetFolder { get => _targetFolder; set => SetProperty(ref _targetFolder, value); }
     public bool AuthorizationConfirmed { get => _authorizationConfirmed; set => SetProperty(ref _authorizationConfirmed, value); }
-    public bool VerifyAfterDownload { get => _verifyAfterDownload; set => SetProperty(ref _verifyAfterDownload, value); }
     public bool IsBusy { get => _isBusy; private set => SetProperty(ref _isBusy, value); }
     public string ToolStatus { get => _toolStatus; private set => SetProperty(ref _toolStatus, value); }
     public string ToolVersion { get => _toolVersion; private set => SetProperty(ref _toolVersion, value); }
     public string LastMessage { get => _lastMessage; private set => SetProperty(ref _lastMessage, value); }
-    public string ToolPath
-{
-    get
-    {
-        var settings = _settingsService?.Load();
-        return settings?.DepotDownloaderPath ?? string.Empty;
-    }
-}
-
-    public string QueueSummary => $"{Jobs.Count(job => job.State == DownloadJobState.Queued)} queued · {Jobs.Count(job => job.IsActive)} active";
+    public string ToolPath => _settingsService.Load().DepotDownloaderPath ?? string.Empty;
+    public string QueueSummary => $"{Jobs.Count(job => IsManualJob(job) && job.IsActive)} active · "
+        + $"{Jobs.Count(job => IsManualJob(job) && job.State == DownloadJobState.Queued)} waiting · "
+        + $"{Jobs.Count(job => IsManualJob(job) && job.State == DownloadJobState.Paused)} paused";
 
     public ICommand CheckToolCommand { get; }
     public ICommand AddToQueueCommand { get; }
@@ -87,10 +91,12 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
         Games = store.Games;
         Branches = store.Branches;
         Jobs = store.Downloads;
+        QueueJobs = new ListCollectionView(Jobs) { Filter = item => item is DownloadJob job && IsManualJob(job) };
+        Jobs.CollectionChanged += OnJobsChanged;
+        foreach (var job in Jobs) PropertyChangedEventManager.AddHandler(job, OnJobChanged, string.Empty);
         SelectedGame = Games.FirstOrDefault();
         var settings = settingsService.Load();
         TargetFolder = settings.DownloadFolder;
-        VerifyAfterDownload = settings.VerifyAfterDownload;
 
         CheckToolCommand = new AsyncRelayCommand(CheckToolAsync);
         AddToQueueCommand = new RelayCommand(AddToQueue);
@@ -124,16 +130,51 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
         }
     }
 
+    private void OnJobsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null)
+            foreach (DownloadJob job in e.OldItems) PropertyChangedEventManager.RemoveHandler(job, OnJobChanged, string.Empty);
+        if (e.NewItems is not null)
+            foreach (DownloadJob job in e.NewItems) PropertyChangedEventManager.AddHandler(job, OnJobChanged, string.Empty);
+        RefreshQueueSummary();
+    }
+
+    private void OnJobChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(DownloadJob.State) or nameof(DownloadJob.DownloadMode)) RefreshQueueSummary();
+    }
+
+    private void RefreshQueueSummary()
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is not null && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(new Action(RefreshQueueSummary));
+            return;
+        }
+        QueueJobs.Refresh();
+        OnPropertyChanged(nameof(QueueSummary));
+        OnPropertyChanged(nameof(HasJobs));
+        OnPropertyChanged(nameof(HasNoJobs));
+    }
+
     private void RefreshSelections()
     {
         Depots.Clear();
-        foreach (var depot in Store.Depots.Where(item => SelectedGame is null || item.AppId == SelectedGame.AppId)) Depots.Add(depot);
-        Manifests.Clear();
-        foreach (var manifest in Store.Manifests.Where(item => SelectedGame is null || item.AppId == SelectedGame.AppId)) Manifests.Add(manifest);
+        foreach (var depot in Store.Depots.Where(item => SelectedGame is not null && item.AppId == SelectedGame.AppId)) Depots.Add(depot);
         SelectedDepot = Depots.FirstOrDefault(item => item.Selected);
+        RefreshManifests();
         SelectedBranch = Branches.FirstOrDefault(item => item.Name.Equals("public", StringComparison.OrdinalIgnoreCase)) ?? Branches.FirstOrDefault();
-        SelectedManifest = Manifests.FirstOrDefault();
         if (string.IsNullOrWhiteSpace(TargetFolder)) TargetFolder = SelectedGame?.InstallFolder ?? _settingsService.Load().DownloadFolder;
+    }
+
+    private void RefreshManifests()
+    {
+        Manifests.Clear();
+        foreach (var manifest in Store.Manifests.Where(item => SelectedGame is not null
+            && item.AppId == SelectedGame.AppId && SelectedDepot is not null && item.DepotId == SelectedDepot.DepotId))
+            Manifests.Add(manifest);
+        SelectedManifest = Manifests.FirstOrDefault();
     }
 
     private void AddToQueue()
@@ -154,7 +195,7 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
             Logging.Add(LogLevel.Warning, "DepotDownloader", "Queue request rejected because authorization was not confirmed.", SelectedGame.AppId);
             return;
         }
-        if (Jobs.Any(job => job.AppId == SelectedGame.AppId && job.DepotId == SelectedDepot?.DepotId && job.State is DownloadJobState.Queued or DownloadJobState.Downloading or DownloadJobState.Paused))
+        if (Jobs.Any(job => job.AppId == SelectedGame.AppId && job.DepotId == SelectedDepot?.DepotId && (job.IsActive || job.State is DownloadJobState.Queued or DownloadJobState.Paused)))
         {
             LastMessage = "This game/depot is already in the active queue.";
             return;
@@ -192,11 +233,11 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
     {
         var settings = _settingsService.Load();
         using var gate = new SemaphoreSlim(Math.Clamp(settings.ParallelDownloads, 1, 16));
-        var queued = Jobs.Where(job => job.State == DownloadJobState.Queued).ToArray();
+        var queued = Jobs.Where(job => IsManualJob(job) && job.State == DownloadJobState.Queued).ToArray();
         await Task.WhenAll(queued.Select(async job =>
         {
-            await gate.WaitAsync().ConfigureAwait(false);
-            try { await StartAsync(job).ConfigureAwait(false); }
+            await gate.WaitAsync();
+            try { await StartAsync(job); }
             finally { gate.Release(); }
         }));
         OnPropertyChanged(nameof(QueueSummary));
@@ -219,8 +260,8 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
 
     private async Task VerifyAsync(DownloadJob job)
     {
-        var result = await _downloadManager.VerifyAsync(job);
-        LastMessage = result ? $"{job.GameName}: verification passed." : $"{job.GameName}: verification unavailable or failed.";
+        await _downloadManager.VerifyAsync(job);
+        LastMessage = $"{job.GameName}: {job.Status}";
         OnPropertyChanged(nameof(QueueSummary));
     }
 

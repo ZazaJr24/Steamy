@@ -7,19 +7,16 @@ namespace Steamy.Services;
 public interface IManifestRefetchService
 {
     /// <summary>
-    /// Makes sure the cached manifests of a paused download are current before it continues.
-    /// True when fresh data is in place (or nothing needed doing), false when it failed.
+    /// Restores missing source metadata for legacy jobs. Existing manifests stay pinned so
+    /// resuming a paused download cannot silently switch the game version.
     /// </summary>
     Task<bool> RefreshBeforeResumeAsync(DownloadJob job, IProgress<string>? progress = null,
         CancellationToken cancellationToken = default, ManifestSource? source = null);
 }
 
 /// <summary>
-/// Resume support: a download that was paused can sit for hours or days. Steam publishes new
-/// manifests in that time and continuing with the old ones makes the tool validate content it
-/// cannot match. So every resume first re-asks the source the job came from for a fresh Lua and
-/// manifest set. Steam itself may still ask for a 2FA/Steam Guard confirmation in its own console
-/// when a depot is licensed but not cached — the app never sees or stores that code.
+/// Existing manifests define the version the user chose. Resume preserves them, including the
+/// per-target snapshot, and only contacts a source when all local metadata is missing.
 /// </summary>
 public sealed class ManifestRefetchService : IManifestRefetchService
 {
@@ -42,11 +39,38 @@ public sealed class ManifestRefetchService : IManifestRefetchService
             && job.DownloadMode.Contains("Mod", StringComparison.OrdinalIgnoreCase);
         if (!modeUsesLocalManifests) return true;
 
-        // The source the download started with is refreshed; Zaza is only the fallback when the
-        // mode does not name a source (older jobs) — it needs no key, so it is the safest guess.
+        var app = job.AppId.ToString(CultureInfo.InvariantCulture);
+        var appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy");
+        var ryuuRoot = Path.Combine(appData, "ryuu-workdir");
+        if (!string.IsNullOrWhiteSpace(job.TargetFolder))
+        {
+            var session = DepotResumeStateStore.SessionDirectory(ryuuRoot, job.AppId, job.TargetFolder);
+            if (DepotResumeStateStore.Read(session, job.AppId, job.TargetFolder) is not null)
+            {
+                progress?.Report("Using the saved manifest version — checking existing files before continuing.");
+                return true;
+            }
+        }
+
+        var directories = new List<string> { Path.Combine(ryuuRoot, app) };
+        var manifestRoot = Path.Combine(appData, "manifest-workdir");
+        if (Directory.Exists(manifestRoot))
+        {
+            directories.Add(Path.Combine(manifestRoot, app));
+            directories.AddRange(Directory.EnumerateDirectories(manifestRoot).Select(folder => Path.Combine(folder, app)));
+        }
+        if (directories.Any(folder => Directory.Exists(folder)
+            && (Directory.EnumerateFiles(folder, "*.lua").Any()
+                || Directory.EnumerateFiles(folder, "*.manifest").Any())))
+        {
+            progress?.Report("Using cached manifests — existing downloaded chunks will be checked.");
+            return true;
+        }
+
+        // No usable local cache exists (for example a migrated job on a new machine).
         var manifestSource = source ?? ReadSourceFromMode(job.DownloadMode) ?? ManifestSource.Zaza;
 
-        progress?.Report("Refreshing manifests before resume…");
+        progress?.Report("Restoring missing manifest metadata…");
         try
         {
             var result = await _sources.DownloadManifestsAsync(manifestSource, job.AppId, progress, cancellationToken)
@@ -54,7 +78,7 @@ public sealed class ManifestRefetchService : IManifestRefetchService
 
             if (result.Succeeded)
             {
-                progress?.Report("Manifests are up to date — continuing.");
+                progress?.Report("Manifest metadata restored — continuing.");
                 _logging.Add(LogLevel.Info, "Resume", $"Refreshed manifests for App {job.AppId} from {manifestSource} before resume.", job.AppId, job.Id);
                 return true;
             }

@@ -10,6 +10,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\src\Steamy\Models\DownloadJobState.cs" Link="Linked\DownloadJobState.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\DownloadPresentation.cs" Link="Linked\DownloadPresentation.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\DownloadJobPolicy.cs" Link="Linked\DownloadJobPolicy.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\LocalDownloadInspector.cs" Link="Linked\LocalDownloadInspector.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\DepotResumeState.cs" Link="Linked\DepotResumeState.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\DownloadOperationRegistry.cs" Link="Linked\DownloadOperationRegistry.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\VdfParser.cs" Link="Linked\VdfParser.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ShareModels.cs" Link="Linked\ShareModels.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ManifestLibraryScanner.cs" Link="Linked\ManifestLibraryScanner.cs" />

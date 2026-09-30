@@ -33,7 +33,7 @@
                 <Border Margin="1" CornerRadius="13" RenderOptions.BitmapScalingMode="HighQuality"
                         Visibility="{Binding IsArtworkFallback, Converter={StaticResource BoolToVis}}">
                   <Border.Background>
-                    <ImageBrush ImageSource="{Binding HeaderArtworkUrl}" Stretch="UniformToFill" />
+                    <ImageBrush ImageSource="{Binding HeaderArtworkUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=480}" Stretch="UniformToFill" />
                   </Border.Background>
                 </Border>
                 <!-- No CacheMode: a BitmapCache renders at 1x and makes covers blurry on scaled displays. -->
@@ -62,6 +62,10 @@
               </StackPanel>
             </Grid>
             <ControlTemplate.Triggers>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="Ring" Property="Opacity" Value="1" />
+                <Setter TargetName="Title" Property="Foreground" Value="{DynamicResource AccentBrush}" />
+              </Trigger>
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter TargetName="Title" Property="Foreground" Value="{DynamicResource AccentBrush}" />
                 <Trigger.EnterActions>
@@ -104,7 +108,7 @@
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
-    <!-- Setup check dot: problems breathe softly so they get noticed without shouting. -->
+    <!-- Persistent status cues stay quiet while the dashboard is idle. -->
     <Style x:Key="StatusDot" TargetType="Ellipse">
       <Setter Property="Width" Value="8" />
       <Setter Property="Height" Value="8" />
@@ -113,16 +117,7 @@
         <DataTrigger Binding="{Binding IsOk}" Value="True">
           <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
         </DataTrigger>
-        <DataTrigger Binding="{Binding IsOk}" Value="False">
-          <DataTrigger.EnterActions>
-            <BeginStoryboard>
-              <Storyboard>
-                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.45" Duration="0:0:0.9"
-                                 AutoReverse="True" RepeatBehavior="Forever" />
-              </Storyboard>
-            </BeginStoryboard>
-          </DataTrigger.EnterActions>
-        </DataTrigger>
+
       </Style.Triggers>
     </Style>
 
@@ -166,8 +161,8 @@
     </Style>
   </Page.Resources>
 
-  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="40,28,40,56">
-    <StackPanel MaxWidth="1400" HorizontalAlignment="Stretch">
+  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="28,24,28,48">
+    <StackPanel MaxWidth="1480" HorizontalAlignment="Stretch">
 
       <!-- ===== Header ======================================================================== -->
       <Grid Style="{StaticResource EnterStyle1}" Margin="0,0,0,22">
@@ -183,32 +178,36 @@
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
           <ui:ProgressRing Width="18" Height="18" Margin="0,0,14,0" IsIndeterminate="True"
                            Visibility="{Binding IsRefreshing, Converter={StaticResource BoolToVis}}" />
-          <ui:TextBox x:Name="DashboardSearch" Width="320" PlaceholderText="Search your games…  (Enter)"
+          <ui:TextBox x:Name="DashboardSearch" Width="320" PlaceholderText="Find a game…  (Enter)" AutomationProperties.Name="Find a game in your library"
                       Icon="{ui:SymbolIcon Search24}" VerticalAlignment="Center" KeyDown="DashboardSearch_KeyDown" />
           <ui:Button Style="{StaticResource IconButtonStyle}" Margin="8,0,0,0" Appearance="Secondary"
                      Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding RefreshCommand}" ToolTip="Rescan library" />
         </StackPanel>
       </Grid>
 
+      <Border Style="{StaticResource InfoPanelStyle}" Margin="0,0,0,16" Visibility="{Binding ShowLibraryNotice, Converter={StaticResource BoolToVis}}">
+        <TextBlock Text="{Binding LibraryNotice}" Style="{StaticResource BodyTextStyle}" />
+      </Border>
+
       <!-- ===== Hero ========================================================================== -->
       <Grid Style="{StaticResource EnterStyle2}" Margin="0,0,0,18">
-        <Border Height="300" CornerRadius="20" ClipToBounds="True"
-                Background="{DynamicResource SurfaceElevatedBrush}"
+        <Border x:Name="DashboardHero" Height="340" CornerRadius="24" ClipToBounds="True"
+                Background="#121A28"
                 BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1">
           <Grid>
             <!-- Game art + shades that keep the white text readable -->
-            <Border RenderOptions.BitmapScalingMode="HighQuality"
+            <Border CornerRadius="24" RenderOptions.BitmapScalingMode="HighQuality"
                     Visibility="{Binding HasHeroArt, Converter={StaticResource BoolToVis}}">
               <Border.Background>
                 <ImageBrush ImageSource="{Binding HeroImage}" Stretch="UniformToFill" />
               </Border.Background>
             </Border>
-            <Border Background="{DynamicResource HeroShadeBrush}" Visibility="{Binding HasHeroArt, Converter={StaticResource BoolToVis}}" />
-            <Border Background="{DynamicResource HeroBottomShadeBrush}" Visibility="{Binding HasHeroArt, Converter={StaticResource BoolToVis}}" />
+            <Border CornerRadius="24" Background="{DynamicResource HeroShadeBrush}" Visibility="{Binding HasHeroArt, Converter={StaticResource BoolToVis}}" />
+            <Border CornerRadius="24" Background="{DynamicResource HeroBottomShadeBrush}" Visibility="{Binding HasHeroArt, Converter={StaticResource BoolToVis}}" />
 
             <!-- Running or waiting download -->
-            <StackPanel DataContext="{Binding HeroDownload}" VerticalAlignment="Bottom" HorizontalAlignment="Left"
-                        Width="620" Margin="36,0,36,30"
+            <StackPanel DataContext="{Binding HeroDownload}" VerticalAlignment="Bottom"
+                        MaxWidth="620" Margin="32,0,32,28" HorizontalAlignment="Stretch"
                         Visibility="{Binding DataContext.ShowDownloadHero, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolToVis}}">
               <Border Style="{StaticResource StatePill}" HorizontalAlignment="Left">
                 <TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}" />
@@ -263,12 +262,14 @@
 
             <!-- First run -->
             <Grid Visibility="{Binding ShowWelcomeHero, Converter={StaticResource BoolToVis}}">
+              <Border CornerRadius="24" Background="{DynamicResource SurfaceElevatedBrush}" />
               <Border Background="{DynamicResource BrandWashBrush}" />
               <Image Source="/Steamy;component/Resources/Brand/steamy-256.png" Width="210" Height="210" Opacity="0.14"
                      HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,64,0"
                      RenderOptions.BitmapScalingMode="HighQuality" />
               <StackPanel VerticalAlignment="Center" Margin="40,0" MaxWidth="640" HorizontalAlignment="Left">
-                <TextBlock Text="Welcome to Steamy" FontSize="32" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="ALL YOUR GAMES. ONE PLACE." Style="{StaticResource OverlineStyle}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10" />
+                <TextBlock Text="Your next session starts here." FontSize="32" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14" Margin="0,8,0,0" TextWrapping="Wrap"
                            Text="Your library, downloads, manifests and tools in one place. Point Steamy at your Steam folder to get started." />
                 <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
@@ -386,7 +387,7 @@
                         Visibility="{Binding HasRecentGames, Converter={StaticResource BoolToVis}}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="148" Spacing="16" CoverRatio="1.5" FooterHeight="50" MaxRows="2" />
+                <controls:AdaptiveGridPanel MinItemWidth="156" Spacing="18" CoverRatio="1.5" FooterHeight="54" MaxRows="1" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -412,107 +413,56 @@
             </StackPanel>
           </Border>
 
-          <TextBlock Text="Quick actions" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,14" HorizontalAlignment="Left" />
-          <ItemsControl Margin="0,0,0,28">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="220" Spacing="12" CoverRatio="0" FooterHeight="70" />
-              </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-
-            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateDepotDownloaderCommand}">
+          <TextBlock Text="Your shortcuts" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,14" />
+          <ItemsControl Margin="0,0,0,12">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate>
+              <controls:AdaptiveGridPanel MinItemWidth="230" Spacing="12" CoverRatio="0" FooterHeight="84" />
+            </ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateLibraryCommand}">
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource IconChipStyle}" Width="40" Height="40" Background="{DynamicResource AccentSoftBrush}">
-                  <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="20" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Style="{StaticResource IconChipStyle}" Width="42" Height="42" Background="{DynamicResource AccentSoftBrush}">
+                  <ui:SymbolIcon Symbol="Apps24" FontSize="20" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
-                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="Depot Downloader" Style="{StaticResource ToolName}" />
-                  <TextBlock Text="Download a game by App ID" Style="{StaticResource ToolHint}" />
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                  <TextBlock Text="Your library" Style="{StaticResource ToolName}" />
+                  <TextBlock Text="Find your next game" Style="{StaticResource ToolHint}" />
+                </StackPanel>
+              </Grid>
+            </Button>
+            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateDownloadsCommand}">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <Border Style="{StaticResource IconChipStyle}" Width="42" Height="42" Background="{DynamicResource SuccessSoftBrush}">
+                  <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="20" Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                  <TextBlock Text="Downloads" Style="{StaticResource ToolName}" />
+                  <TextBlock Text="Manage your queue" Style="{StaticResource ToolHint}" />
                 </StackPanel>
               </Grid>
             </Button>
             <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateShareCommand}">
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource IconChipStyle}" Width="40" Height="40" Background="{DynamicResource PinkSoftBrush}">
-                  <ui:SymbolIcon Symbol="Share24" FontSize="20" Foreground="{DynamicResource PinkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Style="{StaticResource IconChipStyle}" Width="42" Height="42" Background="{DynamicResource VioletSoftBrush}">
+                  <ui:SymbolIcon Symbol="Share24" FontSize="20" Foreground="{DynamicResource VioletBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
-                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                   <TextBlock Text="Share manifests" Style="{StaticResource ToolName}" />
-                  <TextBlock Text="Send all of yours in one go" Style="{StaticResource ToolHint}" />
+                  <TextBlock Text="Keep your collection connected" Style="{StaticResource ToolHint}" />
                 </StackPanel>
               </Grid>
             </Button>
-            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateDenuvoActivationCommand}">
+            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateSettingsCommand}">
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource IconChipStyle}" Width="40" Height="40" Background="{DynamicResource WarningSoftBrush}">
-                  <ui:SymbolIcon Symbol="Key24" FontSize="20" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Style="{StaticResource IconChipStyle}" Width="42" Height="42" Background="{DynamicResource AccentSoftBrush}">
+                  <ui:SymbolIcon Symbol="Settings24" FontSize="20" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
-                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="Denuvo Activation" Style="{StaticResource ToolName}" />
-                  <TextBlock Text="Activation tickets for your games" Style="{StaticResource ToolHint}" />
-                </StackPanel>
-              </Grid>
-            </Button>
-            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateFixesCommand}">
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource IconChipStyle}" Width="40" Height="40" Background="{DynamicResource SuccessSoftBrush}">
-                  <ui:SymbolIcon Symbol="ShieldTask24" FontSize="20" Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="Game Fixes" Style="{StaticResource ToolName}" />
-                  <TextBlock Text="Apply fixes to a game folder" Style="{StaticResource ToolHint}" />
-                </StackPanel>
-              </Grid>
-            </Button>
-            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateDlcUnlockerCommand}">
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource IconChipStyle}" Width="40" Height="40" Background="{DynamicResource VioletSoftBrush}">
-                  <ui:SymbolIcon Symbol="PuzzlePiece24" FontSize="20" Foreground="{DynamicResource VioletBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="DLC Unlocker" Style="{StaticResource ToolName}" />
-                  <TextBlock Text="CreamAPI and SmokeAPI" Style="{StaticResource ToolHint}" />
-                </StackPanel>
-              </Grid>
-            </Button>
-            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateSteamlessCommand}">
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource IconChipStyle}" Width="40" Height="40" Background="{DynamicResource WarningSoftBrush}">
-                  <ui:SymbolIcon Symbol="Wrench24" FontSize="20" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="Steamless" Style="{StaticResource ToolName}" />
-                  <TextBlock Text="Unpack SteamStub executables" Style="{StaticResource ToolHint}" />
-                </StackPanel>
-              </Grid>
-            </Button>
-            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateGoldbergCommand}">
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource IconChipStyle}" Width="40" Height="40" Background="{DynamicResource AccentSoftBrush}">
-                  <ui:SymbolIcon Symbol="Games24" FontSize="20" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="Goldberg" Style="{StaticResource ToolName}" />
-                  <TextBlock Text="LAN and offline play" Style="{StaticResource ToolHint}" />
-                </StackPanel>
-              </Grid>
-            </Button>
-            <Button Style="{StaticResource TileButtonStyle}" Command="{Binding NavigateFamilyShareCommand}">
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource IconChipStyle}" Width="40" Height="40" Background="{DynamicResource PinkSoftBrush}">
-                  <ui:SymbolIcon Symbol="People24" FontSize="20" Foreground="{DynamicResource PinkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="GreenLuma" Style="{StaticResource ToolName}" />
-                  <TextBlock Text="Family Sharing" Style="{StaticResource ToolHint}" />
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                  <TextBlock Text="Make it yours" Style="{StaticResource ToolName}" />
+                  <TextBlock Text="Appearance, storage and sources" Style="{StaticResource ToolHint}" />
                 </StackPanel>
               </Grid>
             </Button>
@@ -521,6 +471,79 @@
 
         <!-- Right: live panels -->
         <StackPanel x:Name="SideColumn" Grid.Column="2" Style="{StaticResource EnterStyle5}">
+
+          <!-- Downloads -->
+          <Border Style="{StaticResource InteractiveCardStyle}" Margin="0,0,0,14">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Downloads" Style="{StaticResource CardHeaderStyle}" />
+                <Border Grid.Column="1" Style="{StaticResource CountBadgeStyle}" HorizontalAlignment="Left">
+                  <TextBlock Text="{Binding JobCountLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                </Border>
+                <ui:Button Grid.Column="2" Style="{StaticResource LinkButtonStyle}" Content="View all" Margin="0,-6,-10,-6"
+                           Command="{Binding NavigateDownloadsCommand}" />
+              </Grid>
+
+              <ItemsControl ItemsSource="{Binding ActiveJobs}" Margin="0,14,0,-12"
+                            Visibility="{Binding HasActiveJobs, Converter={StaticResource BoolToVis}}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="0,0,0,14">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <Grid Width="36" Height="50" VerticalAlignment="Top">
+                        <Border CornerRadius="8" Background="{Binding CoverColor}">
+                          <TextBlock Text="{Binding CoverGlyph}" FontSize="14" Foreground="#AAFFFFFF"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <Border CornerRadius="8" RenderOptions.BitmapScalingMode="HighQuality">
+                          <Border.Background>
+                            <ImageBrush ImageSource="{Binding PortraitArtUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=96}" Stretch="UniformToFill" />
+                          </Border.Background>
+                        </Border>
+                      </Grid>
+                      <StackPanel Grid.Column="1" Margin="12,1,0,0">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <TextBlock Text="{Binding GameName}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="1" Text="{Binding ProgressLabel}" FontSize="12" FontWeight="SemiBold" Margin="8,0,0,0"
+                                     Foreground="{DynamicResource AccentBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <controls:SmoothProgressBar Style="{StaticResource JobProgressBar}" Height="5" Minimum="0" Maximum="100"
+                                                    SmoothValue="{Binding Progress, Mode=OneWay}" Margin="0,8,0,6" />
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <TextBlock Text="{Binding StateLabel}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11.5" />
+                          <TextBlock Grid.Column="1" Text="{Binding Speed}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11.5"
+                                     Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <StackPanel Margin="0,12,0,0" Visibility="{Binding ShowNoJobs, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="Nothing downloading right now." Style="{StaticResource BodyTextStyle}" Foreground="{DynamicResource TextTertiaryBrush}" />
+                <ui:Button Content="New download" Appearance="Secondary" Icon="{ui:SymbolIcon CloudArrowDown24}"
+                           HorizontalAlignment="Stretch" Margin="0,12,0,0" Command="{Binding NavigateDepotDownloaderCommand}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
 
           <!-- Share -->
           <Border CornerRadius="16" BorderThickness="1" BorderBrush="{DynamicResource BorderSubtleBrush}"
@@ -561,79 +584,6 @@
                            Margin="0,8,0,0" Command="{Binding NavigateShareCommand}" />
               </StackPanel>
             </Grid>
-          </Border>
-
-          <!-- Downloads -->
-          <Border Style="{StaticResource InteractiveCardStyle}" Margin="0,0,0,14">
-            <StackPanel>
-              <Grid>
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="Auto" />
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="Downloads" Style="{StaticResource CardHeaderStyle}" />
-                <Border Grid.Column="1" Style="{StaticResource CountBadgeStyle}" HorizontalAlignment="Left">
-                  <TextBlock Text="{Binding JobCountLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
-                </Border>
-                <ui:Button Grid.Column="2" Style="{StaticResource LinkButtonStyle}" Content="View all" Margin="0,-6,-10,-6"
-                           Command="{Binding NavigateDownloadsCommand}" />
-              </Grid>
-
-              <ItemsControl ItemsSource="{Binding ActiveJobs}" Margin="0,14,0,-12"
-                            Visibility="{Binding HasActiveJobs, Converter={StaticResource BoolToVis}}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Grid Margin="0,0,0,14">
-                      <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                      </Grid.ColumnDefinitions>
-                      <Grid Width="36" Height="50" VerticalAlignment="Top">
-                        <Border CornerRadius="8" Background="{Binding CoverColor}">
-                          <TextBlock Text="{Binding CoverGlyph}" FontSize="14" Foreground="#AAFFFFFF"
-                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <Border CornerRadius="8" RenderOptions.BitmapScalingMode="HighQuality">
-                          <Border.Background>
-                            <ImageBrush ImageSource="{Binding PortraitArtUrl}" Stretch="UniformToFill" />
-                          </Border.Background>
-                        </Border>
-                      </Grid>
-                      <StackPanel Grid.Column="1" Margin="12,1,0,0">
-                        <Grid>
-                          <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                          </Grid.ColumnDefinitions>
-                          <TextBlock Text="{Binding GameName}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
-                                     TextTrimming="CharacterEllipsis" />
-                          <TextBlock Grid.Column="1" Text="{Binding ProgressLabel}" FontSize="12" FontWeight="SemiBold" Margin="8,0,0,0"
-                                     Foreground="{DynamicResource AccentBrush}" Typography.NumeralAlignment="Tabular" />
-                        </Grid>
-                        <controls:SmoothProgressBar Style="{StaticResource JobProgressBar}" Height="5" Minimum="0" Maximum="100"
-                                                    SmoothValue="{Binding Progress, Mode=OneWay}" Margin="0,8,0,6" />
-                        <Grid>
-                          <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                          </Grid.ColumnDefinitions>
-                          <TextBlock Text="{Binding StateLabel}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11.5" />
-                          <TextBlock Grid.Column="1" Text="{Binding Speed}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11.5"
-                                     Typography.NumeralAlignment="Tabular" />
-                        </Grid>
-                      </StackPanel>
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-
-              <StackPanel Margin="0,12,0,0" Visibility="{Binding ShowNoJobs, Converter={StaticResource BoolToVis}}">
-                <TextBlock Text="Nothing downloading right now." Style="{StaticResource BodyTextStyle}" Foreground="{DynamicResource TextTertiaryBrush}" />
-                <ui:Button Content="New download" Appearance="Secondary" Icon="{ui:SymbolIcon CloudArrowDown24}"
-                           HorizontalAlignment="Stretch" Margin="0,12,0,0" Command="{Binding NavigateDepotDownloaderCommand}" />
-              </StackPanel>
-            </StackPanel>
           </Border>
 
           <!-- System -->

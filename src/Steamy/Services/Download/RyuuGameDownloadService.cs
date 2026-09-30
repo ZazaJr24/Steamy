@@ -5,8 +5,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using SharpCompress.Archives;
-using SharpCompress.Common;
+using System.Security.Cryptography;
 
 namespace Steamy.Services;
 
@@ -167,11 +166,13 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 entry.ExtractToFile(destPath, overwrite: true);
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return new RyuuGameDownloadResult(false, $"Failed to extract archive: {ex.Message}");
         }
 
+        await File.WriteAllTextAsync(Path.Combine(appWorkDir, $"{appId}.lua"), luaContent, cancellationToken);
         var depots = ParseLua(luaContent);
         if (depots.Count == 0)
             return new RyuuGameDownloadResult(false, "No depots with keys and manifests found in the Lua script.");
@@ -181,7 +182,8 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         await WriteDepotKeysAsync(appWorkDir, appId, depots, cancellationToken);
 
         Directory.CreateDirectory(targetFolder);
-        return await RunDepotDownloaderModAsync(ddPath, appId, depots, appWorkDir, targetFolder, progress, cancellationToken);
+        var sessionDirectory = await PrepareResumeSessionAsync(appId, targetFolder, depots, appWorkDir, cancellationToken);
+        return await RunDepotDownloaderModAsync(ddPath, appId, depots, sessionDirectory, targetFolder, progress, cancellationToken);
     }
 
     public async Task<RyuuGameDownloadResult> DownloadGameAsync(
@@ -216,7 +218,8 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         await WriteDepotKeysAsync(appWorkDir, appId, depots, cancellationToken);
 
         Directory.CreateDirectory(targetFolder);
-        return await RunDepotDownloaderModAsync(ddPath, appId, depots, appWorkDir, targetFolder, progress, cancellationToken);
+        var sessionDirectory = await PrepareResumeSessionAsync(appId, targetFolder, depots, appWorkDir, cancellationToken);
+        return await RunDepotDownloaderModAsync(ddPath, appId, depots, sessionDirectory, targetFolder, progress, cancellationToken);
     }
 
     /// <summary>Writes the "<depot>;<key>" depot-keys file DepotDownloaderMod reads via -depotkeys.</summary>
@@ -247,46 +250,72 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         if (ddPath is null)
             return new RyuuGameDownloadResult(false, "Could not find DepotDownloaderMod.");
 
-        var appWorkDirs = FindManifestWorkDirs(appId).Where(Directory.Exists).ToList();
-        if (appWorkDirs.Count == 0)
-            return new RyuuGameDownloadResult(false, "No cached manifests found — start a fresh download.");
-
-        // The Lua carries the depot keys. Without it every encrypted depot fails on resume,
-        // so it is read even when the manifests themselves are already on disk.
-        string? luaContent = null;
-        foreach (var dir in appWorkDirs)
+        var sessionDirectory = DepotResumeStateStore.SessionDirectory(_workFolder, appId, targetFolder);
+        var pinned = DepotResumeStateStore.Read(sessionDirectory, appId, targetFolder);
+        IReadOnlyList<RyuuDepotInfo> depots;
+        if (pinned is not null)
         {
-            luaContent = TryReadLua(dir, appId);
-            if (luaContent is not null) break;
+            var keys = ReadDepotKeys(sessionDirectory, TryReadLua(sessionDirectory, appId) ?? string.Empty);
+            depots = pinned.Depots.Select(depot => new RyuuDepotInfo(depot.DepotId, depot.ManifestId,
+                keys.GetValueOrDefault(depot.DepotId, string.Empty))).ToArray();
+        }
+        else
+        {
+            // Migrate older jobs from one coherent source cache. Combining different caches can
+            // silently mix old and new game versions and discard keys required by some depots.
+            var appWorkDirs = FindManifestWorkDirs(appId).Where(Directory.Exists)
+                .OrderByDescending(Directory.GetLastWriteTimeUtc).ToArray();
+            depots = [];
+            string? selectedDirectory = null;
+            foreach (var directory in appWorkDirs)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var lua = TryReadLua(directory, appId) ?? string.Empty;
+                var candidates = ParseLua(lua);
+                if (candidates.Count == 0) candidates = BuildDepotsFromDirectory(lua, directory);
+                if (candidates.Count == 0) continue;
+                depots = candidates;
+                selectedDirectory = directory;
+                break;
+            }
+
+            if (selectedDirectory is null)
+                return new RyuuGameDownloadResult(false,
+                    "No cached manifests found. Start a new download to select a manifest version.");
+            sessionDirectory = await PrepareResumeSessionAsync(appId, targetFolder, depots,
+                selectedDirectory, cancellationToken);
         }
 
-        // Depots from the Lua first (they carry the keys), then depots reconstructed from the
-        // manifest files of every work folder, so a resume finds everything the original
-        // download had — no matter which source it came from.
-        var merged = new Dictionary<int, RyuuDepotInfo>();
-        if (luaContent is not null)
-            foreach (var depot in ParseLua(luaContent)) merged.TryAdd(depot.DepotId, depot);
-
-        foreach (var dir in appWorkDirs)
-            foreach (var depot in BuildDepotsFromDirectory(luaContent ?? string.Empty, dir))
-                merged.TryAdd(depot.DepotId, depot);
-
-        if (merged.Count == 0)
-            return new RyuuGameDownloadResult(false, "No cached depots found — start a fresh download.");
-
-        var depots = merged.Values.ToList();
-        var appWorkDir = appWorkDirs.FirstOrDefault(dir => TryReadLua(dir, appId) is not null)
-            ?? appWorkDirs.OrderByDescending(dir => Directory.GetFiles(dir, "*.manifest").Length).First();
-
-        // Keep the keys next to the manifests so the -depotkeys file matches what is passed.
-        await WriteDepotKeysAsync(appWorkDir, appId, depots, cancellationToken);
-
+        cancellationToken.ThrowIfCancellationRequested();
         _logging.Add(Models.LogLevel.Info, "GameDownload",
-            $"Resuming with {depots.Count} cached depot(s) for App {appId}.", appId);
-        progress?.Report($"Resuming — found {depots.Count} cached depot(s)");
-
+            $"Resuming {depots.Count} pinned depot(s) for App {appId}.", appId);
+        progress?.Report($"Checking existing files against {depots.Count} saved depot manifest(s)…");
         Directory.CreateDirectory(targetFolder);
-        return await RunDepotDownloaderModAsync(ddPath, appId, depots, appWorkDir, targetFolder, progress, cancellationToken);
+        return await RunDepotDownloaderModAsync(ddPath, appId, depots, sessionDirectory, targetFolder, progress, cancellationToken);
+    }
+
+    private async Task<string> PrepareResumeSessionAsync(int appId, string targetFolder,
+        IReadOnlyList<RyuuDepotInfo> depots, string sourceDirectory, CancellationToken cancellationToken)
+    {
+        var directory = DepotResumeStateStore.SessionDirectory(_workFolder, appId, targetFolder);
+        Directory.CreateDirectory(directory);
+        foreach (var depot in depots)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var fileName = $"{depot.DepotId}_{depot.ManifestId}.manifest";
+            var source = Path.Combine(sourceDirectory, fileName);
+            // Another cache is useful only when it has this exact pinned manifest version.
+            if (!File.Exists(source))
+                source = FindManifestWorkDirs(appId).Select(folder => Path.Combine(folder, fileName))
+                    .FirstOrDefault(File.Exists);
+            if (source is not null && File.Exists(source))
+                File.Copy(source, Path.Combine(directory, fileName), overwrite: true);
+        }
+        await WriteDepotKeysAsync(directory, appId, depots, cancellationToken);
+        await DepotResumeStateStore.WriteAsync(directory,
+            new DepotResumeState(appId, Path.GetFullPath(targetFolder),
+                depots.Select(depot => new CachedDepotManifest(depot.DepotId, depot.ManifestId)).ToArray()), cancellationToken);
+        return directory;
     }
 
     /// <summary>
@@ -369,17 +398,21 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 "-app", appId.ToString(CultureInfo.InvariantCulture),
                 "-depot", depot.DepotId.ToString(CultureInfo.InvariantCulture),
                 "-manifest", depot.ManifestId,
-                "-depotkeys", keyFile,
                 "-dir", Path.GetFullPath(targetFolder)
             };
+            if (File.Exists(keyFile))
+            {
+                args.Add("-depotkeys");
+                args.Add(keyFile);
+            }
             if (File.Exists(manifestFilePath))
             {
                 args.Add("-manifestfile");
                 args.Add(manifestFilePath);
             }
             DepotDownloaderArgumentBuilder.AddTransferOptions(args, settings.DownloadConnections, settings.UseLancache);
-            // -verify-all makes DepotDownloaderMod re-check the files already in the target folder and
-            // only download what is missing. Without it a resumed depot restarts from zero.
+            // Reuse only chunks that match the saved manifest; repair interrupted writes and
+            // fetch missing chunks without changing the version selected for this download.
             args.Add("-verify-all");
 
             try
@@ -408,6 +441,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 var (exitCode, stdoutLines, depotBytesDownloaded) = await RunProcessWithWatchdogAsync(
                     process, depot.DepotId, index + 1, depots.Count, completedDepotsBytes, Path.GetFullPath(targetFolder), progress, cancellationToken);
 
+                cancellationToken.ThrowIfCancellationRequested();
                 var totalLine = stdoutLines.LastOrDefault(l => l.StartsWith("Total downloaded:", StringComparison.Ordinal));
                 var failureReason = DepotDownloaderOutputParser.ExtractFailureReason(string.Join('\n', stdoutLines));
                 var isFailure = exitCode != 0;
@@ -449,12 +483,13 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         if (failedDepots.Count > 0 && completedDepots == 0)
             return new RyuuGameDownloadResult(false, $"All depots failed:\n{string.Join("\n", failedDepots)}");
 
         if (failedDepots.Count > 0)
-            return new RyuuGameDownloadResult(true,
-                $"{completedDepots}/{depots.Count} depots downloaded. Failed:\n{string.Join("\n", failedDepots)}");
+            return new RyuuGameDownloadResult(false,
+                $"{completedDepots}/{depots.Count} depots downloaded. Resume to repair the incomplete download. Failed:\n{string.Join("\n", failedDepots)}");
 
         return new RyuuGameDownloadResult(true, $"All {depots.Count} depots downloaded to {targetFolder}.");
     }
@@ -507,50 +542,74 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         Process process, int depotId, int depotIndex, int totalDepots, long completedDepotsBytes, string targetFolder,
         IProgress<string>? progress, CancellationToken cancellationToken)
     {
-        var stdoutLines = new List<string>();
+        const int maximumLogLines = 2_000;
+        var output = new System.Collections.Concurrent.ConcurrentQueue<string>();
         var tracker = new DownloadProgressTracker(DownloadByteSource.For(process, targetFolder));
         long lastDepotBytes = 0;
+        var stalled = false;
 
-        var readStdout = Task.Run(async () =>
+        async Task ReadOutputAsync(StreamReader reader)
         {
-            while (await process.StandardOutput.ReadLineAsync(cancellationToken) is { } line)
+            // Cancellation kills the process, then both pipes are drained before the job can
+            // release its slot. Readers must not outlive or access a disposed Process instance.
+            while (await reader.ReadLineAsync().ConfigureAwait(false) is { } line)
             {
-                stdoutLines.Add(line);
-                if (tracker.ObserveLine(line) is null && !string.IsNullOrWhiteSpace(line))
+                if (line.Length > 8_192) line = line[..8_192];
+                output.Enqueue(line);
+                while (output.Count > maximumLogLines) output.TryDequeue(out _);
+                if (tracker.ObserveLine(line) is null && !string.IsNullOrWhiteSpace(line)
+                    && !cancellationToken.IsCancellationRequested)
                     progress?.Report(line);
             }
-        }, cancellationToken);
-
-        var readStderr = process.StandardError.ReadToEndAsync(cancellationToken);
+        }
 
         using var watchdog = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        using var reg = watchdog.Token.Register(() =>
+        using var registration = watchdog.Token.Register(() =>
         {
-            try { if (!process.HasExited) process.Kill(true); } catch { }
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) { }
+            catch (System.ComponentModel.Win32Exception) { }
         });
-
-        // Progress ticks every 100 ms; the process only counts as stuck when it neither prints
-        // nor writes anything, so one large file can no longer trip the watchdog.
+        var readStdout = ReadOutputAsync(process.StandardOutput);
+        var readStderr = ReadOutputAsync(process.StandardError);
         var ticker = Task.Run(async () =>
         {
             using var timer = new PeriodicTimer(DepotDownloaderService.ProgressInterval);
+            var lastCpuSample = Stopwatch.GetTimestamp();
+            var lastCpuActivity = lastCpuSample;
+            var previousCpu = TimeSpan.Zero;
             try
             {
-                while (await timer.WaitForNextTickAsync(watchdog.Token))
+                while (await timer.WaitForNextTickAsync(watchdog.Token).ConfigureAwait(false))
                 {
                     var snapshot = tracker.Snapshot();
-                    if (snapshot.DownloadedBytes > 0)
-                        lastDepotBytes = snapshot.DownloadedBytes;
+                    if (snapshot.DownloadedBytes > 0) lastDepotBytes = snapshot.DownloadedBytes;
+                    if (snapshot.Percent is { } percent && !cancellationToken.IsCancellationRequested)
+                        progress?.Report(GameDownloadProgressMessage.Format(depotId, depotIndex, totalDepots,
+                            percent, snapshot, completedDepotsBytes + lastDepotBytes));
 
-                    if (snapshot.Percent is { } percent)
+                    // Manifest/chunk verification may read and hash a large file without writing
+                    // or printing. CPU activity means the verifier is still working.
+                    if (Stopwatch.GetElapsedTime(lastCpuSample).TotalSeconds >= 1)
                     {
-                        var cumulativeBytes = completedDepotsBytes + lastDepotBytes;
-                        progress?.Report(GameDownloadProgressMessage.Format(depotId, depotIndex, totalDepots, percent, snapshot, cumulativeBytes));
+                        lastCpuSample = Stopwatch.GetTimestamp();
+                        try
+                        {
+                            var cpu = process.TotalProcessorTime;
+                            if (cpu > previousCpu) lastCpuActivity = lastCpuSample;
+                            previousCpu = cpu;
+                        }
+                        catch (InvalidOperationException) { }
+                        catch (System.ComponentModel.Win32Exception) { }
                     }
 
-                    if (tracker.SecondsSinceActivity > StallTimeout.TotalSeconds)
+                    if (tracker.SecondsSinceActivity > StallTimeout.TotalSeconds
+                        && Stopwatch.GetElapsedTime(lastCpuActivity) > StallTimeout)
                     {
-                        progress?.Report("No download activity for 3 minutes — stopping the stuck process.");
+                        stalled = true;
+                        var message = "No download or verification activity for 3 minutes. Resume to retry the saved manifests.";
+                        output.Enqueue(message);
+                        progress?.Report(message);
                         watchdog.Cancel();
                         return;
                     }
@@ -561,19 +620,16 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
 
         try
         {
-            await process.WaitForExitAsync(watchdog.Token);
+            await process.WaitForExitAsync().ConfigureAwait(false);
+            await Task.WhenAll(readStdout, readStderr).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        finally
         {
-            // Watchdog killed the process
+            watchdog.Cancel();
+            await ticker.ConfigureAwait(false);
         }
-        watchdog.Cancel();
-        await ticker;
-        await readStdout;
-        _ = await readStderr;
-
-        var exitCode = process.HasExited ? process.ExitCode : -1;
-        return (exitCode, stdoutLines, lastDepotBytes);
+        cancellationToken.ThrowIfCancellationRequested();
+        return (stalled ? -1 : process.ExitCode, output.ToList(), lastDepotBytes);
     }
 
     private static readonly Regex ManifestFilePattern = new(
@@ -582,58 +638,39 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
 
     private IReadOnlyList<RyuuDepotInfo> BuildDepotsFromDirectory(string luaContent, string? workDir)
     {
-        if (string.IsNullOrWhiteSpace(workDir) || !Directory.Exists(workDir))
-            return [];
+        if (string.IsNullOrWhiteSpace(workDir) || !Directory.Exists(workDir)) return [];
+        var keys = ReadDepotKeys(workDir, luaContent);
+        return Directory.EnumerateFiles(workDir, "*.manifest")
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .Select(file => ManifestFilePattern.Match(Path.GetFileName(file)))
+            .Where(match => match.Success && int.TryParse(match.Groups[1].Value, out _))
+            .Select(match => new RyuuDepotInfo(int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture),
+                match.Groups[2].Value, keys.GetValueOrDefault(int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture), string.Empty)))
+            .DistinctBy(depot => depot.DepotId)
+            .ToArray();
+    }
 
+    private static Dictionary<int, string> ReadDepotKeys(string directory, string luaContent)
+    {
         var keys = new Dictionary<int, string>();
-        foreach (Match m in AddAppIdPattern.Matches(luaContent))
-        {
-            var depotId = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
-            if (m.Groups[2].Success)
-                keys[depotId] = m.Groups[2].Value;
-        }
+        foreach (Match match in AddAppIdPattern.Matches(luaContent))
+            if (match.Groups[2].Success && int.TryParse(match.Groups[1].Value, out var depotId))
+                keys[depotId] = match.Groups[2].Value;
 
-        var result = new List<RyuuDepotInfo>();
-        foreach (var file in Directory.GetFiles(workDir, "*.manifest"))
-        {
-            var match = ManifestFilePattern.Match(Path.GetFileName(file));
-            if (!match.Success) continue;
-            var depotId = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
-            var manifestId = match.Groups[2].Value;
-            if (keys.TryGetValue(depotId, out var key) && !string.IsNullOrEmpty(key))
-                result.Add(new RyuuDepotInfo(depotId, manifestId, key));
-        }
-
-        // Also try .key file in work dir
-        if (result.Count == 0)
-        {
-            foreach (var keyFile in Directory.GetFiles(workDir, "*.key"))
+        foreach (var keyFile in Directory.EnumerateFiles(directory, "*.key"))
+            foreach (var line in File.ReadLines(keyFile))
             {
-                foreach (var line in File.ReadAllLines(keyFile))
-                {
-                    var parts = line.Split(';', 2);
-                    if (parts.Length == 2 && int.TryParse(parts[0], out var depotId))
-                        keys.TryAdd(depotId, parts[1].Trim());
-                }
+                var parts = line.Split(';', 2);
+                if (parts.Length == 2 && int.TryParse(parts[0], out var depotId)
+                    && !string.IsNullOrWhiteSpace(parts[1]))
+                    keys.TryAdd(depotId, parts[1].Trim());
             }
-            foreach (var file in Directory.GetFiles(workDir, "*.manifest"))
-            {
-                var match = ManifestFilePattern.Match(Path.GetFileName(file));
-                if (!match.Success) continue;
-                var depotId = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
-                var manifestId = match.Groups[2].Value;
-                if (keys.TryGetValue(depotId, out var key) && !string.IsNullOrEmpty(key))
-                    result.Add(new RyuuDepotInfo(depotId, manifestId, key));
-            }
-        }
-
-        return result;
+        return keys;
     }
 
     private async Task<string?> EnsureDepotDownloaderModAsync(IProgress<string>? progress, CancellationToken ct)
     {
-        Directory.CreateDirectory(_toolsFolder);
-
+        ct.ThrowIfCancellationRequested();
         string? exePath = null;
         if (Directory.Exists(_toolsFolder))
         {
@@ -652,6 +689,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         }
 
         progress?.Report("DepotDownloaderMod not found — downloading from GitHub...");
+        var stagingDirectory = Path.Combine(Path.GetDirectoryName(fallbackDir)!, ".depot-install-" + Guid.NewGuid().ToString("N"));
         try
         {
             using var releaseResponse = await _httpClient.GetAsync(GitHubReleasesApi, ct);
@@ -666,6 +704,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             var assets = doc.RootElement.GetProperty("assets");
             string? downloadUrl = null;
             string? assetName = null;
+            string? assetDigest = null;
 
             foreach (var asset in assets.EnumerateArray())
             {
@@ -674,7 +713,8 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                     || name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                 {
                     downloadUrl = asset.GetProperty("browser_download_url").GetString();
-                    assetName = name;
+                    assetName = Path.GetFileName(name);
+                    assetDigest = asset.TryGetProperty("digest", out var digest) ? digest.GetString() : null;
                     break;
                 }
             }
@@ -686,30 +726,36 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             }
 
             progress?.Report($"Downloading {assetName}...");
-            var archivePath = Path.Combine(_toolsFolder, assetName);
+            // Keep incomplete downloads out of every executable search path. Installation goes
+            // into writable app data, which also supports a read-only application directory.
+            Directory.CreateDirectory(stagingDirectory);
+            var archivePath = Path.Combine(stagingDirectory, assetName);
             await using (var stream = await _httpClient.GetStreamAsync(downloadUrl, ct))
-            await using (var fs = new FileStream(archivePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            await using (var file = new FileStream(archivePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                await stream.CopyToAsync(file, ct);
+
+            if (assetDigest?.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) == true)
             {
-                await stream.CopyToAsync(fs, ct);
+                await using var file = File.OpenRead(archivePath);
+                var actual = Convert.ToHexString(await SHA256.HashDataAsync(file, ct));
+                if (!actual.Equals(assetDigest[7..], StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("DepotDownloaderMod archive checksum does not match the release digest.");
             }
 
             progress?.Report("Extracting DepotDownloaderMod...");
-            using (var archive = ArchiveFactory.OpenArchive(archivePath))
-            {
-                foreach (var entry in archive.Entries.Where(e => !e.IsDirectory))
-                {
-                    entry.WriteToDirectory(_toolsFolder, new ExtractionOptions
-                    {
-                        ExtractFullPath = true,
-                        Overwrite = true
-                    });
-                }
-            }
-
-            try { File.Delete(archivePath); } catch { }
-
-            exePath = Directory.GetFiles(_toolsFolder, "DepotDownloader*.exe", SearchOption.AllDirectories)
+            var extractionDirectory = Path.Combine(stagingDirectory, "files");
+            var extracted = await Task.Run(() => ArchiveExtractor.Extract(archivePath, extractionDirectory,
+                cancellationToken: ct), ct);
+            if (!extracted.Succeeded) throw new InvalidDataException(extracted.Message);
+            var stagedExecutable = Directory.EnumerateFiles(extractionDirectory, "DepotDownloader*.exe", SearchOption.AllDirectories)
                 .FirstOrDefault();
+            if (stagedExecutable is null) throw new InvalidDataException("The release archive contains no DepotDownloader executable.");
+            ct.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(fallbackDir);
+            var installedDirectory = Path.Combine(fallbackDir, "release-" + Guid.NewGuid().ToString("N"));
+            var relativeExecutable = Path.GetRelativePath(extractionDirectory, stagedExecutable);
+            Directory.Move(extractionDirectory, installedDirectory);
+            exePath = Path.Combine(installedDirectory, relativeExecutable);
 
             if (exePath is not null)
             {
@@ -719,10 +765,17 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
 
             return exePath;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logging.Add(Models.LogLevel.Error, "RyuuDownload", $"Failed to download DepotDownloaderMod: {ex.Message}");
             return null;
+        }
+        finally
+        {
+            try { if (Directory.Exists(stagingDirectory)) Directory.Delete(stagingDirectory, recursive: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
     }
 

@@ -188,9 +188,8 @@ public static class DepotDownloaderArgumentBuilder
 
         AddTransferOptions(arguments, request.MaxDownloads, request.UseLancache);
 
-        // DepotDownloaderMod's own scripts always pass -verify-all. It re-validates the files that
-        // are already on disk and only fetches what is missing or wrong, which is exactly what makes
-        // a resumed download continue where it stopped instead of starting over.
+        // Validate existing chunks against the requested manifest before reusing partial files.
+        // This also repairs interrupted writes when a paused process is started again.
         arguments.Add("-verify-all");
 
         var workingDirectory = string.IsNullOrWhiteSpace(request.WorkingDirectory)
@@ -467,45 +466,66 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
         if (!File.Exists(fullPath))
             return new DepotDownloaderToolStatus(false, fullPath, string.Empty, "Executable not found", checkedAt);
 
-        var fileVersion = FileVersionInfo.GetVersionInfo(fullPath).FileVersion ?? string.Empty;
-        var output = string.Empty;
-        var exitCode = (int?)null;
+        var fileVersion = string.Empty;
         try
         {
+            fileVersion = FileVersionInfo.GetVersionInfo(fullPath).FileVersion ?? string.Empty;
             using var process = new Process
             {
                 StartInfo = DepotDownloaderProcessFactory.Create(
-                    new DepotDownloaderCommand(fullPath, new[] { "-version" }, Path.GetDirectoryName(fullPath)!),
+                    new DepotDownloaderCommand(fullPath, new[] { "--version" }, Path.GetDirectoryName(fullPath)!),
                     interactive: false),
                 EnableRaisingEvents = true
             };
+            cancellationToken.ThrowIfCancellationRequested();
             if (!process.Start())
                 return new DepotDownloaderToolStatus(false, fullPath, fileVersion, "Could not start executable", checkedAt);
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(5));
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(timeout.Token);
-            var stderrTask = process.StandardError.ReadToEndAsync(timeout.Token);
-            try { await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false); }
-            catch (OperationCanceledException) { TryKill(process); }
-            try { output = await stdoutTask.ConfigureAwait(false); } catch (OperationCanceledException) { }
-            try { _ = await stderrTask.ConfigureAwait(false); } catch (OperationCanceledException) { }
-            exitCode = process.HasExited ? process.ExitCode : null;
+            timeout.CancelAfter(TimeSpan.FromSeconds(8));
+            // Drain both pipes concurrently: a runtime-loader error may otherwise fill stderr
+            // while the caller waits forever for stdout.
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            try
+            {
+                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                TryKill(process);
+                await process.WaitForExitAsync().ConfigureAwait(false);
+                await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                return new DepotDownloaderToolStatus(false, fullPath, fileVersion,
+                    "Version check timed out. Check the executable and its .NET runtime.", checkedAt);
+            }
+
+            var output = await stdoutTask.ConfigureAwait(false);
+            var error = await stderrTask.ConfigureAwait(false);
+            var detectedVersion = ExtractVersion(output) ?? fileVersion;
+            if (process.ExitCode != 0)
+            {
+                var detail = (string.IsNullOrWhiteSpace(error) ? output : error)
+                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .FirstOrDefault()?.Trim();
+                if (detail?.Length > 240) detail = detail[..240];
+                return new DepotDownloaderToolStatus(false, fullPath, detectedVersion,
+                    $"Version check failed (exit {process.ExitCode}). {detail}".Trim(), checkedAt);
+            }
+
+            return new DepotDownloaderToolStatus(true, fullPath, detectedVersion,
+                "Ready · version check passed", checkedAt);
         }
         catch (OperationCanceledException)
         {
-            return new DepotDownloaderToolStatus(false, fullPath, fileVersion, "Version check cancelled", checkedAt);
+            throw;
         }
         catch (Exception exception)
         {
-            return new DepotDownloaderToolStatus(false, fullPath, fileVersion, $"Version check failed: {exception.GetType().Name}", checkedAt);
+            return new DepotDownloaderToolStatus(false, fullPath, fileVersion,
+                $"Version check failed: {exception.Message}", checkedAt);
         }
-
-        var detectedVersion = ExtractVersion(output) ?? fileVersion;
-        var message = exitCode is 0
-            ? "Executable found and version check passed"
-            : "Executable found; version check is not supported by this build";
-        return new DepotDownloaderToolStatus(true, fullPath, detectedVersion, message, checkedAt);
     }
 
     public async Task<DepotDownloaderRunResult> DownloadAsync(
@@ -529,6 +549,7 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
             EnableRaisingEvents = true
         };
 
+        cancellationToken.ThrowIfCancellationRequested();
         if (!process.Start()) throw new InvalidOperationException("DepotDownloader could not be started.");
         var active = new ActiveProcess(process);
         if (!_activeProcesses.TryAdd(request.JobId, active))
@@ -594,14 +615,16 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
         }
     }
 
-    public Task StopAsync(Guid jobId, bool pause, CancellationToken cancellationToken = default)
+    public async Task StopAsync(Guid jobId, bool pause, CancellationToken cancellationToken = default)
     {
         if (_activeProcesses.TryGetValue(jobId, out var active))
         {
             active.PauseRequested = pause;
             TryKill(active.Process);
+            // Do not release the queue slot until the child has stopped writing its files.
+            try { await active.Process.WaitForExitAsync(cancellationToken).ConfigureAwait(false); }
+            catch (InvalidOperationException) { } // Run completion may already have disposed it.
         }
-        return Task.CompletedTask;
     }
 
     private static async Task ReadLinesAsync(
