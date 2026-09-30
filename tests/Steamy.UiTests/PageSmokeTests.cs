@@ -40,6 +40,7 @@ public sealed class PageSmokeTests
         // same compiled dictionaries as App.xaml; WPF cannot load App.xaml into a subclass
         // declared in a different assembly.
         var app = new Application();
+        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
         app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ThemesDictionary());
         app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Steamy;component/Resources/Themes/Dark.xaml") });
@@ -84,8 +85,10 @@ public sealed class PageSmokeTests
                     if (page is LibraryPage)
                     {
                         var viewModel = Assert.IsType<Steamy.ViewModels.LibraryViewModel>(page.DataContext);
+                        PumpUntil(() => !viewModel.IsCatalogLoading && viewModel.CatalogItems.Count > 0);
                         viewModel.SelectedSourceFilter = "Sushi";
                         PumpDispatcher(TimeSpan.FromMilliseconds(100));
+                        Assert.True(viewModel.PagedCatalogItems.Count > 0, $"Sushi filter returned no rows: {viewModel.CatalogStatus}; {viewModel.SourceFilterHint}");
                         Assert.Single(viewModel.PagedCatalogItems);
                         viewModel.SelectedSourceFilter = "Hubcap";
                         PumpDispatcher(TimeSpan.FromMilliseconds(100));
@@ -179,6 +182,13 @@ public sealed class PageSmokeTests
         timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
         timer.Start();
         Dispatcher.PushFrame(frame);
+    }
+
+    private static void PumpUntil(Func<bool> condition)
+    {
+        var elapsed = Stopwatch.StartNew();
+        while (!condition() && elapsed.Elapsed < TimeSpan.FromSeconds(5)) PumpDispatcher(TimeSpan.FromMilliseconds(20));
+        Assert.True(condition(), "The asynchronous UI operation did not settle within 5 seconds.");
     }
 
     private static void CheckSushiImport(IServiceProvider provider)
