@@ -211,11 +211,16 @@ public sealed class PageSmokeTests
         // clip a larger render. The same controls, resources and page instances are used.
         var element = (FrameworkElement)window.Content;
         window.Content = null;
+        window.UpdateLayout();
+        PumpDispatcher(TimeSpan.FromMilliseconds(50));
+        Assert.Null(VisualTreeHelper.GetParent(element));
         try
         {
             var size = new Size(1600, 1050);
             element.Width = size.Width;
             element.Height = size.Height;
+            element.InvalidateMeasure();
+            element.InvalidateArrange();
             element.Measure(size);
             element.Arrange(new Rect(size));
             element.UpdateLayout();
