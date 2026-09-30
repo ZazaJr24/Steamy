@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
 using Steamy.Models;
 using Steamy.Pages;
@@ -21,7 +22,7 @@ public sealed class DashboardViewModel : ViewModelBase
 {
     private const int RecentGameCount = 12;
     private const int JobPreviewCount = 4;
-    private static readonly TimeSpan RefreshDebounce = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan RefreshDebounce = TimeSpan.FromSeconds(30);
 
     private readonly ILibrarySyncService _librarySync;
     private readonly ISettingsService _settings;
@@ -320,6 +321,12 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand OpenGameFolderCommand => new RelayCommand<Game>(OpenGameFolder);
     public ICommand NavigateDownloadsCommand => new RelayCommand(() => Navigation.Navigate<DownloadsPage>());
     public ICommand NavigateLibraryCommand => new RelayCommand(() => Navigation.Navigate<LibraryPage>());
+    public ICommand ExploreSourceCommand => new RelayCommand<string>(source =>
+    {
+        if (source is null) return;
+        App.Services.GetRequiredService<LibraryViewModel>().SelectedSourceFilter = source;
+        Navigation.Navigate<LibraryPage>();
+    });
     public ICommand NavigateSettingsCommand => new RelayCommand(() => Navigation.Navigate<SettingsPage>());
     public ICommand NavigateFixesCommand => new RelayCommand(() => Navigation.Navigate<GameFixesPage>());
     public ICommand NavigateDlcUnlockerCommand => new RelayCommand(() => Navigation.Navigate<CreamApiPage>());
@@ -345,7 +352,7 @@ public sealed class DashboardViewModel : ViewModelBase
             catch (Exception exception) { _scan = SteamLibraryScanResult.Failure($"The Steam library could not be read ({exception.GetType().Name})."); }
 
             RefreshLibrary();
-            RefreshStorage();
+            _ = RefreshStorageAsync();
             RefreshDownloads();
             RefreshStatus();
 
@@ -423,28 +430,32 @@ public sealed class DashboardViewModel : ViewModelBase
         OnPropertyChanged(nameof(HeroDownloadDetail));
     }
 
-    private void RefreshStorage()
+    private async Task RefreshStorageAsync()
     {
         var probe = _scan is { Succeeded: true, SteamRoot.Length: > 0 } scan ? scan.SteamRoot : Path.GetTempPath();
+        var storage = await Task.Run(() =>
+        {
         try
         {
             var root = Path.GetPathRoot(Path.GetFullPath(probe));
             var drive = string.IsNullOrWhiteSpace(root) ? null : new DriveInfo(root);
             if (drive is { IsReady: true })
             {
-                _storageFree = drive.AvailableFreeSpace;
-                _storageTotal = drive.TotalSize;
-                _storageDrive = drive.Name.TrimEnd('\\', '/');
+                return (Free: drive.AvailableFreeSpace, Total: drive.TotalSize, Drive: drive.Name.TrimEnd('\\', '/'));
             }
             else
             {
-                _storageFree = -1;
+                return (Free: -1L, Total: 0L, Drive: string.Empty);
             }
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or UnauthorizedAccessException)
         {
-            _storageFree = -1;
+            return (Free: -1L, Total: 0L, Drive: string.Empty);
         }
+        });
+        _storageFree = storage.Free;
+        _storageTotal = storage.Total;
+        _storageDrive = storage.Drive;
 
         OnPropertyChanged(nameof(StorageFree));
         OnPropertyChanged(nameof(StorageSummary));

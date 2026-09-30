@@ -151,62 +151,92 @@ public interface ISettingsService
 
 public sealed class JsonSettingsService : ISettingsService
 {
-    private readonly string _path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "settings.json");
+    private readonly string _path;
+    private readonly object _cacheGate = new();
+    private readonly SemaphoreSlim _writeGate = new(1);
+    private AppSettings? _cached;
+
+    public JsonSettingsService(string? path = null) => _path = path ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "settings.json");
 
     public AppSettings Load()
     {
-        AppSettings? settings = null;
-        try
+        lock (_cacheGate)
         {
-            if (File.Exists(_path))
+            if (_cached is not null) return _cached;
+            AppSettings? settings = null;
+            try
             {
-                settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(
-                    File.ReadAllText(_path),
-                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            }
-        }
-        catch { }
-        settings ??= new AppSettings();
-
-        // Auto-detect DepotDownloader from application's Tools folder
-        if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath) || !File.Exists(settings.DepotDownloaderPath))
-        {
-            var baseTools = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools");
-            var candidate = Path.Combine(baseTools, "DepotDownloader", "DepotDownloader.exe");
-            if (File.Exists(candidate))
-            {
-                settings.DepotDownloaderPath = candidate;
-            }
-            else
-            {
-                var modCandidate = Directory.Exists(Path.Combine(baseTools, "DepotDownloaderMod"))
-                    ? Directory.GetFiles(Path.Combine(baseTools, "DepotDownloaderMod"), "DepotDownloader*.exe", SearchOption.AllDirectories).FirstOrDefault()
-                    : null;
-                if (modCandidate is not null && File.Exists(modCandidate))
+                if (File.Exists(_path))
                 {
-                    settings.DepotDownloaderPath = modCandidate;
+                    settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(
+                        File.ReadAllText(_path),
+                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
             }
-        }
+            catch { }
+            settings ??= new AppSettings();
 
-        // Keep the app's DNS behaviour in step with the setting: every load (startup, page change)
-        // and every save re-points the HTTP handlers at the selected resolver.
-        StableDnsHandler.Configure(settings.DnsMode, settings.DnsEndpoint);
-        return settings;
+            // Auto-detect DepotDownloader from application's Tools folder
+            if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath) || !File.Exists(settings.DepotDownloaderPath))
+            {
+                var baseTools = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools");
+                var candidate = Path.Combine(baseTools, "DepotDownloader", "DepotDownloader.exe");
+                if (File.Exists(candidate))
+                {
+                    settings.DepotDownloaderPath = candidate;
+                }
+                else
+                {
+                    var modCandidate = Directory.Exists(Path.Combine(baseTools, "DepotDownloaderMod"))
+                        ? Directory.GetFiles(Path.Combine(baseTools, "DepotDownloaderMod"), "DepotDownloader*.exe", SearchOption.AllDirectories).FirstOrDefault()
+                        : null;
+                    if (modCandidate is not null && File.Exists(modCandidate))
+                    {
+                        settings.DepotDownloaderPath = modCandidate;
+                    }
+                }
+            }
+
+            // Read and detect once. Bindings and download ticks must never rescan disk or reset DNS.
+            StableDnsHandler.Configure(settings.DnsMode, settings.DnsEndpoint);
+            return _cached = settings;
+        }
     }
 
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        StableDnsHandler.Configure(settings.DnsMode, settings.DnsEndpoint);
         var json = System.Text.Json.JsonSerializer.Serialize(settings, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(_path, json, cancellationToken);
+        await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var temporary = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            await File.WriteAllTextAsync(temporary, json, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporary, _path, overwrite: true);
+            lock (_cacheGate) _cached = settings;
+            StableDnsHandler.Configure(settings.DnsMode, settings.DnsEndpoint);
+        }
+        finally
+        {
+            try { File.Delete(temporary); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            _writeGate.Release();
+        }
     }
 
-    public Task ResetAsync(CancellationToken cancellationToken = default)
+    public async Task ResetAsync(CancellationToken cancellationToken = default)
     {
-        if (File.Exists(_path)) File.Delete(_path);
-        return Task.CompletedTask;
+        await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            lock (_cacheGate)
+            {
+                if (File.Exists(_path)) File.Delete(_path);
+                _cached = null;
+            }
+        }
+        finally { _writeGate.Release(); }
     }
 }
 

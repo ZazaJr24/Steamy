@@ -14,9 +14,11 @@ public partial class SettingsPage : Page
 {
     private string _selectedCategory = "general";
     private readonly Dictionary<FrameworkElement, string> _sectionSearchText = new();
+    private readonly System.Windows.Threading.DispatcherTimer _searchTimer = new(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(180) };
 
     public SettingsPage()
     {
+        _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); FilterSections(); };
         Resources.Add("StringVis", new SettingsStringToVisibilityConverter());
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<SettingsViewModel>();
@@ -25,16 +27,22 @@ public partial class SettingsPage : Page
         // otherwise they would keep showing characters that no longer mean anything.
         ViewModel.CredentialInputsCleared += OnCredentialInputsCleared;
         Loaded += (_, _) => FilterSections();
+        Unloaded += (_, _) => _searchTimer.Stop();
         FilterSections();
     }
 
     private void Category_Checked(object sender, RoutedEventArgs e)
     {
+        _searchTimer.Stop();
         if (sender is RadioButton { Tag: string category }) _selectedCategory = category;
         FilterSections();
     }
 
-    private void SettingsSearch_TextChanged(object sender, TextChangedEventArgs e) => FilterSections();
+    private void SettingsSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        _searchTimer.Stop();
+        _searchTimer.Start();
+    }
 
     private void ClearSearch_Click(object sender, RoutedEventArgs e) => SettingsSearch.Clear();
 
@@ -52,6 +60,7 @@ public partial class SettingsPage : Page
         if (SectionsPanel is null || SettingsSearch is null || SectionSummary is null) return;
         var words = SettingsSearch.Text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var count = 0;
+        var changed = false;
         foreach (FrameworkElement section in SectionsPanel.Children)
         {
             if (!_sectionSearchText.TryGetValue(section, out var searchable))
@@ -62,12 +71,25 @@ public partial class SettingsPage : Page
             var visible = words.Length > 0
                 ? words.All(word => searchable.Contains(word, StringComparison.OrdinalIgnoreCase))
                 : _selectedCategory == "all" || string.Equals(section.Tag as string, _selectedCategory, StringComparison.Ordinal);
-            section.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            var next = visible ? Visibility.Visible : Visibility.Collapsed;
+            changed |= section.Visibility != next;
+            if (section.Visibility != next) section.Visibility = next;
             if (visible) count++;
         }
         SectionSummary.Text = words.Length > 0 ? $"{count} matching sections across all settings" : $"{count} sections · changes save automatically";
         NoSettingsResults.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        SettingsScrollViewer.ScrollToTop();
+        if (changed)
+        {
+            SettingsScrollViewer.ScrollToTop();
+            if (IsLoaded) Steamy.Controls.EntranceMotion.Reveal(SectionsPanel);
+        }
+    }
+
+    private void SourceCredit_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
+        catch (System.ComponentModel.Win32Exception) { }
+        e.Handled = true;
     }
 
     private static IEnumerable<string> StaticLabels(DependencyObject element)

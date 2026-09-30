@@ -21,7 +21,7 @@ namespace Steamy.Pages;
 public partial class LibraryPage : Page
 {
     private SteamCatalogItem? _selectedItem;
-    private ManifestSource _selectedSource = ManifestSource.Ryuu;
+    private ManifestSource _selectedSource = ManifestSource.Sushi;
     private string _downloadPath = string.Empty;
     private string _customArchivePath = string.Empty;
     private CancellationTokenSource? _availabilityCts;
@@ -71,7 +71,7 @@ public partial class LibraryPage : Page
         if (item is null) return;
 
         _selectedItem = item;
-        _selectedSource = ManifestSource.Ryuu;
+        _selectedSource = ManifestSource.Sushi;
 
         OverlayTitle.Text = item.Name;
         OverlayAppId.Text = $"App {item.AppId}";
@@ -90,13 +90,16 @@ public partial class LibraryPage : Page
         }
         catch { OverlayCover.Source = null; }
 
-        SetOptionState(SourceRyuu, true);
-        SetOptionState(SourceZaza, false);
-        SetOptionState(SourceHubcap, false);
-        SetOptionState(SourceDepotBox, false);
+        var requestedSource = ((LibraryViewModel)DataContext).SelectedSourceFilter;
+        _selectedSource = Enum.TryParse<ManifestSource>(requestedSource, out var sourceFilter) ? sourceFilter : ManifestSource.Sushi;
+        SetOptionState(SourceRyuu, _selectedSource == ManifestSource.Ryuu);
+        SetOptionState(SourceZaza, _selectedSource == ManifestSource.Zaza);
+        SetOptionState(SourceHubcap, _selectedSource == ManifestSource.Hubcap);
+        SetOptionState(SourceDepotBox, _selectedSource == ManifestSource.DepotBox);
+        SetOptionState(SourceSushi, _selectedSource == ManifestSource.Sushi);
         SourceAvailabilityText.Text = "";
 
-        _ = CheckSourceAvailabilityAsync(ManifestSource.Ryuu, item.AppId);
+        _ = CheckSourceAvailabilityAsync(_selectedSource, item.AppId);
 
         var settings = App.Services.GetRequiredService<ISettingsService>().Load();
         _downloadPath = settings.DownloadFolder ?? string.Empty;
@@ -140,6 +143,7 @@ public partial class LibraryPage : Page
         SetOptionState(SourceZaza, source == ManifestSource.Zaza);
         SetOptionState(SourceHubcap, source == ManifestSource.Hubcap);
         SetOptionState(SourceDepotBox, source == ManifestSource.DepotBox);
+        SetOptionState(SourceSushi, source == ManifestSource.Sushi);
         var info = App.Services.GetRequiredService<IManifestSourceService>().Sources
             .FirstOrDefault(s => s.Source == source);
         OverlayStatus.Text = info is not null ? info.Description : $"{source} selected.";
@@ -195,6 +199,13 @@ public partial class LibraryPage : Page
                 StartButton.IsEnabled = true;
             }
         }
+    }
+
+    private void SourceCredit_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
+        catch (System.ComponentModel.Win32Exception) { }
+        e.Handled = true;
     }
 
     private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
@@ -366,13 +377,13 @@ public partial class LibraryPage : Page
         var source = _selectedSource;
         if (isResume)
         {
-            foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox" })
+            foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox", "Sushi" })
                 if (job.DownloadMode.Contains(name, StringComparison.OrdinalIgnoreCase)
                     && Enum.TryParse<ManifestSource>(name, out var originalSource))
                 { source = originalSource; break; }
         }
         var token = cts.Token;
-        var progress = new Progress<string>(msg => Dispatcher.BeginInvoke(() =>
+        using var progress = new Steamy.Controls.BufferedDownloadProgress(msg =>
         {
             if (token.IsCancellationRequested || !job.IsActive) return;
             if (!GameDownloadProgressMessage.TryApply(job, msg))
@@ -380,7 +391,7 @@ public partial class LibraryPage : Page
 
             if (_selectedItem == item)
                 OverlayStatus.Text = job.IsActive ? $"{job.Status} — {job.ProgressLabel}" : job.Status;
-        }));
+        });
 
         try
         {

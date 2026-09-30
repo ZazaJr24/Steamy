@@ -11,10 +11,10 @@ namespace Steamy.Pages;
 public partial class DashboardPage : Page
 {
     // Below this width the side panels move under the games instead of squeezing them.
-    private const double StackedLayoutWidth = 1180;
+    private const double StackedLayoutWidth = 1040;
     private const double TwoColumnKpiWidth = 900;
-    private const double SideColumnWidth = 360;
-    private const double GutterWidth = 28;
+    private const double SideColumnWidth = 300;
+    private const double GutterWidth = 20;
 
     public DashboardPage()
     {
@@ -34,7 +34,11 @@ public partial class DashboardPage : Page
     {
         KpiGrid.Columns = width < TwoColumnKpiWidth ? 2 : 4;
         DashboardSearch.Width = width < 1000 ? 220 : 300;
-        DashboardHero.Height = width < 1000 ? 280 : 340;
+        DashboardHero.Height = width < 1000 ? 260 : 292;
+        var showSources = width >= 1100;
+        HeroSourcesColumn.Width = new GridLength(showSources ? 300 : 0);
+        HeroSourcesPanel.Visibility = showSources ? Visibility.Visible : Visibility.Collapsed;
+        DashboardHero.Margin = showSources ? new Thickness(0, 0, 16, 0) : new Thickness(0);
 
         var stacked = width < StackedLayoutWidth;
         Grid.SetColumn(SideColumn, stacked ? 0 : 2);
@@ -153,5 +157,4 @@ public partial class LogsPage : Page
 {
     public LogsPage() { InitializeComponent(); DataContext = App.Services.GetRequiredService<LogsViewModel>(); }
 }
-
 

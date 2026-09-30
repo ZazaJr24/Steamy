@@ -9,6 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Steamy.Models;
 using Steamy.Pages;
 using Steamy.Services;
+using Steamy.Controls;
+using System.Windows.Threading;
+using System.IO.Compression;
+using System.Net.Http;
+using System.Net;
 
 namespace Steamy.UiTests;
 
@@ -46,6 +51,7 @@ public sealed class PageSmokeTests
         var store = new AppDataStore();
         store.Downloads.Add(new DownloadJob { GameName = "A game ready to continue", State = DownloadJobState.Paused, Progress = 42.5, Status = "Paused — existing files are retained", TargetFolder = "C:\\Games\\Example", DownloadMode = "DepotDownloaderMod (Zaza)" });
         store.Downloads.Add(new DownloadJob { GameName = "A completed download", State = DownloadJobState.Completed, Progress = 100, Status = "Download completed", DownloadMode = "DepotDownloader" });
+        store.Downloads.Add(new DownloadJob { GameName = "A free Sushi source download", State = DownloadJobState.Paused, Progress = 61, Status = "Paused · resume keeps the saved manifests", DownloadMode = "DepotDownloaderMod (Sushi)" });
         services.AddSingleton<IAppDataStore>(store);
         services.AddSingleton<ISettingsService>(new MemorySettings());
         using var provider = services.BuildServiceProvider();
@@ -54,11 +60,15 @@ public sealed class PageSmokeTests
         PresentationTraceSources.DataBindingSource.Listeners.Add(bindingLog);
         try
         {
+            CheckBurstUpdates();
+            CheckSettingsCache();
+            CheckSushiImport(provider);
             foreach (var theme in new[] { "Dark", "Light" })
             {
                 UiThemeService.Apply(theme);
-                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage() })
+                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage() })
                 {
+                    PumpDispatcher(TimeSpan.FromMilliseconds(100));
                     foreach (var size in new[] { new Size(780, 560), new Size(1280, 800) })
                     {
                         page.Width = size.Width;
@@ -71,15 +81,39 @@ public sealed class PageSmokeTests
                         Assert.NotNull(page.DataContext);
                         SaveScreenshot(page, theme, size);
                     }
+                    if (page is LibraryPage)
+                    {
+                        var viewModel = Assert.IsType<Steamy.ViewModels.LibraryViewModel>(page.DataContext);
+                        viewModel.SelectedSourceFilter = "Sushi";
+                        PumpDispatcher(TimeSpan.FromMilliseconds(100));
+                        Assert.Single(viewModel.PagedCatalogItems);
+                        viewModel.SelectedSourceFilter = "Hubcap";
+                        PumpDispatcher(TimeSpan.FromMilliseconds(100));
+                        Assert.Empty(viewModel.PagedCatalogItems);
+                        viewModel.SelectedSourceFilter = "All sources";
+                    }
+                    if (page is DownloadsPage)
+                    {
+                        var viewModel = Assert.IsType<Steamy.ViewModels.DownloadsViewModel>(page.DataContext);
+                        viewModel.SelectedSourceFilter = "Sushi";
+                        Assert.Single(viewModel.FilteredJobs);
+                        viewModel.SelectedFilter = "Completed";
+                        Assert.Empty(viewModel.FilteredJobs);
+                        viewModel.ClearFiltersCommand.Execute(null);
+                        Assert.Equal(3, viewModel.FilteredJobs.Count);
+                    }
                     if (page is SettingsPage settings)
                     {
                         var search = Assert.IsAssignableFrom<TextBox>(settings.FindName("SettingsSearch"));
                         search.Text = "resume";
+                        PumpDispatcher(TimeSpan.FromMilliseconds(250));
                         var sections = Assert.IsType<StackPanel>(settings.FindName("SectionsPanel"));
                         Assert.Contains(sections.Children.Cast<FrameworkElement>(), section => section.Visibility == Visibility.Visible);
                         search.Text = "this-setting-does-not-exist-987654";
+                        PumpDispatcher(TimeSpan.FromMilliseconds(250));
                         Assert.DoesNotContain(sections.Children.Cast<FrameworkElement>(), section => section.Visibility == Visibility.Visible);
                         search.Clear();
+                        PumpDispatcher(TimeSpan.FromMilliseconds(250));
                     }
                 }
             }
@@ -89,6 +123,128 @@ public sealed class PageSmokeTests
         {
             PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingLog);
             app.Shutdown();
+        }
+    }
+
+    private static void CheckBurstUpdates()
+    {
+        var notifications = 0;
+        var job = new DownloadJob();
+        job.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(DownloadJob.Status)) notifications++; };
+        Task.Run(() => { for (var index = 0; index < 10000; index++) job.Status = $"Message {index}"; }).GetAwaiter().GetResult();
+        PumpDispatcher(TimeSpan.FromMilliseconds(30));
+        Assert.Equal("Message 9999", job.Status);
+        Assert.Equal(1, notifications);
+        var received = new List<string>();
+        using (var progress = new BufferedDownloadProgress(received.Add))
+        {
+            Task.Run(() =>
+            {
+                for (var index = 0; index < 10000; index++) { progress.Report($"Line {index}"); progress.Report($"PROGRESS|{index}"); }
+            }).GetAwaiter().GetResult();
+            PumpDispatcher(TimeSpan.FromMilliseconds(180));
+            Assert.Equal(new[] { "Line 9999", "PROGRESS|9999" }, received);
+        }
+        PumpDispatcher(TimeSpan.FromMilliseconds(150));
+        Assert.Equal(2, received.Count);
+    }
+
+    private static void CheckSettingsCache()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "Steamy-settings-smoke-" + Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "settings.json");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            File.WriteAllText(path, "{\"Appearance\":\"Light\"}");
+            var service = new JsonSettingsService(path);
+            var settings = service.Load();
+            Assert.Equal("Light", settings.Appearance);
+            File.WriteAllText(path, "not valid JSON");
+            Assert.Same(settings, service.Load());
+            settings.Appearance = "Dark";
+            service.SaveAsync(settings).GetAwaiter().GetResult();
+            Assert.Equal("Dark", new JsonSettingsService(path).Load().Appearance);
+            Assert.Empty(Directory.GetFiles(directory, "*.tmp"));
+            service.ResetAsync().GetAwaiter().GetResult();
+            Assert.NotSame(settings, service.Load());
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    private static void PumpDispatcher(TimeSpan duration)
+    {
+        var frame = new DispatcherFrame();
+        var timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle) { Interval = duration };
+        timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+        timer.Start();
+        Dispatcher.PushFrame(frame);
+    }
+
+    private static void CheckSushiImport(IServiceProvider provider)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "Steamy-source-smoke-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var transport = new SushiTransport();
+            using var client = new HttpClient(transport);
+            using var service = new ManifestSourceService(provider.GetRequiredService<ISettingsService>(), provider.GetRequiredService<ISecureCredentialService>(),
+                provider.GetRequiredService<IRyuuSecureDownloadService>(), provider.GetRequiredService<ILoggingService>(), client, directory);
+            var available = Task.Run(() => service.CheckAvailabilityAsync(ManifestSource.Sushi, 10)).GetAwaiter().GetResult();
+            Assert.True(available.Available && available.Certain);
+            var imported = Task.Run(() => service.DownloadManifestsAsync(ManifestSource.Sushi, 10)).GetAwaiter().GetResult();
+            Assert.True(imported.Succeeded, imported.Message);
+            Assert.Equal("addappid(10)", imported.LuaContent);
+            Assert.True(File.Exists(Path.Combine(imported.WorkDirectory!, "1_123.manifest")));
+            Assert.False(File.Exists(Path.Combine(imported.WorkDirectory!, "untrusted.exe")));
+            transport.Status = HttpStatusCode.NotFound;
+            var missing = Task.Run(() => service.CheckAvailabilityAsync(ManifestSource.Sushi, 999)).GetAwaiter().GetResult();
+            Assert.False(missing.Available);
+            Assert.True(missing.Certain);
+            transport.Status = HttpStatusCode.ServiceUnavailable;
+            var unreachable = Task.Run(() => service.CheckAvailabilityAsync(ManifestSource.Sushi, 10)).GetAwaiter().GetResult();
+            Assert.False(unreachable.Certain);
+            transport.Status = HttpStatusCode.OK;
+            transport.CorruptArchive = true;
+            var corrupt = Task.Run(() => service.DownloadManifestsAsync(ManifestSource.Sushi, 10)).GetAwaiter().GetResult();
+            Assert.False(corrupt.Succeeded);
+            Assert.Equal("addappid(10)", File.ReadAllText(Path.Combine(imported.WorkDirectory!, "10.lua")));
+            Assert.Empty(Directory.GetFiles(imported.WorkDirectory!, "*.zip"));
+            Assert.Empty(Directory.GetDirectories(imported.WorkDirectory!));
+            var second = Task.Run(() => { transport.CorruptArchive = false; return service.DownloadManifestsAsync(ManifestSource.Sushi, 10); }).GetAwaiter().GetResult();
+            Assert.True(second.Succeeded, second.Message);
+            Assert.NotEqual(imported.WorkDirectory, second.WorkDirectory);
+            Assert.True(File.Exists(Path.Combine(imported.WorkDirectory!, "1_123.manifest")));
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+
+    private sealed class SushiTransport : HttpMessageHandler
+    {
+        public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
+        public bool CorruptArchive { get; set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            Assert.Contains("sushi-dev55/sushitools-games-repo", request.RequestUri!.AbsoluteUri);
+            var response = new HttpResponseMessage(Status);
+            if (request.RequestUri.Host == "raw.githubusercontent.com")
+            {
+                if (CorruptArchive) response.Content = new StringContent("this is not a ZIP");
+                else
+                {
+                    using var output = new MemoryStream();
+                    using (var zip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+                        foreach (var item in new[] { ("10.lua", "addappid(10)"), ("1_123.manifest", "manifest data"), ("untrusted.exe", "never run") })
+                        {
+                            using var writer = new StreamWriter(zip.CreateEntry(item.Item1).Open());
+                            writer.Write(item.Item2);
+                        }
+                    response.Content = new ByteArrayContent(output.ToArray());
+                }
+            }
+            else response.Content = new StringContent("{}");
+            return Task.FromResult(response);
         }
     }
 
@@ -131,6 +287,14 @@ public class OfflineServiceProxy : DispatchProxy
         if (method.Name.StartsWith("add_", StringComparison.Ordinal) || method.Name.StartsWith("remove_", StringComparison.Ordinal)) return null;
         if (method.DeclaringType == typeof(ISecureCredentialService) && method.Name == nameof(ISecureCredentialService.ReadAsync)) return Task.FromResult<string?>(null);
         if (method.DeclaringType == typeof(ILoggingService)) return null;
+        if (method.DeclaringType == typeof(ILibrarySyncService) && method.Name == nameof(ILibrarySyncService.RefreshAsync))
+            return Task.FromResult(SteamLibraryScanResult.Failure("Offline UI fixture"));
+        if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.GetCatalogAsync))
+            return Task.FromResult(new SteamCatalogSnapshot(true, new[] { new SteamCatalogItem { AppId = 10, Name = "An offline library game", AppType = SteamCatalogAppType.Game } }, DateTimeOffset.UtcNow, true, "Offline fixture"));
+        if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.EnsureArtworkAsync)) return Task.CompletedTask;
+        if ((method.DeclaringType == typeof(IRyuuCatalogService) || method.DeclaringType == typeof(IHubcapCatalogService)) && method.Name == "GetGamesAsync")
+            return Task.FromResult(SteamCatalogSnapshot.Failure("Offline fixture"));
+        if (method.DeclaringType == typeof(IFreeManifestCatalogService)) return Task.FromResult(new FreeManifestIndex(true, new HashSet<int> { 10 }, "Offline fixture"));
         if (method.Name == nameof(IDisposable.Dispose)) return null;
         throw new InvalidOperationException($"UI smoke attempted an external operation: {method.DeclaringType?.Name}.{method.Name}");
     }

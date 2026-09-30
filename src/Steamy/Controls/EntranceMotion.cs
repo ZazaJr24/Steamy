@@ -25,10 +25,15 @@ public static class EntranceMotion
     private static void OnLoaded(object sender, RoutedEventArgs args)
     {
         var element = (FrameworkElement)sender;
+        Reveal(element, GetDelay(element));
+    }
+
+    public static void Reveal(FrameworkElement element, int delay = 0)
+    {
         if (!SystemParameters.ClientAreaAnimation || !element.IsVisible) return;
-        element.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200))
+        element.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.35, 1, TimeSpan.FromMilliseconds(160))
         {
-            BeginTime = TimeSpan.FromMilliseconds(GetDelay(element)),
+            BeginTime = TimeSpan.FromMilliseconds(delay),
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
             FillBehavior = FillBehavior.Stop
         });

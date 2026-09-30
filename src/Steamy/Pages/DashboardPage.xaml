@@ -161,7 +161,7 @@
     </Style>
   </Page.Resources>
 
-  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="28,24,28,48">
+  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" controls:SmoothScroll.Enabled="True" Padding="28,22,28,36">
     <StackPanel MaxWidth="1480" HorizontalAlignment="Stretch">
 
       <!-- ===== Header ======================================================================== -->
@@ -172,7 +172,7 @@
         </Grid.ColumnDefinitions>
         <StackPanel VerticalAlignment="Center">
           <TextBlock Text="{Binding DateLabel}" Style="{StaticResource OverlineStyle}" Foreground="{DynamicResource AccentBrush}" />
-          <TextBlock Text="{Binding Greeting}" Style="{StaticResource DisplayTitleStyle}" Margin="0,3,0,0" />
+          <TextBlock Text="Your next session" FontSize="30" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,3,0,0" />
           <TextBlock Text="{Binding HeaderSummary}" FontSize="13" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,3,0,0" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -190,10 +190,13 @@
       </Border>
 
       <!-- ===== Hero ========================================================================== -->
-      <Grid Style="{StaticResource EnterStyle2}" Margin="0,0,0,18">
-        <Border x:Name="DashboardHero" Height="340" CornerRadius="24" ClipToBounds="True"
-                Background="#121A28"
+      <Grid x:Name="HeroGrid" Style="{StaticResource EnterStyle2}" Margin="0,0,0,18">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition x:Name="HeroSourcesColumn" Width="300" /></Grid.ColumnDefinitions>
+        <Border x:Name="DashboardHero" Height="292" CornerRadius="24" ClipToBounds="True" Margin="0,0,16,0"
                 BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1">
+          <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#15223C" Offset="0" /><GradientStop Color="#102D38" Offset="1" /></LinearGradientBrush>
+          </Border.Background>
           <Grid>
             <!-- Game art + shades that keep the white text readable -->
             <Border CornerRadius="24" RenderOptions.BitmapScalingMode="HighQuality"
@@ -207,7 +210,7 @@
 
             <!-- Running or waiting download -->
             <StackPanel DataContext="{Binding HeroDownload}" VerticalAlignment="Bottom"
-                        MaxWidth="620" Margin="32,0,32,28" HorizontalAlignment="Stretch"
+                        MaxWidth="620" Margin="26,0,26,24" HorizontalAlignment="Stretch"
                         Visibility="{Binding DataContext.ShowDownloadHero, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolToVis}}">
               <Border Style="{StaticResource StatePill}" HorizontalAlignment="Left">
                 <TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}" />
@@ -267,11 +270,11 @@
               <Image Source="/Steamy;component/Resources/Brand/steamy-256.png" Width="210" Height="210" Opacity="0.14"
                      HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,64,0"
                      RenderOptions.BitmapScalingMode="HighQuality" />
-              <StackPanel VerticalAlignment="Center" Margin="40,0" MaxWidth="640" HorizontalAlignment="Left">
+              <StackPanel VerticalAlignment="Center" Margin="26,0" MaxWidth="640" HorizontalAlignment="Left">
                 <TextBlock Text="ALL YOUR GAMES. ONE PLACE." Style="{StaticResource OverlineStyle}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10" />
-                <TextBlock Text="Your next session starts here." FontSize="32" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                <TextBlock Text="Find your next favorite." FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14" Margin="0,8,0,0" TextWrapping="Wrap"
-                           Text="Your library, downloads, manifests and tools in one place. Point Steamy at your Steam folder to get started." />
+                           Text="Browse games, choose a source, and keep every download in one place." />
                 <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
                   <ui:Button Style="{StaticResource HeroButtonStyle}" Content="Set Steam folder" Appearance="Primary" Icon="{ui:SymbolIcon Settings24}"
                              Command="{Binding NavigateSettingsCommand}" />
@@ -281,6 +284,16 @@
               </StackPanel>
             </Grid>
           </Grid>
+        </Border>
+        <Border x:Name="HeroSourcesPanel" Grid.Column="1" Style="{StaticResource CardStyle}" Padding="22" VerticalAlignment="Stretch">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="DISCOVER MORE" Style="{StaticResource OverlineStyle}" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="Free sources.&#10;More choice." FontSize="25" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,8" />
+            <TextBlock Text="Browse by source. No API key needed for Sushi or Zaza." Style="{StaticResource BodyTextStyle}" TextWrapping="Wrap" Margin="0,0,0,16" />
+            <ui:Button Content="Explore Sushi" Icon="{ui:SymbolIcon Apps24}" Appearance="Primary" HorizontalAlignment="Stretch" Command="{Binding ExploreSourceCommand}" CommandParameter="Sushi" Margin="0,0,0,8" />
+            <ui:Button Content="Explore Zaza" Icon="{ui:SymbolIcon Library24}" Appearance="Secondary" HorizontalAlignment="Stretch" Command="{Binding ExploreSourceCommand}" CommandParameter="Zaza" />
+            <TextBlock Text="SushiTools by sushi-dev55" Style="{StaticResource CaptionStyle}" Margin="0,12,0,0" />
+          </StackPanel>
         </Border>
       </Grid>
 
@@ -387,7 +400,7 @@
                         Visibility="{Binding HasRecentGames, Converter={StaticResource BoolToVis}}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="156" Spacing="18" CoverRatio="1.5" FooterHeight="54" MaxRows="1" />
+                <controls:AdaptiveGridPanel MinItemWidth="140" Spacing="14" CoverRatio="1.5" FooterHeight="50" MaxRows="1" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -403,7 +416,7 @@
               <Border Width="60" Height="60" CornerRadius="30" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Center">
                 <ui:SymbolIcon Symbol="Games24" FontSize="26" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Border>
-              <TextBlock Text="No installed games found" FontSize="16" FontWeight="SemiBold"
+              <TextBlock Text="Build your collection" FontSize="16" FontWeight="SemiBold"
                          Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,14,0,0" />
               <TextBlock Text="{Binding NoGamesDetail}" Style="{StaticResource BodyTextStyle}" TextAlignment="Center" Margin="0,6,0,0" />
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">

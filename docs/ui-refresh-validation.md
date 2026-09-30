@@ -17,6 +17,9 @@ dotnet test tests/Steamy.Tests/Steamy.Tests.csproj -c Release --no-build
 On Windows, also run `dotnet test tests/Steamy.UiTests/Steamy.UiTests.csproj -c Release`.
 This constructs the real pages and view models with offline service fixtures, validates both
 themes at narrow/wide sizes and checks settings search. It launches no downloader process.
+It also exercises source/status filter combinations, a Sushi ZIP import using an offline HTTP
+fixture, corrupt archive recovery, settings cache/atomic persistence and bursts of 10,000
+download messages/property updates. No authenticated game download or real Steam account is used.
 CI captures the rendered pages in `Steamy-test-evidence`, alongside TRX test results, and
 publishes the runnable Windows ZIP as `Steamy-win-x64`.
 
@@ -46,6 +49,15 @@ WPF needs Windows; a Linux cross-build cannot verify these checks. Run `./run.ps
   Visual Tree: only viewport and cache rows should be present, not the whole history.
 - Disable Windows animation effects and verify that entrance fades and progress interpolation
   stop. Navigate away and check that dashboard/download timers and progress rendering stop.
+- Confirm Downloads is below the main navigation, above Settings, at every window size.
+- In Settings, type quickly, switch categories, scroll with the mouse wheel and drag the scrollbar
+  during a scroll animation. Search should settle after typing and keyboard/inner-control scrolling
+  must keep working. Check reduced motion and Windows wheel scrolling disabled as well.
+- Filter Games by Sushi/Zaza/Ryuu/Hubcap/Installed. Combine source with name/App ID and type.
+  Select a game and confirm its source is selected in the download picker. Sushi and Zaza require
+  no API key; repository availability does not claim ownership of an app.
+- Check Sushi attribution in the game picker and Settings → Connections. The supplied
+  `discord.gg/sushitools` community invite is a placeholder pending a confirmed URL.
 
 Measure scrolling, navigation, idle CPU and memory on the same Windows machine before and
 after the change. No frame-rate or download-throughput improvement is asserted by the Linux tests.
