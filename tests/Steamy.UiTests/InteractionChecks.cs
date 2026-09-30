@@ -110,6 +110,16 @@ public sealed partial class PageSmokeTests
             Assert.Equal(Visibility.Visible, snapshot.Visibility);
         }
         Assert.True(overlay.IsKeyboardFocusWithin);
+        var store = provider.GetRequiredService<IAppDataStore>();
+        var settings = provider.GetRequiredService<ISettingsService>().Load();
+        var standardJob = new DownloadJob { AppId = model.PagedCatalogItems[0].AppId, DownloadMode = "DepotDownloader", State = DownloadJobState.Paused,
+            TargetFolder = Path.Combine(string.IsNullOrWhiteSpace(settings.DownloadFolder) ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SteamGames") : settings.DownloadFolder, "An offline library game") };
+        store.Downloads.Add(standardJob);
+        ((Button)page.FindName("StartButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        Assert.Contains("Open Downloads", ((TextBlock)page.FindName("OverlayStatus")).Text);
+        Assert.Contains(standardJob, store.Downloads);
+        Assert.Equal(DownloadJobState.Paused, standardJob.State);
+        store.Downloads.Remove(standardJob);
         page.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(page)!, 0, Key.Escape)
         { RoutedEvent = Keyboard.PreviewKeyDownEvent });
         PumpUntil(() => overlay.Visibility == Visibility.Collapsed);
@@ -118,6 +128,7 @@ public sealed partial class PageSmokeTests
         Assert.Null(snapshot.Source);
         Assert.True(card.IsKeyboardFocused);
         window.Close();
+        Assert.NotNull(Application.Current);
         Assert.False(card.RenderTransform.HasAnimatedProperties); // Unloaded cards release their clocks.
     }
 

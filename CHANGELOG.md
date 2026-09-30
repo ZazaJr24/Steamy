@@ -20,6 +20,7 @@ Add a new `## x.y.z` section at the top before tagging.
 - Newly queued DepotDownloader jobs are saved immediately, before being displayed in the queue.
 - Start queued rechecks each waiting job after acquiring a slot, so cancelled or removed jobs are skipped.
 - Duplicate detection uses the canonical target folder and avoids replacing a paused Mod download with a standard-tool job.
+- The game detail picker preserves the original Mod source on resume and never routes an existing standard-tool job through the Mod downloader.
 - Removal waits for the download manager to accept it; a still-finishing download keeps its queue row.
 - Tool and queue action errors remain visible in the UI; busy state remains correct during overlapping operations.
 - Collection reset and Settings unload release their event subscriptions.

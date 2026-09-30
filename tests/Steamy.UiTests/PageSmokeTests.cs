@@ -39,7 +39,7 @@ public sealed partial class PageSmokeTests
         // A plain test Application avoids production startup/exit side effects. Load the
         // same compiled dictionaries as App.xaml; WPF cannot load App.xaml into a subclass
         // declared in a different assembly.
-        var app = new Application();
+        var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
         app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ThemesDictionary());
         app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
