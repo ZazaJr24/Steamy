@@ -190,13 +190,13 @@ public sealed class PageSmokeTests
         MoveCursorAway(0, 0);
         PumpDispatcher(TimeSpan.FromMilliseconds(500));
         window.UpdateLayout();
-        SaveVisual((FrameworkElement)window.Content, "dashboard.png");
+        SaveVisual(window, "dashboard.png");
         foreach (var (route, filename) in new[] { (typeof(DownloadsPage), "downloads.png"), (typeof(SettingsPage), "settings.png") })
         {
             Assert.True(window.RootNavigationView.Navigate(route));
             PumpDispatcher(TimeSpan.FromMilliseconds(500));
             window.UpdateLayout();
-            SaveVisual((FrameworkElement)window.Content, filename);
+            SaveVisual(window, filename);
         }
         window.Close();
     }
@@ -205,24 +205,36 @@ public sealed class PageSmokeTests
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     private static extern bool MoveCursorAway(int x, int y);
 
-    private static void SaveVisual(FrameworkElement element, string filename)
+    private static void SaveVisual(MainWindow window, string filename)
     {
-        // Render the real window content at a fixed size rather than the runner's small
-        // virtual desktop. This also exercises the wide layout used in the README.
-        var size = new Size(1600, 1050);
-        element.Width = size.Width;
-        element.Height = size.Height;
-        element.Measure(size);
-        element.Arrange(new Rect(size));
-        element.UpdateLayout();
-        var folder = Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS")!;
-        Directory.CreateDirectory(folder);
-        var bitmap = new RenderTargetBitmap((int)element.ActualWidth, (int)element.ActualHeight, 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(element);
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        using var output = File.Create(Path.Combine(folder, filename));
-        encoder.Save(output);
+        // Detach the real shell briefly so the runner's small native window cannot
+        // clip a larger render. The same controls, resources and page instances are used.
+        var element = (FrameworkElement)window.Content;
+        window.Content = null;
+        try
+        {
+            var size = new Size(1600, 1050);
+            element.Width = size.Width;
+            element.Height = size.Height;
+            element.Measure(size);
+            element.Arrange(new Rect(size));
+            element.UpdateLayout();
+            var folder = Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS")!;
+            Directory.CreateDirectory(folder);
+            var bitmap = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(element);
+            foreach (var point in new[] { new Int32Rect(1500, 700, 1, 1), new Int32Rect(1500, 1000, 1, 1) })
+            {
+                var pixel = new byte[4];
+                bitmap.CopyPixels(point, pixel, 4, 0);
+                Assert.Equal(255, pixel[3]); // Reject screenshots clipped to the virtual desktop.
+            }
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using var output = File.Create(Path.Combine(folder, filename));
+            encoder.Save(output);
+        }
+        finally { window.Content = element; }
     }
 
     private sealed class FixtureArtwork : IArtworkService
