@@ -52,6 +52,10 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
+## ✨ What's new in 0.3.3
+
+- **Share covers every game** — the Share page now loads your whole account library automatically on open, so "select all + share" dumps all your games, not just the installed ones
+
 ## ✨ What's new in 0.3.2
 
 - **Downloads resume instead of restarting** — DepotDownloader(Mod) now runs with `-verify-all`, so a paused download continues from the files already on disk

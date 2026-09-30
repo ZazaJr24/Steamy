@@ -3,6 +3,11 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.3.3
+
+### Fixed
+- **The Share page lists every game, not only the installed ones.** The whole account library now loads automatically when the page opens — no more pressing "Load all account games" first. Games without local manifests show up as auto-fetch entries and are dumped like everything else, so a "select all + share" really covers the entire library.
+
 ## 0.3.2
 
 ### Fixed

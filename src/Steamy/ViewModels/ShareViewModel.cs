@@ -177,7 +177,7 @@ public sealed class ShareViewModel : ViewModelBase
         Items.Filter = Matches;
 
         RescanCommand = new AsyncRelayCommand(() => ScanAsync(force: true), () => !IsBusy);
-        OwnedGamesCommand = new AsyncRelayCommand(LoadOwnedGamesAsync, () => !IsLoadingOwned && !IsBusy);
+        OwnedGamesCommand = new AsyncRelayCommand(() => LoadOwnedGamesAsync(), () => !IsLoadingOwned && !IsBusy);
         ShareSelectedCommand = new AsyncRelayCommand(ShareSelectedAsync, () => CanShare);
         CancelCommand = new RelayCommand(() => _runCts?.Cancel(), () => IsBusy);
         SelectAllCommand = new RelayCommand(() => SetSelection(_ => true, visibleOnly: true));
@@ -364,6 +364,16 @@ public sealed class ShareViewModel : ViewModelBase
         OnPropertyChanged(nameof(TargetLabel));
         OnPropertyChanged(nameof(BranchLabel));
         OnPropertyChanged(nameof(LastShareLabel));
+
+        // The list must cover every game of the account, not only the installed ones: the first
+        // visit loads the account library on its own instead of waiting for the button. When it
+        // fails (private profile, offline) the page still lists everything that is on disk.
+        if (!_ownedAutoTried && !_ownedLoaded && !_ownedFailed)
+        {
+            _ownedAutoTried = true;
+            await LoadOwnedGamesAsync(silent: true);
+        }
+
         await ScanAsync(force: false);
     }
 
@@ -453,13 +463,14 @@ public sealed class ShareViewModel : ViewModelBase
         : "Account games not loaded yet — only installed games and cached manifests are listed.";
 
     private string _ownedFailedMessage = string.Empty;
+    private bool _ownedAutoTried;
 
     /// <summary>
     /// Loads the user's whole account library and folds it into the list: every owned game without
     /// local manifests becomes an auto-fetch entry, so the page covers all games, not only the
-    /// installed ones.
+    /// installed ones. <paramref name="silent"/> keeps the automatic first load quiet on failure.
     /// </summary>
-    public async Task LoadOwnedGamesAsync()
+    public async Task LoadOwnedGamesAsync(bool silent = false)
     {
         if (IsLoadingOwned) return;
         IsLoadingOwned = true;
@@ -479,7 +490,8 @@ public sealed class ShareViewModel : ViewModelBase
             {
                 _ownedFailed = true;
                 _ownedFailedMessage = result.Message;
-                ShowResult(false, result.Message, null);
+                Logging.Add(LogLevel.Warning, "Sharing", result.Message);
+                if (!silent) ShowResult(false, result.Message, null);
             }
         }
         catch (Exception exception)
@@ -487,7 +499,7 @@ public sealed class ShareViewModel : ViewModelBase
             _ownedFailed = true;
             _ownedFailedMessage = $"The account library could not be loaded: {exception.Message}";
             Logging.Add(LogLevel.Warning, "Sharing", _ownedFailedMessage);
-            ShowResult(false, _ownedFailedMessage, null);
+            if (!silent) ShowResult(false, _ownedFailedMessage, null);
         }
         finally
         {
