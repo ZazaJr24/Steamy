@@ -20,18 +20,27 @@ public partial class DashboardPage : Page
     {
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<DashboardViewModel>();
-        Loaded += (_, _) => _ = ((DashboardViewModel)DataContext).RefreshAsync(force: false);
+        Loaded += (_, _) =>
+        {
+            var viewModel = (DashboardViewModel)DataContext;
+            viewModel.StartLiveStats();
+            _ = viewModel.RefreshAsync(force: false);
+        };
+        Unloaded += (_, _) => ((DashboardViewModel)DataContext).StopLiveStats();
         SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
     }
 
     private void ApplyResponsiveLayout(double width)
     {
         KpiGrid.Columns = width < TwoColumnKpiWidth ? 2 : 4;
+        DashboardSearch.Width = width < 1000 ? 220 : 300;
+        DashboardHero.Height = width < 1000 ? 280 : 340;
 
         var stacked = width < StackedLayoutWidth;
         Grid.SetColumn(SideColumn, stacked ? 0 : 2);
         Grid.SetRow(SideColumn, stacked ? 1 : 0);
         Grid.SetColumnSpan(SideColumn, stacked ? 3 : 1);
+        SideColumn.Margin = stacked ? new Thickness(0, 24, 0, 0) : new Thickness(0);
         SideColumnDefinition.Width = new GridLength(stacked ? 0 : SideColumnWidth);
         GutterColumn.Width = new GridLength(stacked ? 0 : GutterWidth);
     }
@@ -64,6 +73,13 @@ public partial class DownloadsPage : Page
         DataContext = viewModel;
         Loaded += (_, _) => viewModel.StartLiveStats();
         Unloaded += (_, _) => viewModel.StopLiveStats();
+        SizeChanged += (_, e) =>
+        {
+            var showNetwork = e.NewSize.Width >= 1080 && e.NewSize.Height >= 700;
+            NetworkColumn.Width = new GridLength(showNetwork ? 280 : 0);
+            NetworkCard.Visibility = showNetwork ? Visibility.Visible : Visibility.Collapsed;
+            FeaturedPanel.Height = e.NewSize.Height < 700 ? 210 : 238;
+        };
     }
 
     // Clicking Start/Pause swaps the buttons and WPF would scroll the card into view; only

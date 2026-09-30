@@ -4,17 +4,6 @@ using System.Windows.Media.Imaging;
 
 namespace Steamy.Models;
 
-public enum DownloadJobState
-{
-    Queued,
-    Preparing,
-    Downloading,
-    Verifying,
-    Completed,
-    Failed,
-    Cancelled,
-    Paused
-}
 
 public enum DownloadPriority
 {
@@ -216,8 +205,11 @@ public sealed class DownloadJob : UiObservableObject
     public string Speed
     {
         get => _speed;
-        set => SetProperty(ref _speed, value);
+        set { if (SetProperty(ref _speed, value)) OnPropertyChanged(nameof(SpeedDisplay)); }
     }
+
+    public string SpeedDisplay => !IsActive ? StateLabel : string.IsNullOrWhiteSpace(Speed) ? "Measuring speed…" : Speed;
+    public string EtaDisplay => !IsActive ? string.Empty : string.IsNullOrWhiteSpace(Eta) ? "Estimating time left…" : $"{Eta} remaining";
 
     public string DiskSpeed
     {
@@ -228,7 +220,7 @@ public sealed class DownloadJob : UiObservableObject
     public string Eta
     {
         get => _eta;
-        set => SetProperty(ref _eta, value);
+        set { if (SetProperty(ref _eta, value)) OnPropertyChanged(nameof(EtaDisplay)); }
     }
 
     public string CurrentFile
@@ -302,6 +294,11 @@ public sealed class DownloadJob : UiObservableObject
                 OnPropertyChanged(nameof(IsActive));
                 OnPropertyChanged(nameof(IsPaused));
                 OnPropertyChanged(nameof(IsTerminal));
+                OnPropertyChanged(nameof(CanRepair));
+                OnPropertyChanged(nameof(CanCheckLocalFiles));
+                OnPropertyChanged(nameof(ProgressCaption));
+                OnPropertyChanged(nameof(SpeedDisplay));
+                OnPropertyChanged(nameof(EtaDisplay));
             }
         }
     }
@@ -312,11 +309,23 @@ public sealed class DownloadJob : UiObservableObject
         set
         {
             if (SetProperty(ref _progress, Math.Clamp(value, 0, 100)))
+            {
                 OnPropertyChanged(nameof(ProgressLabel));
+                OnPropertyChanged(nameof(ProgressCaption));
+            }
         }
     }
 
     public string ProgressLabel => $"{Progress:0.0}%";
+    public string ProgressCaption => State switch
+    {
+        DownloadJobState.Preparing => "Preparing…",
+        DownloadJobState.Verifying => "Checking…",
+        DownloadJobState.Completed => "Complete",
+        _ => ProgressLabel
+    };
+    public bool CanRepair => State is DownloadJobState.Completed or DownloadJobState.Paused or DownloadJobState.Failed;
+    public bool CanCheckLocalFiles => CanRepair || State == DownloadJobState.Cancelled;
 
     public string Status
     {

@@ -12,6 +12,9 @@ namespace Steamy.Pages;
 
 public partial class SettingsPage : Page
 {
+    private string _selectedCategory = "general";
+    private readonly Dictionary<FrameworkElement, string> _sectionSearchText = new();
+
     public SettingsPage()
     {
         Resources.Add("StringVis", new SettingsStringToVisibilityConverter());
@@ -21,6 +24,58 @@ public partial class SettingsPage : Page
         // After a save or a delete the typed secrets are gone from memory; the boxes have to match,
         // otherwise they would keep showing characters that no longer mean anything.
         ViewModel.CredentialInputsCleared += OnCredentialInputsCleared;
+        Loaded += (_, _) => FilterSections();
+        FilterSections();
+    }
+
+    private void Category_Checked(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton { Tag: string category }) _selectedCategory = category;
+        FilterSections();
+    }
+
+    private void SettingsSearch_TextChanged(object sender, TextChangedEventArgs e) => FilterSections();
+
+    private void ClearSearch_Click(object sender, RoutedEventArgs e) => SettingsSearch.Clear();
+
+    private void ResetDefaults_Click(object sender, RoutedEventArgs e)
+    {
+        if (MessageBox.Show("Restore the default application settings?", "Reset settings",
+            MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes
+            && ViewModel.ResetCommand.CanExecute(null))
+            ViewModel.ResetCommand.Execute(null);
+    }
+
+    private void FilterSections()
+    {
+        // Checked/TextChanged also fire while InitializeComponent is still building the page.
+        if (SectionsPanel is null || SettingsSearch is null || SectionSummary is null) return;
+        var words = SettingsSearch.Text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var count = 0;
+        foreach (FrameworkElement section in SectionsPanel.Children)
+        {
+            if (!_sectionSearchText.TryGetValue(section, out var searchable))
+            {
+                searchable = string.Join(" ", StaticLabels(section));
+                _sectionSearchText[section] = searchable;
+            }
+            var visible = words.Length > 0
+                ? words.All(word => searchable.Contains(word, StringComparison.OrdinalIgnoreCase))
+                : _selectedCategory == "all" || string.Equals(section.Tag as string, _selectedCategory, StringComparison.Ordinal);
+            section.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            if (visible) count++;
+        }
+        SectionSummary.Text = words.Length > 0 ? $"{count} matching sections across all settings" : $"{count} sections · changes save automatically";
+        NoSettingsResults.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        SettingsScrollViewer.ScrollToTop();
+    }
+
+    private static IEnumerable<string> StaticLabels(DependencyObject element)
+    {
+        // Index UI labels only, never paths, entered settings or password contents.
+        if (element is TextBlock text && !BindingOperations.IsDataBound(text, TextBlock.TextProperty)) yield return text.Text;
+        foreach (var child in LogicalTreeHelper.GetChildren(element).OfType<DependencyObject>())
+            foreach (var label in StaticLabels(child)) yield return label;
     }
 
     private void OnCredentialInputsCleared(object? sender, EventArgs e)

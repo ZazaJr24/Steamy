@@ -13,7 +13,7 @@
                  ExtendsContentIntoTitleBar="True"
                  Icon="pack://application:,,,/Steamy;component/Resources/Brand/steamy.ico"
                  Background="{DynamicResource AppBackgroundBrush}">
-  <Grid Background="{DynamicResource AppBackgroundBrush}">
+  <Grid Background="{DynamicResource AppBackgroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
@@ -29,7 +29,7 @@
     <Grid Grid.Row="1">
         <ui:NavigationView x:Name="RootNavigation"
                         PaneDisplayMode="Left"
-                        OpenPaneLength="208"
+                        OpenPaneLength="196"
                         CompactPaneLength="52"
                         IsBackButtonVisible="Collapsed"
                         IsPaneToggleVisible="True"
@@ -68,6 +68,9 @@
           <ui:NavigationViewItem Content="Games"
                                  Icon="{ui:SymbolIcon Apps24}"
                                  TargetPageType="{x:Type pages:LibraryPage}" />
+          <ui:NavigationViewItem Content="Downloads"
+                                 Icon="{ui:SymbolIcon ArrowDownload24}"
+                                 TargetPageType="{x:Type pages:DownloadsPage}" />
           <ui:NavigationViewItem Content="Share"
                                  Icon="{ui:SymbolIcon Share24}"
                                  TargetPageType="{x:Type pages:SharePage}" />
@@ -104,9 +107,7 @@
         </ui:NavigationView.MenuItems>
 
         <ui:NavigationView.FooterMenuItems>
-          <ui:NavigationViewItem Content="Downloads"
-                                 Icon="{ui:SymbolIcon ArrowDownload24}"
-                                 TargetPageType="{x:Type pages:DownloadsPage}" />
+
           <ui:NavigationViewItem Content="Settings"
                                  Icon="{ui:SymbolIcon Settings24}"
                                  TargetPageType="{x:Type pages:SettingsPage}" />

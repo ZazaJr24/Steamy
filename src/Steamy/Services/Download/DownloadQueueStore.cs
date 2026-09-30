@@ -100,7 +100,7 @@ public sealed class DownloadQueueStore : IDownloadQueueStore
             DepotId = row.DepotId,
             Branch = row.Branch,
             ManifestId = row.ManifestId,
-            AuthorizationConfirmed = true,
+            AuthorizationConfirmed = row.AuthorizationConfirmed,
             TotalSize = row.TotalSize,
             Started = row.Started,
             Priority = row.Priority,
@@ -108,23 +108,25 @@ public sealed class DownloadQueueStore : IDownloadQueueStore
             DownloadMode = row.DownloadMode
         };
 
-        if (!Enum.TryParse<DownloadJobState>(row.State, out var state)) state = DownloadJobState.Queued;
+        var state = DownloadJobPolicy.RestoreState(row.State, autoResume);
+        Enum.TryParse<DownloadJobState>(row.State, out var savedState);
 
-        if (state is DownloadJobState.Preparing or DownloadJobState.Downloading or DownloadJobState.Verifying)
+        if (savedState is DownloadJobState.Preparing or DownloadJobState.Downloading or DownloadJobState.Verifying)
         {
             // "Queued" keeps the job in the active list so one click on Start/Resume continues it;
             // nothing is started on its own at app launch — that is a deliberate user action.
-            job.State = autoResume ? DownloadJobState.Queued : DownloadJobState.Paused;
+            job.State = state;
             job.Status = autoResume
                 ? "Interrupted while the app was closed — press Start to continue in the same folder"
                 : "Interrupted while the app was closed — press Resume to continue in the same folder";
-            job.Progress = Math.Clamp(row.Progress, 0, 100);
+            job.Progress = double.IsFinite(row.Progress) ? Math.Clamp(row.Progress, 0, 100) : 0;
             return job;
         }
 
         job.State = state;
-        job.Progress = Math.Clamp(row.Progress, 0, 100);
+        job.Progress = double.IsFinite(row.Progress) ? Math.Clamp(row.Progress, 0, 100) : 0;
         job.Status = row.Status;
+        if (job.IsTerminal) job.Finished = row.UpdatedAt;
         return job;
     }
 

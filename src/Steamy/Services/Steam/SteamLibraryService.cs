@@ -304,6 +304,7 @@ public static class GameFactory
 public interface ILibrarySyncService
 {
     SteamLibraryScanResult Refresh(CancellationToken cancellationToken = default);
+    Task<SteamLibraryScanResult> RefreshAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -332,20 +333,38 @@ public sealed class LibrarySyncService : ILibrarySyncService
         _settings = settings;
     }
 
+    // Scan off-thread, then publish collection changes on the caller's UI context.
+    public async Task<SteamLibraryScanResult> RefreshAsync(CancellationToken cancellationToken = default)
+    {
+        var generation = Interlocked.Increment(ref _scanGeneration);
+        var steamRoot = _settings.Load().SteamLibraryPath;
+        var result = await Task.Run(() => _steamLibrary.Scan(steamRoot), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (generation == Volatile.Read(ref _scanGeneration)) CompleteRefresh(result, cancellationToken);
+        return result;
+    }
+
+    private int _scanGeneration;
+
     public SteamLibraryScanResult Refresh(CancellationToken cancellationToken = default)
     {
+        Interlocked.Increment(ref _scanGeneration);
         var result = _steamLibrary.Scan(_settings.Load().SteamLibraryPath);
+        CompleteRefresh(result, cancellationToken);
+        return result;
+    }
 
+    private void CompleteRefresh(SteamLibraryScanResult result, CancellationToken cancellationToken)
+    {
         if (!result.Succeeded)
         {
             _logging.Add(LogLevel.Warning, "LibraryService", result.Message);
-            return result;
+            return;
         }
 
         Apply(result.Apps);
         _logging.Add(LogLevel.Info, "LibraryService", result.Message);
         _ = LoadArtworkAsync(cancellationToken);
-        return result;
     }
 
     private void Apply(IReadOnlyList<InstalledSteamApp> apps)

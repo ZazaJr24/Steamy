@@ -3,20 +3,20 @@
   <!-- Steamy Night: near-black blue-grey surfaces, one electric blue accent and a sky → indigo →
        violet brand gradient. Every page reads its colours from these keys, so the light palette
        only has to redefine the same names. -->
-  <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0B0D12" />
-  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#090B10" />
+  <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0D1017" />
+  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#0A0D13" />
   <SolidColorBrush x:Key="SidebarHoverBrush" Color="#151923" />
   <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#1B2130" />
-  <SolidColorBrush x:Key="SurfaceBrush" Color="#10131A" />
-  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#141821" />
-  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#1B202B" />
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#121722" />
+  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#171D29" />
+  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#202838" />
   <SolidColorBrush x:Key="ControlHoverBrush" Color="#242A37" />
-  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#222835" />
-  <SolidColorBrush x:Key="BorderStrongBrush" Color="#323A4B" />
+  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#2A3447" />
+  <SolidColorBrush x:Key="BorderStrongBrush" Color="#43516A" />
 
-  <SolidColorBrush x:Key="AccentBrush" Color="#5AA7FF" />
+  <SolidColorBrush x:Key="AccentBrush" Color="#78B5FF" />
   <SolidColorBrush x:Key="AccentStrongBrush" Color="#3B82F6" />
-  <SolidColorBrush x:Key="AccentSoftBrush" Color="#132440" />
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="#1A2E4B" />
   <SolidColorBrush x:Key="SuccessBrush" Color="#34D399" />
   <SolidColorBrush x:Key="SuccessSoftBrush" Color="#0F2A21" />
   <SolidColorBrush x:Key="WarningBrush" Color="#FBBF24" />
@@ -29,8 +29,8 @@
   <SolidColorBrush x:Key="PinkSoftBrush" Color="#33172A" />
 
   <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F3F5F9" />
-  <SolidColorBrush x:Key="TextSecondaryBrush" Color="#A3ACBD" />
-  <SolidColorBrush x:Key="TextTertiaryBrush" Color="#6E7689" />
+  <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B3BED0" />
+  <SolidColorBrush x:Key="TextTertiaryBrush" Color="#94A0B5" />
   <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
 
   <!-- Brand gradient for the logo, the welcome hero and the primary call to action. -->

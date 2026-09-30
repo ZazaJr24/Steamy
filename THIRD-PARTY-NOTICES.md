@@ -8,6 +8,7 @@ The components below are not covered by that license; each keeps its own terms.
 | Component | Author | License | Where |
 |---|---|---|---|
 | .NET runtime and WPF | Microsoft | MIT | self-contained runtime |
+| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod/tree/ef4c59af4964c3a49a2effb40860dd0514c8365d) 3.4.0 | SteamAutoCracks and SteamRE contributors | GPL-2.0 (see bundled LICENSE) | `Tools/DepotDownloaderMod/`, shipped unmodified |
 | [WPF-UI](https://github.com/lepoco/wpfui) 4.2.0 | lepo.co | MIT | UI framework |
 | [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) 8.4.0 | .NET Foundation | MIT | view models |
 | [Microsoft.Data.Sqlite](https://github.com/dotnet/efcore) 9.0.9 | Microsoft | MIT | local database |

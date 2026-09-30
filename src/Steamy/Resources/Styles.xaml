@@ -11,9 +11,11 @@
   <Duration x:Key="DialogAnimationDuration">0:0:0.22</Duration>
   <CubicEase x:Key="SmoothEase" EasingMode="EaseOut" />
   <CubicEase x:Key="SmoothEaseInOut" EasingMode="EaseInOut" />
+  <controls:ArtworkImageConverter x:Key="ArtworkImage" />
+
   <!-- Core typography -->
   <Style x:Key="PageTitleStyle" TargetType="TextBlock">
-    <Setter Property="FontSize" Value="28" />
+    <Setter Property="FontSize" Value="32" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="Margin" Value="0,0,0,6" />
@@ -71,7 +73,7 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="10" />
     <Setter Property="Margin" Value="0,0,0,14" />
   </Style>
@@ -79,7 +81,7 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="16" />
     <Setter Property="Effect">
       <Setter.Value>
@@ -286,7 +288,7 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="16" />
   </Style>
 
@@ -392,6 +394,16 @@
         <DataTrigger Binding="{Binding State}" Value="{x:Static models:DownloadJobState.Completed}"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
       </Style.Triggers>
     </Style>
+    <Style x:Key="RepairButton" TargetType="ui:Button" BasedOn="{StaticResource JobActionButton}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding CanRepair}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="CheckFilesButton" TargetType="ui:Button" BasedOn="{StaticResource JobActionButton}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding CanCheckLocalFiles}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
     <Style x:Key="CancelButton" TargetType="ui:Button" BasedOn="{StaticResource JobActionButton}">
       <Setter Property="Visibility" Value="Visible" />
       <Style.Triggers>
@@ -457,21 +469,8 @@
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <!-- Soft fade + rise when a job card appears -->
-    <Style x:Key="JobCardEntrance" TargetType="FrameworkElement">
-      <Setter Property="RenderTransform"><Setter.Value><TranslateTransform Y="0" /></Setter.Value></Setter>
-      <Style.Triggers>
-        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-          <BeginStoryboard>
-            <Storyboard>
-              <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.28" />
-              <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="8" To="0" Duration="0:0:0.32">
-                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
-              </DoubleAnimation>
-            </Storyboard>
-          </BeginStoryboard>
-        </EventTrigger>
-      </Style.Triggers>
-    </Style>
+    <!-- Recycled download rows stay steady while scrolling. -->
+    <Style x:Key="JobCardEntrance" TargetType="FrameworkElement" />
     <!-- Stats row only while a job is actively downloading -->
     <Style x:Key="LiveStatsStyle">
       <Setter Property="UIElement.Visibility" Value="Collapsed" />
@@ -485,74 +484,26 @@
   <!-- card, a header or a hover looks and moves the same everywhere in the app.                -->
   <!-- ====================================================================================== -->
 
-  <!-- Entrance motion: opacity + a 12 px rise, staggered by the number in the key. Integer
-       translation and no effects, so text and art stay sharp while it plays. -->
+  <!-- Short entrances share one lifecycle-aware implementation and respect Windows motion settings. -->
   <Style x:Key="EnterStyle1" TargetType="FrameworkElement">
-    <Setter Property="Opacity" Value="0" />
-    <Setter Property="RenderTransform"><Setter.Value><TranslateTransform Y="12" /></Setter.Value></Setter>
-    <Style.Triggers>
-      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-        <BeginStoryboard>
-          <Storyboard>
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.38" BeginTime="0:0:0.02" EasingFunction="{StaticResource SmoothEase}" />
-            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.42" BeginTime="0:0:0.02" EasingFunction="{StaticResource SmoothEase}" />
-          </Storyboard>
-        </BeginStoryboard>
-      </EventTrigger>
-    </Style.Triggers>
+    <Setter Property="controls:EntranceMotion.Delay" Value="0" />
   </Style>
-  <Style x:Key="EnterStyle2" TargetType="FrameworkElement" BasedOn="{StaticResource EnterStyle1}">
-    <Style.Triggers>
-      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-        <BeginStoryboard>
-          <Storyboard>
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.38" BeginTime="0:0:0.08" EasingFunction="{StaticResource SmoothEase}" />
-            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.42" BeginTime="0:0:0.08" EasingFunction="{StaticResource SmoothEase}" />
-          </Storyboard>
-        </BeginStoryboard>
-      </EventTrigger>
-    </Style.Triggers>
+  <Style x:Key="EnterStyle2" TargetType="FrameworkElement">
+    <Setter Property="controls:EntranceMotion.Delay" Value="20" />
   </Style>
-  <Style x:Key="EnterStyle3" TargetType="FrameworkElement" BasedOn="{StaticResource EnterStyle1}">
-    <Style.Triggers>
-      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-        <BeginStoryboard>
-          <Storyboard>
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.38" BeginTime="0:0:0.14" EasingFunction="{StaticResource SmoothEase}" />
-            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.42" BeginTime="0:0:0.14" EasingFunction="{StaticResource SmoothEase}" />
-          </Storyboard>
-        </BeginStoryboard>
-      </EventTrigger>
-    </Style.Triggers>
+  <Style x:Key="EnterStyle3" TargetType="FrameworkElement">
+    <Setter Property="controls:EntranceMotion.Delay" Value="40" />
   </Style>
-  <Style x:Key="EnterStyle4" TargetType="FrameworkElement" BasedOn="{StaticResource EnterStyle1}">
-    <Style.Triggers>
-      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-        <BeginStoryboard>
-          <Storyboard>
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.38" BeginTime="0:0:0.2" EasingFunction="{StaticResource SmoothEase}" />
-            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.42" BeginTime="0:0:0.2" EasingFunction="{StaticResource SmoothEase}" />
-          </Storyboard>
-        </BeginStoryboard>
-      </EventTrigger>
-    </Style.Triggers>
+  <Style x:Key="EnterStyle4" TargetType="FrameworkElement">
+    <Setter Property="controls:EntranceMotion.Delay" Value="60" />
   </Style>
-  <Style x:Key="EnterStyle5" TargetType="FrameworkElement" BasedOn="{StaticResource EnterStyle1}">
-    <Style.Triggers>
-      <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-        <BeginStoryboard>
-          <Storyboard>
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.38" BeginTime="0:0:0.26" EasingFunction="{StaticResource SmoothEase}" />
-            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.42" BeginTime="0:0:0.26" EasingFunction="{StaticResource SmoothEase}" />
-          </Storyboard>
-        </BeginStoryboard>
-      </EventTrigger>
-    </Style.Triggers>
+  <Style x:Key="EnterStyle5" TargetType="FrameworkElement">
+    <Setter Property="controls:EntranceMotion.Delay" Value="80" />
   </Style>
 
   <!-- Typography scale -->
   <Style x:Key="DisplayTitleStyle" TargetType="TextBlock">
-    <Setter Property="FontSize" Value="30" />
+    <Setter Property="FontSize" Value="34" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -586,7 +537,7 @@
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
   </Style>
   <Style x:Key="KpiValueStyle" TargetType="TextBlock">
-    <Setter Property="FontSize" Value="22" />
+    <Setter Property="FontSize" Value="26" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
@@ -598,7 +549,7 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="20" />
     <Setter Property="SnapsToDevicePixels" Value="True" />
   </Style>
@@ -728,6 +679,9 @@
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Bg" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter TargetName="Bg" Property="Background" Value="{DynamicResource AccentSoftBrush}" />

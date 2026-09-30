@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!-- Steamy Day: cool paper-white surfaces with the same blue accent and brand gradient as the
        dark palette. Keys must match Dark.xaml one to one. -->
-  <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F5F9" />
+  <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F4F6FA" />
   <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#FAFBFD" />
   <SolidColorBrush x:Key="SidebarHoverBrush" Color="#EBEEF4" />
   <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#E1E7F2" />
@@ -29,7 +29,7 @@
 
   <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0F172A" />
   <SolidColorBrush x:Key="TextSecondaryBrush" Color="#475569" />
-  <SolidColorBrush x:Key="TextTertiaryBrush" Color="#64748B" />
+  <SolidColorBrush x:Key="TextTertiaryBrush" Color="#53627A" />
   <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
 
   <LinearGradientBrush x:Key="BrandGradientBrush" StartPoint="0,0" EndPoint="1,1">
