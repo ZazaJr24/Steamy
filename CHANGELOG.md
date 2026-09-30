@@ -3,6 +3,21 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.3.9
+
+### Added
+- Automatic Spotlight for new and upcoming major studio releases, refreshed daily from public Steam metadata without an API key.
+- ACE COMBAT 8: WINGS OF THEVE and Assassin's Creed Black Flag Resynced in the first verified feed, alongside other current releases.
+- Release status, official release dates, publisher labels and direct Steam store links; upcoming games are not presented as installed or downloadable.
+- A bundled feed, persistent local cache and shared background refresh keep discovery usable offline and current without an app update.
+
+### Improved
+- Translucent glass surfaces, soft blue and violet background light, rounded Spotlight artwork and brighter glass edges throughout the app.
+- A gently rotating Spotlight pauses while hovered, focused, searching or inactive and follows Windows animation preferences.
+- Steam-provided artwork URLs support new games with hashed asset paths; artwork downloads are bounded and decoded off the UI thread.
+- An evergreen README with a single Latest download, updated Windows screenshots, concise setup instructions and complete source credits.
+- Every release includes Steamy-latest.zip for a stable direct download URL, alongside the versioned ZIP used by existing updates.
+
 ## 0.3.8
 
 ### Improved

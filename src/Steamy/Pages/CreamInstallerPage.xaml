@@ -4,7 +4,7 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:local="clr-namespace:Steamy.Pages"
       ScrollViewer.CanContentScroll="False"
-      Background="{DynamicResource AppBackgroundBrush}">
+      Background="{DynamicResource WorkspaceBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <local:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />

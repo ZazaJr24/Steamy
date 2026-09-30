@@ -8,9 +8,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Steamy</RootNamespace>
     <AssemblyName>Steamy</AssemblyName>
-    <Version>0.3.8</Version>
-    <FileVersion>0.3.8</FileVersion>
-    <AssemblyVersion>0.3.8</AssemblyVersion>
+    <Version>0.3.9</Version>
+    <FileVersion>0.3.9</FileVersion>
+    <AssemblyVersion>0.3.9</AssemblyVersion>
     <Product>Steamy</Product>
     <Company>ZazaJr24</Company>
     <Authors>ZazaJr24</Authors>
@@ -41,6 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Data\spotlight.json" LogicalName="Steamy.spotlight.json" />
     <None Include="Resources\LICENSE-CloudRedirect.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Data\appid.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Data\appid.json')" />
   </ItemGroup>

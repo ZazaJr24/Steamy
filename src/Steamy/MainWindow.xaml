@@ -13,7 +13,7 @@
                  ExtendsContentIntoTitleBar="True"
                  Icon="pack://application:,,,/Steamy;component/Resources/Brand/steamy.ico"
                  Background="{DynamicResource AppBackgroundBrush}">
-  <Grid Background="{DynamicResource AppBackgroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
+  <Grid Background="{DynamicResource WorkspaceBackgroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />

@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\src\Steamy\Services\Catalog\SpotlightCatalog.cs" Link="Linked\SpotlightCatalog.cs" />
     <Compile Include="..\..\src\Steamy\Services\Catalog\GitHubManifestIndex.cs" Link="Linked\GitHubManifestIndex.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\ManifestArchiveReader.cs" Link="Linked\ManifestArchiveReader.cs" />
     <Compile Include="..\..\src\Steamy\Models\DownloadJobState.cs" Link="Linked\DownloadJobState.cs" />

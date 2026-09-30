@@ -4,7 +4,7 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:vm="clr-namespace:Steamy.ViewModels"
       ScrollViewer.CanContentScroll="False"
-      Background="{DynamicResource AppBackgroundBrush}">
+      Background="{DynamicResource WorkspaceBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolVis" />
     <Style x:Key="SectionLabel" TargetType="TextBlock">

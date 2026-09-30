@@ -3,14 +3,14 @@
   <!-- Steamy Day: cool paper-white surfaces with the same blue accent and brand gradient as the
        dark palette. Keys must match Dark.xaml one to one. -->
   <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F4F6FA" />
-  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#FAFBFD" />
+  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#D9F9FBFF" />
   <SolidColorBrush x:Key="SidebarHoverBrush" Color="#EBEEF4" />
   <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#E1E7F2" />
-  <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#EEF1F6" />
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#D9FFFFFF" />
+  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#BFFFFFFF" />
+  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#C7EDF2FF" />
   <SolidColorBrush x:Key="ControlHoverBrush" Color="#E4E8F0" />
-  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#DCE1EA" />
+  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#609EAED0" />
   <SolidColorBrush x:Key="BorderStrongBrush" Color="#C5CDDA" />
 
   <SolidColorBrush x:Key="AccentBrush" Color="#2563EB" />
@@ -31,6 +31,19 @@
   <SolidColorBrush x:Key="TextSecondaryBrush" Color="#475569" />
   <SolidColorBrush x:Key="TextTertiaryBrush" Color="#53627A" />
   <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
+
+  <LinearGradientBrush x:Key="GlassSurfaceBrush" StartPoint="0,0" EndPoint="0.65,1">
+    <GradientStop Color="#F2FFFFFF" Offset="0" /><GradientStop Color="#B5FFFFFF" Offset="0.6" /><GradientStop Color="#D9ECF1FF" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="GlassBorderBrush" StartPoint="0,0" EndPoint="0.8,1">
+    <GradientStop Color="#FFFFFFFF" Offset="0" /><GradientStop Color="#4091A6CA" Offset="0.55" /><GradientStop Color="#70919DD0" Offset="1" />
+  </LinearGradientBrush>
+  <RadialGradientBrush x:Key="AmbientBlueBrush" Center="0.87,0.04" GradientOrigin="0.87,0.04" RadiusX="0.85" RadiusY="0.85">
+    <GradientStop Color="#50A3CFFF" Offset="0" /><GradientStop Color="#16A3CFFF" Offset="0.6" /><GradientStop Color="#00A3CFFF" Offset="1" />
+  </RadialGradientBrush>
+  <RadialGradientBrush x:Key="AmbientVioletBrush" Center="0.08,0.94" GradientOrigin="0.08,0.94" RadiusX="0.72" RadiusY="0.9">
+    <GradientStop Color="#48C4B5FD" Offset="0" /><GradientStop Color="#00C4B5FD" Offset="1" />
+  </RadialGradientBrush>
 
   <LinearGradientBrush x:Key="BrandGradientBrush" StartPoint="0,0" EndPoint="1,1">
     <GradientStop Color="#38BDF8" Offset="0" />

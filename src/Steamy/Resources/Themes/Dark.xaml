@@ -4,14 +4,14 @@
        violet brand gradient. Every page reads its colours from these keys, so the light palette
        only has to redefine the same names. -->
   <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0D1017" />
-  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#0A0D13" />
+  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#D00D1424" />
   <SolidColorBrush x:Key="SidebarHoverBrush" Color="#151923" />
   <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#1B2130" />
-  <SolidColorBrush x:Key="SurfaceBrush" Color="#121722" />
-  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#171D29" />
-  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#202838" />
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#B0121D30" />
+  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#AD1C2940" />
+  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#B02B3951" />
   <SolidColorBrush x:Key="ControlHoverBrush" Color="#242A37" />
-  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#2A3447" />
+  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#444D6488" />
   <SolidColorBrush x:Key="BorderStrongBrush" Color="#43516A" />
 
   <SolidColorBrush x:Key="AccentBrush" Color="#78B5FF" />
@@ -32,6 +32,19 @@
   <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B3BED0" />
   <SolidColorBrush x:Key="TextTertiaryBrush" Color="#94A0B5" />
   <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
+
+  <LinearGradientBrush x:Key="GlassSurfaceBrush" StartPoint="0,0" EndPoint="0.65,1">
+    <GradientStop Color="#C22A3852" Offset="0" /><GradientStop Color="#B2162136" Offset="0.6" /><GradientStop Color="#CA172039" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="GlassBorderBrush" StartPoint="0,0" EndPoint="0.8,1">
+    <GradientStop Color="#50CDDFFF" Offset="0" /><GradientStop Color="#146CA6F0" Offset="0.55" /><GradientStop Color="#387A86CE" Offset="1" />
+  </LinearGradientBrush>
+  <RadialGradientBrush x:Key="AmbientBlueBrush" Center="0.87,0.04" GradientOrigin="0.87,0.04" RadiusX="0.85" RadiusY="0.85">
+    <GradientStop Color="#543877AF" Offset="0" /><GradientStop Color="#163877AF" Offset="0.6" /><GradientStop Color="#003877AF" Offset="1" />
+  </RadialGradientBrush>
+  <RadialGradientBrush x:Key="AmbientVioletBrush" Center="0.08,0.94" GradientOrigin="0.08,0.94" RadiusX="0.72" RadiusY="0.9">
+    <GradientStop Color="#444C3689" Offset="0" /><GradientStop Color="#004C3689" Offset="1" />
+  </RadialGradientBrush>
 
   <!-- Brand gradient for the logo, the welcome hero and the primary call to action. -->
   <LinearGradientBrush x:Key="BrandGradientBrush" StartPoint="0,0" EndPoint="1,1">

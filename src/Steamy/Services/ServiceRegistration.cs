@@ -41,6 +41,7 @@ public static class ServiceRegistration
         services.AddSingleton<INotificationService, LoggingNotificationService>();
         services.AddSingleton<IArtworkService>(_ => new SteamArtworkService());
         services.AddSingleton<ISteamCatalogService>(_ => new SteamCatalogService());
+        services.AddSingleton<ISpotlightService>(_ => new SpotlightCatalogService());
         services.AddSingleton<IFreeManifestCatalogService, FreeManifestCatalogService>();
         services.AddSingleton<IRyuuCatalogService>(sp => new RyuuCatalogService(sp.GetRequiredService<ISettingsService>()));
         services.AddSingleton<IHubcapCatalogService>(sp => new HubcapCatalogService(sp.GetRequiredService<ISettingsService>(), sp.GetRequiredService<ISecureCredentialService>()));

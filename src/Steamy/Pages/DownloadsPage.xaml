@@ -5,7 +5,7 @@
       xmlns:controls="clr-namespace:Steamy.Controls"
       ScrollViewer.CanContentScroll="False"
       UseLayoutRounding="True" SnapsToDevicePixels="True"
-      Background="{DynamicResource AppBackgroundBrush}">
+      Background="{DynamicResource WorkspaceBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolVis" />
 
@@ -20,8 +20,8 @@
     </LinearGradientBrush>
     <!-- Queue row: crisp glass card, lights up on hover -->
     <Style x:Key="QueueRow" TargetType="Border" BasedOn="{StaticResource JobCardEntrance}">
-      <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="18" />
       <Setter Property="Padding" Value="14" />

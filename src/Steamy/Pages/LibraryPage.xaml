@@ -7,7 +7,7 @@
       UseLayoutRounding="True" SnapsToDevicePixels="True"
       PreviewKeyDown="Page_PreviewKeyDown"
       ScrollViewer.CanContentScroll="False"
-      Background="{DynamicResource AppBackgroundBrush}">
+      Background="{DynamicResource WorkspaceBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <local:EnumToShowBoolConverter x:Key="EnumTo_ShowBoolConverter" />

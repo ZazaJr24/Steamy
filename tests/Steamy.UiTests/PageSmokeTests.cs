@@ -56,6 +56,7 @@ public sealed partial class PageSmokeTests
         store.Downloads.Add(new DownloadJob { GameName = "A free Sushi source download", State = DownloadJobState.Paused, Progress = 61, Status = "Paused · resume keeps the saved manifests", DownloadMode = "DepotDownloaderMod (Sushi)" });
         var fixtureArtwork = new FixtureArtwork();
         services.AddSingleton<IArtworkService>(fixtureArtwork);
+        services.AddSingleton<ISpotlightService>(new FixtureSpotlight());
         var navigation = new NavigationService();
         services.AddSingleton<INavigationService>(navigation);
         services.AddSingleton<IAppDataStore>(store);
@@ -171,17 +172,22 @@ public sealed partial class PageSmokeTests
         var loading = model.EnsureDiscoveryArtworkAsync();
         PumpUntil(() => loading.IsCompleted);
         loading.GetAwaiter().GetResult();
-        Assert.Equal(2322010, model.FeaturedGame.Game.AppId);
+        Assert.True(model.DiscoverGames.Count >= 3);
+        var firstId = model.DiscoverGames[0].Game.AppId;
+        Assert.Equal(firstId, model.FeaturedGame!.Game.AppId);
+        Assert.Contains(model.DiscoverGames, feature => feature.Metadata.ComingSoon);
+        Assert.Equal("COMING SOON", model.DiscoverGames.First(feature => feature.Metadata.ComingSoon).ReleaseStatus);
         Assert.False(model.HasRecentGames); // Discovery must not pretend these games are installed.
         model.PreviousFeaturedCommand.Execute(null);
-        Assert.Equal(2358720, model.FeaturedGame.Game.AppId);
-        PumpUntil(() => artwork.HeroRequests.ContainsKey(2358720));
+        var lastId = model.DiscoverGames[^1].Game.AppId;
+        Assert.Equal(lastId, model.FeaturedGame!.Game.AppId);
+        PumpUntil(() => artwork.HeroRequests.ContainsKey(lastId));
         model.NextFeaturedCommand.Execute(null);
         model.NextFeaturedCommand.Execute(null);
-        Assert.Equal(1245620, model.FeaturedGame.Game.AppId);
+        Assert.Equal(model.DiscoverGames[1].Game.AppId, model.FeaturedGame!.Game.AppId);
         model.PreviousFeaturedCommand.Execute(null);
         PumpDispatcher(TimeSpan.FromMilliseconds(100));
-        Assert.Equal(1, artwork.HeroRequests[2322010]); // Returning to a slide reuses its image task.
+        Assert.Equal(1, artwork.HeroRequests[firstId]); // Returning to a slide reuses its image task.
         var library = provider.GetRequiredService<Steamy.ViewModels.LibraryViewModel>();
         library.SelectedSourceFilter = "Sushi";
         library.SelectedTypeFilter = "DLC";
@@ -189,7 +195,7 @@ public sealed partial class PageSmokeTests
         navigation.Attach(page => route = page);
         model.ViewFeaturedCommand.Execute(null);
         Assert.Equal(typeof(LibraryPage), route);
-        Assert.Equal("2322010", library.SearchText);
+        Assert.Equal(firstId.ToString(System.Globalization.CultureInfo.InvariantCulture), library.SearchText);
         Assert.Equal("All sources", library.SelectedSourceFilter);
         Assert.Equal("All games", library.SelectedTypeFilter);
         library.SearchText = string.Empty;
@@ -306,6 +312,12 @@ public sealed partial class PageSmokeTests
         encoder.Save(output);
     }
 
+    private sealed class FixtureSpotlight : ISpotlightService
+    {
+        public SpotlightSnapshot Cached { get; } = SpotlightCatalogService.LoadBundled();
+        public Task<SpotlightSnapshot> GetAsync(bool force = false, CancellationToken cancellationToken = default) => Task.FromResult(Cached);
+    }
+
     private sealed class FixtureArtwork : IArtworkService
     {
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<(int, string), BitmapImage> Images = new();
@@ -384,6 +396,18 @@ public sealed partial class PageSmokeTests
             Assert.Equal(1, handler.Requests); // Revisiting a game reads the local cache.
             var large = Task.Run(() => service.LoadHeroAsync(2)).GetAwaiter().GetResult();
             Assert.Equal(1600, large!.PixelWidth);
+            var spotlight = SpotlightCatalogService.LoadBundled().Games[0];
+            var hero = Task.Run(() => service.LoadSpotlightHeroAsync(spotlight)).GetAwaiter().GetResult();
+            Assert.True(hero!.IsFrozen);
+            Assert.Equal(spotlight.HeroUrl, handler.LastUri!.AbsoluteUri);
+            var requestCount = handler.Requests;
+            Task.Run(() => service.LoadSpotlightHeroAsync(spotlight)).GetAwaiter().GetResult();
+            Assert.Equal(requestCount, handler.Requests);
+            var revised = spotlight with { HeroUrl = spotlight.HeroUrl + "&revision=2" };
+            Task.Run(() => service.LoadSpotlightHeroAsync(revised)).GetAwaiter().GetResult();
+            Assert.Equal(requestCount + 1, handler.Requests); // A changed Steam asset URL invalidates its cache.
+            Task.Run(() => service.LoadSpotlightHeaderAsync(spotlight)).GetAwaiter().GetResult();
+            Assert.Equal(spotlight.HeaderUrl, handler.LastUri!.AbsoluteUri);
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }
@@ -392,9 +416,11 @@ public sealed partial class PageSmokeTests
     {
         public int Width { get; set; } = 16;
         public int Requests { get; private set; }
+        public Uri? LastUri { get; private set; }
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Requests++;
+            LastUri = request.RequestUri;
             var source = BitmapSource.Create(Width, 2, 96, 96, PixelFormats.Bgra32, null, new byte[Width * 2 * 4], Width * 4);
             var encoder = new PngBitmapEncoder();
             encoder.Frames.Add(BitmapFrame.Create(source));

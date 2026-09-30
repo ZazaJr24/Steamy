@@ -18,12 +18,16 @@ namespace Steamy.ViewModels;
 
 public sealed record DashboardStatusItem(string Title, string Detail, bool IsOk, string ActionLabel, ICommand Action);
 
-public sealed class DashboardFeature(Game game, string description, string genres) : UiObservableObject
+public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObject
 {
     private ImageSource? _heroArtwork;
-    public Game Game { get; } = game;
-    public string Description { get; } = description;
-    public string Genres { get; } = genres;
+    public SpotlightGame Metadata { get; } = metadata;
+    public Game Game { get; } = new() { AppId = metadata.AppId, Name = metadata.Name, CoverColor = "#283E53" };
+    public string Description => Metadata.Description;
+    public string Genres => Metadata.Genres;
+    public string ReleaseLabel => Metadata.ReleaseLabel;
+    public string ReleaseStatus => Metadata.ComingSoon ? "COMING SOON" : "NEW RELEASE";
+    public string Publisher => Metadata.Publisher;
     public ImageSource? HeroArtwork { get => _heroArtwork; set => SetProperty(ref _heroArtwork, value); }
 }
 
@@ -113,29 +117,37 @@ public sealed class DashboardViewModel : ViewModelBase
     }
 
     private readonly IArtworkService _artwork;
+    private readonly ISpotlightService _spotlight;
     private Task? _discoveryArtworkTask;
-    private readonly Dictionary<int, Task<BitmapImage?>> _heroLoads = new();
+    private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _heroLoads = new();
+    private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _headerLoads = new();
     private int _featuredIndex;
-    public IReadOnlyList<DashboardFeature> DiscoverGames { get; } = new[]
-    {
-        new DashboardFeature(new Game { AppId = 2322010, Name = "God of War Ragnarök", CoverColor = "#283E53" }, "Journey through the Nine Realms with Kratos and Atreus. An epic adventure awaits.", "Action  ·  Adventure  ·  Story rich"),
-        new DashboardFeature(new Game { AppId = 1245620, Name = "ELDEN RING", CoverColor = "#443824" }, "Step into the Lands Between. Find your own path through a vast world of mystery and discovery.", "RPG  ·  Open world  ·  Souls-like"),
-        new DashboardFeature(new Game { AppId = 1091500, Name = "Cyberpunk 2077", CoverColor = "#594B16" }, "Make your mark on Night City. Your story, your choices, your next adventure.", "RPG  ·  Open world  ·  Cyberpunk"),
-        new DashboardFeature(new Game { AppId = 1174180, Name = "Red Dead Redemption 2", CoverColor = "#60252A" }, "Explore America's untamed frontier in a sweeping story of loyalty and survival.", "Adventure  ·  Open world  ·  Western"),
-        new DashboardFeature(new Game { AppId = 2358720, Name = "Black Myth: Wukong", CoverColor = "#293F37" }, "Uncover the legends of the Journey to the West as the Destined One.", "Action RPG  ·  Mythology  ·  Adventure")
-    };
-    public DashboardFeature FeaturedGame => DiscoverGames[_featuredIndex];
-    public string FeaturedPosition => $"{_featuredIndex + 1:00} / {DiscoverGames.Count:00}";
+    public IReadOnlyList<DashboardFeature> DiscoverGames { get; private set; } = Array.Empty<DashboardFeature>();
+    public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames.Take(3).ToArray();
+    public bool HasSpotlight => DiscoverGames.Count > 0;
+    public DashboardFeature? FeaturedGame => HasSpotlight ? DiscoverGames[_featuredIndex] : null;
+    public string FeaturedPosition => HasSpotlight ? $"{_featuredIndex + 1:00} / {DiscoverGames.Count:00}" : string.Empty;
     public ICommand NextFeaturedCommand { get; }
     public ICommand PreviousFeaturedCommand { get; }
     public ICommand ViewFeaturedCommand { get; }
+    public ICommand OpenSpotlightCommand { get; }
 
-    public Task EnsureDiscoveryArtworkAsync() => _discoveryArtworkTask ??= LoadDiscoveryArtworkAsync();
+    public Task EnsureDiscoveryArtworkAsync(bool force = false) => _discoveryArtworkTask is { IsCompleted: false }
+        ? _discoveryArtworkTask : _discoveryArtworkTask = LoadDiscoveryArtworkAsync(force);
 
-    private async Task LoadDiscoveryArtworkAsync()
+    private async Task LoadDiscoveryArtworkAsync(bool force)
     {
-        // Download and decode away from the dispatcher; visible cards reuse the disk cache.
-        var cards = Task.Run(() => _artwork.LoadHeadersAsync(DiscoverGames.Select(feature => feature.Game)));
+        // Show cached artwork immediately; checking the feed must not delay the first paint.
+        var savedArtwork = LoadVisibleArtworkAsync();
+        try { ApplySpotlight(await _spotlight.GetAsync(force)); }
+        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Using saved discoveries: {exception.GetType().Name}."); }
+        await LoadVisibleArtworkAsync();
+        await savedArtwork;
+    }
+
+    private async Task LoadVisibleArtworkAsync()
+    {
+        var cards = LoadDiscoveryHeadersAsync();
         await LoadFeaturedArtworkAsync();
         try { await cards; }
         catch (Exception exception)
@@ -144,13 +156,47 @@ public sealed class DashboardViewModel : ViewModelBase
         }
     }
 
+    private void ApplySpotlight(SpotlightSnapshot snapshot)
+    {
+        if (DiscoverGames.Select(feature => feature.Metadata).SequenceEqual(snapshot.Games)) return;
+        var previousId = FeaturedGame?.Game.AppId;
+        DiscoverGames = snapshot.Games.Select(game => new DashboardFeature(game)).ToArray();
+        _featuredIndex = Math.Max(0, Array.FindIndex(DiscoverGames.ToArray(), feature => feature.Game.AppId == previousId));
+        _heroLoads.Clear();
+        _headerLoads.Clear();
+        OnPropertyChanged(nameof(DiscoverGames));
+        OnPropertyChanged(nameof(NewGames));
+        OnPropertyChanged(nameof(HasSpotlight));
+        OnPropertyChanged(nameof(FeaturedGame));
+        OnPropertyChanged(nameof(FeaturedPosition));
+        (NextFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
+        (PreviousFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
+        (ViewFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
+    }
+
+    private async Task LoadDiscoveryHeadersAsync()
+    {
+        // Only the three visible recommendations need headers; the rest load as selected.
+        foreach (var feature in NewGames)
+        {
+            try
+            {
+                if (!_headerLoads.TryGetValue(feature.Metadata, out var task))
+                    _headerLoads[feature.Metadata] = task = Task.Run(() => _artwork.LoadSpotlightHeaderAsync(feature.Metadata));
+                feature.Game.HeaderImage = await task;
+            }
+            catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Optional card artwork unavailable: {exception.GetType().Name}."); }
+        }
+    }
+
     private async Task LoadFeaturedArtworkAsync()
     {
         var feature = FeaturedGame;
+        if (feature is null) return;
         try
         {
-            if (!_heroLoads.TryGetValue(feature.Game.AppId, out var task))
-                _heroLoads[feature.Game.AppId] = task = Task.Run(() => _artwork.LoadHeroAsync(feature.Game.AppId));
+            if (!_heroLoads.TryGetValue(feature.Metadata, out var task))
+                _heroLoads[feature.Metadata] = task = Task.Run(() => _artwork.LoadSpotlightHeroAsync(feature.Metadata));
             feature.HeroArtwork = await task;
         }
         catch (Exception exception)
@@ -161,6 +207,7 @@ public sealed class DashboardViewModel : ViewModelBase
 
     private void MoveFeatured(int direction)
     {
+        if (!HasSpotlight) return;
         _featuredIndex = (_featuredIndex + direction + DiscoverGames.Count) % DiscoverGames.Count;
         OnPropertyChanged(nameof(FeaturedGame));
         OnPropertyChanged(nameof(FeaturedPosition));
@@ -169,11 +216,20 @@ public sealed class DashboardViewModel : ViewModelBase
 
     private void ViewFeatured()
     {
+        if (FeaturedGame is null) return;
         var library = App.Services.GetRequiredService<LibraryViewModel>();
         library.SelectedSourceFilter = "All sources";
         library.SelectedTypeFilter = "All games";
         library.SearchText = FeaturedGame.Game.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture);
         Navigation.Navigate<LibraryPage>();
+    }
+
+    private void OpenSpotlight(DashboardFeature? feature)
+    {
+        feature ??= FeaturedGame;
+        if (feature is null) return;
+        try { Process.Start(new ProcessStartInfo(feature.Metadata.StoreUrl) { UseShellExecute = true }); }
+        catch (Exception exception) { Logging.Add(LogLevel.Warning, "Spotlight", $"Could not open the Steam store: {exception.Message}"); }
     }
 
     private readonly ILibrarySyncService _librarySync;
@@ -216,15 +272,19 @@ public sealed class DashboardViewModel : ViewModelBase
         DownloadsViewModel downloadActions,
         ShareViewModel share,
         IArtworkService artwork,
-        ISteamCatalogService catalog) : base(store, navigation, logging)
+        ISteamCatalogService catalog,
+        ISpotlightService spotlight) : base(store, navigation, logging)
     {
         _catalog = catalog;
         OpenSearchResultCommand = new RelayCommand<SteamCatalogItem>(item => { if (item is not null) OpenSearch(item.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture)); });
         OpenSearchCommand = new RelayCommand(() => OpenSearch(SearchText.Trim()));
         _artwork = artwork;
-        NextFeaturedCommand = new RelayCommand(() => MoveFeatured(1));
-        PreviousFeaturedCommand = new RelayCommand(() => MoveFeatured(-1));
-        ViewFeaturedCommand = new RelayCommand(ViewFeatured);
+        _spotlight = spotlight;
+        NextFeaturedCommand = new RelayCommand(() => MoveFeatured(1), () => DiscoverGames.Count > 1);
+        PreviousFeaturedCommand = new RelayCommand(() => MoveFeatured(-1), () => DiscoverGames.Count > 1);
+        ViewFeaturedCommand = new RelayCommand(ViewFeatured, () => HasSpotlight);
+        OpenSpotlightCommand = new RelayCommand<DashboardFeature>(OpenSpotlight);
+        ApplySpotlight(spotlight.Cached);
         _librarySync = librarySync;
         _settings = settings;
         _depotCheck = depotCheck;
@@ -504,6 +564,7 @@ public sealed class DashboardViewModel : ViewModelBase
         if (IsRefreshing || (!force && DateTime.UtcNow - _lastRefresh < RefreshDebounce)) return;
         IsRefreshing = true;
         _lastRefresh = DateTime.UtcNow;
+        _ = EnsureDiscoveryArtworkAsync(force);
         try
         {
             try { _scan = await _librarySync.RefreshAsync(); }
