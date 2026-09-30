@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-30T21:16:56.807288+00:00",
+  "games": [
+    {
+      "appId": 2288340,
+      "name": "ACE COMBAT 8: WINGS OF THEVE",
+      "description": "Soar through the skies and rise above every challenge to earn your place among the elite. Engage in intense aerial combat to dominate the battlefield with powerful weapons. Experience a breathtaking campaign filled with high-stakes missions, hard choices, and deep squad connections.",
+      "genres": "Action",
+      "publisher": "Bandai Namco Entertainment Inc.",
+      "comingSoon": true,
+      "releaseLabel": "Oct 1, 2026",
+      "releaseDate": "2026-10-01",
+      "storeUrl": "https://store.steampowered.com/app/2288340/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/4b28102e4f8702f48bfc03e099246a55a200204f/page_bg_raw.jpg?t=1790763244",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/13dea8084135fd130605b78189c82e39bf944c35/header.jpg?t=1790763244"
+    },
+    {
+      "appId": 3751950,
+      "name": "Assassin's Creed Black Flag Resynced",
+      "description": "The iconic solo pirate adventure returns. Sail the Caribbean as Edward Kenway during the Golden Age of Piracy in this faithfully enhanced remake featuring stunning visuals, upgraded gameplay, and new content.",
+      "genres": "Action · Adventure",
+      "publisher": "Ubisoft",
+      "comingSoon": false,
+      "releaseLabel": "Jul 9, 2026",
+      "releaseDate": "2026-07-09",
+      "storeUrl": "https://store.steampowered.com/app/3751950/",
+      "heroUrl": "https://store.akamai.steamstatic.com/images/storepagebackground/app/3751950?t=1787915122",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3751950/9b046115b1663a4be2b252712328e4f6c162da68/header.jpg?t=1787915122"
+    },
+    {
+      "appId": 3259780,
+      "name": "FINAL FANTASY RESONANCE",
+      "description": "Return to the pixel‑art world of FINAL FANTASY, evolved from its classic roots. Travel with companions bound by fate and call on Visions to aid you in battle to uncover the truth behind a force that threatens to bring everything to ruin.",
+      "genres": "RPG",
+      "publisher": "Square Enix",
+      "comingSoon": true,
+      "releaseLabel": "Oct 22, 2026",
+      "releaseDate": "2026-10-22",
+      "storeUrl": "https://store.steampowered.com/app/3259780/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/063703b81c58de555ed405df85a985869a500eba/page_bg_raw.jpg?t=1788534743",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/710da43babb2043f9f6ad0e50023e31167d94708/header.jpg?t=1788534743"
+    },
+    {
+      "appId": 4231820,
+      "name": "Castlevania: Belmont's Curse",
+      "description": "Crimson Curse —Will Your Fate Bloom in Despair or Salvation Set 23 years after Castlevania Dracula's Curse - follow Rose Belmont's journey in an all new 2D Action-Exploration title from KONAMI, Evil Empire and Motion Twin.",
+      "genres": "Action · RPG",
+      "publisher": "KONAMI",
+      "comingSoon": true,
+      "releaseLabel": "Oct 14, 2026",
+      "releaseDate": "2026-10-14",
+      "storeUrl": "https://store.steampowered.com/app/4231820/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/0741481b7e0e4519884d1012dfe285970e078508/page_bg_raw.jpg?t=1788478863",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/6b65aec2c398006aea8b76e1463cc34d0e4ba68b/header.jpg?t=1788478863"
+    },
+    {
+      "appId": 3846830,
+      "name": "Total War: SHOGUN 2 - Complete Edition",
+      "description": "Unite Japan and become Shogun in the updated, enhanced and complete edition of Total War: SHOGUN 2. Build alliances, sabotage your enemies and outsmart your rival clans in a seamless blend of turn-based empire building and real-time battles.",
+      "genres": "Strategy",
+      "publisher": "SEGA",
+      "comingSoon": true,
+      "releaseLabel": "Oct 13, 2026",
+      "releaseDate": "2026-10-13",
+      "storeUrl": "https://store.steampowered.com/app/3846830/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3846830/1b83d820ff110c13bc5c19cbfd777d2623e1f9ce/page_bg_raw.jpg?t=1789489801",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3846830/d0ee9f67d5afcf19e5e8d7955fc831d5d197bdb0/header.jpg?t=1789489801"
+    },
+    {
+      "appId": 3010850,
+      "name": "Gears of War: E-Day",
+      "description": "Experience Emergence Day – the brutal origin story of one of gaming’s most acclaimed third-person shooter franchises.",
+      "genres": "Action · Adventure",
+      "publisher": "Xbox Game Studios",
+      "comingSoon": true,
+      "releaseLabel": "Oct 6, 2026",
+      "releaseDate": "2026-10-06",
+      "storeUrl": "https://store.steampowered.com/app/3010850/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/3ab525f8c362fa205da31db35102a11f05511202/page_bg_raw.jpg?t=1789676311",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header.jpg?t=1789676311"
+    },
+    {
+      "appId": 3634190,
+      "name": "MXGP 26 - The Official Game",
+      "description": "Dominate the track, feel every impact, every rut, every victory. The most intense and realistic motocross experience is finally available. Experience the entire 2026 championship, with its official tracks and riders.",
+      "genres": "Racing · Simulation · Sports",
+      "publisher": "Nacon",
+      "comingSoon": true,
+      "releaseLabel": "Oct 1, 2026",
+      "releaseDate": "2026-10-01",
+      "storeUrl": "https://store.steampowered.com/app/3634190/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3634190/8e7b95c0943988c8bbf47f5125a9e065e9f355ac/page_bg_raw.jpg?t=1790326510",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3634190/92e6ac99739bd346ec51d8a02744fe1b8b7e8386/header.jpg?t=1790326510"
+    },
+    {
+      "appId": 1912410,
+      "name": "Minecraft Dungeons II",
+      "description": "A new threat descends upon the Overworld...",
+      "genres": "Action · Adventure · RPG",
+      "publisher": "Xbox Game Studios",
+      "comingSoon": false,
+      "releaseLabel": "Sep 29, 2026",
+      "releaseDate": "2026-09-29",
+      "storeUrl": "https://store.steampowered.com/app/1912410/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1912410/dbbe1c377ecf00ed7c841bcdfa72c44853080d43/page_bg_raw.jpg?t=1790774234",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1912410/86cbba83c1aaffa0b0efa4197ce29c2264ea9dc2/header.jpg?t=1790774234"
+    },
+    {
+      "appId": 4080220,
+      "name": "EA SPORTS FC™ 27",
+      "description": "Welcome to The World’s Game in EA SPORTS FC™ 27. Step into The Grounds to experience a football playground where the streets meet the stadium, and feel greater control in every mode as community-driven innovations deliver more true-to-football gameplay.",
+      "genres": "Simulation · Sports",
+      "publisher": "Electronic Arts",
+      "comingSoon": false,
+      "releaseLabel": "Sep 24, 2026",
+      "releaseDate": "2026-09-24",
+      "storeUrl": "https://store.steampowered.com/app/4080220/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4080220/4954b27a73c05793e8e206b126a8187fb27adddc/page_bg_raw.jpg?t=1790357926",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4080220/ff6a3779f1ca83aae8ad3878454f6c11008ea24d/header.jpg?t=1790357926"
+    }
+  ]
+}
