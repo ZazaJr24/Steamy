@@ -15,7 +15,8 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Grid x:Name="Card">
+            <Grid x:Name="Card" Background="Transparent">
+              <Grid x:Name="MotionSurface">
               <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
               <Grid>
                 <Border CornerRadius="12" Background="{Binding CoverColor}" />
@@ -28,6 +29,7 @@
                 <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" />
                 <TextBlock Text="{Binding Size}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
               </StackPanel>
+              </Grid>
             </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Opacity" Value="1" /></Trigger>

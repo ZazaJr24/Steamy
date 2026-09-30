@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 
@@ -19,6 +20,7 @@ public static class CardMotion
     {
         public readonly ScaleTransform Scale = new();
         public readonly TranslateTransform Lift = new();
+        public required FrameworkElement Target;
         public Transform? Original;
         public Point OriginalOrigin;
         public bool Pressed;
@@ -41,13 +43,19 @@ public static class CardMotion
     {
         var element = (FrameworkElement)sender;
         if (element.GetValue(StateProperty) is MotionState) return;
-        var state = new MotionState { Original = element.RenderTransform, OriginalOrigin = element.RenderTransformOrigin };
+        var target = element;
+        if (element is Control control)
+        {
+            control.ApplyTemplate();
+            target = control.Template?.FindName("MotionSurface", control) as FrameworkElement ?? element;
+        }
+        var state = new MotionState { Target = target, Original = target.RenderTransform, OriginalOrigin = target.RenderTransformOrigin };
         var group = new TransformGroup();
         if (state.Original is not null) group.Children.Add(state.Original);
         group.Children.Add(state.Scale);
         group.Children.Add(state.Lift);
-        element.RenderTransformOrigin = new Point(0.5, 0.5);
-        element.RenderTransform = group;
+        target.RenderTransformOrigin = new Point(0.5, 0.5);
+        target.RenderTransform = group;
         element.SetValue(StateProperty, state);
         element.MouseEnter += Changed;
         element.MouseLeave += Changed;
@@ -136,8 +144,8 @@ public static class CardMotion
         state.Scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
         state.Scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
         state.Lift.BeginAnimation(TranslateTransform.YProperty, null);
-        element.RenderTransform = state.Original ?? Transform.Identity;
-        element.RenderTransformOrigin = state.OriginalOrigin;
+        state.Target.RenderTransform = state.Original ?? Transform.Identity;
+        state.Target.RenderTransformOrigin = state.OriginalOrigin;
         element.ClearValue(StateProperty);
     }
     private static void Unloaded(object sender, RoutedEventArgs args)
