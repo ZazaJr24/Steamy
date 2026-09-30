@@ -3,7 +3,7 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
-## Unreleased
+## 0.3.4
 
 ### Improved
 - Redesigned dashboard, downloads and settings with consistent surfaces, readable status cues, shorter entrances and clear keyboard focus.
