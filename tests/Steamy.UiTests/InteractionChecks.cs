@@ -110,6 +110,11 @@ public sealed partial class PageSmokeTests
         {
             Assert.True(((BitmapSource)snapshot.Source).IsFrozen);
             Assert.Equal(Visibility.Visible, snapshot.Visibility);
+            var previous = snapshot.Source;
+            window.Width -= 20;
+            PumpDispatcher(TimeSpan.FromMilliseconds(250));
+            Assert.NotSame(previous, snapshot.Source);
+            Assert.True(((BitmapSource)snapshot.Source).IsFrozen);
         }
         Assert.True(overlay.IsKeyboardFocusWithin);
         var store = provider.GetRequiredService<IAppDataStore>();

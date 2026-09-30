@@ -248,7 +248,9 @@ public sealed partial class PageSmokeTests
         Assert.True(window.RootNavigationView.Navigate(typeof(LibraryPage)));
         var library = provider.GetRequiredService<Steamy.ViewModels.LibraryViewModel>();
         _phase = "Refresh screenshot catalog";
-        ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
+        var refresh = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
+        PumpUntil(() => refresh.IsCompleted);
+        refresh.GetAwaiter().GetResult();
         PumpUntil(() => library.PagedCatalogItems.Count == 5 && !library.IsCatalogLoading);
         PumpDispatcher(TimeSpan.FromMilliseconds(400));
         window.UpdateLayout();
@@ -306,6 +308,7 @@ public sealed partial class PageSmokeTests
 
     private sealed class FixtureArtwork : IArtworkService
     {
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<(int, string), BitmapImage> Images = new();
         public System.Collections.Concurrent.ConcurrentDictionary<int, int> HeroRequests { get; } = new();
         public Task<BitmapImage?> LoadHeroAsync(int appId, CancellationToken cancellationToken = default)
         {
@@ -325,6 +328,7 @@ public sealed partial class PageSmokeTests
         }
         public static BitmapImage? Read(int appId, string kind)
         {
+            if (Images.TryGetValue((appId, kind), out var cached)) return cached;
             var folder = Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK");
             if (string.IsNullOrWhiteSpace(folder)) return null;
             var path = Path.Combine(folder, $"{appId}_{kind}.jpg");
@@ -333,8 +337,10 @@ public sealed partial class PageSmokeTests
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.UriSource = new Uri(path);
+            image.DecodePixelWidth = kind == "hero" ? 1200 : kind == "portrait" ? 600 : 460;
             image.EndInit();
             image.Freeze();
+            Images.TryAdd((appId, kind), image);
             return image;
         }
     }
@@ -586,7 +592,7 @@ public class OfflineServiceProxy : DispatchProxy
         if ((method.DeclaringType == typeof(IRyuuCatalogService) || method.DeclaringType == typeof(IHubcapCatalogService)) && method.Name == "GetGamesAsync")
             return Task.FromResult(SteamCatalogSnapshot.Failure("Offline fixture"));
         if (method.DeclaringType == typeof(IManifestSourceService) && method.Name == nameof(IManifestSourceService.CheckAvailabilityAsync)) return Task.FromResult(new ManifestAvailability(true, true, "Available · offline fixture"));
-        if (method.DeclaringType == typeof(IFreeManifestCatalogService)) return Task.FromResult(new FreeManifestIndex(true, new HashSet<int> { 10 }, "Offline fixture"));
+        if (method.DeclaringType == typeof(IFreeManifestCatalogService)) return Task.FromResult(new FreeManifestIndex(true, ScreenshotCatalog?.Select(item => item.AppId).ToHashSet() ?? new HashSet<int> { 10 }, "Offline fixture"));
         if (method.Name == nameof(IDisposable.Dispose)) return null;
         throw new InvalidOperationException($"UI smoke attempted an external operation: {method.DeclaringType?.Name}.{method.Name}");
     }

@@ -33,6 +33,8 @@ public partial class LibraryPage : Page
     private int _overlayRevision;
     private bool _overlayClosing;
     private bool _resumingExisting;
+    private readonly System.Windows.Threading.DispatcherTimer _backdropResizeTimer = new(System.Windows.Threading.DispatcherPriority.Background)
+    { Interval = TimeSpan.FromMilliseconds(140) };
 
     private Brush ActiveChipBg => ThemeBrush("AccentSoftBrush");
     private Brush ActiveChipFg => ThemeBrush("AccentBrush");
@@ -55,12 +57,21 @@ public partial class LibraryPage : Page
         DataContext = App.Services.GetRequiredService<LibraryViewModel>();
         _ = ((LibraryViewModel)DataContext).OnNavigatedToAsync();
         Unloaded += (_, _) => ResetOverlay();
+        _backdropResizeTimer.Tick += (_, _) =>
+        {
+            _backdropResizeTimer.Stop();
+            if (OverlayGrid.Visibility == Visibility.Visible) CaptureBackdrop();
+        };
         DialogPanel.SizeChanged += (_, _) => DialogPanel.Clip = new RectangleGeometry(new Rect(DialogPanel.RenderSize), 24, 24);
         SizeChanged += (_, _) =>
         {
             DialogPanel.MaxWidth = Math.Max(0, ActualWidth - 32);
             DialogPanel.MaxHeight = Math.Max(0, ActualHeight - 32);
-            if (OverlayGrid.Visibility == Visibility.Visible) CaptureBackdrop();
+            if (OverlayGrid.Visibility == Visibility.Visible)
+            {
+                _backdropResizeTimer.Stop();
+                _backdropResizeTimer.Start();
+            }
         };
     }
 
@@ -387,6 +398,7 @@ public partial class LibraryPage : Page
 
     private void ResetOverlay()
     {
+        _backdropResizeTimer.Stop();
         _overlayRevision++;
         _availabilityCts?.Cancel();
         _artworkCts?.Cancel();
