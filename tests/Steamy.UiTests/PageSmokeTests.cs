@@ -67,6 +67,7 @@ public sealed class PageSmokeTests
         {
             CheckBurstUpdates();
             CheckSettingsCache();
+            CheckArtworkDecoding();
             CheckSushiImport(provider);
             CheckFeaturedGames(provider, fixtureArtwork, navigation);
             if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
@@ -259,6 +260,43 @@ public sealed class PageSmokeTests
             image.EndInit();
             image.Freeze();
             return image;
+        }
+    }
+
+    private static void CheckArtworkDecoding()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "Steamy-artwork-smoke-" + Guid.NewGuid().ToString("N"));
+        using var handler = new ArtworkHandler();
+        using var client = new HttpClient(handler);
+        using var service = new SteamArtworkService(client, directory);
+        try
+        {
+            var small = Task.Run(() => service.LoadHeroAsync(1)).GetAwaiter().GetResult();
+            Assert.Equal(16, small!.PixelWidth); // Small CDN headers must never be enlarged in memory.
+            Assert.True(small.IsFrozen);
+            handler.Width = 3200;
+            var cached = Task.Run(() => service.LoadHeroAsync(1)).GetAwaiter().GetResult();
+            Assert.Equal(16, cached!.PixelWidth);
+            Assert.Equal(1, handler.Requests); // Revisiting a game reads the local cache.
+            var large = Task.Run(() => service.LoadHeroAsync(2)).GetAwaiter().GetResult();
+            Assert.Equal(1600, large!.PixelWidth);
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+
+    private sealed class ArtworkHandler : HttpMessageHandler
+    {
+        public int Width { get; set; } = 16;
+        public int Requests { get; private set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            var source = BitmapSource.Create(Width, 2, 96, 96, PixelFormats.Bgra32, null, new byte[Width * 2 * 4], Width * 4);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(source));
+            using var stream = new MemoryStream();
+            encoder.Save(stream);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(stream.ToArray()) });
         }
     }
 

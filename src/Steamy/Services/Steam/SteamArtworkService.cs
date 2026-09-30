@@ -184,10 +184,12 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
         try
         {
             using var stream = new MemoryStream(bytes, writable: false);
+            var nativeWidth = BitmapFrame.Create(stream, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None).PixelWidth;
+            stream.Position = 0;
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 1600;
+            image.DecodePixelWidth = Math.Min(1600, nativeWidth);
             image.StreamSource = stream;
             image.EndInit();
             image.Freeze();
