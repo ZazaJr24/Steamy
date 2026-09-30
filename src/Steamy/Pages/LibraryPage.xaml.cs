@@ -32,6 +32,7 @@ public partial class LibraryPage : Page
     private IInputElement? _previousFocus;
     private int _overlayRevision;
     private bool _overlayClosing;
+    private bool _resumingExisting;
 
     private Brush ActiveChipBg => ThemeBrush("AccentSoftBrush");
     private Brush ActiveChipFg => ThemeBrush("AccentBrush");
@@ -122,13 +123,28 @@ public partial class LibraryPage : Page
         CustomArchiveText.Text = "No archive selected";
         CustomArchiveText.Foreground = TertiaryText;
         // A paused download of this app resumes in the same folder with one click.
-        var resumeFolder = Path.Combine(
-            string.IsNullOrWhiteSpace(_downloadPath) ? (settings.DownloadFolder ?? string.Empty) : _downloadPath,
-            SanitizeFolderName(item.Name));
+        var resumeFolder = TargetFolderFor(item, settings, _downloadPath);
         var resumable = App.Services.GetRequiredService<IAppDataStore>().Downloads.FirstOrDefault(existing =>
             existing.AppId == item.AppId
+            && DownloadJobPolicy.UsesModDownloader(existing.DownloadMode, existing.DepotId, existing.TargetFolder)
             && string.Equals(existing.TargetFolder, resumeFolder, StringComparison.OrdinalIgnoreCase)
             && existing.State is DownloadJobState.Paused or DownloadJobState.Failed or DownloadJobState.Cancelled);
+        _resumingExisting = resumable is not null;
+        if (resumable is not null)
+        {
+            _availabilityCts?.Cancel();
+            foreach (var name in Enum.GetNames<ManifestSource>())
+                if (resumable.DownloadMode.Contains(name, StringComparison.OrdinalIgnoreCase)
+                    && Enum.TryParse<ManifestSource>(name, out var originalSource))
+                { _selectedSource = originalSource; break; }
+            SetOptionState(SourceRyuu, _selectedSource == ManifestSource.Ryuu);
+            SetOptionState(SourceZaza, _selectedSource == ManifestSource.Zaza);
+            SetOptionState(SourceHubcap, _selectedSource == ManifestSource.Hubcap);
+            SetOptionState(SourceDepotBox, _selectedSource == ManifestSource.DepotBox);
+            SetOptionState(SourceSushi, _selectedSource == ManifestSource.Sushi);
+            SourceAvailabilityText.Text = $"Resume uses the saved {_selectedSource} manifests and existing files.";
+            SourceAvailabilityText.Foreground = TertiaryText;
+        }
         StartButton.Content = resumable is null ? "Start download" : "Resume download";
         StartButton.IsEnabled = true;
         PauseButton.Visibility = Visibility.Collapsed;
@@ -222,6 +238,11 @@ public partial class LibraryPage : Page
 
     private void Source_Click(object sender, MouseButtonEventArgs e)
     {
+        if (_resumingExisting || _downloadRunning)
+        {
+            OverlayStatus.Text = "Continue with the original source and saved manifests. Manage this job in Downloads.";
+            return;
+        }
         if (sender is not Border border || !border.IsEnabled || border.Tag is not string sourceTag) return;
         if (!Enum.TryParse<ManifestSource>(sourceTag, out var source)) return;
         _selectedSource = source;
@@ -382,6 +403,7 @@ public partial class LibraryPage : Page
         MainContentGrid.IsEnabled = true;
         _previousFocus = null;
         _selectedItem = null;
+        _resumingExisting = false;
         _overlayClosing = false;
     }
 
@@ -433,14 +455,18 @@ public partial class LibraryPage : Page
         var item = _selectedItem;
         var settings = App.Services.GetRequiredService<ISettingsService>().Load();
 
-        var basePath = string.IsNullOrWhiteSpace(_downloadPath) ? settings.DownloadFolder : _downloadPath;
-        var folder = string.IsNullOrWhiteSpace(basePath)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SteamGames")
-            : basePath;
-        var targetFolder = Path.Combine(folder, SanitizeFolderName(item.Name));
+        var targetFolder = TargetFolderFor(item, settings, _downloadPath);
 
         var store = App.Services.GetRequiredService<IAppDataStore>();
         var queueStore = App.Services.GetRequiredService<IDownloadQueueStore>();
+        if (store.Downloads.Any(existing => existing.AppId == item.AppId
+            && string.Equals(existing.TargetFolder, targetFolder, StringComparison.OrdinalIgnoreCase)
+            && existing.State is DownloadJobState.Queued or DownloadJobState.Paused
+            && !DownloadJobPolicy.UsesModDownloader(existing.DownloadMode, existing.DepotId, existing.TargetFolder)))
+        {
+            OverlayStatus.Text = "This folder already has a DepotDownloader job. Open Downloads to continue that job, or choose a different folder.";
+            return;
+        }
         if (store.Downloads.Any(existing => existing.AppId == item.AppId && existing.IsActive
             && string.Equals(existing.TargetFolder, targetFolder, StringComparison.OrdinalIgnoreCase)))
         {
@@ -451,6 +477,7 @@ public partial class LibraryPage : Page
         // Reuse the job of a paused download of this app so Resume keeps its identity, target
         // folder and progress instead of piling up duplicate rows for the same game.
         var job = store.Downloads.FirstOrDefault(existing => existing.AppId == item.AppId
+                && DownloadJobPolicy.UsesModDownloader(existing.DownloadMode, existing.DepotId, existing.TargetFolder)
                 && string.Equals(existing.TargetFolder, targetFolder, StringComparison.OrdinalIgnoreCase)
                 && existing.State is DownloadJobState.Paused or DownloadJobState.Failed or DownloadJobState.Cancelled)
             ?? new DownloadJob
@@ -610,6 +637,13 @@ public partial class LibraryPage : Page
                     if (_selectedItem == item) PauseButton.Visibility = Visibility.Collapsed;
                 }
             }
+    }
+
+    private static string TargetFolderFor(SteamCatalogItem item, AppSettings settings, string selectedFolder)
+    {
+        var folder = string.IsNullOrWhiteSpace(selectedFolder) ? settings.DownloadFolder : selectedFolder;
+        if (string.IsNullOrWhiteSpace(folder)) folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SteamGames");
+        return Path.Combine(folder, SanitizeFolderName(item.Name));
     }
 
     private static string SanitizeFolderName(string name)
