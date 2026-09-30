@@ -18,11 +18,84 @@ namespace Steamy.ViewModels;
 
 public sealed record DashboardStatusItem(string Title, string Detail, bool IsOk, string ActionLabel, ICommand Action);
 
+public sealed class DashboardFeature(Game game, string description, string genres) : UiObservableObject
+{
+    private ImageSource? _heroArtwork;
+    public Game Game { get; } = game;
+    public string Description { get; } = description;
+    public string Genres { get; } = genres;
+    public ImageSource? HeroArtwork { get => _heroArtwork; set => SetProperty(ref _heroArtwork, value); }
+}
+
 public sealed class DashboardViewModel : ViewModelBase
 {
     private const int RecentGameCount = 12;
     private const int JobPreviewCount = 4;
     private static readonly TimeSpan RefreshDebounce = TimeSpan.FromSeconds(30);
+
+    private readonly IArtworkService _artwork;
+    private Task? _discoveryArtworkTask;
+    private readonly Dictionary<int, Task<BitmapImage?>> _heroLoads = new();
+    private int _featuredIndex;
+    public IReadOnlyList<DashboardFeature> DiscoverGames { get; } = new[]
+    {
+        new DashboardFeature(new Game { AppId = 2322010, Name = "God of War Ragnarök", CoverColor = "#283E53" }, "Journey through the Nine Realms with Kratos and Atreus. An epic adventure awaits.", "Action  ·  Adventure  ·  Story rich"),
+        new DashboardFeature(new Game { AppId = 1245620, Name = "ELDEN RING", CoverColor = "#443824" }, "Step into the Lands Between. Find your own path through a vast world of mystery and discovery.", "RPG  ·  Open world  ·  Souls-like"),
+        new DashboardFeature(new Game { AppId = 1091500, Name = "Cyberpunk 2077", CoverColor = "#594B16" }, "Make your mark on Night City. Your story, your choices, your next adventure.", "RPG  ·  Open world  ·  Cyberpunk"),
+        new DashboardFeature(new Game { AppId = 1174180, Name = "Red Dead Redemption 2", CoverColor = "#60252A" }, "Explore America's untamed frontier in a sweeping story of loyalty and survival.", "Adventure  ·  Open world  ·  Western"),
+        new DashboardFeature(new Game { AppId = 2358720, Name = "Black Myth: Wukong", CoverColor = "#293F37" }, "Uncover the legends of the Journey to the West as the Destined One.", "Action RPG  ·  Mythology  ·  Adventure")
+    };
+    public DashboardFeature FeaturedGame => DiscoverGames[_featuredIndex];
+    public string FeaturedPosition => $"{_featuredIndex + 1:00} / {DiscoverGames.Count:00}";
+    public ICommand NextFeaturedCommand { get; }
+    public ICommand PreviousFeaturedCommand { get; }
+    public ICommand ViewFeaturedCommand { get; }
+
+    public Task EnsureDiscoveryArtworkAsync() => _discoveryArtworkTask ??= LoadDiscoveryArtworkAsync();
+
+    private async Task LoadDiscoveryArtworkAsync()
+    {
+        // Download and decode away from the dispatcher; visible cards reuse the disk cache.
+        var cards = Task.Run(() => _artwork.LoadHeadersAsync(DiscoverGames.Select(feature => feature.Game)));
+        await LoadFeaturedArtworkAsync();
+        try { await cards; }
+        catch (Exception exception)
+        {
+            Logging.Add(LogLevel.Debug, "Dashboard", $"Optional card artwork unavailable: {exception.GetType().Name}.");
+        }
+    }
+
+    private async Task LoadFeaturedArtworkAsync()
+    {
+        var feature = FeaturedGame;
+        try
+        {
+            if (!_heroLoads.TryGetValue(feature.Game.AppId, out var task))
+                _heroLoads[feature.Game.AppId] = task = Task.Run(() => _artwork.LoadHeroAsync(feature.Game.AppId));
+            feature.HeroArtwork = await task;
+        }
+        catch (Exception exception)
+        {
+            Logging.Add(LogLevel.Debug, "Dashboard", $"Optional artwork unavailable: {exception.GetType().Name}.");
+        }
+    }
+
+    private void MoveFeatured(int direction)
+    {
+        _featuredIndex = (_featuredIndex + direction + DiscoverGames.Count) % DiscoverGames.Count;
+        OnPropertyChanged(nameof(FeaturedGame));
+        OnPropertyChanged(nameof(FeaturedPosition));
+        _ = LoadFeaturedArtworkAsync();
+    }
+
+    private void ViewFeatured()
+    {
+        var library = App.Services.GetRequiredService<LibraryViewModel>();
+        library.SelectedSourceFilter = "All sources";
+        library.SelectedTypeFilter = "All games";
+        library.SearchText = FeaturedGame.Game.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        Navigation.Navigate<LibraryPage>();
+    }
 
     private readonly ILibrarySyncService _librarySync;
     private readonly ISettingsService _settings;
@@ -49,8 +122,6 @@ public sealed class DashboardViewModel : ViewModelBase
     public void StopLiveStats() => _statsTimer.Stop();
     private DownloadJob? _heroDownload;
     private Game? _heroGame;
-    private int _heroImageAppId;
-    private ImageSource? _heroImage;
     private long _storageFree = -1;
     private long _storageTotal;
     private string _storageDrive = string.Empty;
@@ -64,8 +135,13 @@ public sealed class DashboardViewModel : ViewModelBase
         ISettingsService settings,
         IDepotDownloaderCheckService depotCheck,
         DownloadsViewModel downloadActions,
-        ShareViewModel share) : base(store, navigation, logging)
+        ShareViewModel share,
+        IArtworkService artwork) : base(store, navigation, logging)
     {
+        _artwork = artwork;
+        NextFeaturedCommand = new RelayCommand(() => MoveFeatured(1));
+        PreviousFeaturedCommand = new RelayCommand(() => MoveFeatured(-1));
+        ViewFeaturedCommand = new RelayCommand(ViewFeatured);
         _librarySync = librarySync;
         _settings = settings;
         _depotCheck = depotCheck;
@@ -153,7 +229,6 @@ public sealed class DashboardViewModel : ViewModelBase
             OnPropertyChanged(nameof(ShowWelcomeHero));
             OnPropertyChanged(nameof(HasHeroArt));
             OnPropertyChanged(nameof(HeroDownloadDetail));
-            UpdateHeroImage();
         }
     }
 
@@ -167,7 +242,6 @@ public sealed class DashboardViewModel : ViewModelBase
             OnPropertyChanged(nameof(ShowWelcomeHero));
             OnPropertyChanged(nameof(HasHeroArt));
             OnPropertyChanged(nameof(HeroGameDetail));
-            UpdateHeroImage();
         }
     }
 
@@ -200,12 +274,6 @@ public sealed class DashboardViewModel : ViewModelBase
     public string HeroGameDetail => HeroGame is null
         ? string.Empty
         : string.Join("  ·  ", new[] { HeroGame.Size, HeroGame.LastPlayed }.Where(part => !string.IsNullOrWhiteSpace(part)));
-
-    public ImageSource? HeroImage
-    {
-        get => _heroImage;
-        private set => SetProperty(ref _heroImage, value);
-    }
 
     // ---- stat tiles -----------------------------------------------------------------------------
 
@@ -324,7 +392,10 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand ExploreSourceCommand => new RelayCommand<string>(source =>
     {
         if (source is null) return;
-        App.Services.GetRequiredService<LibraryViewModel>().SelectedSourceFilter = source;
+        var library = App.Services.GetRequiredService<LibraryViewModel>();
+        library.SearchText = string.Empty;
+        library.SelectedTypeFilter = "All games";
+        library.SelectedSourceFilter = source;
         Navigation.Navigate<LibraryPage>();
     });
     public ICommand NavigateSettingsCommand => new RelayCommand(() => Navigation.Navigate<SettingsPage>());
@@ -339,7 +410,11 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand ShareAllNewCommand => new RelayCommand(_share.PrepareShareAllNew);
     public ICommand NavigateGoldbergCommand => new RelayCommand(() => Navigation.Navigate<GoldbergPage>());
 
-    public override Task OnNavigatedToAsync() => RefreshAsync(force: false);
+    public override Task OnNavigatedToAsync()
+    {
+        _ = EnsureDiscoveryArtworkAsync();
+        return RefreshAsync(force: false);
+    }
 
     public async Task RefreshAsync(bool force)
     {
@@ -531,39 +606,6 @@ public sealed class DashboardViewModel : ViewModelBase
 
         StatusItems = new[] { library, depot, fixes };
         OnPropertyChanged(nameof(StatusSummary));
-    }
-
-    private void UpdateHeroImage()
-    {
-        var appId = HeroDownload?.AppId ?? HeroGame?.AppId ?? 0;
-        if (appId == _heroImageAppId) return;
-        _heroImageAppId = appId;
-        HeroImage = appId <= 0 ? null : LoadSteamImage(appId, "library_hero.jpg", fallback: "header.jpg");
-    }
-
-    private BitmapImage? LoadSteamImage(int appId, string file, string? fallback)
-    {
-        try
-        {
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.UriSource = new Uri($"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/{file}");
-            image.DecodePixelWidth = 1600;
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.EndInit();
-            if (fallback is not null)
-            {
-                image.DownloadFailed += (_, _) =>
-                {
-                    if (_heroImageAppId == appId) HeroImage = LoadSteamImage(appId, fallback, fallback: null);
-                };
-            }
-            return image;
-        }
-        catch (Exception exception) when (exception is IOException or NotSupportedException or UriFormatException)
-        {
-            return null;
-        }
     }
 
     // ---- live updates ---------------------------------------------------------------------------

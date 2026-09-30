@@ -7,7 +7,9 @@ namespace Steamy.Services;
 
 public interface IArtworkService
 {
+    Task<BitmapImage?> LoadHeroAsync(int appId, CancellationToken cancellationToken = default);
     Task LoadAsync(Game game, CancellationToken cancellationToken = default);
+    Task LoadHeadersAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default);
     Task LoadManyAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default);
 }
 
@@ -34,6 +36,32 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Steamy",
             "artwork");
+    }
+
+    public Task<BitmapImage?> LoadHeroAsync(int appId, CancellationToken cancellationToken = default) =>
+        LoadFirstAvailableAsync(new[]
+        {
+            $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/library_hero.jpg",
+            $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/library_hero.jpg",
+            $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/header.jpg"
+        }, Path.Combine(_cacheDirectory, $"{appId}_hero.jpg"), cancellationToken);
+
+    public async Task LoadHeadersAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default)
+    {
+        using var gate = new SemaphoreSlim(4);
+        await Task.WhenAll(games.Where(game => game.AppId > 0).Select(async game =>
+        {
+            await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                game.HeaderImage = await LoadFirstAvailableAsync(new[]
+                {
+                    $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{game.AppId}/header.jpg",
+                    $"https://cdn.akamai.steamstatic.com/steam/apps/{game.AppId}/header.jpg"
+                }, Path.Combine(_cacheDirectory, $"{game.AppId}_header.jpg"), cancellationToken).ConfigureAwait(false);
+            }
+            finally { gate.Release(); }
+        })).ConfigureAwait(false);
     }
 
     public async Task LoadManyAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default)
@@ -159,6 +187,7 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
+            image.DecodePixelWidth = 1600;
             image.StreamSource = stream;
             image.EndInit();
             image.Freeze();

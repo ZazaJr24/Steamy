@@ -3,6 +3,18 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.3.6
+
+### Improved
+- Rebuilt Home around a full-width featured game hero, manual carousel and landscape library cards, with more room for game artwork and fewer panels.
+- Added a curated discovery row that opens the real game catalog; recommendations do not claim ownership or source availability.
+- Kept downloads at the bottom left and pause/resume/start actions in a compact dashboard queue.
+- Featured artwork loads off the UI thread, uses a local disk cache and reuses each slide's image task. The carousel does not run an idle animation timer.
+
+### Documentation
+- New screenshots rendered from the actual Windows app with sample library data, including Dashboard, Downloads and Settings.
+- Added a manual Windows screenshot workflow to keep the README images current.
+
 ## 0.3.5
 
 ### Improved
