@@ -29,6 +29,11 @@ public sealed class AdaptiveGridPanel : Panel
         nameof(MaxRows), typeof(int), typeof(AdaptiveGridPanel),
         new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly DependencyProperty MaxColumnsProperty = DependencyProperty.Register(
+        nameof(MaxColumns), typeof(int), typeof(AdaptiveGridPanel),
+        new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
+    public int MaxColumns { get => (int)GetValue(MaxColumnsProperty); set => SetValue(MaxColumnsProperty, value); }
     public int MaxRows { get => (int)GetValue(MaxRowsProperty); set => SetValue(MaxRowsProperty, value); }
     public double MinItemWidth { get => (double)GetValue(MinItemWidthProperty); set => SetValue(MinItemWidthProperty, value); }
     public double Spacing { get => (double)GetValue(SpacingProperty); set => SetValue(SpacingProperty, value); }
@@ -39,6 +44,7 @@ public sealed class AdaptiveGridPanel : Panel
     {
         if (double.IsInfinity(width) || width <= 0) width = MinItemWidth * 4 + Spacing * 3;
         var columns = Math.Max(1, (int)((width + Spacing) / (MinItemWidth + Spacing)));
+        if (MaxColumns > 0) columns = Math.Min(columns, MaxColumns);
         var itemWidth = Math.Floor((width - Spacing * (columns - 1)) / columns);
         return (columns, itemWidth, Math.Round(itemWidth * CoverRatio + FooterHeight));
     }

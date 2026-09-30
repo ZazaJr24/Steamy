@@ -31,6 +31,7 @@ public partial class DashboardPage : Page
         DashboardHero.Height = Math.Clamp((width - 56) * 0.37, 340, 490);
         HeroCopy.MaxWidth = width < 900 ? 370 : 480;
         HeroTitle.FontSize = width < 900 ? 34 : 46;
+        HeroTitle.LineHeight = HeroTitle.FontSize * 1.1;
     }
 
     private void GameCover_Click(object sender, RoutedEventArgs e)

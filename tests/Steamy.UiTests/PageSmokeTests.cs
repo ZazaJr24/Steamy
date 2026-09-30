@@ -187,21 +187,34 @@ public sealed class PageSmokeTests
         UiThemeService.Apply("Dark");
         var window = new MainWindow { WindowState = WindowState.Normal, Width = 1600, Height = 1050 };
         window.Show();
+        MoveCursorAway(0, 0);
         PumpDispatcher(TimeSpan.FromMilliseconds(500));
         window.UpdateLayout();
-        SaveVisual(window, "dashboard.png");
+        SaveVisual((FrameworkElement)window.Content, "dashboard.png");
         foreach (var (route, filename) in new[] { (typeof(DownloadsPage), "downloads.png"), (typeof(SettingsPage), "settings.png") })
         {
             Assert.True(window.RootNavigationView.Navigate(route));
             PumpDispatcher(TimeSpan.FromMilliseconds(500));
             window.UpdateLayout();
-            SaveVisual(window, filename);
+            SaveVisual((FrameworkElement)window.Content, filename);
         }
         window.Close();
     }
 
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SetCursorPos")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool MoveCursorAway(int x, int y);
+
     private static void SaveVisual(FrameworkElement element, string filename)
     {
+        // Render the real window content at a fixed size rather than the runner's small
+        // virtual desktop. This also exercises the wide layout used in the README.
+        var size = new Size(1600, 1050);
+        element.Width = size.Width;
+        element.Height = size.Height;
+        element.Measure(size);
+        element.Arrange(new Rect(size));
+        element.UpdateLayout();
         var folder = Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS")!;
         Directory.CreateDirectory(folder);
         var bitmap = new RenderTargetBitmap((int)element.ActualWidth, (int)element.ActualHeight, 96, 96, PixelFormats.Pbgra32);
