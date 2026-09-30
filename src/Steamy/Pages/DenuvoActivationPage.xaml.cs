@@ -22,6 +22,24 @@ public partial class DenuvoActivationPage : Page
 
     private DenuvoActivationViewModel ViewModel => (DenuvoActivationViewModel)DataContext;
 
+    private void ActivationHelp_Click(object sender, RoutedEventArgs e) =>
+        ActivationHelpPopup.IsOpen = !ActivationHelpPopup.IsOpen;
+
+    private void ActivationHelp_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        ActivationHelpPopup.IsOpen = false;
+        ActivationHelpButton.Focus();
+        e.Handled = true;
+    }
+
+    private void ActivationCommunity_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
+        catch (System.ComponentModel.Win32Exception) { }
+        e.Handled = true;
+    }
+
     private void Suggestion_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (sender is Border border && border.DataContext is SteamSearchEntry entry)

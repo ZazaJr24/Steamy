@@ -55,6 +55,7 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 ## ✨ What's new in 0.3.6
 
 - **A new Home** — full-width game artwork, a featured carousel, landscape library cards and a curated discovery row.
+- **Denuvo Activation help** — an info button links to the [Pubs Lounge community](https://discord.gg/pubslounge). SushiTools attribution is in the Credits section.
 - **A quieter dashboard** — compact download controls, fewer panels and cached background artwork loading.
 - **Fresh Windows screenshots** of Dashboard, Downloads and Settings. The screenshots use sample library data; game artwork belongs to its respective owners.
 
@@ -385,6 +386,7 @@ tests/Steamy.Tests/  xUnit tests for the sharing core and the VDF parser
 | [SmokeAPI](https://github.com/acidicoala/SmokeAPI) | acidicoala | Alternative DLC unlocker |
 | [Goldberg Emulator](https://github.com/Detanup01/gbe_fork) | Detanup01 | Steam emulation (gbe_fork) |
 | [GreenLuma 2026](https://cs.rin.ru) | Steam006 | Family Share bypass |
+| [SushiTools games repository](https://github.com/sushi-dev55/sushitools-games-repo) | [sushi-dev55](https://github.com/sushi-dev55) · [SushiTools community](https://discord.gg/sushitools) | Free Lua metadata and depot manifests (MIT) |
 | [WPF-UI](https://github.com/lepoco/wpfui) | lepo.co | Fluent Design framework |
 
 <br/>

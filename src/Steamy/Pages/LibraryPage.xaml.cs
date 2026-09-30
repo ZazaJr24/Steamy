@@ -201,12 +201,6 @@ public partial class LibraryPage : Page
         }
     }
 
-    private void SourceCredit_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
-    {
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
-        catch (System.ComponentModel.Win32Exception) { }
-        e.Handled = true;
-    }
 
     private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
     {
