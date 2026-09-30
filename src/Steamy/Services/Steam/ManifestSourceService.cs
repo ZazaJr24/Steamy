@@ -62,7 +62,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         new(ManifestSource.Zaza, "Zaza", "ZazaJr24 Game-Files-UpdateR on GitHub", "https://raw.githubusercontent.com/ZazaJr24/Game-Files-UpdateR/main/", RequiresAuthCode: false),
         new(ManifestSource.Hubcap, "Hubcap", "Hubcap Manifest API (requires API key)", "https://hubcapmanifest.com/", RequiresAuthCode: true),
         new(ManifestSource.DepotBox, "DepotBox", "DepotBox manifest generator (requires API key)", "https://depotbox.org/", RequiresAuthCode: true),
-        new(ManifestSource.Sushi, "Sushi", "Free manifests by sushi-dev55 · sushitools-games-repo · no API key", FreeManifestCatalogService.SushiUrl, RequiresAuthCode: false),
+        new(ManifestSource.Sushi, "Sushi", "Free Lua metadata and depot manifests · no API key", FreeManifestCatalogService.SushiUrl, RequiresAuthCode: false),
     };
 
     private readonly ISettingsService _settings;
@@ -196,7 +196,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         var staging = Path.Combine(directory, Guid.NewGuid().ToString("N"));
         try
         {
-            progress?.Report("Downloading free Sushi manifests · credits: sushi-dev55 / SushiTools.");
+            progress?.Report("Downloading free Sushi manifests.");
             var url = $"https://raw.githubusercontent.com/{FreeManifestCatalogService.SushiRepository}/main/{appId}.zip";
             using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode) return new(false, $"Sushi archive unavailable (HTTP {(int)response.StatusCode}).");

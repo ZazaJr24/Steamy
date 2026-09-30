@@ -13,7 +13,32 @@
     <StackPanel Margin="36,28,36,28" MaxWidth="680" HorizontalAlignment="Left">
 
       <!-- Header -->
-      <TextBlock Text="Denuvo Activation" Style="{StaticResource PageTitleStyle}" />
+      <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+        <TextBlock Text="Denuvo Activation" Style="{StaticResource PageTitleStyle}" />
+        <ui:Button x:Name="ActivationHelpButton" Grid.Column="1" Appearance="Transparent"
+                   Icon="{ui:SymbolIcon Info24}" Width="40" Height="40" VerticalAlignment="Center"
+                   Click="ActivationHelp_Click" ToolTip="Denuvo activation information"
+                   AutomationProperties.Name="Denuvo activation information" />
+        <Popup x:Name="ActivationHelpPopup" PlacementTarget="{Binding ElementName=ActivationHelpButton}"
+               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="None">
+          <Border Width="350" Padding="20" Margin="4" CornerRadius="16"
+                  Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+                  PreviewKeyDown="ActivationHelp_PreviewKeyDown">
+            <StackPanel>
+              <TextBlock Text="How to get Denuvo activations without owning the game" FontSize="16" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+              <TextBlock Text="Join Discord.gg/pubslounge to get free legit Denuvo activations." FontSize="13" LineHeight="21"
+                         Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,12,0,0" />
+              <TextBlock Text="Read the community's pinned instructions, ask which games are available, and follow the steps for your activation request. You can also ask the community for help with setup."
+                         FontSize="12" LineHeight="20" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,10,0,16" />
+              <TextBlock FontSize="13" FontWeight="SemiBold">
+                <Hyperlink NavigateUri="https://discord.gg/pubslounge" RequestNavigate="ActivationCommunity_RequestNavigate">Join Pubs Lounge ↗</Hyperlink>
+              </TextBlock>
+            </StackPanel>
+          </Border>
+        </Popup>
+      </Grid>
       <TextBlock Text="Generate a ready-to-use ColdLoader package for any Steam game."
                  Style="{StaticResource PageSubtitleStyle}" Margin="0,2,0,0" />
 

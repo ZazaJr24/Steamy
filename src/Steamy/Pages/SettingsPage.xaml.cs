@@ -85,12 +85,6 @@ public partial class SettingsPage : Page
         }
     }
 
-    private void SourceCredit_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
-    {
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
-        catch (System.ComponentModel.Win32Exception) { }
-        e.Handled = true;
-    }
 
     private static IEnumerable<string> StaticLabels(DependencyObject element)
     {

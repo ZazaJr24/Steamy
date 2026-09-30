@@ -8,6 +8,8 @@ Add a new `## x.y.z` section at the top before tagging.
 ### Improved
 - Rebuilt Home around a full-width featured game hero, manual carousel and landscape library cards, with more room for game artwork and fewer panels.
 - Added a curated discovery row that opens the real game catalog; recommendations do not claim ownership or source availability.
+- Added a right-side information button to Denuvo Activation with the requested community guidance and Discord link.
+- Moved visible SushiTools author/repository/community credits to the README; the third-party MIT license notice remains bundled.
 - Kept downloads at the bottom left and pause/resume/start actions in a compact dashboard queue.
 - Featured artwork loads off the UI thread, uses a local disk cache and reuses each slide's image task. The carousel does not run an idle animation timer.
 

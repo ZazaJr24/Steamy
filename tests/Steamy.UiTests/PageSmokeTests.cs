@@ -74,7 +74,7 @@ public sealed class PageSmokeTests
             foreach (var theme in new[] { "Dark", "Light" })
             {
                 UiThemeService.Apply(theme);
-                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage() })
+                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage() })
                 {
                     PumpDispatcher(TimeSpan.FromMilliseconds(100));
                     foreach (var size in new[] { new Size(780, 560), new Size(1280, 800) })
@@ -207,39 +207,24 @@ public sealed class PageSmokeTests
 
     private static void SaveVisual(MainWindow window, string filename)
     {
-        // Detach the real shell briefly so the runner's small native window cannot
-        // clip a larger render. The same controls, resources and page instances are used.
-        var element = (FrameworkElement)window.Content;
-        window.Content = null;
-        window.UpdateLayout();
-        PumpDispatcher(TimeSpan.FromMilliseconds(50));
-        Assert.Null(VisualTreeHelper.GetParent(element));
-        try
+        // Capture the complete native WPF window at its actual size. Windows runners
+        // may constrain the window to their virtual desktop; never pad a clipped image.
+        var width = (int)window.ActualWidth;
+        var height = (int)window.ActualHeight;
+        var folder = Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS")!;
+        Directory.CreateDirectory(folder);
+        var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(window);
+        foreach (var point in new[] { new Int32Rect(width - 20, height / 2, 1, 1), new Int32Rect(width / 2, height - 20, 1, 1) })
         {
-            var size = new Size(1600, 1050);
-            element.Width = size.Width;
-            element.Height = size.Height;
-            element.InvalidateMeasure();
-            element.InvalidateArrange();
-            element.Measure(size);
-            element.Arrange(new Rect(size));
-            element.UpdateLayout();
-            var folder = Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS")!;
-            Directory.CreateDirectory(folder);
-            var bitmap = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
-            bitmap.Render(element);
-            foreach (var point in new[] { new Int32Rect(1500, 700, 1, 1), new Int32Rect(1500, 1000, 1, 1) })
-            {
-                var pixel = new byte[4];
-                bitmap.CopyPixels(point, pixel, 4, 0);
-                Assert.Equal(255, pixel[3]); // Reject screenshots clipped to the virtual desktop.
-            }
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(bitmap));
-            using var output = File.Create(Path.Combine(folder, filename));
-            encoder.Save(output);
+            var pixel = new byte[4];
+            bitmap.CopyPixels(point, pixel, 4, 0);
+            Assert.Equal(255, pixel[3]);
         }
-        finally { window.Content = element; }
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var output = File.Create(Path.Combine(folder, filename));
+        encoder.Save(output);
     }
 
     private sealed class FixtureArtwork : IArtworkService
@@ -445,6 +430,13 @@ public class OfflineServiceProxy : DispatchProxy
         if (method.Name.StartsWith("add_", StringComparison.Ordinal) || method.Name.StartsWith("remove_", StringComparison.Ordinal)) return null;
         if (method.DeclaringType == typeof(ISecureCredentialService) && method.Name == nameof(ISecureCredentialService.ReadAsync)) return Task.FromResult<string?>(null);
         if (method.DeclaringType == typeof(ILoggingService)) return null;
+        if (method.DeclaringType == typeof(IDenuvoGeneratorDownloadService))
+        {
+            if (method.Name == "get_HasCachedExecutable") return false;
+            if (method.Name == "get_CachedPath") return null;
+            if (method.Name == nameof(IDenuvoGeneratorDownloadService.DownloadLatestAsync))
+                return Task.FromResult(new DenuvoGeneratorDownloadResult(false, "Offline fixture", null, null));
+        }
         if (method.DeclaringType == typeof(ILibrarySyncService) && method.Name == nameof(ILibrarySyncService.RefreshAsync))
             return Task.FromResult(SteamLibraryScanResult.Failure("Offline UI fixture"));
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.GetCatalogAsync))
