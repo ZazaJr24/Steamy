@@ -85,6 +85,7 @@ public sealed partial class PageSmokeTests
 
     private static void CheckLibraryDialog(IServiceProvider provider, string theme)
     {
+        _phase = "Create dialog test page " + theme;
         var page = new LibraryPage();
         var window = new Window { Content = page, Width = 980, Height = 760, ShowInTaskbar = false };
         window.Show();
@@ -97,6 +98,7 @@ public sealed partial class PageSmokeTests
         var card = Descendants<Button>(page).Single(button => button.Tag is SteamCatalogItem);
         Assert.True(CardMotion.GetIsEnabled(card));
         card.Focus();
+        _phase = "Open dialog " + theme;
         card.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); // The same action works for Enter/Space.
         var overlay = (Grid)page.FindName("OverlayGrid");
         var background = (Grid)page.FindName("MainContentGrid");
@@ -120,6 +122,7 @@ public sealed partial class PageSmokeTests
         Assert.Contains(standardJob, store.Downloads);
         Assert.Equal(DownloadJobState.Paused, standardJob.State);
         store.Downloads.Remove(standardJob);
+        _phase = "Close dialog " + theme;
         page.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(page)!, 0, Key.Escape)
         { RoutedEvent = Keyboard.PreviewKeyDownEvent });
         PumpUntil(() => overlay.Visibility == Visibility.Collapsed);

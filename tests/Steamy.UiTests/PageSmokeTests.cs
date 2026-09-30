@@ -19,6 +19,7 @@ namespace Steamy.UiTests;
 
 public sealed partial class PageSmokeTests
 {
+    private static volatile string _phase = "Starting";
     [Fact]
     public void RealPagesLoadTheirResourcesAndLayoutInBothThemes()
     {
@@ -30,7 +31,7 @@ public sealed partial class PageSmokeTests
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
-        Assert.True(thread.Join(TimeSpan.FromSeconds(60)), "WPF smoke test did not finish within 60 seconds.");
+        Assert.True(thread.Join(TimeSpan.FromSeconds(60)), "WPF smoke test did not finish within 60 seconds. Last phase: " + _phase);
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
@@ -65,21 +66,30 @@ public sealed partial class PageSmokeTests
         PresentationTraceSources.DataBindingSource.Listeners.Add(bindingLog);
         try
         {
+            _phase = "CheckBurstUpdates()";
             CheckBurstUpdates();
+            _phase = "CheckSettingsCache()";
             CheckSettingsCache();
+            _phase = "CheckArtworkDecoding()";
             CheckArtworkDecoding();
+            _phase = "CheckSushiImport(provider)";
             CheckSushiImport(provider);
+            _phase = "CheckFeaturedGames(provider, fixtureArtwork, navigation)";
             CheckFeaturedGames(provider, fixtureArtwork, navigation);
+            _phase = "CheckDashboardSearch(provider)";
             CheckDashboardSearch(provider);
+            _phase = "CheckDepotQueue(provider)";
             CheckDepotQueue(provider);
             if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
                 AddScreenshotLibrary(store, fixtureArtwork);
             foreach (var theme in new[] { "Dark", "Light" })
             {
                 UiThemeService.Apply(theme);
+                _phase = "Library dialog " + theme;
                 CheckLibraryDialog(provider, theme);
                 foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage(), new HypervisorFixesPage() })
                 {
+                    _phase = theme + " " + page.GetType().Name;
                     PumpDispatcher(TimeSpan.FromMilliseconds(100));
                     foreach (var size in new[] { new Size(780, 560), new Size(1280, 800) })
                     {
@@ -192,6 +202,7 @@ public sealed partial class PageSmokeTests
             (1174180, "Red Dead Redemption 2", "119 GB"), (2358720, "Black Myth: Wukong", "128 GB") };
         foreach (var (id, name, size) in names)
         {
+            _phase = "Read sample artwork " + id;
             var game = new Game { AppId = id, Name = name, Size = size, InstallState = GameInstallState.Installed, LastUpdated = DateTime.Today.AddMinutes(-store.Games.Count) };
             artwork.LoadAsync(game).GetAwaiter().GetResult();
             store.Games.Add(game);
@@ -201,6 +212,7 @@ public sealed partial class PageSmokeTests
 
     private static void SaveShellScreenshots(IServiceProvider provider, FixtureArtwork artwork)
     {
+        _phase = "Prepare shell screenshots";
         UiThemeService.Apply("Dark");
         Application.Current.Resources["ArtworkImage"] = new ScreenshotArtworkConverter();
         var jobs = provider.GetRequiredService<IAppDataStore>().Downloads;
@@ -213,6 +225,7 @@ public sealed partial class PageSmokeTests
         jobs.Add(new DownloadJob { AppId = 2358720, GameName = "Black Myth: Wukong", State = DownloadJobState.Queued,
             TotalSize = "128 GB", Status = "Ready when you are", DownloadMode = "DepotDownloader", TargetFolder = @"C:\Games\Wukong" });
         var window = new MainWindow { WindowState = WindowState.Normal, Width = 1600, Height = 1050 };
+        _phase = "Show main window";
         window.Show();
         MoveCursorAway(0, 0);
         PumpDispatcher(TimeSpan.FromMilliseconds(500));
@@ -220,6 +233,7 @@ public sealed partial class PageSmokeTests
         SaveVisual(window, "dashboard.png");
         foreach (var (route, filename) in new[] { (typeof(DownloadsPage), "downloads.png"), (typeof(SettingsPage), "settings.png") })
         {
+            _phase = "Navigate " + route.Name;
             Assert.True(window.RootNavigationView.Navigate(route));
             PumpDispatcher(TimeSpan.FromMilliseconds(500));
             window.UpdateLayout();
@@ -230,14 +244,17 @@ public sealed partial class PageSmokeTests
             .Select(entry => new SteamCatalogItem { AppId = entry.Item1, Name = entry.Item2, AppType = SteamCatalogAppType.Game,
                 ArtworkImage = FixtureArtwork.Read(entry.Item1, "portrait") ?? FixtureArtwork.Read(entry.Item1, "header"),
                 HeaderImage = FixtureArtwork.Read(entry.Item1, "header") }).ToArray();
+        _phase = "Navigate Library";
         Assert.True(window.RootNavigationView.Navigate(typeof(LibraryPage)));
         var library = provider.GetRequiredService<Steamy.ViewModels.LibraryViewModel>();
+        _phase = "Refresh screenshot catalog";
         ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
         PumpUntil(() => library.PagedCatalogItems.Count == 5 && !library.IsCatalogLoading);
         PumpDispatcher(TimeSpan.FromMilliseconds(400));
         window.UpdateLayout();
         SaveVisual(window, "games.png");
         var page = Descendants<LibraryPage>(window).Single();
+        _phase = "Open game details";
         page.OpenGameDetails(library.PagedCatalogItems.First(item => item.AppId == 1091500));
         PumpDispatcher(TimeSpan.FromMilliseconds(350));
         window.UpdateLayout();
@@ -266,6 +283,7 @@ public sealed partial class PageSmokeTests
 
     private static void SaveVisual(MainWindow window, string filename)
     {
+        _phase = "Capture " + filename;
         // Capture the complete native WPF window at its actual size. Windows runners
         // may constrain the window to their virtual desktop; never pad a clipped image.
         var width = (int)window.ActualWidth;
