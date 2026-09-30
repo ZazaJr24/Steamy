@@ -1,0 +1,74 @@
+name: Refresh app screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: readme-screenshots
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Fetch public artwork for the sample library
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/artwork | Out-Null
+          foreach ($appId in @(2322010, 1245620, 1091500, 1174180, 2358720)) {
+            foreach ($kind in @('hero', 'header')) {
+              $file = if ($kind -eq 'hero') { 'library_hero.jpg' } else { 'header.jpg' }
+              $url = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/$appId/$file"
+              Invoke-WebRequest -Uri $url -OutFile "artifacts/artwork/${appId}_${kind}.jpg" -TimeoutSec 30
+            }
+          }
+      - name: Render real Windows pages with offline sample services
+        env:
+          STEAMY_SCREENSHOT_ARTWORK: ${{ github.workspace }}/artifacts/artwork
+          STEAMY_UI_ARTIFACTS: ${{ github.workspace }}/artifacts/ui
+        run: dotnet test tests/Steamy.UiTests/Steamy.UiTests.csproj -c Release --logger trx --results-directory artifacts/test-results
+      - name: Report test failures
+        if: failure()
+        shell: pwsh
+        run: |
+          Get-ChildItem artifacts/test-results -Filter *.trx -ErrorAction SilentlyContinue | ForEach-Object {
+            [xml]$results = Get-Content $_.FullName
+            $results.SelectNodes("//*[local-name()='UnitTestResult' and @outcome='Failed']") | ForEach-Object {
+              $details = $_.InnerText.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+              Write-Output "::error title=$($_.testName)::$details"
+            }
+          }
+      - name: Upload render evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Steamy-screenshots
+          path: |
+            artifacts/ui/
+            artifacts/test-results/
+          if-no-files-found: ignore
+      - name: Update README images on main
+        shell: pwsh
+        run: |
+          foreach ($file in @('dashboard.png', 'downloads.png', 'settings.png')) {
+            Copy-Item "artifacts/ui/$file" "docs/screenshots/$file" -Force
+          }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- docs/screenshots/dashboard.png docs/screenshots/downloads.png docs/screenshots/settings.png
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+          git commit -m 'docs: refresh screenshots from the Windows app'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git push origin HEAD:main
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

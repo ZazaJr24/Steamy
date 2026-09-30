@@ -53,6 +53,10 @@ public sealed class PageSmokeTests
         store.Downloads.Add(new DownloadJob { GameName = "A game ready to continue", State = DownloadJobState.Paused, Progress = 42.5, Status = "Paused — existing files are retained", TargetFolder = "C:\\Games\\Example", DownloadMode = "DepotDownloaderMod (Zaza)" });
         store.Downloads.Add(new DownloadJob { GameName = "A completed download", State = DownloadJobState.Completed, Progress = 100, Status = "Download completed", DownloadMode = "DepotDownloader" });
         store.Downloads.Add(new DownloadJob { GameName = "A free Sushi source download", State = DownloadJobState.Paused, Progress = 61, Status = "Paused · resume keeps the saved manifests", DownloadMode = "DepotDownloaderMod (Sushi)" });
+        var fixtureArtwork = new FixtureArtwork();
+        services.AddSingleton<IArtworkService>(fixtureArtwork);
+        var navigation = new NavigationService();
+        services.AddSingleton<INavigationService>(navigation);
         services.AddSingleton<IAppDataStore>(store);
         services.AddSingleton<ISettingsService>(new MemorySettings());
         using var provider = services.BuildServiceProvider();
@@ -64,6 +68,9 @@ public sealed class PageSmokeTests
             CheckBurstUpdates();
             CheckSettingsCache();
             CheckSushiImport(provider);
+            CheckFeaturedGames(provider, fixtureArtwork, navigation);
+            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
+                AddScreenshotLibrary(store, fixtureArtwork);
             foreach (var theme in new[] { "Dark", "Light" })
             {
                 UiThemeService.Apply(theme);
@@ -120,12 +127,123 @@ public sealed class PageSmokeTests
                     }
                 }
             }
+            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
+                SaveShellScreenshots(provider);
             Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Steamy.ViewModels", StringComparison.Ordinal) && line.Contains("property not found", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
             PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingLog);
             app.Shutdown();
+        }
+    }
+
+    private static void CheckFeaturedGames(IServiceProvider provider, FixtureArtwork artwork, NavigationService navigation)
+    {
+        var model = provider.GetRequiredService<Steamy.ViewModels.DashboardViewModel>();
+        var loading = model.EnsureDiscoveryArtworkAsync();
+        PumpUntil(() => loading.IsCompleted);
+        loading.GetAwaiter().GetResult();
+        Assert.Equal(2322010, model.FeaturedGame.Game.AppId);
+        Assert.False(model.HasRecentGames); // Discovery must not pretend these games are installed.
+        model.PreviousFeaturedCommand.Execute(null);
+        Assert.Equal(2358720, model.FeaturedGame.Game.AppId);
+        PumpUntil(() => artwork.HeroRequests.ContainsKey(2358720));
+        model.NextFeaturedCommand.Execute(null);
+        model.NextFeaturedCommand.Execute(null);
+        Assert.Equal(1245620, model.FeaturedGame.Game.AppId);
+        model.PreviousFeaturedCommand.Execute(null);
+        PumpDispatcher(TimeSpan.FromMilliseconds(100));
+        Assert.Equal(1, artwork.HeroRequests[2322010]); // Returning to a slide reuses its image task.
+        var library = provider.GetRequiredService<Steamy.ViewModels.LibraryViewModel>();
+        library.SelectedSourceFilter = "Sushi";
+        library.SelectedTypeFilter = "DLC";
+        Type? route = null;
+        navigation.Attach(page => route = page);
+        model.ViewFeaturedCommand.Execute(null);
+        Assert.Equal(typeof(LibraryPage), route);
+        Assert.Equal("2322010", library.SearchText);
+        Assert.Equal("All sources", library.SelectedSourceFilter);
+        Assert.Equal("All games", library.SelectedTypeFilter);
+        library.SearchText = string.Empty;
+        navigation.Detach();
+    }
+
+    private static void AddScreenshotLibrary(AppDataStore store, FixtureArtwork artwork)
+    {
+        var names = new[] { (1245620, "ELDEN RING", "61.1 GB"), (1091500, "Cyberpunk 2077", "86.3 GB"),
+            (1174180, "Red Dead Redemption 2", "119 GB"), (2358720, "Black Myth: Wukong", "128 GB") };
+        foreach (var (id, name, size) in names)
+        {
+            var game = new Game { AppId = id, Name = name, Size = size, InstallState = GameInstallState.Installed, LastUpdated = DateTime.Today.AddMinutes(-store.Games.Count) };
+            artwork.LoadAsync(game).GetAwaiter().GetResult();
+            store.Games.Add(game);
+        }
+        PumpDispatcher(TimeSpan.FromMilliseconds(100));
+    }
+
+    private static void SaveShellScreenshots(IServiceProvider provider)
+    {
+        UiThemeService.Apply("Dark");
+        var window = new MainWindow { WindowState = WindowState.Normal, Width = 1600, Height = 1050 };
+        window.Show();
+        PumpDispatcher(TimeSpan.FromMilliseconds(500));
+        window.UpdateLayout();
+        SaveVisual(window, "dashboard.png");
+        foreach (var (route, filename) in new[] { (typeof(DownloadsPage), "downloads.png"), (typeof(SettingsPage), "settings.png") })
+        {
+            Assert.True(window.RootNavigationView.Navigate(route));
+            PumpDispatcher(TimeSpan.FromMilliseconds(500));
+            window.UpdateLayout();
+            SaveVisual(window, filename);
+        }
+        window.Close();
+    }
+
+    private static void SaveVisual(FrameworkElement element, string filename)
+    {
+        var folder = Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS")!;
+        Directory.CreateDirectory(folder);
+        var bitmap = new RenderTargetBitmap((int)element.ActualWidth, (int)element.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(element);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var output = File.Create(Path.Combine(folder, filename));
+        encoder.Save(output);
+    }
+
+    private sealed class FixtureArtwork : IArtworkService
+    {
+        public System.Collections.Concurrent.ConcurrentDictionary<int, int> HeroRequests { get; } = new();
+        public Task<BitmapImage?> LoadHeroAsync(int appId, CancellationToken cancellationToken = default)
+        {
+            HeroRequests.AddOrUpdate(appId, 1, (_, count) => count + 1);
+            return Task.FromResult(Read(appId, "hero"));
+        }
+        public Task LoadAsync(Game game, CancellationToken cancellationToken = default)
+        {
+            game.HeaderImage = Read(game.AppId, "header");
+            game.ArtworkImage = game.HeaderImage;
+            return Task.CompletedTask;
+        }
+        public Task LoadHeadersAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default) => LoadManyAsync(games, cancellationToken);
+        public async Task LoadManyAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default)
+        {
+            foreach (var game in games) await LoadAsync(game, cancellationToken);
+        }
+        private static BitmapImage? Read(int appId, string kind)
+        {
+            var folder = Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK");
+            if (string.IsNullOrWhiteSpace(folder)) return null;
+            var path = Path.Combine(folder, $"{appId}_{kind}.jpg");
+            if (!File.Exists(path)) return null;
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.UriSource = new Uri(path);
+            image.EndInit();
+            image.Freeze();
+            return image;
         }
     }
 

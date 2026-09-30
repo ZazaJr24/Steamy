@@ -47,10 +47,20 @@ Steamy replaces your folder full of scattered `.exe` files, batch scripts, and h
 Every tool is wired up, configured, and ready to go. No command lines. No README hunting. No "which version do I need?"
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" width="900" alt="Steamy dashboard" />
+  <img src="docs/screenshots/dashboard.png" width="900" alt="Steamy Home running on Windows with a sample library" />
 </p>
 
 <br/>
+
+## ✨ What's new in 0.3.6
+
+- **A new Home** — full-width game artwork, a featured carousel, landscape library cards and a curated discovery row.
+- **A quieter dashboard** — compact download controls, fewer panels and cached background artwork loading.
+- **Fresh Windows screenshots** of Dashboard, Downloads and Settings. The screenshots use sample library data; game artwork belongs to its respective owners.
+
+<p align="center">
+  <img src="docs/screenshots/settings.png" width="900" alt="Steamy Settings running on Windows" />
+</p>
 
 ## ✨ What's new in 0.3.5
 
