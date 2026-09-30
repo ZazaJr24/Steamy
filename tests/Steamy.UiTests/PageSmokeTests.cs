@@ -31,7 +31,6 @@ public sealed class PageSmokeTests
 
     private static void ExercisePages()
     {
-        Application.ResourceAssembly = typeof(App).Assembly;
         var app = new SmokeApplication();
         app.InitializeComponent();
         var services = new ServiceCollection().AddSteamyServices();
