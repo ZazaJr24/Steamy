@@ -5,7 +5,7 @@
       xmlns:models="clr-namespace:Steamy.Models"
       xmlns:controls="clr-namespace:Steamy.Controls"
       ScrollViewer.CanContentScroll="False"
-      Background="{DynamicResource AppBackgroundBrush}">
+      Background="{DynamicResource WorkspaceBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolVis" />
     <Style x:Key="QueueListItem" TargetType="ListBoxItem">

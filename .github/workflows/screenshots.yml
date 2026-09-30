@@ -32,6 +32,13 @@ jobs:
               Invoke-WebRequest -Uri $url -OutFile "artifacts/artwork/${appId}_${kind}.jpg" -TimeoutSec 30
             }
           }
+          $spotlight = Get-Content src/Steamy/Data/spotlight.json -Raw | ConvertFrom-Json
+          foreach ($game in $spotlight.games) {
+            foreach ($kind in @('hero', 'header')) {
+              $url = if ($kind -eq 'hero') { $game.heroUrl } else { $game.headerUrl }
+              Invoke-WebRequest -Uri $url -OutFile "artifacts/artwork/$($game.appId)_${kind}.jpg" -TimeoutSec 30
+            }
+          }
       - name: Render real Windows pages with offline sample services
         env:
           STEAMY_SCREENSHOT_ARTWORK: ${{ github.workspace }}/artifacts/artwork

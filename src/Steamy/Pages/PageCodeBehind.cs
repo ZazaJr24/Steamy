@@ -10,6 +10,9 @@ namespace Steamy.Pages;
 
 public partial class DashboardPage : Page
 {
+    private readonly System.Windows.Threading.DispatcherTimer _spotlightTimer = new(System.Windows.Threading.DispatcherPriority.Background)
+        { Interval = TimeSpan.FromSeconds(12) };
+    private DateTime _nextFeedCheck = DateTime.MinValue;
     public DashboardPage()
     {
         InitializeComponent();
@@ -18,11 +21,37 @@ public partial class DashboardPage : Page
         {
             var viewModel = (DashboardViewModel)DataContext;
             viewModel.StartLiveStats();
+            viewModel.PropertyChanged += SpotlightChanged;
+            _spotlightTimer.Start();
             _ = viewModel.EnsureDiscoveryArtworkAsync();
             _ = viewModel.RefreshAsync(force: false);
         };
-        Unloaded += (_, _) => { var model = (DashboardViewModel)DataContext; model.StopLiveStats(); model.StopSearch(); };
+        Unloaded += (_, _) =>
+        {
+            var model = (DashboardViewModel)DataContext;
+            model.PropertyChanged -= SpotlightChanged;
+            model.StopLiveStats(); model.StopSearch();
+            _spotlightTimer.Stop();
+            DashboardHero.BeginAnimation(OpacityProperty, null);
+        };
+        _spotlightTimer.Tick += (_, _) =>
+        {
+            var model = (DashboardViewModel)DataContext;
+            if (!IsVisible || Application.Current?.MainWindow?.IsActive != true) return;
+            if (DateTime.UtcNow >= _nextFeedCheck)
+            {
+                _nextFeedCheck = DateTime.UtcNow.AddHours(6);
+                _ = model.EnsureDiscoveryArtworkAsync();
+            }
+            if (SystemParameters.ClientAreaAnimation && !DashboardHero.IsMouseOver && !IsKeyboardFocusWithin && !model.HasSearchQuery)
+                model.NextFeaturedCommand.Execute(null);
+        };
         SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
+    }
+
+    private void SpotlightChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(DashboardViewModel.FeaturedGame)) Controls.EntranceMotion.Reveal(DashboardHero);
     }
 
     private void ApplyResponsiveLayout(double width)
@@ -168,4 +197,3 @@ public partial class LogsPage : Page
 {
     public LogsPage() { InitializeComponent(); DataContext = App.Services.GetRequiredService<LogsViewModel>(); }
 }
-

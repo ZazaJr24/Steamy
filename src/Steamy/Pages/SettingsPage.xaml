@@ -6,7 +6,7 @@
       PreviewKeyDown="Settings_PreviewKeyDown"
       ScrollViewer.CanContentScroll="False"
       UseLayoutRounding="True" SnapsToDevicePixels="True"
-      Background="{DynamicResource AppBackgroundBrush}">
+      Background="{DynamicResource WorkspaceBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <Style x:Key="CredentialBoxStyle" TargetType="PasswordBox">
@@ -20,7 +20,7 @@
       <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style x:Key="SettingsCard" TargetType="Border" BasedOn="{StaticResource SurfaceCardStyle}">
-      <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+      <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
       <Style.Triggers>
         <Trigger Property="IsKeyboardFocusWithin" Value="True">
           <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
