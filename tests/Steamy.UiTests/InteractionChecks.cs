@@ -97,7 +97,12 @@ public sealed partial class PageSmokeTests
         window.UpdateLayout();
         var card = Descendants<Button>(page).Single(button => button.Tag is SteamCatalogItem);
         Assert.True(CardMotion.GetIsEnabled(card));
+        var edge = card.TranslatePoint(new Point(card.ActualWidth / 2, card.ActualHeight - 1), window);
         card.Focus();
+        PumpDispatcher(TimeSpan.FromMilliseconds(210));
+        var hit = window.InputHitTest(edge) as DependencyObject;
+        while (hit is not null && !ReferenceEquals(hit, card)) hit = VisualTreeHelper.GetParent(hit);
+        Assert.Same(card, hit); // The hit area stays fixed while only the visual surface lifts/scales.
         _phase = "Open dialog " + theme;
         card.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); // The same action works for Enter/Space.
         var overlay = (Grid)page.FindName("OverlayGrid");

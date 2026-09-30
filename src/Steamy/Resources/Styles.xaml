@@ -25,7 +25,8 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="Template"><Setter.Value>
       <ControlTemplate TargetType="Button">
-        <Grid>
+        <Grid Background="Transparent">
+          <Grid x:Name="MotionSurface">
           <Border x:Name="Chrome" CornerRadius="16" Background="{TemplateBinding Background}"
                   BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -36,6 +37,7 @@
               <GradientStop Color="#26FFFFFF" Offset="0" /><GradientStop Color="#00FFFFFF" Offset="0.55" /><GradientStop Color="#0CFFFFFF" Offset="1" />
             </LinearGradientBrush></Border.BorderBrush>
           </Border>
+          </Grid>
         </Grid>
         <ControlTemplate.Triggers>
           <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
