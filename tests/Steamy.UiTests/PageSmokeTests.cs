@@ -31,8 +31,14 @@ public sealed class PageSmokeTests
 
     private static void ExercisePages()
     {
-        var app = new SmokeApplication();
-        app.InitializeComponent();
+        // A plain test Application avoids production startup/exit side effects. Load the
+        // same compiled dictionaries as App.xaml; WPF cannot load App.xaml into a subclass
+        // declared in a different assembly.
+        var app = new Application();
+        app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ThemesDictionary());
+        app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
+        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Steamy;component/Resources/Themes/Dark.xaml") });
+        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Steamy;component/Resources/Styles.xaml") });
         var services = new ServiceCollection().AddSteamyServices();
         // Real view models, no downloader processes, network clients, database or user credentials.
         foreach (var type in services.Select(s => s.ServiceType).Where(t => t.IsInterface).Distinct().ToArray())
@@ -97,12 +103,6 @@ public sealed class PageSmokeTests
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var output = File.Create(Path.Combine(folder, $"{theme}-{page.GetType().Name}-{size.Width}.png"));
         encoder.Save(output);
-    }
-
-    private sealed class SmokeApplication : App
-    {
-        protected override void OnStartup(StartupEventArgs e) { }
-        protected override void OnExit(ExitEventArgs e) { }
     }
 
     private sealed class MemorySettings : ISettingsService
