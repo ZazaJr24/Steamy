@@ -1,0 +1,149 @@
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+
+namespace Steamy.Controls;
+
+/// <summary>Short, interruptible card movement. Idle cards retain no animation clocks.</summary>
+public static class CardMotion
+{
+    public static readonly DependencyProperty IsEnabledProperty = DependencyProperty.RegisterAttached(
+        "IsEnabled", typeof(bool), typeof(CardMotion), new PropertyMetadata(false, OnEnabledChanged));
+    private static readonly DependencyProperty StateProperty = DependencyProperty.RegisterAttached(
+        "State", typeof(MotionState), typeof(CardMotion));
+    public static bool GetIsEnabled(DependencyObject element) => (bool)element.GetValue(IsEnabledProperty);
+    public static void SetIsEnabled(DependencyObject element, bool value) => element.SetValue(IsEnabledProperty, value);
+
+    private sealed class MotionState
+    {
+        public readonly ScaleTransform Scale = new();
+        public readonly TranslateTransform Lift = new();
+        public Transform? Original;
+        public Point OriginalOrigin;
+        public bool Pressed;
+        public int Revision;
+    }
+
+    private static void OnEnabledChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+    {
+        if (sender is not FrameworkElement element) return;
+        element.Loaded -= Loaded;
+        element.Unloaded -= Unloaded;
+        Detach(element);
+        if (!(bool)args.NewValue) { Reset(element); return; }
+        element.Loaded += Loaded;
+        element.Unloaded += Unloaded;
+        if (element.IsLoaded) Loaded(element, new RoutedEventArgs());
+    }
+
+    private static void Loaded(object sender, RoutedEventArgs args)
+    {
+        var element = (FrameworkElement)sender;
+        if (element.GetValue(StateProperty) is MotionState) return;
+        var state = new MotionState { Original = element.RenderTransform, OriginalOrigin = element.RenderTransformOrigin };
+        var group = new TransformGroup();
+        if (state.Original is not null) group.Children.Add(state.Original);
+        group.Children.Add(state.Scale);
+        group.Children.Add(state.Lift);
+        element.RenderTransformOrigin = new Point(0.5, 0.5);
+        element.RenderTransform = group;
+        element.SetValue(StateProperty, state);
+        element.MouseEnter += Changed;
+        element.MouseLeave += Changed;
+        element.GotKeyboardFocus += FocusChanged;
+        element.LostKeyboardFocus += FocusChanged;
+        element.PreviewMouseLeftButtonDown += Press;
+        element.PreviewMouseLeftButtonUp += Release;
+        element.LostMouseCapture += Release;
+        element.PreviewKeyDown += KeyDown;
+        element.PreviewKeyUp += KeyUp;
+        EntranceMotion.Reveal(element);
+    }
+
+    private static void Changed(object sender, MouseEventArgs args)
+    {
+        var element = (FrameworkElement)sender;
+        if (!element.IsMouseOver && element.GetValue(StateProperty) is MotionState state) state.Pressed = false;
+        Update(element);
+    }
+    private static void FocusChanged(object sender, KeyboardFocusChangedEventArgs args)
+    {
+        var element = (FrameworkElement)sender;
+        if (!element.IsKeyboardFocusWithin && element.GetValue(StateProperty) is MotionState state) state.Pressed = false;
+        Update(element);
+    }
+    private static void Press(object sender, MouseButtonEventArgs args) => SetPressed((FrameworkElement)sender, true);
+    private static void Release(object sender, MouseEventArgs args) => SetPressed((FrameworkElement)sender, false);
+    private static void KeyDown(object sender, KeyEventArgs args)
+    {
+        if (args.Key is Key.Space or Key.Enter) SetPressed((FrameworkElement)sender, true);
+    }
+    private static void KeyUp(object sender, KeyEventArgs args)
+    {
+        if (args.Key is Key.Space or Key.Enter) SetPressed((FrameworkElement)sender, false);
+    }
+    private static void SetPressed(FrameworkElement element, bool pressed)
+    {
+        if (element.GetValue(StateProperty) is not MotionState state) return;
+        state.Pressed = pressed;
+        Update(element);
+    }
+    private static void Update(FrameworkElement element)
+    {
+        if (element.GetValue(StateProperty) is not MotionState state) return;
+        var hover = element.IsMouseOver || element.IsKeyboardFocusWithin;
+        var scale = state.Pressed ? 0.985 : hover ? 1.008 : 1;
+        var lift = state.Pressed ? -1 : hover ? -3 : 0;
+        var revision = ++state.Revision;
+        Animate(state.Scale, ScaleTransform.ScaleXProperty, scale, state, revision);
+        Animate(state.Scale, ScaleTransform.ScaleYProperty, scale, state, revision);
+        Animate(state.Lift, TranslateTransform.YProperty, lift, state, revision);
+    }
+    private static void Animate(Animatable target, DependencyProperty property, double value, MotionState state, int revision)
+    {
+        var previous = (double)target.GetValue(property);
+        target.SetValue(property, value);
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            target.BeginAnimation(property, null);
+            return;
+        }
+        var animation = new DoubleAnimation(previous, value, TimeSpan.FromMilliseconds(state.Pressed ? 85 : 190))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            FillBehavior = FillBehavior.Stop
+        };
+        animation.Completed += (_, _) => { if (revision == state.Revision) target.BeginAnimation(property, null); };
+        target.BeginAnimation(property, animation, HandoffBehavior.SnapshotAndReplace);
+    }
+    private static void Detach(FrameworkElement element)
+    {
+        element.MouseEnter -= Changed;
+        element.MouseLeave -= Changed;
+        element.GotKeyboardFocus -= FocusChanged;
+        element.LostKeyboardFocus -= FocusChanged;
+        element.PreviewMouseLeftButtonDown -= Press;
+        element.PreviewMouseLeftButtonUp -= Release;
+        element.LostMouseCapture -= Release;
+        element.PreviewKeyDown -= KeyDown;
+        element.PreviewKeyUp -= KeyUp;
+    }
+    private static void Reset(FrameworkElement element)
+    {
+        if (element.GetValue(StateProperty) is not MotionState state) return;
+        state.Revision++;
+        state.Scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        state.Scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        state.Lift.BeginAnimation(TranslateTransform.YProperty, null);
+        element.RenderTransform = state.Original ?? Transform.Identity;
+        element.RenderTransformOrigin = state.OriginalOrigin;
+        element.ClearValue(StateProperty);
+    }
+    private static void Unloaded(object sender, RoutedEventArgs args)
+    {
+        var element = (FrameworkElement)sender;
+        Detach(element);
+        Reset(element);
+    }
+}

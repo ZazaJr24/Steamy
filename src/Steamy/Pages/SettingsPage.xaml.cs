@@ -25,10 +25,42 @@ public partial class SettingsPage : Page
 
         // After a save or a delete the typed secrets are gone from memory; the boxes have to match,
         // otherwise they would keep showing characters that no longer mean anything.
-        ViewModel.CredentialInputsCleared += OnCredentialInputsCleared;
-        Loaded += (_, _) => FilterSections();
-        Unloaded += (_, _) => _searchTimer.Stop();
+        Loaded += (_, _) =>
+        {
+            ViewModel.CredentialInputsCleared -= OnCredentialInputsCleared;
+            ViewModel.CredentialInputsCleared += OnCredentialInputsCleared;
+            FilterSections();
+        };
+        Unloaded += (_, _) =>
+        {
+            _searchTimer.Stop();
+            ViewModel.CredentialInputsCleared -= OnCredentialInputsCleared;
+            OnCredentialInputsCleared(this, EventArgs.Empty);
+        };
         FilterSections();
+    }
+
+    private void Settings_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.F && System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control)
+        {
+            SettingsSearch.Focus();
+            SettingsSearch.SelectAll();
+            e.Handled = true;
+        }
+        else if (e.Key == System.Windows.Input.Key.Escape && !string.IsNullOrEmpty(SettingsSearch.Text))
+        {
+            SettingsSearch.Clear();
+            _searchTimer.Stop();
+            FilterSections();
+            e.Handled = true;
+        }
+        else if (e.Key == System.Windows.Input.Key.Enter && SettingsSearch.IsKeyboardFocusWithin)
+        {
+            _searchTimer.Stop();
+            FilterSections();
+            e.Handled = true;
+        }
     }
 
     private void Category_Checked(object sender, RoutedEventArgs e)

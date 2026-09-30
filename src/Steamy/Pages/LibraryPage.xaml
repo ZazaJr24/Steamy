@@ -4,6 +4,8 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:controls="clr-namespace:Steamy.Controls"
       xmlns:local="clr-namespace:Steamy.Pages"
+      UseLayoutRounding="True" SnapsToDevicePixels="True"
+      PreviewKeyDown="Page_PreviewKeyDown"
       ScrollViewer.CanContentScroll="False"
       Background="{DynamicResource AppBackgroundBrush}">
   <Page.Resources>
@@ -145,42 +147,35 @@
       <ProgressBar Grid.Row="1" IsIndeterminate="True" Height="2" Margin="0,0,8,8"
                    Visibility="{Binding IsCatalogLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-      <ScrollViewer Grid.Row="2" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,8,0">
+      <ScrollViewer Grid.Row="2" controls:SmoothScroll.Enabled="True" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,8,0">
         <StackPanel>
           <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource GalleryEmptyStateStyle}" />
 
           <ItemsControl ItemsSource="{Binding PagedCatalogItems}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="176" Spacing="16" CoverRatio="1.5" FooterHeight="58" />
+                <controls:AdaptiveGridPanel MinItemWidth="174" Spacing="20" CoverRatio="1.38" FooterHeight="64" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border x:Name="Card"
-                        CornerRadius="14"
-                        Background="{DynamicResource SurfaceElevatedBrush}"
-                        BorderBrush="Transparent"
-                        BorderThickness="1.5"
-                        Cursor="Hand"
-                        SnapsToDevicePixels="True"
-                        MouseLeftButtonUp="GameCard_MouseLeftButtonUp"
-                        Tag="{Binding}"
-                        ToolTip="{Binding Name}">
+                <Button x:Name="Card" Style="{StaticResource GalleryCardButton}"
+                        Click="GameCard_Click" Tag="{Binding}" ToolTip="{Binding Name}"
+                        AutomationProperties.Name="{Binding Name}">
                   <Grid>
                     <Grid.RowDefinitions>
                       <RowDefinition Height="*" />
-                      <RowDefinition Height="58" />
+                      <RowDefinition Height="64" />
                     </Grid.RowDefinitions>
 
-                    <Border CornerRadius="13,13,0,0" Background="#0B0C0F">
+                    <Border CornerRadius="15,15,0,0" Background="#0B0C0F">
                       <Grid>
-                        <Border CornerRadius="13,13,0,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
+                        <Border CornerRadius="15,15,0,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
                           <Border.Background>
                             <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
                           </Border.Background>
                         </Border>
-                        <Border CornerRadius="13,13,0,0" Background="{DynamicResource SurfaceSubtleBrush}"
+                        <Border CornerRadius="15,15,0,0" Background="{DynamicResource SurfaceSubtleBrush}"
                                 Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         <TextBlock Text="STEAM" Foreground="#3A3E47" FontSize="15" FontWeight="Bold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -194,7 +189,7 @@
                             </LinearGradientBrush>
                           </Border.Background>
                         </Border>
-                        <Border x:Name="Shine" CornerRadius="13,13,0,0" Background="#FFFFFF" Opacity="0" />
+                        <Border x:Name="Shine" CornerRadius="15,15,0,0" Background="#FFFFFF" Opacity="0" />
                         <Border Style="{StaticResource CoverBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
                           <TextBlock Text="{Binding TypeLabel}" Style="{StaticResource CoverBadgeTextStyle}" />
                         </Border>
@@ -220,11 +215,10 @@
                                  FontSize="10.5" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                   </Grid>
-                </Border>
+                </Button>
                 <DataTemplate.Triggers>
                   <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-                    <Setter TargetName="Shine" Property="Opacity" Value="0.06" />
+                    <Setter TargetName="Shine" Property="Opacity" Value="0.035" />
                   </Trigger>
                 </DataTemplate.Triggers>
               </DataTemplate>
@@ -257,22 +251,26 @@
         </StackPanel>
       </ScrollViewer>
     </Grid>
+    <!-- A half-resolution frozen backdrop keeps modal blur independent of live progress updates. -->
+    <Image x:Name="BackdropImage" Margin="32,26,24,0" Visibility="Collapsed" Stretch="Fill"
+           IsHitTestVisible="False" RenderOptions.BitmapScalingMode="HighQuality">
+      <Image.Effect><BlurEffect Radius="14" RenderingBias="Performance" /></Image.Effect>
+    </Image>
     <!-- Download dialog overlay -->
-    <Grid x:Name="OverlayGrid" Visibility="Collapsed">
-      <Border Background="#60000000" MouseLeftButtonUp="Overlay_Close" />
+    <Grid x:Name="OverlayGrid" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle" KeyboardNavigation.ControlTabNavigation="Cycle">
+      <Border Background="#65070B12" MouseLeftButtonUp="Overlay_Close" />
       <Border x:Name="DialogPanel"
               HorizontalAlignment="Center"
               VerticalAlignment="Center"
               Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
-              BorderThickness="1"
-              CornerRadius="20"
-              Width="560"
-              MaxHeight="720"
-              ClipToBounds="True">
-        <Border.Clip>
-          <RectangleGeometry Rect="0,0,560,720" RadiusX="20" RadiusY="20" />
-        </Border.Clip>
+              BorderThickness="1" CornerRadius="24"
+              Width="560" MaxWidth="{Binding ActualWidth, ElementName=OverlayGrid}"
+              MaxHeight="{Binding ActualHeight, ElementName=OverlayGrid}"
+              Margin="16" RenderTransformOrigin="0.5,0.5">
+        <Border.BorderBrush><LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+          <GradientStop Color="#70FFFFFF" Offset="0" /><GradientStop Color="#16FFFFFF" Offset="0.6" /><GradientStop Color="#28FFFFFF" Offset="1" />
+        </LinearGradientBrush></Border.BorderBrush>
+        <Border.RenderTransform><TransformGroup><ScaleTransform x:Name="DialogScale" /><TranslateTransform x:Name="DialogOffset" /></TransformGroup></Border.RenderTransform>
         <Grid>
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -281,11 +279,12 @@
           </Grid.RowDefinitions>
 
           <!-- Hero banner -->
-          <Grid Grid.Row="0" Height="140">
+          <Border Grid.Row="0" CornerRadius="23,23,0,0" Background="{DynamicResource AccentSoftBrush}">
+          <Grid Height="164">
             <Image x:Name="OverlayCover" Stretch="UniformToFill" VerticalAlignment="Center"
                    RenderOptions.BitmapScalingMode="HighQuality" />
             <Border Background="{StaticResource HeroBannerFade}" />
-            <ui:Button Style="{StaticResource IconButtonStyle}"
+            <ui:Button x:Name="DialogCloseButton" Style="{StaticResource IconButtonStyle}"
                        Icon="{ui:SymbolIcon Dismiss24}"
                        Width="30" Height="30" MinHeight="30"
                        HorizontalAlignment="Right" VerticalAlignment="Top"
@@ -303,8 +302,9 @@
                          FontSize="11.5" Margin="0,3,0,0" />
             </StackPanel>
           </Grid>
+          </Border>
 
-          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,16,24,6">
+          <ScrollViewer Grid.Row="1" controls:SmoothScroll.Enabled="True" VerticalScrollBarVisibility="Auto" Padding="24,16,24,6">
             <StackPanel>
               <!-- Source -->
               <TextBlock Text="Source" FontSize="11" FontWeight="SemiBold"

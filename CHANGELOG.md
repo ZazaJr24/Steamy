@@ -3,6 +3,30 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.3.8
+
+### Improved
+- More balanced game grids with subtle glass edges, short hover/press animations and keyboard-accessible cards.
+- Game details open over a frozen, blurred gallery backdrop; Escape/background click closes the dialog and restores keyboard focus.
+- Detail artwork uses the cached asynchronous artwork service instead of decoding a remote hero image on the UI thread.
+- A compact Downloads overview with smaller cover art, slimmer queue cards, clearer transfer metrics and direct Verify & repair controls.
+- Settings category animations and Ctrl+F, Enter and Escape search shortcuts; motion respects Windows animation preferences.
+
+### Added
+- Hypervisor Fixes under Fixes, with an explicit Coming soon page.
+- Verify & repair on the DepotDownloader page, separate from the read-only local file check.
+
+### Fixed
+- Newly queued DepotDownloader jobs are saved immediately, before being displayed in the queue.
+- Start queued rechecks each waiting job after acquiring a slot, so cancelled or removed jobs are skipped.
+- Duplicate detection uses the canonical target folder and avoids replacing a paused Mod download with a standard-tool job.
+- Removal waits for the download manager to accept it; a still-finishing download keeps its queue row.
+- Tool and queue action errors remain visible in the UI; busy state remains correct during overlapping operations.
+- Collection reset and Settings unload release their event subscriptions.
+
+### Documentation
+- Updated Windows screenshots, including Games, the blurred game detail dialog and Hypervisor Fixes.
+
 ## 0.3.7
 
 ### Improved

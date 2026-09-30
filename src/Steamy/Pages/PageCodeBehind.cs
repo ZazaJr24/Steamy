@@ -90,10 +90,10 @@ public partial class DownloadsPage : Page
         Unloaded += (_, _) => viewModel.StopLiveStats();
         SizeChanged += (_, e) =>
         {
-            var showNetwork = e.NewSize.Width >= 1080 && e.NewSize.Height >= 700;
-            NetworkColumn.Width = new GridLength(showNetwork ? 280 : 0);
+            var showNetwork = e.NewSize.Width >= 920 && e.NewSize.Height >= 620;
+            NetworkColumn.Width = new GridLength(showNetwork ? 226 : 0);
             NetworkCard.Visibility = showNetwork ? Visibility.Visible : Visibility.Collapsed;
-            FeaturedPanel.Height = e.NewSize.Height < 700 ? 210 : 238;
+            FeaturedPanel.Height = 190;
         };
     }
 

@@ -17,6 +17,9 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
     private readonly IDepotDownloaderService _depotDownloader;
     private readonly IDownloadManager _downloadManager;
     private readonly ISettingsService _settingsService;
+    private readonly IDownloadQueueStore _queueStore;
+    private readonly HashSet<DownloadJob> _watchedJobs = new();
+    private int _busyOperations;
     private string _targetFolder = string.Empty;
     private Game? _selectedGame;
     private Depot? _selectedDepot;
@@ -74,6 +77,7 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
     public IAsyncRelayCommand<DownloadJob> CancelCommand { get; }
     public IAsyncRelayCommand<DownloadJob> RetryCommand { get; }
     public IAsyncRelayCommand<DownloadJob> VerifyCommand { get; }
+    public IAsyncRelayCommand<DownloadJob> RepairCommand { get; }
     public ICommand RemoveCommand { get; }
     public ICommand CopyFolderCommand { get; }
 
@@ -83,30 +87,38 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
         ILoggingService logging,
         IDepotDownloaderService depotDownloader,
         IDownloadManager downloadManager,
-        ISettingsService settingsService) : base(store, navigation, logging)
+        ISettingsService settingsService,
+        IDownloadQueueStore queueStore) : base(store, navigation, logging)
     {
         _depotDownloader = depotDownloader;
         _downloadManager = downloadManager;
         _settingsService = settingsService;
+        _queueStore = queueStore;
         Games = store.Games;
         Branches = store.Branches;
         Jobs = store.Downloads;
         QueueJobs = new ListCollectionView(Jobs) { Filter = item => item is DownloadJob job && IsManualJob(job) };
         Jobs.CollectionChanged += OnJobsChanged;
-        foreach (var job in Jobs) PropertyChangedEventManager.AddHandler(job, OnJobChanged, string.Empty);
+        foreach (var job in Jobs) Watch(job);
         SelectedGame = Games.FirstOrDefault();
         var settings = settingsService.Load();
         TargetFolder = settings.DownloadFolder;
 
         CheckToolCommand = new AsyncRelayCommand(CheckToolAsync);
-        AddToQueueCommand = new RelayCommand(AddToQueue);
+        AddToQueueCommand = new AsyncRelayCommand(AddToQueueAsync);
         StartQueuedCommand = new AsyncRelayCommand(StartQueuedAsync);
         StartCommand = new AsyncRelayCommand<DownloadJob>(job => job is null ? Task.CompletedTask : StartAsync(job));
-        PauseCommand = new AsyncRelayCommand<DownloadJob>(job => job is null ? Task.CompletedTask : _downloadManager.PauseAsync(job));
+        PauseCommand = new AsyncRelayCommand<DownloadJob>(job => RunJobAsync(job, () => _downloadManager.PauseAsync(job!)));
         ResumeCommand = new AsyncRelayCommand<DownloadJob>(job => job is null ? Task.CompletedTask : StartAsync(job));
-        CancelCommand = new AsyncRelayCommand<DownloadJob>(job => job is null ? Task.CompletedTask : _downloadManager.CancelAsync(job));
-        RetryCommand = new AsyncRelayCommand<DownloadJob>(job => job is null ? Task.CompletedTask : _downloadManager.RetryAsync(job));
+        CancelCommand = new AsyncRelayCommand<DownloadJob>(job => RunJobAsync(job, () => _downloadManager.CancelAsync(job!)));
+        RetryCommand = new AsyncRelayCommand<DownloadJob>(job => RunJobAsync(job, () => _downloadManager.RetryAsync(job!)));
         VerifyCommand = new AsyncRelayCommand<DownloadJob>(job => job is null ? Task.CompletedTask : VerifyAsync(job));
+        RepairCommand = new AsyncRelayCommand<DownloadJob>(job =>
+        {
+            if (job is null || job.State is not (DownloadJobState.Completed or DownloadJobState.Paused or DownloadJobState.Failed)) return Task.CompletedTask;
+            job.AppendLog("Verify & repair — checking existing files against the downloader manifests; missing or invalid chunks may be downloaded.");
+            return StartAsync(job);
+        });
         RemoveCommand = new AsyncRelayCommand<DownloadJob>(RemoveJobAsync);
         CopyFolderCommand = new RelayCommand<DownloadJob>(CopyFolder);
         RefreshSelections();
@@ -114,7 +126,7 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
 
     private async Task CheckToolAsync()
     {
-        IsBusy = true;
+        IsBusy = ++_busyOperations > 0;
         try
         {
             var status = await _depotDownloader.CheckAsync(ToolPath);
@@ -124,18 +136,39 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
             Logging.Add(status.IsReady ? LogLevel.Info : LogLevel.Warning, "DepotDownloader", status.Message);
             OnPropertyChanged(nameof(ToolPath));
         }
+        catch (Exception exception)
+        {
+            ToolStatus = "Tool check failed";
+            ToolVersion = "—";
+            ReportError("Could not check the download tool", exception);
+        }
         finally
         {
-            IsBusy = false;
+            IsBusy = --_busyOperations > 0;
         }
+    }
+
+    private void Watch(DownloadJob job)
+    {
+        if (_watchedJobs.Add(job)) PropertyChangedEventManager.AddHandler(job, OnJobChanged, string.Empty);
     }
 
     private void OnJobsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (e.OldItems is not null)
-            foreach (DownloadJob job in e.OldItems) PropertyChangedEventManager.RemoveHandler(job, OnJobChanged, string.Empty);
-        if (e.NewItems is not null)
-            foreach (DownloadJob job in e.NewItems) PropertyChangedEventManager.AddHandler(job, OnJobChanged, string.Empty);
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            foreach (var job in _watchedJobs) PropertyChangedEventManager.RemoveHandler(job, OnJobChanged, string.Empty);
+            _watchedJobs.Clear();
+            foreach (var job in Jobs) Watch(job);
+        }
+        else
+        {
+            if (e.OldItems is not null)
+                foreach (DownloadJob job in e.OldItems)
+                    if (_watchedJobs.Remove(job)) PropertyChangedEventManager.RemoveHandler(job, OnJobChanged, string.Empty);
+            if (e.NewItems is not null)
+                foreach (DownloadJob job in e.NewItems) Watch(job);
+        }
         RefreshQueueSummary();
     }
 
@@ -177,7 +210,7 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
         SelectedManifest = Manifests.FirstOrDefault();
     }
 
-    private void AddToQueue()
+    private async Task AddToQueueAsync()
     {
         if (SelectedGame is null)
         {
@@ -195,9 +228,27 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
             Logging.Add(LogLevel.Warning, "DepotDownloader", "Queue request rejected because authorization was not confirmed.", SelectedGame.AppId);
             return;
         }
-        if (Jobs.Any(job => job.AppId == SelectedGame.AppId && job.DepotId == SelectedDepot?.DepotId && (job.IsActive || job.State is DownloadJobState.Queued or DownloadJobState.Paused)))
+        string targetFolder;
+        try
         {
-            LastMessage = "This game/depot is already in the active queue.";
+            if (!Path.IsPathFullyQualified(TargetFolder.Trim()))
+            {
+                LastMessage = "Choose an absolute target folder, for example C:\\Games\\My Game.";
+                return;
+            }
+            targetFolder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(TargetFolder.Trim()));
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            LastMessage = "The target folder is invalid. Choose another folder.";
+            return;
+        }
+        if (Jobs.Any(job => job.AppId == SelectedGame.AppId
+            && SameFolder(job.TargetFolder, targetFolder)
+            && (job.IsActive || job.State is DownloadJobState.Queued or DownloadJobState.Paused)
+            && (!IsManualJob(job) || job.DepotId is null || SelectedDepot is null || job.DepotId == SelectedDepot.DepotId)))
+        {
+            LastMessage = "This folder already has an active, queued or paused download for this game. Continue that job in Downloads, or choose a different folder.";
             return;
         }
 
@@ -207,7 +258,7 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
             GameName = SelectedGame.Name,
             CoverColor = SelectedGame.CoverColor,
             CoverGlyph = SelectedGame.CoverGlyph,
-            TargetFolder = TargetFolder,
+            TargetFolder = targetFolder,
             TotalSize = SelectedDepot?.Size ?? SelectedGame.Size,
             Downloaded = "0 B",
             Speed = "—",
@@ -223,6 +274,12 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
             Priority = DownloadPriority.Normal,
             DownloadMode = string.IsNullOrWhiteSpace(ToolPath) ? "Not configured" : "DepotDownloader"
         };
+        try { await _queueStore.SaveAsync(job); }
+        catch (Exception exception)
+        {
+            ReportError("Could not save the queued download", exception);
+            return;
+        }
         Jobs.Insert(0, job);
         LastMessage = $"{SelectedGame.Name} added to the queue.";
         Logging.Add(LogLevel.Info, "DepotDownloader", "Authorized job added to queue.", job.AppId, job.Id);
@@ -237,41 +294,69 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
         await Task.WhenAll(queued.Select(async job =>
         {
             await gate.WaitAsync();
-            try { await StartAsync(job); }
+            try
+            {
+                // A waiting job may have been cancelled/removed while another job used the slot.
+                if (Jobs.Contains(job) && job.State == DownloadJobState.Queued) await StartAsync(job);
+            }
             finally { gate.Release(); }
         }));
         OnPropertyChanged(nameof(QueueSummary));
     }
 
-    private async Task StartAsync(DownloadJob job)
+    private Task StartAsync(DownloadJob job) => RunJobAsync(job, async () =>
     {
-        try
-        {
-            IsBusy = true;
-            await _downloadManager.StartAsync(job);
-            LastMessage = $"{job.GameName}: {job.Status}";
-        }
-        finally
-        {
-            IsBusy = false;
-            OnPropertyChanged(nameof(QueueSummary));
-        }
-    }
+        if (job.IsActive) return;
+        var started = await _downloadManager.StartAsync(job);
+        LastMessage = started ? $"{job.GameName}: {job.Status}" : $"{job.GameName}: {job.Status}. If an operation is finishing, wait briefly and try again.";
+    });
 
-    private async Task VerifyAsync(DownloadJob job)
+    private Task VerifyAsync(DownloadJob job) => RunJobAsync(job, async () =>
     {
         await _downloadManager.VerifyAsync(job);
         LastMessage = $"{job.GameName}: {job.Status}";
-        OnPropertyChanged(nameof(QueueSummary));
+    });
+
+    private async Task RunJobAsync(DownloadJob? job, Func<Task> action)
+    {
+        if (job is null || !IsManualJob(job)) return;
+        IsBusy = ++_busyOperations > 0;
+        try { await action(); }
+        catch (OperationCanceledException) { LastMessage = $"{job.GameName}: operation cancelled; existing files were kept."; }
+        catch (Exception exception) { ReportError($"{job.GameName}: operation failed", exception); }
+        finally
+        {
+            IsBusy = --_busyOperations > 0;
+            RefreshQueueSummary();
+        }
     }
 
     private async Task RemoveJobAsync(DownloadJob? job)
     {
-        if (job is null || job.IsActive) return;
-        Jobs.Remove(job);
-        await _downloadManager.ForgetAsync(job).ConfigureAwait(true);
-        Logging.Add(LogLevel.Info, "DepotDownloader", "Inactive job removed from the queue; local files were left untouched.", job.AppId, job.Id);
-        OnPropertyChanged(nameof(QueueSummary));
+        if (job is null || job.IsActive || !IsManualJob(job)) return;
+        await RunJobAsync(job, async () =>
+        {
+            // A paused process can still be saving its state. Keep its row if removal is refused.
+            await _downloadManager.ForgetAsync(job);
+            Jobs.Remove(job);
+            LastMessage = "Download removed from the queue; local files were kept.";
+            Logging.Add(LogLevel.Info, "DepotDownloader", LastMessage, job.AppId, job.Id);
+        });
+    }
+
+    private void ReportError(string context, Exception exception)
+    {
+        LastMessage = $"{context}: {exception.Message}";
+        Logging.Add(LogLevel.Warning, "DepotDownloader", LastMessage);
+    }
+
+    private static bool SameFolder(string left, string right)
+    {
+        try
+        {
+            return string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(left.Trim())), right, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
     }
 
     public override async Task OnNavigatedToAsync()

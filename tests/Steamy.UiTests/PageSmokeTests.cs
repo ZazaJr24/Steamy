@@ -17,7 +17,7 @@ using System.Net;
 
 namespace Steamy.UiTests;
 
-public sealed class PageSmokeTests
+public sealed partial class PageSmokeTests
 {
     [Fact]
     public void RealPagesLoadTheirResourcesAndLayoutInBothThemes()
@@ -71,12 +71,14 @@ public sealed class PageSmokeTests
             CheckSushiImport(provider);
             CheckFeaturedGames(provider, fixtureArtwork, navigation);
             CheckDashboardSearch(provider);
+            CheckDepotQueue(provider);
             if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
                 AddScreenshotLibrary(store, fixtureArtwork);
             foreach (var theme in new[] { "Dark", "Light" })
             {
                 UiThemeService.Apply(theme);
-                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage() })
+                CheckLibraryDialog(provider, theme);
+                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage(), new HypervisorFixesPage() })
                 {
                     PumpDispatcher(TimeSpan.FromMilliseconds(100));
                     foreach (var size in new[] { new Size(780, 560), new Size(1280, 800) })
@@ -143,7 +145,7 @@ public sealed class PageSmokeTests
                 }
             }
             if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
-                SaveShellScreenshots(provider);
+                SaveShellScreenshots(provider, fixtureArtwork);
             Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Steamy.ViewModels", StringComparison.Ordinal) && line.Contains("property not found", StringComparison.OrdinalIgnoreCase));
         }
         finally
@@ -197,9 +199,19 @@ public sealed class PageSmokeTests
         PumpDispatcher(TimeSpan.FromMilliseconds(100));
     }
 
-    private static void SaveShellScreenshots(IServiceProvider provider)
+    private static void SaveShellScreenshots(IServiceProvider provider, FixtureArtwork artwork)
     {
         UiThemeService.Apply("Dark");
+        Application.Current.Resources["ArtworkImage"] = new ScreenshotArtworkConverter();
+        var jobs = provider.GetRequiredService<IAppDataStore>().Downloads;
+        jobs.Clear();
+        jobs.Add(new DownloadJob { AppId = 1091500, GameName = "Cyberpunk 2077", State = DownloadJobState.Downloading,
+            Progress = 42.5, Downloaded = "36.7 GB", TotalSize = "86.3 GB", Speed = "12.4 MB/s", BytesPerSecond = 12.4 * 1024 * 1024,
+            Eta = "1h 08m", EtaSeconds = 4080, Status = "Downloading depot 1 of 2", DownloadMode = "DepotDownloaderMod (Sushi)", TargetFolder = @"C:\Games\Cyberpunk 2077" });
+        jobs.Add(new DownloadJob { AppId = 1245620, GameName = "ELDEN RING", State = DownloadJobState.Paused,
+            Progress = 61, Downloaded = "37.3 GB", TotalSize = "61.1 GB", Status = "Paused — existing files and manifests are retained", DownloadMode = "DepotDownloaderMod (Zaza)", TargetFolder = @"C:\Games\ELDEN RING" });
+        jobs.Add(new DownloadJob { AppId = 2358720, GameName = "Black Myth: Wukong", State = DownloadJobState.Queued,
+            TotalSize = "128 GB", Status = "Ready when you are", DownloadMode = "DepotDownloader", TargetFolder = @"C:\Games\Wukong" });
         var window = new MainWindow { WindowState = WindowState.Normal, Width = 1600, Height = 1050 };
         window.Show();
         MoveCursorAway(0, 0);
@@ -213,7 +225,39 @@ public sealed class PageSmokeTests
             window.UpdateLayout();
             SaveVisual(window, filename);
         }
+        OfflineServiceProxy.ScreenshotCatalog = new[] { (2322010, "God of War Ragnarök"), (1245620, "ELDEN RING"),
+            (1091500, "Cyberpunk 2077"), (1174180, "Red Dead Redemption 2"), (2358720, "Black Myth: Wukong") }
+            .Select(entry => new SteamCatalogItem { AppId = entry.Item1, Name = entry.Item2, AppType = SteamCatalogAppType.Game,
+                ArtworkImage = FixtureArtwork.Read(entry.Item1, "portrait") ?? FixtureArtwork.Read(entry.Item1, "header"),
+                HeaderImage = FixtureArtwork.Read(entry.Item1, "header") }).ToArray();
+        Assert.True(window.RootNavigationView.Navigate(typeof(LibraryPage)));
+        var library = provider.GetRequiredService<Steamy.ViewModels.LibraryViewModel>();
+        ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
+        PumpUntil(() => library.PagedCatalogItems.Count == 5 && !library.IsCatalogLoading);
+        PumpDispatcher(TimeSpan.FromMilliseconds(400));
+        window.UpdateLayout();
+        SaveVisual(window, "games.png");
+        var page = Descendants<LibraryPage>(window).Single();
+        page.OpenGameDetails(library.PagedCatalogItems.First(item => item.AppId == 1091500));
+        PumpDispatcher(TimeSpan.FromMilliseconds(350));
+        window.UpdateLayout();
+        SaveVisual(window, "game-details.png");
+        page.CloseOverlay();
+        PumpDispatcher(TimeSpan.FromMilliseconds(250));
+        Assert.True(window.RootNavigationView.Navigate(typeof(HypervisorFixesPage)));
+        PumpDispatcher(TimeSpan.FromMilliseconds(300));
+        SaveVisual(window, "hypervisor-fixes.png");
         window.Close();
+    }
+
+    private sealed class ScreenshotArtworkConverter : System.Windows.Data.IValueConverter
+    {
+        public object? Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(value?.ToString() ?? "", @"/apps/(\d+)/");
+            return match.Success ? FixtureArtwork.Read(int.Parse(match.Groups[1].Value), "header") : null;
+        }
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotSupportedException();
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SetCursorPos")]
@@ -261,7 +305,7 @@ public sealed class PageSmokeTests
         {
             foreach (var game in games) await LoadAsync(game, cancellationToken);
         }
-        private static BitmapImage? Read(int appId, string kind)
+        public static BitmapImage? Read(int appId, string kind)
         {
             var folder = Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK");
             if (string.IsNullOrWhiteSpace(folder)) return null;
@@ -498,6 +542,7 @@ public sealed class PageSmokeTests
 public class OfflineServiceProxy : DispatchProxy
 {
     public static int CatalogRequests;
+    public static SteamCatalogItem[]? ScreenshotCatalog;
     public static object Create(Type interfaceType) => DispatchProxy.Create(interfaceType, typeof(OfflineServiceProxy));
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
@@ -517,11 +562,12 @@ public class OfflineServiceProxy : DispatchProxy
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.GetCatalogAsync))
         {
             Interlocked.Increment(ref CatalogRequests);
-            return Task.FromResult(new SteamCatalogSnapshot(true, new[] { new SteamCatalogItem { AppId = 10, Name = "An offline library game", AppType = SteamCatalogAppType.Game } }, DateTimeOffset.UtcNow, true, "Offline fixture"));
+            return Task.FromResult(new SteamCatalogSnapshot(true, ScreenshotCatalog ?? new[] { new SteamCatalogItem { AppId = 10, Name = "An offline library game", AppType = SteamCatalogAppType.Game } }, DateTimeOffset.UtcNow, true, "Offline fixture"));
         }
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.EnsureArtworkAsync)) return Task.CompletedTask;
         if ((method.DeclaringType == typeof(IRyuuCatalogService) || method.DeclaringType == typeof(IHubcapCatalogService)) && method.Name == "GetGamesAsync")
             return Task.FromResult(SteamCatalogSnapshot.Failure("Offline fixture"));
+        if (method.DeclaringType == typeof(IManifestSourceService) && method.Name == nameof(IManifestSourceService.CheckAvailabilityAsync)) return Task.FromResult(new ManifestAvailability(true, true, "Available · offline fixture"));
         if (method.DeclaringType == typeof(IFreeManifestCatalogService)) return Task.FromResult(new FreeManifestIndex(true, new HashSet<int> { 10 }, "Offline fixture"));
         if (method.Name == nameof(IDisposable.Dispose)) return null;
         throw new InvalidOperationException($"UI smoke attempted an external operation: {method.DeclaringType?.Name}.{method.Name}");

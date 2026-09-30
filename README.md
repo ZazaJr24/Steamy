@@ -52,6 +52,25 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
+## ✨ What's new in 0.3.8
+
+- **More polished game cards** with short hover/press animations and keyboard controls.
+- **Blurred game details** with restrained glass edges and cached background artwork loading.
+- **Compact Downloads** with clearer progress, transfer information and Verify & repair actions.
+- **A reliable DepotDownloader queue** — immediate saving, skipped cancelled jobs and safer removal.
+- **Hypervisor Fixes** now has a dedicated **Coming soon** page under Fixes.
+- **Settings shortcuts**: Ctrl+F to search, Enter to apply immediately and Escape to clear.
+
+<p align="center">
+  <img src="docs/screenshots/downloads.png" width="900" alt="Compact Downloads with offline sample jobs in the Windows app" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/games.png" width="900" alt="Steamy game grid running on Windows with sample catalog artwork" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/game-details.png" width="900" alt="Game details over a blurred gallery backdrop in Steamy" />
+</p>
+
 ## ✨ What's new in 0.3.7
 
 - **A distinct, minimal Home** with a compact spotlight and quieter game suggestions.

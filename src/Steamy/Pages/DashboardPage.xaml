@@ -8,6 +8,7 @@
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
     <Style x:Key="LandscapeGameCard" TargetType="Button">
+      <Setter Property="controls:CardMotion.IsEnabled" Value="True" />
       <Setter Property="Cursor" Value="Hand" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Stretch" />
@@ -15,7 +16,6 @@
         <Setter.Value>
           <ControlTemplate TargetType="Button">
             <Grid x:Name="Card">
-              <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
               <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
               <Grid>
                 <Border CornerRadius="12" Background="{Binding CoverColor}" />
@@ -33,12 +33,6 @@
               <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Opacity" Value="1" /></Trigger>
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter TargetName="Ring" Property="Opacity" Value="1" />
-                <Trigger.EnterActions><BeginStoryboard><Storyboard>
-                  <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="-2" Duration="{StaticResource HoverAnimationDuration}" />
-                </Storyboard></BeginStoryboard></Trigger.EnterActions>
-                <Trigger.ExitActions><BeginStoryboard><Storyboard>
-                  <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="{StaticResource HoverAnimationDuration}" />
-                </Storyboard></BeginStoryboard></Trigger.ExitActions>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>

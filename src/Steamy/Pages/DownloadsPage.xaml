@@ -23,7 +23,7 @@
       <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="CornerRadius" Value="18" />
       <Setter Property="Padding" Value="14" />
       <Setter Property="Margin" Value="0" />
       <Style.Triggers>
@@ -51,7 +51,7 @@
           </Grid.ColumnDefinitions>
 
           <!-- Game art -->
-          <Grid Width="112" Height="66">
+          <Grid Width="84" Height="58">
             <Border CornerRadius="12" Background="{Binding CoverColor}">
               <TextBlock Text="{Binding CoverGlyph}" FontSize="20" Foreground="#44FFFFFF"
                          HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -64,8 +64,8 @@
           </Grid>
 
           <!-- Title, progress, details -->
-          <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center">
-            <TextBlock Text="{Binding GameName}" FontSize="15" FontWeight="SemiBold"
+          <StackPanel Grid.Column="1" Margin="14,0,14,0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding GameName}" FontSize="14" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"
                        ToolTip="{Binding GameName}" />
             <WrapPanel Margin="0,5,0,0">
@@ -98,35 +98,38 @@
           <!-- Actions -->
           <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
             <ui:Button Icon="{ui:SymbolIcon Play24}" ToolTip="Start" AutomationProperties.Name="Start" Appearance="Primary"
-                       Style="{StaticResource StartButton}" Width="38" Height="38" Padding="0" CornerRadius="19"
+                       Style="{StaticResource StartButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                        Command="{Binding DataContext.StartCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                        CommandParameter="{Binding}" />
             <ui:Button Icon="{ui:SymbolIcon Pause24}" ToolTip="Pause" AutomationProperties.Name="Pause" Appearance="Secondary"
-                       Style="{StaticResource PauseButton}" Width="38" Height="38" Padding="0" CornerRadius="19"
+                       Style="{StaticResource PauseButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                        Command="{Binding DataContext.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                        CommandParameter="{Binding}" />
             <ui:Button Icon="{ui:SymbolIcon Play24}" ToolTip="Resume" AutomationProperties.Name="Resume" Appearance="Primary"
-                       Style="{StaticResource ResumeButton}" Width="38" Height="38" Padding="0" CornerRadius="19"
+                       Style="{StaticResource ResumeButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                        Command="{Binding DataContext.ResumeCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                        CommandParameter="{Binding}" />
             <ui:Button Icon="{ui:SymbolIcon ArrowClockwise24}" ToolTip="Retry" AutomationProperties.Name="Retry" Appearance="Secondary"
-                       Style="{StaticResource RetryButton}" Width="38" Height="38" Padding="0" CornerRadius="19"
+                       Style="{StaticResource RetryButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                        Command="{Binding DataContext.RetryCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                        CommandParameter="{Binding}" />
+            <ui:Button Icon="{ui:SymbolIcon ArrowSync24}" ToolTip="Verify &amp; repair using the downloader manifests" AutomationProperties.Name="Verify and repair" Appearance="Secondary"
+                       Style="{StaticResource RepairButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
+                       Command="{Binding DataContext.RepairCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
             <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open folder" AutomationProperties.Name="Open folder" Appearance="Secondary"
-                       Style="{StaticResource CompletedOnlyButton}" Width="38" Height="38" Padding="0" CornerRadius="19"
+                       Style="{StaticResource CompletedOnlyButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                        Command="{Binding DataContext.OpenFolderCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                        CommandParameter="{Binding}" />
             <ui:Button Icon="{ui:SymbolIcon ShieldCheckmark24}" ToolTip="Check local files: inspect the target folder without claiming a manifest verification" AutomationProperties.Name="Check local files" Appearance="Secondary"
-                       Style="{StaticResource CompletedOnlyButton}" Width="38" Height="38" Padding="0" CornerRadius="19"
+                       Style="{StaticResource CompletedOnlyButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                        Command="{Binding DataContext.VerifyCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                        CommandParameter="{Binding}" />
             <ui:Button Icon="{ui:SymbolIcon Dismiss24}" ToolTip="Cancel" AutomationProperties.Name="Cancel" Appearance="Secondary"
-                       Style="{StaticResource CancelButton}" Width="38" Height="38" Padding="0" CornerRadius="19"
+                       Style="{StaticResource CancelButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                        Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                        CommandParameter="{Binding}" />
             <ui:Button Icon="{ui:SymbolIcon Delete24}" ToolTip="Remove from list" AutomationProperties.Name="Remove from list" Appearance="Secondary"
-                       Style="{StaticResource RemoveButton}" Width="38" Height="38" Padding="0" CornerRadius="19"
+                       Style="{StaticResource RemoveButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                        Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                        CommandParameter="{Binding}" />
           </StackPanel>
@@ -147,8 +150,7 @@
     <Grid Margin="0,0,0,18" controls:EntranceMotion.Delay="0">
       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
       <StackPanel>
-        <TextBlock Text="YOUR DOWNLOAD SPACE" Style="{StaticResource OverlineStyle}" Foreground="{DynamicResource AccentBrush}" />
-        <TextBlock Text="Downloads" Style="{StaticResource DisplayTitleStyle}" Margin="0,2,0,0" />
+        <TextBlock Text="Downloads" Style="{StaticResource PageTitleStyle}" Margin="0" />
         <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0">
           <Run Text="{Binding ActiveCount, Mode=OneWay}" /><Run Text=" active   ·   " />
           <Run Text="{Binding QueuedJobCount, Mode=OneWay}" /><Run Text=" queued   ·   " />
@@ -159,64 +161,59 @@
                  VerticalAlignment="Center" Command="{Binding NavigateLibraryCommand}" Padding="18,10" />
     </Grid>
 
-    <Grid Grid.Row="1" x:Name="FeaturedPanel" Height="238" Margin="0,0,0,18" controls:EntranceMotion.Delay="20">
+    <Grid Grid.Row="1" x:Name="FeaturedPanel" Height="190" Margin="0,0,0,18" controls:EntranceMotion.Delay="20">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" />
-        <ColumnDefinition x:Name="NetworkColumn" Width="280" />
+        <ColumnDefinition x:Name="NetworkColumn" Width="226" />
       </Grid.ColumnDefinitions>
       <Grid>
-        <Grid DataContext="{Binding HeroJob}"
-              Visibility="{Binding DataContext.HasHeroJob, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolVis}}">
-          <Border CornerRadius="22" Background="#121A28" />
-          <Border CornerRadius="22"><Border.Background>
-            <ImageBrush ImageSource="{Binding HeroArtUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=1600}" Stretch="UniformToFill" />
-          </Border.Background></Border>
-          <Border CornerRadius="22" Background="{StaticResource HeroSideShade}" />
-          <Border CornerRadius="22" Background="{StaticResource HeroBottomShade}" />
-          <Grid Margin="24,18">
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <Border DataContext="{Binding HeroJob}" CornerRadius="20" Background="{DynamicResource SurfaceElevatedBrush}"
+                BorderThickness="1" BorderBrush="{DynamicResource BorderSubtleBrush}"
+                Visibility="{Binding DataContext.HasHeroJob, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolVis}}">
+          <Grid Margin="20,16">
+            <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid>
-              <Border Style="{StaticResource StatePill}" HorizontalAlignment="Left">
-                <TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}" />
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <Border Width="80" Height="58" CornerRadius="12" VerticalAlignment="Center">
+                <Border.Background><ImageBrush ImageSource="{Binding HeaderArtUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=256}" Stretch="UniformToFill" /></Border.Background>
               </Border>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <ui:Button Icon="{ui:SymbolIcon Pause24}" Content="Pause" Appearance="Secondary" Style="{StaticResource PauseButton}"
+              <StackPanel Grid.Column="1" Margin="14,0,10,0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding GameName}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding GameName}" />
+                <WrapPanel Margin="0,6,0,0">
+                  <Border Style="{StaticResource StatePill}" Padding="7,2"><TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}" /></Border>
+                  <TextBlock Text="{Binding SourceLabel}" Style="{StaticResource CaptionStyle}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                </WrapPanel>
+              </StackPanel>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:Button Icon="{ui:SymbolIcon Pause24}" ToolTip="Pause download" AutomationProperties.Name="Pause download" Appearance="Secondary" Style="{StaticResource PauseButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                            Command="{Binding DataContext.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
-                <ui:Button Icon="{ui:SymbolIcon Play24}" Content="Resume" Appearance="Primary" Style="{StaticResource ResumeButton}"
+                <ui:Button Icon="{ui:SymbolIcon Play24}" ToolTip="Resume download" AutomationProperties.Name="Resume download" Appearance="Primary" Style="{StaticResource ResumeButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                            Command="{Binding DataContext.ResumeCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
-                <ui:Button Icon="{ui:SymbolIcon Dismiss24}" ToolTip="Cancel download" AutomationProperties.Name="Cancel download"
-                           Style="{StaticResource CancelButton}" Appearance="Secondary" Padding="8"
-                           Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
               </StackPanel>
             </Grid>
-            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,8">
-              <TextBlock Text="{Binding GameName}" FontSize="30" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis" ToolTip="{Binding GameName}" />
-              <TextBlock Text="{Binding Status}" Foreground="#CCD6E5" FontSize="12" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}" />
-            </StackPanel>
-            <StackPanel Grid.Row="2">
-              <Grid Margin="0,0,0,10">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <controls:SmoothProgressBar SmoothValue="{Binding Progress}" Maximum="100" Height="6" Background="#33FFFFFF"
-                                            Style="{StaticResource JobProgressBar}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" Text="{Binding ProgressCaption}" Foreground="White" FontWeight="SemiBold" FontSize="22" Margin="16,0,0,0" Typography.NumeralAlignment="Tabular" />
-              </Grid>
-              <WrapPanel>
-                <TextBlock Text="{Binding SizeSummary}" Foreground="#DAE3F1" Margin="0,0,20,0" FontSize="12" Typography.NumeralAlignment="Tabular" />
-                <TextBlock Text="{Binding SpeedDisplay}" Foreground="#8DC5FF" Margin="0,0,20,0" FontSize="12" Typography.NumeralAlignment="Tabular" />
-                <TextBlock Text="{Binding EtaDisplay}" Foreground="#DAE3F1" FontSize="12" Typography.NumeralAlignment="Tabular" />
-              </WrapPanel>
-            </StackPanel>
+            <Grid Grid.Row="1" Margin="0,14,0,10">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <controls:SmoothProgressBar SmoothValue="{Binding Progress}" Maximum="100" Height="5" Style="{StaticResource JobProgressBar}" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{Binding ProgressCaption}" Style="{StaticResource JobNumberText}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="16" Margin="12,0,0,0" />
+            </Grid>
+            <Grid Grid.Row="2">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <TextBlock Text="{Binding SizeSummary}" Style="{StaticResource CaptionStyle}" TextTrimming="CharacterEllipsis" Margin="0,0,10,0" ToolTip="{Binding SizeSummary}" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <TextBlock Text="{Binding SpeedDisplay}" Style="{StaticResource JobNumberText}" FontSize="11" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" />
+                <TextBlock Text="{Binding EtaDisplay}" Style="{StaticResource JobNumberText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+              </StackPanel>
+            </Grid>
           </Grid>
-        </Grid>
+        </Border>
 
         <Border CornerRadius="22" Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
                 Visibility="{Binding ShowIdleHero, Converter={StaticResource BoolVis}}">
           <Grid>
             <Border Background="{DynamicResource BrandWashBrush}" CornerRadius="22" />
-            <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="140" Opacity="0.07" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Right" Margin="0,0,24,0" />
+            <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="90" Opacity="0.04" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Right" Margin="0,0,24,0" />
             <StackPanel Margin="28,18" VerticalAlignment="Center">
-              <TextBlock Text="READY WHEN YOU ARE" Style="{StaticResource OverlineStyle}" Foreground="{DynamicResource AccentBrush}" />
-              <TextBlock Text="{Binding IdleHeadline}" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding IdleHeadline}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
               <TextBlock Text="{Binding IdleDetail}" Style="{StaticResource BodyTextStyle}" Margin="0,6,0,14" />
               <ui:Button Content="Start next download" Icon="{ui:SymbolIcon Play24}" Appearance="Primary" HorizontalAlignment="Left"
                          Visibility="{Binding HasNextQueuedJob, Converter={StaticResource BoolVis}}"
@@ -226,12 +223,12 @@
         </Border>
       </Grid>
 
-      <Border x:Name="NetworkCard" Grid.Column="1" Style="{StaticResource CardStyle}" Margin="16,0,0,0" Padding="20,16">
+      <Border x:Name="NetworkCard" Grid.Column="1" Style="{StaticResource CardStyle}" Margin="16,0,0,0" Padding="16,14">
         <StackPanel>
-          <TextBlock Text="NETWORK ACTIVITY" Style="{StaticResource OverlineStyle}" />
-          <TextBlock Text="{Binding InternetSpeedLabel}" Style="{StaticResource KpiValueStyle}" Margin="0,6,0,0" />
-          <TextBlock Text="Entire device · last 30 seconds" Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
-          <Viewbox Stretch="Fill" Height="38" Margin="0,10,0,12">
+          <TextBlock Text="TRANSFER ACTIVITY" Style="{StaticResource OverlineStyle}" />
+          <TextBlock Text="{Binding JobsSpeedLabel}" FontSize="23" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,6,0,0" />
+          <TextBlock Text="Steamy downloads" Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
+          <Viewbox Stretch="Fill" Height="26" Margin="0,9,0,10">
             <Canvas Width="200" Height="40" ClipToBounds="True">
               <Polygon Points="{Binding InternetSparklineArea}" Fill="{DynamicResource AccentSoftBrush}" />
               <Polyline Points="{Binding InternetSparkline}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.7" StrokeLineJoin="Round" />
@@ -239,12 +236,12 @@
           </Viewbox>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBlock Text="Steamy downloads" Style="{StaticResource CaptionStyle}" />
-            <TextBlock Grid.Column="1" Text="{Binding JobsSpeedLabel}" Style="{StaticResource CardTitleStyle}" />
+            <TextBlock Text="Device network" Style="{StaticResource CaptionStyle}" />
+            <TextBlock Grid.Column="1" Text="{Binding InternetSpeedLabel}" Style="{StaticResource CardTitleStyle}" />
           </Grid>
           <Grid Margin="0,8,0,0" ToolTip="{Binding OverallEtaHint}">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBlock Text="Active jobs remaining" Style="{StaticResource CaptionStyle}" />
+            <TextBlock Text="Remaining" Style="{StaticResource CaptionStyle}" />
             <TextBlock Grid.Column="1" Text="{Binding OverallEtaLabel}" Style="{StaticResource CardTitleStyle}" />
           </Grid>
         </StackPanel>
@@ -255,8 +252,8 @@
       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
       <ui:TextBox PlaceholderText="Search downloads or App ID…" Icon="{ui:SymbolIcon Search24}"
                   AutomationProperties.Name="Search downloads" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=200}" Margin="0,0,12,0" />
-      <ComboBox Grid.Column="1" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}" MinWidth="142" AutomationProperties.Name="Filter download status" />
-      <ComboBox Grid.Column="2" ItemsSource="{Binding SourceFilters}" SelectedItem="{Binding SelectedSourceFilter}" MinWidth="112" Margin="8,0,0,0" AutomationProperties.Name="Filter downloads by source" />
+      <ComboBox Grid.Column="1" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}" MinWidth="120" AutomationProperties.Name="Filter download status" />
+      <ComboBox Grid.Column="2" ItemsSource="{Binding SourceFilters}" SelectedItem="{Binding SelectedSourceFilter}" MinWidth="102" Margin="8,0,0,0" AutomationProperties.Name="Filter downloads by source" />
       <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding RefreshCommand}" ToolTip="Refresh downloads" AutomationProperties.Name="Refresh downloads" Margin="8,0,0,0" />
     </Grid>
 
