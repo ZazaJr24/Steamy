@@ -21,17 +21,22 @@ public partial class DashboardPage : Page
             _ = viewModel.EnsureDiscoveryArtworkAsync();
             _ = viewModel.RefreshAsync(force: false);
         };
-        Unloaded += (_, _) => ((DashboardViewModel)DataContext).StopLiveStats();
+        Unloaded += (_, _) => { var model = (DashboardViewModel)DataContext; model.StopLiveStats(); model.StopSearch(); };
         SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
     }
 
     private void ApplyResponsiveLayout(double width)
     {
-        DashboardSearch.Width = width < 900 ? 230 : 340;
-        DashboardHero.Height = Math.Clamp((width - 56) * 0.37, 340, 490);
-        HeroCopy.MaxWidth = width < 900 ? 370 : 480;
-        HeroTitle.FontSize = width < 900 ? 34 : 46;
-        HeroTitle.LineHeight = HeroTitle.FontSize * 1.1;
+        DashboardSearch.Width = width < 900 ? 260 : 340;
+        HomeHeading.FontSize = width < 1000 ? 36 : 42;
+        HomeHeading.LineHeight = HomeHeading.FontSize * 1.15;
+        var stacked = width < 720;
+        Grid.SetRow(DashboardHero, stacked ? 1 : 0);
+        Grid.SetColumn(DashboardHero, stacked ? 0 : 2);
+        Grid.SetColumnSpan(DashboardHero, stacked ? 3 : 1);
+        Grid.SetColumnSpan(HeroCopy, stacked ? 3 : 1);
+        DashboardHero.Margin = stacked ? new Thickness(0, 18, 0, 0) : new Thickness(0);
+        SpotlightGutter.Width = new GridLength(stacked ? 0 : 28);
     }
 
     private void GameCover_Click(object sender, RoutedEventArgs e)
@@ -42,8 +47,26 @@ public partial class DashboardPage : Page
     // Enter in the dashboard search box carries the query into the Games grid and switches to it.
     private void DashboardSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key != System.Windows.Input.Key.Enter) return;
-        OpenInLibrary(DashboardSearch.Text?.Trim() ?? string.Empty);
+        var model = (DashboardViewModel)DataContext;
+        if (e.Key == System.Windows.Input.Key.Escape) { model.SearchText = string.Empty; e.Handled = true; }
+        else if (e.Key == System.Windows.Input.Key.Enter) { model.OpenSearchCommand.Execute(null); e.Handled = true; }
+        else if (e.Key == System.Windows.Input.Key.Down && model.SearchResults.Count > 0)
+        {
+            SearchMatches.UpdateLayout();
+            if (SearchMatches.ItemContainerGenerator.ContainerFromIndex(0) is DependencyObject container)
+            {
+                var button = FindSearchButton(container);
+                if (button is not null) { button.Focus(); e.Handled = true; }
+            }
+        }
+    }
+
+    private static System.Windows.Controls.Primitives.ButtonBase? FindSearchButton(DependencyObject element)
+    {
+        if (element is System.Windows.Controls.Primitives.ButtonBase button) return button;
+        for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(element); index++)
+            if (FindSearchButton(System.Windows.Media.VisualTreeHelper.GetChild(element, index)) is { } child) return child;
+        return null;
     }
 
     private static void OpenInLibrary(string query)

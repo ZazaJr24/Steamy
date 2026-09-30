@@ -30,8 +30,87 @@ public sealed class DashboardFeature(Game game, string description, string genre
 public sealed class DashboardViewModel : ViewModelBase
 {
     private const int RecentGameCount = 12;
-    private const int JobPreviewCount = 4;
+    private const int JobPreviewCount = 2;
     private static readonly TimeSpan RefreshDebounce = TimeSpan.FromSeconds(30);
+
+    private readonly ISteamCatalogService _catalog;
+    private Task<SteamCatalogSnapshot>? _searchCatalogTask;
+    private CancellationTokenSource? _searchCancellation;
+    private string _searchText = string.Empty;
+    private string _searchStatus = string.Empty;
+    private bool _isSearchBusy;
+    public RangeObservableCollection<SteamCatalogItem> SearchResults { get; } = new();
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (!SetProperty(ref _searchText, value)) return;
+            OnPropertyChanged(nameof(HasSearchQuery));
+            _searchCancellation?.Cancel();
+            _searchCancellation?.Dispose();
+            _searchCancellation = new CancellationTokenSource();
+            _ = SearchAsync(value.Trim(), _searchCancellation.Token);
+        }
+    }
+    public bool HasSearchQuery => !string.IsNullOrWhiteSpace(SearchText);
+    public string SearchStatus { get => _searchStatus; private set => SetProperty(ref _searchStatus, value); }
+    public bool IsSearchBusy { get => _isSearchBusy; private set => SetProperty(ref _isSearchBusy, value); }
+    public ICommand OpenSearchResultCommand { get; }
+    public ICommand OpenSearchCommand { get; }
+    public void StopSearch() { _searchCancellation?.Cancel(); IsSearchBusy = false; }
+
+    private async Task SearchAsync(string query, CancellationToken cancellationToken)
+    {
+        if (query.Length < 2)
+        {
+            SearchResults.ReplaceWith(Array.Empty<SteamCatalogItem>());
+            IsSearchBusy = false;
+            SearchStatus = query.Length == 0 ? string.Empty : "Type at least two characters.";
+            return;
+        }
+        IsSearchBusy = true;
+        SearchStatus = "Searching…";
+        try
+        {
+            await Task.Delay(180, cancellationToken);
+            // One shared cached catalog request; typing never reloads optional provider indexes.
+            _searchCatalogTask ??= Task.Run(() => _catalog.GetCatalogAsync());
+            var snapshot = await _searchCatalogTask.WaitAsync(cancellationToken);
+            var local = Store.Games.Select(game => new SteamCatalogItem { AppId = game.AppId, Name = game.Name, IsInstalled = true }).ToArray();
+            var words = SteamCatalogQuery.SearchTerms(query);
+            var results = await Task.Run(() => snapshot.Items.Concat(local)
+                .Where(item => { cancellationToken.ThrowIfCancellationRequested(); return !item.Nsfw && SteamCatalogQuery.MatchesSearch(item.Name, item.AppId, query, words); })
+                .DistinctBy(item => item.AppId)
+                .OrderByDescending(item => item.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture) == query)
+                .ThenByDescending(item => item.Name.StartsWith(query, StringComparison.OrdinalIgnoreCase))
+                .ThenByDescending(item => PopularityLookup.GetScore(item.AppId))
+                .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).Take(6).ToArray(), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            SearchResults.ReplaceWith(results);
+            SearchStatus = results.Length == 0 ? "No matches. Press Enter to search the full library." : "Select a game, or press Enter for all results.";
+            if (!snapshot.Succeeded) _searchCatalogTask = null;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception exception)
+        {
+            if (cancellationToken.IsCancellationRequested) return;
+            _searchCatalogTask = null;
+            SearchStatus = "Catalog unavailable. Press Enter to search Games.";
+            Logging.Add(LogLevel.Debug, "Search", exception.GetType().Name);
+        }
+        finally { if (!cancellationToken.IsCancellationRequested) IsSearchBusy = false; }
+    }
+
+    private void OpenSearch(string query)
+    {
+        var library = App.Services.GetRequiredService<LibraryViewModel>();
+        library.SelectedSourceFilter = "All sources";
+        library.SelectedTypeFilter = "All games";
+        library.SearchText = query;
+        SearchText = string.Empty;
+        Navigation.Navigate<LibraryPage>();
+    }
 
     private readonly IArtworkService _artwork;
     private Task? _discoveryArtworkTask;
@@ -136,8 +215,12 @@ public sealed class DashboardViewModel : ViewModelBase
         IDepotDownloaderCheckService depotCheck,
         DownloadsViewModel downloadActions,
         ShareViewModel share,
-        IArtworkService artwork) : base(store, navigation, logging)
+        IArtworkService artwork,
+        ISteamCatalogService catalog) : base(store, navigation, logging)
     {
+        _catalog = catalog;
+        OpenSearchResultCommand = new RelayCommand<SteamCatalogItem>(item => { if (item is not null) OpenSearch(item.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture)); });
+        OpenSearchCommand = new RelayCommand(() => OpenSearch(SearchText.Trim()));
         _artwork = artwork;
         NextFeaturedCommand = new RelayCommand(() => MoveFeatured(1));
         PreviousFeaturedCommand = new RelayCommand(() => MoveFeatured(-1));

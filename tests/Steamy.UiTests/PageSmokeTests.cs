@@ -70,6 +70,7 @@ public sealed class PageSmokeTests
             CheckArtworkDecoding();
             CheckSushiImport(provider);
             CheckFeaturedGames(provider, fixtureArtwork, navigation);
+            CheckDashboardSearch(provider);
             if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
                 AddScreenshotLibrary(store, fixtureArtwork);
             foreach (var theme in new[] { "Dark", "Light" })
@@ -102,6 +103,19 @@ public sealed class PageSmokeTests
                         PumpDispatcher(TimeSpan.FromMilliseconds(100));
                         Assert.Empty(viewModel.PagedCatalogItems);
                         viewModel.SelectedSourceFilter = "All sources";
+                        PumpUntil(() => viewModel.PagedCatalogItems.Count == 1);
+                        var pageChanges = 0;
+                        viewModel.PagedCatalogItems.CollectionChanged += (_, _) => pageChanges++;
+                        viewModel.SearchText = "this text must never flash as an empty result";
+                        viewModel.SearchText = "offline";
+                        PumpDispatcher(TimeSpan.FromMilliseconds(350));
+                        Assert.Single(viewModel.PagedCatalogItems);
+                        Assert.Equal(0, pageChanges); // Unchanged rows keep their containers and loaded artwork.
+                        viewModel.SearchText = "no game has this title 987654";
+                        PumpUntil(() => viewModel.PagedCatalogItems.Count == 0);
+                        Assert.Equal(1, pageChanges);
+                        viewModel.SearchText = string.Empty;
+                        PumpUntil(() => viewModel.PagedCatalogItems.Count == 1);
                     }
                     if (page is DownloadsPage)
                     {
@@ -261,6 +275,28 @@ public sealed class PageSmokeTests
             image.Freeze();
             return image;
         }
+    }
+
+    private static void CheckDashboardSearch(IServiceProvider provider)
+    {
+        var model = provider.GetRequiredService<Steamy.ViewModels.DashboardViewModel>();
+        var requests = OfflineServiceProxy.CatalogRequests;
+        model.SearchText = "offline";
+        PumpUntil(() => !model.IsSearchBusy);
+        Assert.Equal(10, Assert.Single(model.SearchResults).AppId);
+        model.SearchText = "this query should be superseded";
+        model.SearchText = "OFFLINE library";
+        PumpUntil(() => !model.IsSearchBusy);
+        Assert.Equal(10, Assert.Single(model.SearchResults).AppId);
+        Assert.Equal(requests + 1, OfflineServiceProxy.CatalogRequests);
+        model.SearchText = string.Empty;
+        Assert.Empty(model.SearchResults);
+        Assert.False(model.HasSearchQuery);
+        Assert.True(SteamCatalogQuery.MatchesSearch("God of War Ragnarök", 2322010, "god ragnarok"));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        Assert.Throws<OperationCanceledException>(() => SteamCatalogQuery.FilterAndSort(
+            new[] { new SteamCatalogItem { AppId = 10, Name = "Offline" } }, "off", "All games", "Name A–Z", cancellationToken: cancellation.Token));
     }
 
     private static void CheckArtworkDecoding()
@@ -461,6 +497,7 @@ public sealed class PageSmokeTests
 // Constructors may subscribe to events and read optional credentials. Any real operation is rejected.
 public class OfflineServiceProxy : DispatchProxy
 {
+    public static int CatalogRequests;
     public static object Create(Type interfaceType) => DispatchProxy.Create(interfaceType, typeof(OfflineServiceProxy));
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
@@ -478,7 +515,10 @@ public class OfflineServiceProxy : DispatchProxy
         if (method.DeclaringType == typeof(ILibrarySyncService) && method.Name == nameof(ILibrarySyncService.RefreshAsync))
             return Task.FromResult(SteamLibraryScanResult.Failure("Offline UI fixture"));
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.GetCatalogAsync))
+        {
+            Interlocked.Increment(ref CatalogRequests);
             return Task.FromResult(new SteamCatalogSnapshot(true, new[] { new SteamCatalogItem { AppId = 10, Name = "An offline library game", AppType = SteamCatalogAppType.Game } }, DateTimeOffset.UtcNow, true, "Offline fixture"));
+        }
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.EnsureArtworkAsync)) return Task.CompletedTask;
         if ((method.DeclaringType == typeof(IRyuuCatalogService) || method.DeclaringType == typeof(IHubcapCatalogService)) && method.Name == "GetGamesAsync")
             return Task.FromResult(SteamCatalogSnapshot.Failure("Offline fixture"));

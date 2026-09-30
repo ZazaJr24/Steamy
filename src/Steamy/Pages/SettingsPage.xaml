@@ -94,20 +94,10 @@
       <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
       <RowDefinition Height="*" /><RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
-    <Border CornerRadius="22" Background="{DynamicResource SurfaceElevatedBrush}"
-            BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Margin="0,0,0,16"
-            controls:EntranceMotion.Delay="0">
-      <Grid>
-        <Border CornerRadius="22" Background="{DynamicResource BrandWashBrush}" />
-        <ui:SymbolIcon Symbol="Settings24" FontSize="100" Foreground="{DynamicResource AccentBrush}" Opacity="0.08"
-                       IsHitTestVisible="False" HorizontalAlignment="Right" Margin="0,0,22,0" />
-        <StackPanel Margin="22,14">
-          <TextBlock Text="MAKE IT YOURS" Style="{StaticResource OverlineStyle}" Foreground="{DynamicResource AccentBrush}" />
-          <TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2,0,0" />
-          <TextBlock Text="Your look. Your downloads. Your way to play." Style="{StaticResource BodyTextStyle}" Margin="0,4,0,0" />
-        </StackPanel>
-      </Grid>
-    </Border>
+    <StackPanel Margin="0,0,0,18">
+      <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" />
+      <TextBlock Text="Appearance, downloads and connections." Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" />
+    </StackPanel>
 
     <StackPanel Grid.Row="1">
       <Grid Margin="0,0,0,12">
