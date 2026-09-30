@@ -1,0 +1,141 @@
+"""Build Steamy's public discovery feed from Steam's public store metadata. No API key."""
+import argparse
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
+from html import unescape
+from pathlib import Path
+import json
+import re
+import time
+import urllib.parse
+import urllib.request
+
+PUBLISHERS = (
+    'bandai namco', 'ubisoft', 'capcom', 'square enix', 'playstation', 'sony interactive',
+    'electronic arts', 'bethesda', 'xbox game studios', 'activision', 'blizzard', 'rockstar',
+    '2k', 'sega', 'konami', 'warner bros', 'cd projekt', 'thq nordic', 'deep silver',
+    'focus entertainment', 'krafton', 'net ease', 'netease', 'io interactive', 'techland',
+    'pearl abyss', 'nacon', 'dreamhaven', 'embark', 'bungie', 'fromsoftware', 'larian',
+)
+REQUESTED = ('ACE COMBAT 8', 'Black Flag Resynced')
+STORE = 'https://store.steampowered.com/'
+
+
+def fetch_json(url):
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'Steamy-Spotlight/1.0', 'Accept': 'application/json'})
+            with urllib.request.urlopen(req, timeout=25) as response:
+                data = response.read(2_000_001)
+            if len(data) > 2_000_000:
+                raise ValueError('Store response exceeds the size limit')
+            return json.loads(data)
+        except Exception:
+            if attempt == 2:
+                raise
+            time.sleep(2 ** attempt)
+
+
+def plain_text(value):
+    return re.sub(r'\s+', ' ', unescape(re.sub(r'<[^>]*>', ' ', str(value or '')))).strip()
+
+
+def major_studio(data):
+    labels = ' '.join(data.get('publishers', []) + data.get('developers', [])).casefold()
+    return any(studio in labels for studio in PUBLISHERS)
+
+
+def release_date(label):
+    for fmt in ('%d %b, %Y', '%b %d, %Y', '%d %B, %Y', '%B %d, %Y', '%B %Y', '%b %Y'):
+        try:
+            return datetime.strptime(label, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    return None
+
+
+def select_game(data, now):
+    if data.get('type') != 'game' or not major_studio(data):
+        return None
+    if 3 in data.get('content_descriptors', {}).get('ids', []):
+        return None
+    release = data.get('release_date', {})
+    coming = bool(release.get('coming_soon'))
+    date_label = plain_text(release.get('date'))
+    date = release_date(date_label)
+    if not coming and (date is None or not now - timedelta(days=180) <= date <= now + timedelta(days=1)):
+        return None
+    if coming and date and date > now + timedelta(days=730):
+        return None
+    app_id = data.get('steam_appid')
+    if not isinstance(app_id, int) or app_id <= 0:
+        return None
+    return {
+        'appId': app_id, 'name': plain_text(data.get('name')),
+        'description': plain_text(data.get('short_description'))[:350],
+        'genres': ' · '.join(plain_text(g.get('description')) for g in data.get('genres', [])[:3]),
+        'publisher': ' · '.join(data.get('publishers', [])),
+        'comingSoon': coming, 'releaseLabel': date_label or ('Coming soon' if coming else 'New release'),
+        'releaseDate': date.date().isoformat() if date else None,
+        'storeUrl': f'{STORE}app/{app_id}/',
+        'heroUrl': data.get('background_raw') or data.get('background') or data.get('header_image', ''),
+        'headerUrl': data.get('header_image', ''),
+    }
+
+
+def collect_candidates():
+    ids = {}
+    requested_ids = set()
+    for term in REQUESTED:
+        result = fetch_json(STORE + 'api/storesearch/?' + urllib.parse.urlencode({'term': term, 'l': 'english', 'cc': 'us'}))
+        expected = re.sub(r'[^a-z0-9]', '', term.casefold())
+        for item in result.get('items', []):
+            title = re.sub(r'[^a-z0-9]', '', str(item.get('name', '')).casefold())
+            if expected in title:
+                ids[item['id']] = None
+                requested_ids.add(item['id'])
+    categories = fetch_json(STORE + 'api/featuredcategories/?cc=us&l=english')
+    for key in ('new_releases', 'coming_soon', 'top_sellers'):
+        for item in categories.get(key, {}).get('items', []):
+            if isinstance(item.get('id'), int):
+                ids[item['id']] = None
+    for filter_name in ('popularcomingsoon', 'newreleases'):
+        query = urllib.parse.urlencode({'query': '', 'start': 0, 'count': 50, 'filter': filter_name,
+                                       'category1': 998, 'infinite': 1, 'cc': 'us', 'l': 'english', 'ignore_preferences': 1})
+        result = fetch_json(STORE + 'search/results/?' + query)
+        for app_id in re.findall(r'data-ds-appid="(\d+)"', result.get('results_html', '')):
+            ids[int(app_id)] = None
+    return list(ids)[:120], requested_ids
+
+
+def refresh(output):
+    now = datetime.now(timezone.utc)
+    candidates, requested_ids = collect_candidates()
+    def details(app_id):
+        try:
+            response = fetch_json(STORE + f'api/appdetails?appids={app_id}&l=english&cc=us')
+            item = response.get(str(app_id), {})
+            return select_game(item.get('data', {}), now) if item.get('success') else None
+        except Exception as error:
+            print(f'Skipped app {app_id}: {type(error).__name__}')
+            return None
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        games = [game for game in pool.map(details, candidates) if game]
+    games.sort(key=lambda game: (game['appId'] in requested_ids,
+               game['comingSoon'], game['releaseDate'] or '9999-12-31'), reverse=True)
+    games = games[:16]
+    if len(games) < 3:
+        raise RuntimeError('Too few verified recent/upcoming games; retaining the previous feed')
+    document = {'schemaVersion': 1, 'updatedAt': now.isoformat(), 'games': games}
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temp = output.with_suffix('.tmp')
+    temp.write_text(json.dumps(document, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    temp.replace(output)
+    for game in games:
+        print(f"{game['appId']}: {game['name']} | {game['releaseLabel']} | {game['publisher']}")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output', type=Path, default=Path('src/Steamy/Data/spotlight.json'))
+    refresh(parser.parse_args().output)
