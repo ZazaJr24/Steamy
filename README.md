@@ -52,6 +52,12 @@ Every tool is wired up, configured, and ready to go. No command lines. No README
 
 <br/>
 
+## ✨ What's new in 0.3.4
+
+- **Refreshed dashboard, downloads and settings** — consistent themes, quieter animations, settings categories and search, and a virtualized download history.
+- **Safer pause, resume and retry** — one operation per job, saved depot/manifest versions and preserved download sources.
+- **Verify & repair** — downloader verification is separate from the read-only local file check.
+
 ## ✨ What's new in 0.3.3
 
 - **Share covers every game** — the Share page now loads your whole account library automatically on open, so "select all + share" dumps all your games, not just the installed ones

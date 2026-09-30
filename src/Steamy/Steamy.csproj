@@ -8,9 +8,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Steamy</RootNamespace>
     <AssemblyName>Steamy</AssemblyName>
-    <Version>0.3.3</Version>
-    <FileVersion>0.3.3</FileVersion>
-    <AssemblyVersion>0.3.3</AssemblyVersion>
+    <Version>0.3.4</Version>
+    <FileVersion>0.3.4</FileVersion>
+    <AssemblyVersion>0.3.4</AssemblyVersion>
     <Product>Steamy</Product>
     <Company>ZazaJr24</Company>
     <Authors>ZazaJr24</Authors>
