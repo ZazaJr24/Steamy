@@ -37,6 +37,18 @@ jobs:
           STEAMY_UI_ARTIFACTS: ${{ github.workspace }}/artifacts/ui
         run: dotnet test Steamy.sln -c Release --no-build --logger "console;verbosity=normal" --logger trx --results-directory artifacts/test-results
 
+      - name: Report test failures
+        if: failure()
+        shell: pwsh
+        run: |
+          Get-ChildItem artifacts/test-results -Filter *.trx -ErrorAction SilentlyContinue | ForEach-Object {
+            [xml]$results = Get-Content $_.FullName
+            $results.SelectNodes("//*[local-name()='UnitTestResult' and @outcome='Failed']") | ForEach-Object {
+              $details = $_.InnerText.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+              Write-Output "::error title=$($_.testName)::$details"
+            }
+          }
+
       - name: Upload test evidence
         if: always()
         uses: actions/upload-artifact@v4
