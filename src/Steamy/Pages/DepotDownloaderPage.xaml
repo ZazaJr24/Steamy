@@ -15,7 +15,7 @@
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><ContentPresenter /></ControlTemplate></Setter.Value></Setter>
     </Style>
   </Page.Resources>
-  <ScrollViewer Style="{StaticResource PageScrollHostStyle}" Padding="28,24,28,40">
+  <ScrollViewer controls:SmoothScroll.Enabled="True" Style="{StaticResource PageScrollHostStyle}" Padding="28,24,28,40">
     <StackPanel MaxWidth="1440" HorizontalAlignment="Stretch">
       <Grid Margin="0,0,0,22" controls:EntranceMotion.Delay="0">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -142,6 +142,7 @@
                           <ui:Button Content="Pause" Icon="{ui:SymbolIcon Pause24}" Style="{StaticResource PauseButton}" Margin="6,0,0,5" Command="{Binding DataContext.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
                           <ui:Button Content="Resume" Icon="{ui:SymbolIcon Play24}" Style="{StaticResource ResumeButton}" Margin="6,0,0,5" Command="{Binding DataContext.ResumeCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Primary"/>
                           <ui:Button Content="Retry" Icon="{ui:SymbolIcon ArrowClockwise24}" Style="{StaticResource RetryButton}" Margin="6,0,0,5" Command="{Binding DataContext.RetryCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
+                          <ui:Button Content="Verify &amp; repair" Icon="{ui:SymbolIcon ShieldCheckmark24}" Style="{StaticResource RepairButton}" Margin="6,0,0,5" Command="{Binding DataContext.RepairCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Primary" ToolTip="Check existing data against manifests and download missing or invalid chunks." />
                           <ui:Button Content="Check local files" Icon="{ui:SymbolIcon Checkmark24}" Style="{StaticResource CompletedOnlyButton}" Margin="6,0,0,5" Command="{Binding DataContext.VerifyCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
                           <ui:Button Content="Copy folder" Icon="{ui:SymbolIcon FolderOpen24}" Style="{StaticResource CompletedOnlyButton}" Margin="6,0,0,5" Command="{Binding DataContext.CopyFolderCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Secondary"/>
                           <ui:Button Content="Cancel" Style="{StaticResource CancelButton}" Margin="6,0,0,5" Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Danger"/>

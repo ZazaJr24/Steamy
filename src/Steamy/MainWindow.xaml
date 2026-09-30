@@ -99,6 +99,8 @@
               <ui:NavigationViewItem Content="Game Fixes"
                                      Icon="{ui:SymbolIcon ShieldTask24}"
                                      TargetPageType="{x:Type pages:GameFixesPage}" />
+              <ui:NavigationViewItem Content="Hypervisor Fixes" Icon="{ui:SymbolIcon Shield24}"
+                                     TargetPageType="{x:Type pages:HypervisorFixesPage}" />
             </ui:NavigationViewItem.MenuItems>
           </ui:NavigationViewItem>
         </ui:NavigationView.MenuItems>

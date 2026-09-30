@@ -13,6 +13,39 @@
   <CubicEase x:Key="SmoothEaseInOut" EasingMode="EaseInOut" />
   <controls:ArtworkImageConverter x:Key="ArtworkImage" />
 
+  <!-- A restrained glass edge; the cover remains the focus. -->
+  <Style x:Key="GalleryCardButton" TargetType="Button">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="controls:CardMotion.IsEnabled" Value="True" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Template"><Setter.Value>
+      <ControlTemplate TargetType="Button">
+        <Grid>
+          <Border x:Name="Chrome" CornerRadius="16" Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Border>
+          <Border CornerRadius="16" BorderThickness="1" IsHitTestVisible="False">
+            <Border.BorderBrush><LinearGradientBrush StartPoint="0,0" EndPoint="0.8,1">
+              <GradientStop Color="#26FFFFFF" Offset="0" /><GradientStop Color="#00FFFFFF" Offset="0.55" /><GradientStop Color="#0CFFFFFF" Offset="1" />
+            </LinearGradientBrush></Border.BorderBrush>
+          </Border>
+        </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate>
+    </Setter.Value></Setter>
+  </Style>
+
   <!-- Core typography -->
   <Style x:Key="PageTitleStyle" TargetType="TextBlock">
     <Setter Property="FontSize" Value="28" />

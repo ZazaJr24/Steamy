@@ -8,6 +8,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Animation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using SharpCompress.Archives;
@@ -27,6 +28,10 @@ public partial class LibraryPage : Page
     private CancellationTokenSource? _availabilityCts;
     private CancellationTokenSource? _downloadCts;
     private bool _pauseRequested;
+    private CancellationTokenSource? _artworkCts;
+    private IInputElement? _previousFocus;
+    private int _overlayRevision;
+    private bool _overlayClosing;
 
     private Brush ActiveChipBg => ThemeBrush("AccentSoftBrush");
     private Brush ActiveChipFg => ThemeBrush("AccentBrush");
@@ -48,11 +53,19 @@ public partial class LibraryPage : Page
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<LibraryViewModel>();
         _ = ((LibraryViewModel)DataContext).OnNavigatedToAsync();
+        Unloaded += (_, _) => ResetOverlay();
+        DialogPanel.SizeChanged += (_, _) => DialogPanel.Clip = new RectangleGeometry(new Rect(DialogPanel.RenderSize), 24, 24);
+        SizeChanged += (_, _) =>
+        {
+            DialogPanel.MaxWidth = Math.Max(0, ActualWidth - 32);
+            DialogPanel.MaxHeight = Math.Max(0, ActualHeight - 32);
+            if (OverlayGrid.Visibility == Visibility.Visible) CaptureBackdrop();
+        };
     }
 
-    private void GameCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private void GameCard_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Border border) return;
+        if (sender is not Button border) return;
         var item = border.Tag switch
         {
             SteamCatalogItem catalogItem => catalogItem,
@@ -69,7 +82,12 @@ public partial class LibraryPage : Page
             _ => null
         };
         if (item is null) return;
+        OpenGameDetails(item);
+    }
 
+    public void OpenGameDetails(SteamCatalogItem item)
+    {
+        if (_overlayClosing || _downloadRunning) return;
         _selectedItem = item;
         _selectedSource = ManifestSource.Sushi;
 
@@ -77,18 +95,10 @@ public partial class LibraryPage : Page
         OverlayAppId.Text = $"App {item.AppId}";
         OverlayStatus.Text = "Choose a manifest source and download folder.";
 
-        try
-        {
-            var heroUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{item.AppId}/library_hero.jpg";
-            var bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.UriSource = new Uri(heroUrl);
-            bmp.DecodePixelHeight = 280;
-            bmp.CacheOption = BitmapCacheOption.OnLoad;
-            bmp.EndInit();
-            OverlayCover.Source = bmp;
-        }
-        catch { OverlayCover.Source = null; }
+        OverlayCover.Source = item.HeaderImage ?? item.ArtworkImage;
+        _artworkCts?.Cancel();
+        _artworkCts = new CancellationTokenSource();
+        _ = LoadDetailArtworkAsync(item, _artworkCts);
 
         var requestedSource = ((LibraryViewModel)DataContext).SelectedSourceFilter;
         _selectedSource = Enum.TryParse<ManifestSource>(requestedSource, out var sourceFilter) ? sourceFilter : ManifestSource.Sushi;
@@ -122,7 +132,83 @@ public partial class LibraryPage : Page
         StartButton.Content = resumable is null ? "Start download" : "Resume download";
         StartButton.IsEnabled = true;
         PauseButton.Visibility = Visibility.Collapsed;
+        ShowOverlay();
+    }
+
+    private async Task LoadDetailArtworkAsync(SteamCatalogItem item, CancellationTokenSource cancellation)
+    {
+        try
+        {
+            var image = await App.Services.GetRequiredService<IArtworkService>().LoadHeroAsync(item.AppId, cancellation.Token);
+            if (!cancellation.IsCancellationRequested && ReferenceEquals(_selectedItem, item) && image is not null)
+                OverlayCover.Source = image;
+        }
+        catch (OperationCanceledException) { }
+        catch { /* The already loaded cover remains available offline. */ }
+        finally
+        {
+            if (ReferenceEquals(_artworkCts, cancellation)) _artworkCts = null;
+            cancellation.Dispose();
+        }
+    }
+
+    private void CaptureBackdrop()
+    {
+        // A frozen half-resolution snapshot avoids re-blurring the gallery for every live update.
+        MainContentGrid.Opacity = 1;
+        MainContentGrid.IsEnabled = true;
+        if (MainContentGrid.ActualWidth > 0 && MainContentGrid.ActualHeight > 0 && !SystemParameters.HighContrast)
+        {
+            var snapshot = new RenderTargetBitmap(Math.Max(1, (int)Math.Ceiling(MainContentGrid.ActualWidth / 2)),
+                Math.Max(1, (int)Math.Ceiling(MainContentGrid.ActualHeight / 2)), 48, 48, PixelFormats.Pbgra32);
+            snapshot.Render(MainContentGrid);
+            snapshot.Freeze();
+            BackdropImage.Source = snapshot;
+            BackdropImage.Visibility = Visibility.Visible;
+            MainContentGrid.Opacity = 0;
+        }
+        MainContentGrid.IsEnabled = OverlayGrid.Visibility != Visibility.Visible;
+    }
+
+    private void ShowOverlay()
+    {
+        _overlayRevision++;
+        _previousFocus = Keyboard.FocusedElement;
+        CaptureBackdrop();
+        MainContentGrid.IsHitTestVisible = false;
+        MainContentGrid.IsEnabled = false;
         OverlayGrid.Visibility = Visibility.Visible;
+        Animate(OverlayGrid, OpacityProperty, 0, 1);
+        Animate(DialogScale, ScaleTransform.ScaleXProperty, 0.97, 1);
+        Animate(DialogScale, ScaleTransform.ScaleYProperty, 0.97, 1);
+        Animate(DialogOffset, TranslateTransform.YProperty, 10, 0);
+        DialogCloseButton.Focus();
+    }
+
+    private void Animate(DependencyObject target, DependencyProperty property, double from, double to)
+    {
+        if (!SystemParameters.ClientAreaAnimation) return;
+        var animation = new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(180))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        var revision = _overlayRevision;
+        animation.Completed += (_, _) =>
+        {
+            if (revision != _overlayRevision) return;
+            if (target is UIElement ui) ui.BeginAnimation(property, null);
+            else if (target is Animatable transform) transform.BeginAnimation(property, null);
+        };
+        if (target is UIElement element) element.BeginAnimation(property, animation);
+        else if (target is Animatable transform) transform.BeginAnimation(property, animation);
+    }
+
+    private void Page_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || OverlayGrid.Visibility != Visibility.Visible) return;
+        e.Handled = true;
+        CloseOverlay();
     }
 
     private void SetOptionState(Border option, bool selected)
@@ -156,7 +242,8 @@ public partial class LibraryPage : Page
     {
         _availabilityCts?.Cancel();
         _availabilityCts = new CancellationTokenSource();
-        var ct = _availabilityCts.Token;
+        var cancellation = _availabilityCts;
+        var ct = cancellation.Token;
 
         SourceAvailabilityText.Text = $"Checking {source}...";
         SourceAvailabilityText.Foreground = TertiaryText;
@@ -198,6 +285,11 @@ public partial class LibraryPage : Page
                 SourceAvailabilityText.Foreground = ThemeBrush("WarningBrush");
                 StartButton.IsEnabled = true;
             }
+        }
+        finally
+        {
+            if (ReferenceEquals(_availabilityCts, cancellation)) _availabilityCts = null;
+            cancellation.Dispose();
         }
     }
 
@@ -252,10 +344,45 @@ public partial class LibraryPage : Page
     private void Overlay_Close(object sender, MouseButtonEventArgs e) => CloseOverlay();
     private void OverlayCloseButton_Click(object sender, RoutedEventArgs e) => CloseOverlay();
 
-    private void CloseOverlay()
+    public async void CloseOverlay()
     {
+        if (_overlayClosing || OverlayGrid.Visibility != Visibility.Visible) return;
+        _overlayClosing = true;
+        var revision = ++_overlayRevision;
+        _availabilityCts?.Cancel();
+        _artworkCts?.Cancel();
+        if (SystemParameters.ClientAreaAnimation)
+        {
+            Animate(OverlayGrid, OpacityProperty, 1, 0);
+            Animate(DialogScale, ScaleTransform.ScaleXProperty, 1, 0.98);
+            Animate(DialogScale, ScaleTransform.ScaleYProperty, 1, 0.98);
+            await Task.Delay(180);
+        }
+        if (revision != _overlayRevision) return;
+        var focus = _previousFocus;
+        ResetOverlay();
+        if (focus is UIElement { IsVisible: true, IsEnabled: true }) Keyboard.Focus(focus);
+    }
+
+    private void ResetOverlay()
+    {
+        _overlayRevision++;
+        _availabilityCts?.Cancel();
+        _artworkCts?.Cancel();
+        OverlayGrid.BeginAnimation(OpacityProperty, null);
+        DialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        DialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        DialogOffset.BeginAnimation(TranslateTransform.YProperty, null);
         OverlayGrid.Visibility = Visibility.Collapsed;
+        BackdropImage.Visibility = Visibility.Collapsed;
+        BackdropImage.Source = null;
+        OverlayCover.Source = null;
+        MainContentGrid.Opacity = 1;
+        MainContentGrid.IsHitTestVisible = true;
+        MainContentGrid.IsEnabled = true;
+        _previousFocus = null;
         _selectedItem = null;
+        _overlayClosing = false;
     }
 
     private bool _downloadRunning;
