@@ -54,6 +54,9 @@ public sealed partial class PageSmokeTests
             PumpDispatcher(TimeSpan.FromMilliseconds(100));
             var dashboard = Descendants<DashboardPage>(window).Single();
             var homeScroll = (ScrollViewer)dashboard.FindName("DashboardScroll");
+            Assert.False(SmoothScroll.GetEnabled(homeScroll));
+            Assert.Same(homeScroll, Assert.Single(Descendants<ScrollViewer>(dashboard).Where(viewer => viewer.ScrollableHeight > 0)));
+            Assert.NotNull(homeScroll.Template.FindName("PART_ScrollContentPresenter", homeScroll));
             Assert.False(ScrollViewer.GetCanContentScroll(dashboard));
             Assert.True(homeScroll.ViewportHeight > 0 && homeScroll.ScrollableHeight > 0,
                 "The real navigation host must give Dashboard a finite scrolling viewport.");
@@ -77,6 +80,48 @@ public sealed partial class PageSmokeTests
                 Assert.Equal(originalHeroHeight, hero.ActualHeight);
             }
 
+
+            // Keep the real five-second timer running through two rotations. The old
+            // test only executed commands and could miss a later animation/layout reset.
+            window.Activate();
+            PumpDispatcher(TimeSpan.FromMilliseconds(80));
+            Assert.True(window.IsActive, "The timed Spotlight regression requires an active window.");
+            var timedRotations = 0;
+            System.ComponentModel.PropertyChangedEventHandler rotated = (_, args) =>
+            {
+                if (args.PropertyName == nameof(DashboardViewModel.FeaturedGame)) timedRotations++;
+            };
+            dashboardModel.PropertyChanged += rotated;
+            try
+            {
+                homeScroll.ScrollToVerticalOffset(Math.Min(240, homeScroll.ScrollableHeight));
+                PumpDispatcher(TimeSpan.FromMilliseconds(60));
+                var heldOffset = homeScroll.VerticalOffset;
+                var heldViewport = homeScroll.ViewportHeight;
+                var elapsed = System.Diagnostics.Stopwatch.StartNew();
+                while (elapsed.Elapsed < TimeSpan.FromSeconds(11))
+                {
+                    PumpDispatcher(TimeSpan.FromMilliseconds(100));
+                    Assert.InRange(homeScroll.VerticalOffset, heldOffset - 1, heldOffset + 1);
+                    Assert.Equal(heldViewport, homeScroll.ViewportHeight);
+                }
+                Assert.True(timedRotations >= 2, "Exercise at least two automatic Spotlight changes while scrolled down.");
+                // Upward wheel input and scrollbar dragging must still be able to move.
+                WheelOver(image, 120);
+                PumpDispatcher(TimeSpan.FromMilliseconds(240));
+                Assert.True(homeScroll.VerticalOffset < heldOffset);
+                var bar = (ScrollBar)homeScroll.Template.FindName("PART_VerticalScrollBar", homeScroll);
+                var thumbOffset = Math.Min(180, homeScroll.ScrollableHeight);
+                bar.RaiseEvent(new ScrollEventArgs(ScrollEventType.ThumbTrack, thumbOffset) { RoutedEvent = ScrollBar.ScrollEvent });
+                PumpDispatcher(TimeSpan.FromMilliseconds(240));
+                Assert.InRange(homeScroll.VerticalOffset, thumbOffset - 1, thumbOffset + 1);
+                var activity = dashboardModel.RefreshActivityAsync();
+                PumpUntil(() => activity.IsCompleted);
+                activity.GetAwaiter().GetResult();
+                PumpDispatcher(TimeSpan.FromMilliseconds(200));
+                Assert.InRange(homeScroll.VerticalOffset, thumbOffset - 1, thumbOffset + 1);
+            }
+            finally { dashboardModel.PropertyChanged -= rotated; }
 
             OfflineServiceProxy.ScreenshotCatalog = Enumerable.Range(1000, 56).Select(id =>
                 new SteamCatalogItem { AppId = id, Name = $"Scroll fixture {id}", AppType = SteamCatalogAppType.Game }).ToArray();
