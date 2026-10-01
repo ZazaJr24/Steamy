@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-30T21:16:56.807288+00:00",
+  "updatedAt": "2026-10-01T13:15:09.625804+00:00",
   "games": [
     {
       "appId": 2288340,
@@ -40,6 +40,19 @@
       "storeUrl": "https://store.steampowered.com/app/3259780/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/063703b81c58de555ed405df85a985869a500eba/page_bg_raw.jpg?t=1788534743",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/710da43babb2043f9f6ad0e50023e31167d94708/header.jpg?t=1788534743"
+    },
+    {
+      "appId": 4435490,
+      "name": "Call of Duty®: Modern Warfare® 4",
+      "description": "War erupts on the Korean Peninsula as North Korea launches an invasion that threatens to destabilize the world in Call of Duty®: Modern Warfare® 4.",
+      "genres": "Action",
+      "publisher": "Activision",
+      "comingSoon": true,
+      "releaseLabel": "Oct 22, 2026",
+      "releaseDate": "2026-10-22",
+      "storeUrl": "https://store.steampowered.com/app/4435490/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/daf5d7dee8c89ae737aaac6b712288b934ee84dc/page_bg_raw.jpg?t=1790698027",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/0c492be3204835d71e8b454b6eb1817f8ff68c0d/header.jpg?t=1790698027"
     },
     {
       "appId": 4231820,
@@ -86,12 +99,12 @@
       "description": "Dominate the track, feel every impact, every rut, every victory. The most intense and realistic motocross experience is finally available. Experience the entire 2026 championship, with its official tracks and riders.",
       "genres": "Racing · Simulation · Sports",
       "publisher": "Nacon",
-      "comingSoon": true,
+      "comingSoon": false,
       "releaseLabel": "Oct 1, 2026",
       "releaseDate": "2026-10-01",
       "storeUrl": "https://store.steampowered.com/app/3634190/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3634190/8e7b95c0943988c8bbf47f5125a9e065e9f355ac/page_bg_raw.jpg?t=1790326510",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3634190/92e6ac99739bd346ec51d8a02744fe1b8b7e8386/header.jpg?t=1790326510"
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3634190/8e7b95c0943988c8bbf47f5125a9e065e9f355ac/page_bg_raw.jpg?t=1790844728",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3634190/92e6ac99739bd346ec51d8a02744fe1b8b7e8386/header.jpg?t=1790844728"
     },
     {
       "appId": 1912410,
