@@ -93,12 +93,12 @@
           </Border>
           <Border CornerRadius="23" IsHitTestVisible="False">
             <Border.Background><LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-              <GradientStop Color="#A6090D15" Offset="0" /><GradientStop Color="#50090D15" Offset="0.45" /><GradientStop Color="#00090D15" Offset="0.82" />
+              <GradientStop Color="#800E2038" Offset="0" /><GradientStop Color="#400E2038" Offset="0.45" /><GradientStop Color="#000E2038" Offset="0.82" />
             </LinearGradientBrush></Border.Background>
           </Border>
           <Border CornerRadius="23" IsHitTestVisible="False">
             <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-              <GradientStop Color="#00090D15" Offset="0.2" /><GradientStop Color="#50090D15" Offset="0.57" /><GradientStop Color="#ED090D15" Offset="1" />
+              <GradientStop Color="#0012253D" Offset="0.2" /><GradientStop Color="#4012253D" Offset="0.57" /><GradientStop Color="#D012243B" Offset="1" />
             </LinearGradientBrush></Border.Background>
           </Border>
           <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="26" CornerRadius="20" Padding="12,7" Background="#990B1422" BorderBrush="#4078B5FF" BorderThickness="1">
@@ -162,12 +162,12 @@
       <StackPanel Margin="0,0,0,26" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
         <TextBlock Text="Upcoming releases" Style="{StaticResource SectionTitle}" Margin="0,0,0,12" />
         <ItemsControl ItemsSource="{Binding NewGames}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="185" MaxColumns="3" Spacing="22" CoverRatio="0.50" FooterHeight="48" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="210" MaxColumns="3" Spacing="24" CoverRatio="0.56" FooterHeight="56" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate><DataTemplate>
             <Button Style="{StaticResource CoverCardButton}" ToolTip="{Binding Game.Name}" CommandParameter="{Binding}"
                     Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}">
               <Grid>
-                <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="48" /></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="56" /></Grid.RowDefinitions>
                 <Border Grid.Row="0" CornerRadius="12" Background="{Binding Game.CoverColor}" />
                 <Border Grid.Row="0" CornerRadius="12" SizeChanged="RecommendationArtwork_SizeChanged" ClipToBounds="True" RenderOptions.BitmapScalingMode="HighQuality">
                   <Image Source="{Binding Game.HeaderImage}" Stretch="UniformToFill" StretchDirection="DownOnly" />
@@ -176,7 +176,7 @@
                   <TextBlock Text="{Binding Countdown}" Foreground="#D5E8FF" FontSize="11" FontWeight="SemiBold" />
                 </Border>
                 <StackPanel Grid.Row="1" Margin="2,9,2,0">
-                  <TextBlock Text="{Binding Game.Name}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding Game.Name}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Text="{Binding ReleaseLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
               </Grid>

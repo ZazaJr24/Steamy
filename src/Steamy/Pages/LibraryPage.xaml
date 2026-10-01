@@ -47,8 +47,8 @@
     </Style>
     <LinearGradientBrush x:Key="HeroBannerFade" StartPoint="0,0" EndPoint="0,1">
       <GradientStop Color="#00000000" Offset="0" />
-      <GradientStop Color="#CC0A0D14" Offset="0.6" />
-      <GradientStop Color="#F80A0D14" Offset="1" />
+      <GradientStop Color="#B3162C47" Offset="0.6" />
+      <GradientStop Color="#EC213B5B" Offset="1" />
     </LinearGradientBrush>
 
     <!-- Dashboard stat tile -->
@@ -169,7 +169,7 @@
           <ItemsControl ItemsSource="{Binding PagedCatalogItems}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="174" Spacing="20" CoverRatio="1.38" FooterHeight="64" />
+                <controls:AdaptiveGridPanel MinItemWidth="224" Spacing="24" CoverRatio="1.38" FooterHeight="70" MaxColumns="5" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -180,7 +180,7 @@
                   <Grid>
                     <Grid.RowDefinitions>
                       <RowDefinition Height="*" />
-                      <RowDefinition Height="64" />
+                      <RowDefinition Height="70" />
                     </Grid.RowDefinitions>
 
                     <Border CornerRadius="15" Background="{DynamicResource SurfaceSubtleBrush}">
@@ -192,7 +192,7 @@
                         </Border>
                         <Border CornerRadius="15" Background="{DynamicResource SurfaceSubtleBrush}"
                                 Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <TextBlock Text="STEAM" Foreground="#3A3E47" FontSize="15" FontWeight="Bold"
+                        <TextBlock Text="STEAM" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="15" FontWeight="Bold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         <Border x:Name="Shine" CornerRadius="15" Background="#FFFFFF" Opacity="0" />
@@ -214,7 +214,7 @@
                     <StackPanel Grid.Row="1" Margin="3,0" VerticalAlignment="Center">
                       <TextBlock Text="{Binding Name}"
                                  Foreground="{DynamicResource TextPrimaryBrush}"
-                                 FontSize="13" FontWeight="SemiBold"
+                                 FontSize="14" FontWeight="SemiBold"
                                  TextTrimming="CharacterEllipsis" />
                       <TextBlock Text="{Binding AppLabel}" Margin="0,4,0,0"
                                  Foreground="{DynamicResource TextTertiaryBrush}"
@@ -266,7 +266,7 @@
     <Grid x:Name="OverlayGrid" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle" KeyboardNavigation.ControlTabNavigation="Cycle">
       <Border x:Name="DialogDimmer" Background="#65070B12" MouseLeftButtonUp="Overlay_Close" />
       <Border x:Name="DialogPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
-              Background="{DynamicResource SolidSurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}"
+              Background="{DynamicResource DialogSurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}"
               BorderThickness="1" CornerRadius="16" Width="640" Margin="16" RenderTransformOrigin="0.5,0.5">
         <Border.RenderTransform><TransformGroup><ScaleTransform x:Name="DialogScale" /><TranslateTransform x:Name="DialogOffset" /></TransformGroup></Border.RenderTransform>
         <Grid>
