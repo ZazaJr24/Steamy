@@ -70,7 +70,7 @@
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <ui:TextBox Grid.Column="0"
-                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=160}"
                     PlaceholderText="Search game fixes…"
                     Icon="{ui:SymbolIcon Search24}"
                     FontSize="13"
@@ -100,7 +100,7 @@
 
     <!-- Scrollable grid + pager -->
     <ScrollViewer Grid.Row="2" Style="{StaticResource PageScrollHostStyle}" controls:SmoothScroll.Enabled="True" Padding="0,0,0,0">
-      <StackPanel>
+      <StackPanel RequestBringIntoView="FixGallery_RequestBringIntoView">
         <ProgressBar IsIndeterminate="True" Height="3" Margin="0,0,0,6"
                      Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
@@ -258,7 +258,7 @@
             </Grid>
             <Border Background="{StaticResource HeroBannerFade}" />
             <!-- Close button over the hero -->
-            <ui:Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12"
+            <ui:Button x:Name="FixDialogCloseButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12"
                        Style="{StaticResource IconButtonStyle}"
                        Icon="{ui:SymbolIcon Dismiss24}"
                        Width="32" Height="32" MinHeight="32"

@@ -19,6 +19,7 @@ public partial class GameFixesPage : Page
     private string _folderPath = string.Empty;
     private bool _isOverlayClosing;
     private bool _isApplying;
+    private IInputElement? _returnFocus;
 
     private Brush PrimaryText => ThemeBrush("TextPrimaryBrush");
     private Brush TertiaryText => ThemeBrush("TextTertiaryBrush");
@@ -34,6 +35,7 @@ public partial class GameFixesPage : Page
     {
         if (sender is not Button button || button.Tag is not GameFixGameCard card || card.Game is null) return;
 
+        _returnFocus = button;
         _selectedCard = card;
         _folderPath = string.Empty;
         _isApplying = false;
@@ -64,6 +66,11 @@ public partial class GameFixesPage : Page
             if (ReferenceEquals(_selectedCard, card) && image is not null) OverlayHeroImage.Source = image;
         }
         catch (Exception exception) { System.Diagnostics.Debug.WriteLine($"Fix artwork: {exception.Message}"); }
+    }
+
+    private void FixGallery_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs args)
+    {
+        if (!Steamy.Controls.ScrollNavigation.IsNavigationKeyDown()) args.Handled = true;
     }
 
     private void Page_PreviewKeyDown(object sender, KeyEventArgs args)
@@ -322,6 +329,8 @@ public partial class GameFixesPage : Page
         {
             OverlayGrid.Visibility = Visibility.Visible;
             DialogPanel.Opacity = OverlayGrid.Opacity = 1;
+            DialogScale.ScaleX = DialogScale.ScaleY = 1;
+            FixDialogCloseButton.Focus();
             return;
         }
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
@@ -333,6 +342,7 @@ public partial class GameFixesPage : Page
         DialogPanel.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
         DialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.94, 1, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
         DialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.94, 1, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
+        FixDialogCloseButton.Focus();
         await Task.Delay(230);
     }
 
@@ -360,6 +370,8 @@ public partial class GameFixesPage : Page
             MainContentGrid.Effect = null;
             MainContentGrid.IsEnabled = true;
             _selectedCard = null;
+            _returnFocus?.Focus();
+            _returnFocus = null;
         }
         finally { _isOverlayClosing = false; }
     }
