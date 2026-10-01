@@ -6,7 +6,7 @@
 <p align="center"><strong>Your Steam library, downloads and tools.</strong><br/>A portable Windows app for playing, browsing and managing your games.</p>
 
 <p align="center">
-  <a href="https://github.com/ZazaJr24/Steamy/releases/latest/download/Steamy-latest.zip"><img src="https://img.shields.io/badge/Download-Latest-7c83ff?style=for-the-badge&logo=windows&logoColor=white" alt="Download Latest for Windows" /></a>
+  <a href="https://github.com/ZazaJr24/Steamy/releases/latest"><img src="https://img.shields.io/badge/Download-Latest-7c83ff?style=for-the-badge&logo=windows&logoColor=white" alt="Download Latest for Windows" /></a>
   <a href="https://github.com/ZazaJr24/Steamy/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ZazaJr24/Steamy/ci.yml?branch=main&style=for-the-badge&label=Build" alt="Build status" /></a>
 </p>
 <p align="center"><a href="#start-playing">Get started</a> · <a href="#inside-steamy">Features</a> · <a href="#a-closer-look">Screenshots</a> · <a href="#build-it-yourself">Build</a> · <a href="#credits">Credits</a></p>
@@ -15,7 +15,7 @@
 
 ## Start playing
 
-1. **[Download Latest](https://github.com/ZazaJr24/Steamy/releases/latest/download/Steamy-latest.zip)** and extract the entire ZIP into a folder.
+1. **[Download Latest](https://github.com/ZazaJr24/Steamy/releases/latest)** and extract the entire ZIP into a folder.
 2. Run **Steamy.exe**. Steam library folders are detected automatically; adjust them in **Settings** if needed.
 3. Open **Games** to browse, or **Downloads** at the bottom left to continue your queue.
 
@@ -23,7 +23,7 @@ The release is portable and includes the Windows runtime. Use Windows 10 or 11 o
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
-Upgrading from **0.4.6** to the **0.4.6.1 hotfix** requires a manual ZIP update: the older updater ignores the fourth version number. Close Steamy, extract the full new app ZIP over your portable installation, then reopen it. The hotfix preserves revision numbers for future updates. If you already installed 0.4.6.1, download the ZIP again to get this refreshed build; the version stays 0.4.6.1.
+Normal releases use three version numbers, such as **0.4.7**. Optional hotfixes use four, such as **0.4.7.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
 
 ## Inside Steamy
 
@@ -172,7 +172,7 @@ GitHub Actions rebuilds the pinned Mod tool and builds/tests `main` on Windows. 
 - `scripts/update_spotlight.py` — public Steam metadata → discovery feed; no API key or extra Python packages.
 - `.github/workflows/spotlight.yml` — daily discovery refresh, also runnable manually.
 
-Publish a release by updating the app version and [`CHANGELOG.md`](CHANGELOG.md), then pushing a matching tag. Each release includes a versioned archive, complete source ZIP, SHA-256 checksums and **Steamy-latest.zip**, keeping the download button above current.
+Publish a release by updating the app version and [`CHANGELOG.md`](CHANGELOG.md), then pushing a matching tag. Each release uploads only its versioned app ZIP. Its SHA-256 checksum is appended to the release notes after the ZIP is built. The download button opens the latest release; GitHub provides source archives for the matching tag.
 
 </details>
 

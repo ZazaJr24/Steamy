@@ -6,7 +6,7 @@ on:
       version:
         description: 'Version tag (e.g. 0.2.2)'
         required: true
-        default: '0.4.6.1'
+        default: '0.4.7'
   push:
     tags:
       - 'v*'
@@ -86,42 +86,14 @@ jobs:
       - name: Zip release
         run: |
           Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ steps.ver.outputs.v }}.zip
-          Copy-Item Steamy-v${{ steps.ver.outputs.v }}.zip Steamy-latest.zip
 
-      - name: Archive complete source
-        shell: pwsh
-        run: |
-          git archive --format=zip --prefix=Steamy-v${{ steps.ver.outputs.v }}-source/ HEAD -o Steamy-v${{ steps.ver.outputs.v }}-source.zip
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Get-FileHash Steamy-*.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $([IO.Path]::GetFileName($_.Path))" } | Set-Content SHA256SUMS.txt
-
-      # The release description is the CHANGELOG.md section of this version.
-      - name: Release notes from CHANGELOG
-        shell: pwsh
-        run: |
-          $version = "${{ steps.ver.outputs.v }}"
-          $lines = @(Get-Content CHANGELOG.md -Encoding utf8)
-          $header = $lines | Select-String -Pattern ("^##\s+v?" + [regex]::Escape($version) + "\b") | Select-Object -First 1
-          $notes = @()
-          if ($header) {
-            for ($i = $header.LineNumber; $i -lt $lines.Count; $i++) {
-              if ($lines[$i] -match '^##\s') { break }
-              $notes += $lines[$i]
-            }
-          }
-          $text = ($notes -join "`n").Trim()
-          if (-not $text) { $text = "Steamy $version" }
-          Set-Content -Path release-notes.md -Value $text -Encoding utf8
-          Get-Content release-notes.md
+      - name: Release notes and SHA-256 from the packaged ZIP
+        run: python scripts/release_notes.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip' --output release-notes.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.v }}
           name: Steamy v${{ steps.ver.outputs.v }}
-          files: |
-            Steamy-v${{ steps.ver.outputs.v }}.zip
-            Steamy-latest.zip
-            Steamy-v${{ steps.ver.outputs.v }}-source.zip
-            SHA256SUMS.txt
+          files: Steamy-v${{ steps.ver.outputs.v }}.zip
           body_path: release-notes.md

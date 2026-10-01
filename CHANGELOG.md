@@ -3,6 +3,16 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.7 — 2026-10-01
+
+- Neutral black transparent surfaces, a quiet sidebar and frameless, compact Games, Fixes and upcoming cards.
+- Upcoming-only Spotlight with days, hours, minutes and seconds from Steam's published release schedules. Countdown sits at the bottom left and refreshes immediately when returning to Discover; unknown times keep honest day/TBA labels.
+- Removed Check sources and View game from Spotlight. Up to eight previews on the right, calm artwork transitions and a small rotating indicator before the next slide.
+- Gentle gallery entrance and hover motion with fixed hit areas; pause, inactivity, reduced effects and scroll position remain respected.
+- Supports regular three-part releases and optional four-part hotfixes, including revision comparisons and the next regular release after a hotfix. The updater prefers the ZIP matching the release tag and excludes source archives.
+- Release assets contain only the versioned app ZIP. Removed duplicate Steamy-latest, additional Steamy-source and separate checksum uploads. The exact app ZIP SHA-256 checksum appears directly in this version's GitHub release info after packaging; GitHub's tag source archives remain available.
+- Includes the local ZIP/Lua package, pinned Resume, atomic Share export, searchable settings and download fixes from 0.4.6 and 0.4.6.1.
+
 ## 0.4.6.1 — 2026-10-01
 
 - Neutral black transparent surfaces, a quiet sidebar and frameless Games, Fixes and upcoming cards.

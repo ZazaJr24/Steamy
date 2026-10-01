@@ -26,6 +26,7 @@ public partial class DashboardPage : Page
         {
             var viewModel = (DashboardViewModel)DataContext;
             viewModel.RefreshSearchPreference();
+            viewModel.RefreshCountdowns();
             viewModel.StartLiveStats();
             viewModel.PropertyChanged += SpotlightChanged;
             Controls.MotionPreferences.Changed += MotionChanged;
