@@ -98,7 +98,7 @@ public partial class DashboardPage : Page
     private void ApplyResponsiveLayout(double width)
     {
         // Artwork owns the width. Stack only the compact controls on narrow windows.
-        var compact = width < 900;
+        var compact = width < 800;
         DashboardSearch.Width = width < 640 ? 220 : width < 900 ? 280 : 340;
         DashboardScroll.Padding = width < 640 ? new Thickness(18, 18, 18, 26) : new Thickness(28, 22, 28, 30);
         DashboardHero.Height = width < 720 ? 400 : width < 1000 ? 420 : 460;
@@ -108,7 +108,7 @@ public partial class DashboardPage : Page
         SpotlightPaging.SetValue(Grid.RowProperty, compact ? 2 : 1);
         SpotlightPaging.SetValue(Grid.ColumnProperty, compact ? 0 : 1);
         SpotlightPaging.Margin = compact ? new Thickness(0,12,0,0) : new Thickness(18,0,0,0);
-        SpotlightDetails.MaxWidth = Math.Max(240, (width - 110) * 0.82);
+        SpotlightDetails.MaxWidth = compact ? Math.Max(240, (width - 110) * 0.82) : Math.Max(240, width - 245);
     }
 
     private void GameCover_Click(object sender, RoutedEventArgs e)
