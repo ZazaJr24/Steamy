@@ -101,14 +101,21 @@ public static class SmoothScroll
             _target = Math.Clamp((_animating ? _target : current) - args.Delta / 120d * distance, 0, _viewer.ScrollableHeight);
             if (Math.Abs(_target - current) < 0.5) return;
             args.Handled = true;
-            var generation = ++_generation;
             if (!MotionPreferences.AnimationsEnabled)
             {
+                _generation++;
                 _viewer.BeginAnimation(OffsetProperty, null);
                 _viewer.SetCurrentValue(OffsetProperty, _target);
                 _animating = false;
                 return;
             }
+            AnimateTo(_target);
+        }
+        private void AnimateTo(double target)
+        {
+            var current = _viewer.VerticalOffset;
+            _target = Math.Clamp(target, 0, _viewer.ScrollableHeight);
+            var generation = ++_generation;
             _animating = true;
             var animation = new DoubleAnimation(current, _target, TimeSpan.FromMilliseconds(160)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
             animation.Completed += (_, _) =>
