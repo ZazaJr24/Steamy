@@ -149,14 +149,14 @@ public sealed class SteamToolsTests
         temp.Write("steam.exe", "fixture only");
         var file = outside.Write("480.lua", "external original");
         Directory.CreateDirectory(Path.Combine(temp.Path,"config"));
-        var linked = Path.Combine(temp.Path,"config/stplug-in");
+        var linked = Path.Combine(temp.Path,"config", "stplug-in");
         if (OperatingSystem.IsWindows())
         {
             var info = new System.Diagnostics.ProcessStartInfo("cmd.exe") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
             foreach (var argument in new[] { "/d", "/c", "mklink", "/J", linked, outside.Path }) info.ArgumentList.Add(argument);
             using var process = System.Diagnostics.Process.Start(info)!;
             Assert.True(process.WaitForExit(5000));
-            Assert.Equal(0, process.ExitCode);
+            Assert.True(process.ExitCode == 0, process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd());
         }
         else Directory.CreateSymbolicLink(linked, outside.Path);
         var files = new Dictionary<string, byte[]> { ["config/stplug-in/480.lua"] = Encoding.UTF8.GetBytes("replacement") };
