@@ -57,6 +57,16 @@ public sealed partial class PageSmokeTests
         model.GameInput = "";
         model.SelectedSource = model.Sources[0];
         model.RefreshDetection();
+        var library = new LibraryPage();
+        library.OpenDownloadSetup(new Steamy.Models.SteamCatalogItem { AppId = 4242, Name = "A game for Steam metadata" });
+        Type? route = null;
+        provider.GetRequiredService<INavigationService>().Attach(page => route = page);
+        ((Button)library.FindName("AddToSteamToolsButton")).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+        PumpUntil(() => fixture.LastSource.Item1 == 4242 && !model.IsBusy);
+        Assert.Equal(typeof(BetterSteamToolsPage), route);
+        Assert.Equal((4242, (ManifestSource?)null), fixture.LastSource);
+        model.GameInput = "";
+        model.RefreshDetection();
     }
 
     private sealed class BetterSteamToolsFixture : IBetterSteamToolsService

@@ -18,7 +18,7 @@ public partial class BetterSteamToolsPage : Page
     private void SteamRoot_LostFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs args) => Model.RefreshDetection();
     private static bool Supports(DragEventArgs args) => args.Data.GetDataPresent(DataFormats.FileDrop)
         && args.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } paths
-        && paths.All(path => Path.GetExtension(path).ToLowerInvariant() is ".zip" or ".lua" or ".manifest");
+        && paths.All(path => File.Exists(path) && Path.GetExtension(path).ToLowerInvariant() is ".zip" or ".lua" or ".manifest");
     private void Metadata_DragOver(object sender, DragEventArgs args)
     {
         args.Effects = !Model.IsBusy && Model.BackendInstalled && Supports(args) ? DragDropEffects.Copy : DragDropEffects.None;
