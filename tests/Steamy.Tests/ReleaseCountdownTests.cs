@@ -27,6 +27,7 @@ public class ReleaseCountdownTests
             new() { AppId = 6, ComingSoon = true, ReleaseDate = new(2026, 11, 1) },
             new() { AppId = 7, ComingSoon = true, ReleaseDate = new(2026, 10, 2) },
             new() { AppId = 8, ComingSoon = true, ReleaseDate = new(2026, 10, 1) }];
+        Assert.Empty(ReleaseCountdown.Upcoming([new() { ComingSoon = true, ReleaseLabel = "Q2 2026" }, new() { ComingSoon = true, ReleaseLabel = "Late 2025" }], new(2026,10,1)));
         Assert.Equal([8,7,6,5], ReleaseCountdown.Upcoming(games, new(2026,10,1)).Select(game => game.AppId));
     }
 }

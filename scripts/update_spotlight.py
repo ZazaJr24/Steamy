@@ -76,6 +76,12 @@ def select_game(data, now):
             break
         except ValueError:
             pass
+    year_match = re.search(r'\b(20\d{2})\b', date_label)
+    if year_match and int(year_match.group(1)) < now.year:
+        return None
+    quarter = re.search(r'\bQ([1-4])\s+(20\d{2})\b', date_label, re.IGNORECASE)
+    if quarter and (int(quarter.group(2)), int(quarter.group(1))) < (now.year, (now.month-1)//3+1):
+        return None
     if coming and date and date > now + timedelta(days=730):
         return None
     app_id = data.get('steam_appid')
