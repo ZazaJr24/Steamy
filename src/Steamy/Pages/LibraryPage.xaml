@@ -481,6 +481,7 @@
               <TextBlock x:Name="GameInstallInfo" Visibility="Collapsed" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16" />
               <StackPanel Orientation="Horizontal">
                 <ui:Button x:Name="FavoriteButton" Content="Favorite" Icon="{ui:SymbolIcon Heart24}" Appearance="Secondary" Click="FavoriteButton_Click" />
+                <ui:Button x:Name="AddToSteamToolsButton" Content="Add to Steam" Appearance="Secondary" Margin="8,0,0,0" Click="AddToSteamTools_Click" />
                 <ui:Button x:Name="PlayButton" Content="Play in Steam" Icon="{ui:SymbolIcon Play24}" Appearance="Secondary" Margin="8,0,0,0" Visibility="Collapsed" Click="PlayButton_Click" />
               </StackPanel>
             </StackPanel>

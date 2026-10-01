@@ -3,6 +3,15 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.8 — 2026-10-01
+
+- README statistics restored: release downloads, stars, forks and current version.
+- New Tools → BetterSteamTools page with Steam detection, one-click official backend installation/update and SHA-256 verification.
+- Drag/drop or choose ZIP, Lua and manifest files for immediate import. App IDs are detected from configuration; an explicit ID selects a game from a multi-game bundle. Steamy Share hashes are checked, and standalone manifests are cached without inventing a game ID.
+- Add to Steam from an App ID or official store link, with automatic source detection or Sushi, Zaza, Hubcap, Ryuu and DepotBox selection using existing credentials. Games details can open the tool with the selected App ID.
+- Metadata uses Steam's config/stplug-in and root depotcache folders. Other backend settings remain intact, originals are backed up, failed writes roll back, cancellation is supported and unsupported Lua code is rejected without evaluation.
+- Normal and optional four-part hotfix updates remain supported. The only uploaded release asset is the versioned app ZIP; its SHA-256 checksum is in the release info.
+
 ## 0.4.7 — 2026-10-01
 
 - Neutral black transparent surfaces, a quiet sidebar and frameless, compact Games, Fixes and upcoming cards.

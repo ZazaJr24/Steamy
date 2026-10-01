@@ -9,6 +9,12 @@
   <a href="https://github.com/ZazaJr24/Steamy/releases/latest"><img src="https://img.shields.io/badge/Download-Latest-7c83ff?style=for-the-badge&logo=windows&logoColor=white" alt="Download Latest for Windows" /></a>
   <a href="https://github.com/ZazaJr24/Steamy/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ZazaJr24/Steamy/ci.yml?branch=main&style=for-the-badge&label=Build" alt="Build status" /></a>
 </p>
+<p align="center">
+  <a href="https://github.com/ZazaJr24/Steamy/releases"><img src="https://img.shields.io/github/downloads/ZazaJr24/Steamy/total?style=for-the-badge&amp;label=Downloads" alt="Total release asset downloads" /></a>
+  <a href="https://github.com/ZazaJr24/Steamy/stargazers"><img src="https://img.shields.io/github/stars/ZazaJr24/Steamy?style=for-the-badge&amp;label=Stars" alt="GitHub stars" /></a>
+  <a href="https://github.com/ZazaJr24/Steamy/forks"><img src="https://img.shields.io/github/forks/ZazaJr24/Steamy?style=for-the-badge&amp;label=Forks" alt="GitHub forks" /></a>
+  <a href="https://github.com/ZazaJr24/Steamy/releases/latest"><img src="https://img.shields.io/github/v/release/ZazaJr24/Steamy?style=for-the-badge&amp;sort=date&amp;label=Version" alt="Latest release version" /></a>
+</p>
 <p align="center"><a href="#start-playing">Get started</a> · <a href="#inside-steamy">Features</a> · <a href="#a-closer-look">Screenshots</a> · <a href="#build-it-yourself">Build</a> · <a href="#credits">Credits</a></p>
 
 <p align="center"><img src="docs/screenshots/dashboard.png" width="1044" alt="Steamy dashboard with compact Spotlight artwork and three upcoming games" /></p>
@@ -23,7 +29,7 @@ The release is portable and includes the Windows runtime. Use Windows 10 or 11 o
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
-Normal releases use three version numbers, such as **0.4.7**. Optional hotfixes use four, such as **0.4.7.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
+Normal releases use three version numbers, such as **0.4.8**. Optional hotfixes use four, such as **0.4.8.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
 
 ## Inside Steamy
 
@@ -71,12 +77,25 @@ Preparation creates an independent copy. Moving, editing or deleting the origina
 
 **Share → Save as ZIP** exports metadata, not the game files. Each game has a file list and SHA-256 hashes. The result reports the actual exported count and names games omitted because no manifests were available. Missing files produce an error. Cancellation and errors preserve an existing destination ZIP; the finished package replaces it atomically.
 
+### Add game metadata to Steam
+
+Open **Tools → BetterSteamTools**. Steam is detected from your existing settings or Windows installation; **Browse** selects a different Steam folder.
+
+1. Close Steam and click **Install / update BetterSteamTools**. Steamy downloads the official [BetterSteamTools](https://github.com/madoiscool/BetterSteamTools) Windows release, verifies its SHA-256 checksum and installs the required backend files. Start Steam afterwards.
+2. Enter an App ID or Steam store link and click **Add to Steam**. **Automatic** tries available Sushi, Zaza and configured API sources; Hubcap, Ryuu and DepotBox use their existing Settings credentials. Availability depends on the selected provider.
+3. Alternatively, drop ZIP, Lua or manifest files to install directly, or choose files. An empty game field detects App IDs from the metadata; an explicit ID selects a game in a multi-game bundle. A standalone manifest is cached without inventing an App ID. The Games detail view also has an **Add to Steam** shortcut.
+
+Lua is validated as `addappid`/`setManifestid` configuration and is never evaluated by Steamy. Lua goes to Steam's `config/stplug-in`; manifests go to its root `depotcache`. The existing backend configuration keeps its other paths/settings and registers the Lua folder for reload. Originals are retained under `config/steamy-backups`; failed writes restore previous files. Adding metadata does not download the game files or prove source availability for every title.
+
+This workflow is inspired by [LuaTools](https://github.com/madoiscool/LuaTools). BetterSteamTools is downloaded on request; neither it nor LuaTools is bundled with Steamy.
+
 <details>
 <summary><strong>Tools, in one place</strong></summary>
 
 | Tool | Purpose |
 | --- | --- |
 | **DepotDownloader / DepotDownloaderMod** | Depot downloads, saved manifests, queue management and repair. The existing Mod fork is bundled. |
+| **BetterSteamTools** | Detect Steam, install/update the official backend, drop ZIP/Lua/manifest metadata, or add an App ID/store link through automatic Sushi/Zaza/API source detection. |
 | **Steamless** | Run Steamless against a selected executable, with its options and output in the app. |
 | **Denuvo Activation** | Configure the activation tool and inspect its output; the information button links to the community help. |
 | **DLC Unlocker** | Configure supported CreamAPI or SmokeAPI integration for a selected game. |
@@ -90,7 +109,7 @@ Additional tools are fetched when needed. Credentials are kept in a Windows DPAP
 
 ## A closer look
 
-Screenshots are captured from the actual Windows app using sample library, queue and depot metadata. The Spotlight uses verified public Steam data. Game artwork belongs to the respective rights holders.
+Screenshots are captured from the actual Windows app using sample library, queue, depot and SteamTools status metadata. The Spotlight uses verified public Steam data. Game artwork belongs to the respective rights holders.
 
 **Games** — cover art, clear labels and room to breathe.
 
@@ -143,6 +162,10 @@ Screenshots are captured from the actual Windows app using sample library, queue
 
 </details>
 
+### BetterSteamTools
+
+![BetterSteamTools: Steam detection, one-click backend installation and metadata import](docs/screenshots/better-steamtools.png)
+
 ## Build it yourself
 
 Use the .NET SDK selected by [`global.json`](global.json). The desktop app and UI tests require Windows; the core test project also runs on Linux and macOS.
@@ -185,6 +208,8 @@ Steamy is maintained by [ZazaJr24](https://github.com/ZazaJr24). Thanks to the a
 | [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod) | SteamAutoCracks and SteamRE contributors | Bundled Mod downloader; [pinned patch, build and tests](tools/DepotDownloaderMod), GPL license and complete corresponding source included |
 | [DepotDownloader](https://github.com/SteamRE/DepotDownloader) | SteamRE | Standard depot downloader |
 | [SushiTools games repository](https://github.com/sushi-dev55/sushitools-games-repo) | [sushi-dev55](https://github.com/sushi-dev55) · [SushiTools server](https://discord.gg/sushitools) | Free Lua metadata and depot manifests, used under MIT |
+| [BetterSteamTools](https://github.com/madoiscool/BetterSteamTools) | madoiscool / OpenSteamTool contributors | Optional Steam backend; official releases downloaded on request, GPL-3.0 |
+| [LuaTools](https://github.com/madoiscool/LuaTools) | madoiscool / contributors | Steam metadata workflow reference, MIT; not bundled |
 | [Steamless](https://github.com/atom0s/Steamless) | atom0s | Steamless engine |
 | [CreamInstaller](https://github.com/FroggMaster/CreamInstaller) | FroggMaster and original CreamAPI authors | CreamAPI components |
 | [SmokeAPI](https://github.com/acidicoala/SmokeAPI) | acidicoala | Optional DLC integration |

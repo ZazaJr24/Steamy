@@ -43,6 +43,9 @@
 
   <ItemGroup>
     <Compile Include="..\..\src\Steamy\Services\Catalog\ReleaseCountdown.cs" Link="Linked\ReleaseCountdown.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Steam\SteamToolsMetadata.cs" Link="Linked\SteamToolsMetadata.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Steam\SteamToolsFiles.cs" Link="Linked\SteamToolsFiles.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Steam\SteamToolsBackend.cs" Link="Linked\SteamToolsBackend.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\LocalManifestPackage.cs" Link="Linked\LocalManifestPackage.cs" />
   </ItemGroup>
 
