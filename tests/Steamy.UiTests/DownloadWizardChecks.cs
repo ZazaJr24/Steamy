@@ -451,6 +451,19 @@ public sealed partial class PageSmokeTests
         Assert.Contains("English", displayedText);
         Assert.Contains("Offline sample metadata", displayedText);
         Assert.Contains("Build 100", displayedText);
+        var versionSelector = Descendants<ComboBox>(panel).First();
+        versionSelector.Focus();
+        var selectedVersion = versionSelector.SelectedItem;
+        var listScroll = Descendants<ScrollViewer>((ListBox)page.FindName("DepotChoices")).First();
+        listScroll.ScrollToBottom();
+        PumpDispatcher(TimeSpan.FromMilliseconds(40));
+        var previousOffset = listScroll.VerticalOffset;
+        versionSelector.RaiseEvent(new System.Windows.Input.MouseWheelEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, 120)
+            { RoutedEvent = UIElement.PreviewMouseWheelEvent });
+        PumpDispatcher(TimeSpan.FromMilliseconds(40));
+        Assert.Same(selectedVersion, versionSelector.SelectedItem);
+        if (previousOffset > 0) Assert.True(listScroll.VerticalOffset < previousOffset,
+            "Scrolling over a focused closed manifest selector must scroll the list while retaining its selected version.");
         var withoutMetadata = page.DownloadDepotChoices[1];
         var unknownDepotText = string.Join("\n", Descendants<TextBlock>(panel)
             .Where(text => text.IsVisible && ReferenceEquals(text.DataContext, withoutMetadata)).Select(text => text.Text));

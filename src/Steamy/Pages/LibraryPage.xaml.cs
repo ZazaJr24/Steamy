@@ -232,6 +232,21 @@ public partial class LibraryPage : Page
         catch (Exception exception) { OverlayStatus.Text = $"Could not open depot information: {exception.Message}"; }
     }
 
+    private void DepotVersion_PreviewMouseWheel(object sender, MouseWheelEventArgs args)
+    {
+        if (sender is not ComboBox { IsDropDownOpen: false } combo) return;
+        // Wheel input after picking a version should scroll the depot list, not silently
+        // change the pinned manifest in the still-focused closed selector.
+        for (DependencyObject? parent = VisualTreeHelper.GetParent(combo); parent is not null; parent = VisualTreeHelper.GetParent(parent))
+        {
+            if (parent is not ScrollViewer scroll) continue;
+            args.Handled = true;
+            scroll.RaiseEvent(new MouseWheelEventArgs(args.MouseDevice, args.Timestamp, args.Delta)
+                { RoutedEvent = Mouse.MouseWheelEvent });
+            break;
+        }
+    }
+
     private async Task UpdateFavoriteButtonAsync(SteamCatalogItem item)
     {
         try

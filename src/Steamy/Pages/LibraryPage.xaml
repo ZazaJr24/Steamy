@@ -371,7 +371,7 @@
                         <Grid Margin="0,12,0,0">
                           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                           <ComboBox ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion, Mode=TwoWay}" DisplayMemberPath="Label"
-                                    IsEnabled="{Binding IsSelected}" FontSize="11" MinHeight="32" AutomationProperties.Name="Depot version" />
+                                    IsEnabled="{Binding IsSelected}" FontSize="11" MinHeight="32" AutomationProperties.Name="Depot version" PreviewMouseWheel="DepotVersion_PreviewMouseWheel" />
                           <ui:Button Grid.Column="1" Content="SteamDB ↗" Appearance="Transparent" FontSize="10.5" Padding="8,5" Margin="8,0,0,0"
                                      Tag="{Binding DepotId}" Click="OpenDepotInfo_Click" ToolTip="Inspect this depot on SteamDB" />
                         </Grid>
