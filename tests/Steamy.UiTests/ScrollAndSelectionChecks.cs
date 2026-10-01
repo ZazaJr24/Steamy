@@ -143,9 +143,11 @@ public sealed partial class PageSmokeTests
                 Assert.True(homeScroll.VerticalOffset < heldOffset);
                 var bar = (ScrollBar)homeScroll.Template.FindName("PART_VerticalScrollBar", homeScroll);
                 var thumbOffset = Math.Min(180, homeScroll.ScrollableHeight);
-                // The real thumb changes Value before raising its routed Scroll event.
-                bar.Value = thumbOffset;
-                bar.RaiseEvent(new ScrollEventArgs(ScrollEventType.ThumbTrack, thumbOffset) { RoutedEvent = ScrollBar.ScrollEvent });
+                // ScrollBar.ChangeValue sends this routed command to its template
+                // parent during thumb tracking. ScrollEvent alone is only a notification.
+                var thumbTarget = (IInputElement)bar.TemplatedParent;
+                Assert.True(ScrollBar.ScrollToVerticalOffsetCommand.CanExecute(thumbOffset, thumbTarget));
+                ScrollBar.ScrollToVerticalOffsetCommand.Execute(thumbOffset, thumbTarget);
                 PumpDispatcher(TimeSpan.FromMilliseconds(240));
                 Assert.InRange(homeScroll.VerticalOffset, thumbOffset - 1, thumbOffset + 1);
                 var activity = dashboardModel.RefreshActivityAsync();
