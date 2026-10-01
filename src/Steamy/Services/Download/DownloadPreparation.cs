@@ -10,7 +10,8 @@ public enum ManifestSource
     Zaza,
     Hubcap,
     DepotBox,
-    Sushi
+    Sushi,
+    Local
 }
 
 public sealed record RyuuDepotInfo(int DepotId, string ManifestId, string DecryptionKey);

@@ -65,6 +65,8 @@ public partial class SettingsPage : Page
 
     private void MotionSettings_PropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
+        if (args.PropertyName == nameof(AppSettings.DashboardSearch))
+            App.Services.GetRequiredService<DashboardViewModel>().RefreshSearchPreference();
         if (args.PropertyName == nameof(AppSettings.ReduceEffects))
             MotionPreferences.Configure(ViewModel.Settings.ReduceEffects);
     }

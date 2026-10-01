@@ -561,18 +561,21 @@ public sealed class ShareViewModel : ViewModelBase
     /// <summary>Called by the page after the user picked where to save the ZIP.</summary>
     public async Task ExportSelectedAsync(string zipPath)
     {
+        if (IsBusy) return;
         var selected = _items.Where(item => item.IsSelected).Select(item => item.Candidate).ToList();
         if (selected.Count == 0) return;
 
+        _runCts = new CancellationTokenSource();
         IsBusy = true;
         HasResult = false;
         Progress = 0;
         ProgressText = "Packing the ZIP…";
         try
         {
-            var result = await _sharing.ExportAsync(selected, zipPath);
+            var result = await _sharing.ExportAsync(selected, zipPath, _runCts.Token);
             ShowResult(result.Succeeded, result.Message, result.Succeeded ? Path.GetDirectoryName(zipPath) : null);
         }
+        catch (OperationCanceledException) { ShowResult(false, "Export cancelled. The previous ZIP was kept.", null); }
         catch (Exception exception)
         {
             // Packing itself is guarded inside the service; this catches everything around it
@@ -582,6 +585,8 @@ public sealed class ShareViewModel : ViewModelBase
         }
         finally
         {
+            _runCts.Dispose();
+            _runCts = null;
             IsBusy = false;
         }
     }

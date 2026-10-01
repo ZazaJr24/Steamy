@@ -34,6 +34,14 @@ public sealed partial class PageSmokeTests
             model.SearchText = string.Empty;
             PumpUntil(() => model.PagedCatalogItems.Count == 1);
             var game = model.PagedCatalogItems[0];
+            page.OpenDownloadSetup(game);
+            page.SelectLocalPackage(Path.Combine(directory, "metadata.zip"));
+            Assert.Equal(Visibility.Visible, ((FrameworkElement)page.FindName("LocalPackagePanel")).Visibility);
+            AwaitWizardStep(page);
+            Assert.Equal(ManifestSource.Local, downloads.Plans.Last().Source);
+            Assert.Equal(1, page.DownloadWizardStep);
+            page.CloseOverlay();
+            PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
             page.OpenGameDetails(game);
             Assert.Equal(Visibility.Collapsed, ((Button)page.FindName("PlayButton")).Visibility);
             var activity = provider.GetRequiredService<IGameActivityService>();
@@ -152,13 +160,13 @@ public sealed partial class PageSmokeTests
             PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
             page.OpenDownloadSetup(game);
             Assert.Equal(2, page.DownloadWizardStep);
-            foreach (var sourceControl in new[] { "SourceSushi", "SourceZaza", "SourceRyuu", "SourceHubcap", "SourceDepotBox" })
+            foreach (var sourceControl in new[] { "SourceSushi", "SourceZaza", "SourceRyuu", "SourceHubcap", "SourceDepotBox", "SourceLocal" })
                 Assert.False(((Button)page.FindName(sourceControl)).IsEnabled);
             page.SelectDownloadSource(ManifestSource.Zaza);
             Assert.Contains("original source", ((TextBlock)page.FindName("OverlayStatus")).Text, StringComparison.OrdinalIgnoreCase);
             ((Button)page.FindName("NewSelectionButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             Assert.Equal(0, page.DownloadWizardStep);
-            foreach (var sourceControl in new[] { "SourceSushi", "SourceZaza", "SourceRyuu", "SourceHubcap", "SourceDepotBox" })
+            foreach (var sourceControl in new[] { "SourceSushi", "SourceZaza", "SourceRyuu", "SourceHubcap", "SourceDepotBox", "SourceLocal" })
                 Assert.True(((Button)page.FindName(sourceControl)).IsEnabled);
             Assert.Contains(added, store.Downloads);
             Assert.Equal(DownloadJobState.Paused, added.State);
@@ -503,6 +511,13 @@ public sealed partial class PageSmokeTests
             PreparationTokens.Enqueue(cancellationToken);
             return PrepareOverride?.Invoke(appId, source, cancellationToken)
                 ?? Task.FromResult(CreatePreparation(appId, source));
+        }
+
+        public Task<GameDownloadPreparation> PrepareLocalPackageAsync(int appId, string packagePath,
+            IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(packagePath));
+            return PrepareDownloadAsync(appId, ManifestSource.Local, progress, cancellationToken);
         }
 
         public GameDownloadPreparation CreatePreparation(int appId, ManifestSource source)

@@ -32,7 +32,7 @@ public sealed partial class PageSmokeTests
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
-        Assert.True(thread.Join(TimeSpan.FromSeconds(120)), "WPF smoke test did not finish within 120 seconds. Last phase: " + _phase);
+        Assert.True(thread.Join(TimeSpan.FromSeconds(180)), "WPF smoke test did not finish within 180 seconds. Last phase: " + _phase);
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
@@ -211,7 +211,7 @@ public sealed partial class PageSmokeTests
         var firstId = model.DiscoverGames[0].Game.AppId;
         Assert.Equal(firstId, model.FeaturedGame!.Game.AppId);
         Assert.Contains(model.DiscoverGames, feature => feature.Metadata.ComingSoon);
-        Assert.Equal("COMING SOON", model.DiscoverGames.First(feature => feature.Metadata.ComingSoon).ReleaseStatus);
+        Assert.Equal("UPCOMING", model.DiscoverGames.First(feature => feature.Metadata.ComingSoon).ReleaseStatus);
         Assert.False(model.HasRecentGames); // Discovery must not pretend these games are installed.
         model.PreviousFeaturedCommand.Execute(null);
         var lastId = model.DiscoverGames[^1].Game.AppId;
@@ -321,6 +321,10 @@ public sealed partial class PageSmokeTests
         PumpDispatcher(TimeSpan.FromMilliseconds(350));
         window.UpdateLayout();
         SaveVisual(window, "game-details.png");
+        page.SelectDownloadSource(ManifestSource.Local);
+        window.UpdateLayout();
+        SaveVisual(window, "local-package.png");
+        page.SelectDownloadSource(ManifestSource.Sushi);
         _phase = "Prepare screenshot depot choices";
         AwaitWizardStep(page);
         Assert.Equal(1, page.DownloadWizardStep);
@@ -435,6 +439,10 @@ public sealed partial class PageSmokeTests
     private static void CheckDashboardSearch(IServiceProvider provider)
     {
         var model = provider.GetRequiredService<Steamy.ViewModels.DashboardViewModel>();
+        var settings = provider.GetRequiredService<ISettingsService>().Load();
+        Assert.False(settings.DashboardSearch);
+        settings.DashboardSearch = true;
+        model.RefreshSearchPreference();
         var requests = OfflineServiceProxy.CatalogRequests;
         model.SearchText = "offline";
         PumpUntil(() => !model.IsSearchBusy);
@@ -464,6 +472,10 @@ public sealed partial class PageSmokeTests
         model.SearchText = string.Empty;
         Assert.Empty(model.SearchResults);
         Assert.False(model.HasSearchQuery);
+        settings.DashboardSearch = false;
+        model.RefreshSearchPreference();
+        Assert.Empty(model.SearchMatches);
+        Assert.False(model.ShowSearchPanel);
         Assert.True(SteamCatalogQuery.MatchesSearch("God of War Ragnarök", 2322010, "god ragnarok"));
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
@@ -573,12 +585,17 @@ public sealed partial class PageSmokeTests
             Assert.Equal("Light", settings.Appearance);
             File.WriteAllText(path, "not valid JSON");
             Assert.Same(settings, service.Load());
+            Assert.False(settings.DashboardSearch);
+            settings.DashboardSearch = true;
             settings.Appearance = "Dark";
             service.SaveAsync(settings).GetAwaiter().GetResult();
-            Assert.Equal("Dark", new JsonSettingsService(path).Load().Appearance);
+            var reloaded = new JsonSettingsService(path).Load();
+            Assert.Equal("Dark", reloaded.Appearance);
+            Assert.True(reloaded.DashboardSearch);
             Assert.Empty(Directory.GetFiles(directory, "*.tmp"));
             service.ResetAsync().GetAwaiter().GetResult();
             Assert.NotSame(settings, service.Load());
+            Assert.False(service.Load().DashboardSearch);
         }
         finally { Directory.Delete(directory, true); }
     }

@@ -11,7 +11,7 @@
 </p>
 <p align="center"><a href="#start-playing">Get started</a> · <a href="#inside-steamy">Features</a> · <a href="#a-closer-look">Screenshots</a> · <a href="#build-it-yourself">Build</a> · <a href="#credits">Credits</a></p>
 
-<p align="center"><img src="docs/screenshots/dashboard.png" width="1044" alt="Steamy dashboard with large Spotlight artwork and six new and upcoming games" /></p>
+<p align="center"><img src="docs/screenshots/dashboard.png" width="1044" alt="Steamy dashboard with large Spotlight artwork and three upcoming games" /></p>
 
 ## Start playing
 
@@ -27,8 +27,8 @@ Already using Steamy? Open **Settings → Check now** to get the latest release.
 
 | Your next stop | What you'll find |
 | --- | --- |
-| **Dashboard** | Large Spotlight artwork, clear download actions and six new/upcoming games in a focused discovery view. |
-| **Spotlight** | New and upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
+| **Dashboard** | Large Spotlight artwork, clear download actions and at most three upcoming games in a focused discovery view. |
+| **Spotlight** | Upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
 | **Games** | Rounded cover artwork with transparent captions, typo-tolerant title/App ID search, favorites, sorting and source filters. |
 | **Downloads** | Compact source → depots & version → location steps, right-hand depot selection and available Steam details, plus queue priority, pause, resume and repair. |
 | **Settings** | Searchable categories, dark/light themes, reduced effects, Windows backdrop options, download limits, network options and source connections. |
@@ -39,9 +39,11 @@ Cards respond with short hover and click transitions while their clickable area 
 
 ### A Spotlight that keeps moving
 
-The feed checks Steam daily for recent releases and popular upcoming games from established publishers. **ACE COMBAT 8: WINGS OF THEVE** and **Assassin's Creed Black Flag Resynced** are included in the initial verified selection. New titles arrive without downloading another app release.
+The feed checks public Steam data daily for upcoming releases from established publishers and studios. Released games, DLC, demos, soundtracks, old editions and expired release dates are excluded. Confirmed near dates come first; vague dates follow. The app checks for updates every six hours and retains its last valid feed when a request fails.
 
-The app checks for feed updates in the background, shares concurrent requests and retains the last good data when offline. Slides change every five seconds while the dashboard is active; searching pauses rotation. Spotlight cards open source selection inside Steamy. Upcoming games carry a **Coming soon** status; appearing here does not imply a download is available.
+Official artwork is preloaded. Slides change about every five seconds while the app is active; **Pause / Resume** and manual arrows give you control. Countdown and image updates retain your scroll position. Exact release dates show remaining days and **Today** on the date; month/year or unknown dates show **TBA**. Hours, minutes and seconds require a confirmed time. A date reaching zero never proves that a game has released or is downloadable.
+
+Dashboard search is hidden by default. Enable **Settings → General → Dashboard search** to search Discover. Disabling it clears the hidden query and results. The regular **Games** search is always available.
 
 ### Downloads you can come back to
 
@@ -58,6 +60,14 @@ Waiting jobs can be reordered or prioritized; **Start queue** respects the selec
 **Verify & repair** asks DepotDownloader to check and repair the files. The separate **local file check** reports what is already on disk. Queue actions show errors in the app, and waiting jobs are checked again before they start.
 
 Sources include **Sushi, Zaza, Ryuu, Hubcap, DepotBox and ManifestHub**, where supported. Sushi and Zaza can be browsed without an API key; other providers may require their own credentials. Source filters help narrow the catalog and queue. Availability is checked for the selected game.
+
+### Bring your own metadata
+
+Choose **Source → Your package** and select or drop a ZIP or Lua file. Lua is read as metadata and never executed. The importer supports depot keys, manifests and **Share → Save as ZIP** packages; from multi-game bundles it imports only the selected game. It checks Steamy hashes and rejects unsafe paths, duplicate filenames, ambiguous games and oversized archives.
+
+Preparation creates an independent copy. Moving, editing or deleting the original package cannot change the prepared selection or its later Resume. Downloads offers a **Local** source filter. Resume locks the original source and keeps your selected manifest versions.
+
+**Share → Save as ZIP** exports metadata, not the game files. Each game has a file list and SHA-256 hashes. The result reports the actual exported count and names games omitted because no manifests were available. Missing files produce an error. Cancellation and errors preserve an existing destination ZIP; the finished package replaces it atomically.
 
 <details>
 <summary><strong>Tools, in one place</strong></summary>
@@ -87,6 +97,10 @@ Screenshots are captured from the actual Windows app using sample library, queue
 **Download setup** — begin with the familiar compact source picker.
 
 ![Choose the download source](docs/screenshots/game-details.png)
+
+**Your package** — import local ZIP or Lua metadata.
+
+![Local metadata package import](docs/screenshots/local-package.png)
 
 <details>
 <summary>Depot/version selection and download location</summary>
@@ -152,7 +166,7 @@ GitHub Actions rebuilds the pinned Mod tool and builds/tests `main` on Windows. 
 - `scripts/update_spotlight.py` — public Steam metadata → discovery feed; no API key or extra Python packages.
 - `.github/workflows/spotlight.yml` — daily discovery refresh, also runnable manually.
 
-Publish a release by updating the app version and [`CHANGELOG.md`](CHANGELOG.md), then pushing a matching tag. Each release includes a versioned archive and **Steamy-latest.zip**, keeping the download button above current.
+Publish a release by updating the app version and [`CHANGELOG.md`](CHANGELOG.md), then pushing a matching tag. Each release includes a versioned archive, complete source ZIP, SHA-256 checksums and **Steamy-latest.zip**, keeping the download button above current.
 
 </details>
 

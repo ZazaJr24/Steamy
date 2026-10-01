@@ -35,6 +35,7 @@ public sealed class ManifestSourceTests
     [InlineData("DepotDownloaderMod (Zaza)", "Sushi", false)]
     [InlineData("DepotDownloaderMod (Sushi)", "DepotDownloader", false)]
     [InlineData("DepotDownloader", "DepotDownloader", true)]
+    [InlineData("DepotDownloaderMod (Local)", "Local", true)]
     [InlineData("Custom archive", "Custom archive", true)]
     [InlineData("DepotDownloaderMod (Hubcap)", "All sources", true)]
     public void DownloadSourceFilterRetainsTheActualToolAndProvider(string mode, string source, bool matches) => Assert.Equal(matches, GitHubManifestIndex.Matches(mode, source));

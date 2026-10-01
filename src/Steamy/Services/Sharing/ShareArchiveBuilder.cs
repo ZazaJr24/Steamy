@@ -43,16 +43,20 @@ public static class ShareArchiveBuilder
     /// One ZIP that holds every given app in its own folder plus an <c>index.json</c> — the
     /// "share everything at once" file for sending anywhere, no token needed.
     /// </summary>
-    public static void WriteBundle(Stream output, IReadOnlyList<ShareCandidate> candidates, string appVersion, DateTime createdUtc)
+    public static void WriteBundle(Stream output, IReadOnlyList<ShareCandidate> candidates, string appVersion, DateTime createdUtc, CancellationToken cancellationToken = default)
     {
+        if (candidates.Sum(candidate => candidate.TotalBytes) > LocalManifestPackage.MaximumBytes
+            || candidates.Sum(candidate => candidate.Files.Count + 1) + 2 > 4096)
+            throw new InvalidDataException("The bundle exceeds the 512 MB or 4096 entry import limit. Export fewer games at once.");
         using var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true);
         var index = new List<object>();
         var usedFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var candidate in candidates)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var folder = UniqueFolder(usedFolders, $"{candidate.AppId} - {SafeName(candidate.Name)}");
-            var entries = WriteAppEntries(archive, candidate, folder + "/");
+            var entries = WriteAppEntries(archive, candidate, folder + "/", cancellationToken);
             WriteText(archive, folder + "/steamy.json", BuildMetadataJson(candidate, entries, appVersion, createdUtc));
             index.Add(new
             {
@@ -73,6 +77,24 @@ public static class ShareArchiveBuilder
             apps = index
         }, JsonOptions));
         WriteText(archive, "README.txt", BuildReadme(candidates, appVersion, createdUtc));
+    }
+
+    public static void WriteBundleAtomically(string path, IReadOnlyList<ShareCandidate> candidates,
+        string appVersion, DateTime createdUtc, CancellationToken cancellationToken = default)
+    {
+        path = Path.GetFullPath(path);
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".partial";
+        try
+        {
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                WriteBundle(stream, candidates, appVersion, createdUtc, cancellationToken);
+                stream.Flush(true);
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
     /// <summary>Bytes of a file as they go into a share (appmanifests cleaned, everything else as is).</summary>
@@ -109,24 +131,46 @@ public static class ShareArchiveBuilder
 
     private sealed record EntryInfo(string Name, long Length, string Sha256);
 
-    private static List<EntryInfo> WriteAppEntries(ZipArchive archive, ShareCandidate candidate, string prefix)
+    private static List<EntryInfo> WriteAppEntries(ZipArchive archive, ShareCandidate candidate, string prefix, CancellationToken cancellationToken = default)
     {
         var entries = new List<EntryInfo>();
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (candidate.Files.Count == 0 || candidate.Files.Count > 4096)
+            throw new InvalidDataException($"{candidate.Name} has no exportable metadata or too many files.");
+        long totalBytes = 0;
         foreach (var file in candidate.Files)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!LocalManifestPackage.SafeSegment(file.EntryName) || !names.Add(file.EntryName)
+                || file.EntryName.Equals("steamy.json", StringComparison.OrdinalIgnoreCase)
+                || file.EntryName.Equals("README.txt", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"{candidate.Name} contains an unsafe or duplicate metadata filename.");
             byte[] bytes;
-            try
+            using (var input = new FileStream(file.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var output = new MemoryStream())
             {
-                bytes = ReadForShare(file);
+                if (input.Length != file.Length || input.Length > LocalManifestPackage.MaximumBytes - totalBytes)
+                    throw new IOException($"{candidate.Name}: {file.EntryName} changed or exceeds the package limit. Scan again before exporting.");
+                var buffer = new byte[81920];
+                int count;
+                while ((count = input.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (output.Length + count > LocalManifestPackage.MaximumBytes - totalBytes)
+                        throw new InvalidDataException("Metadata exceeds the package limit.");
+                    output.Write(buffer, 0, count);
+                }
+                bytes = output.ToArray();
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-                // A file that vanished or is locked is left out instead of failing the whole pack.
-                continue;
-            }
-
+            if (file.EntryName.EndsWith(".acf", StringComparison.OrdinalIgnoreCase)) bytes = SanitizeAcf(bytes);
+            totalBytes += bytes.LongLength;
             var entry = archive.CreateEntry(prefix + file.EntryName, CompressionLevel.Optimal);
-            using (var stream = entry.Open()) stream.Write(bytes, 0, bytes.Length);
+            using (var stream = entry.Open())
+                for (var offset = 0; offset < bytes.Length; offset += 81920)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    stream.Write(bytes, offset, Math.Min(81920, bytes.Length - offset));
+                }
             entries.Add(new EntryInfo(file.EntryName, bytes.LongLength, Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant()));
         }
 
@@ -140,6 +184,7 @@ public static class ShareArchiveBuilder
             appId = candidate.AppId,
             name = candidate.Name,
             source = SourceLabel(candidate.Source),
+            content = "metadata-only",
             createdUtc = createdUtc.ToString("O"),
             steamy = appVersion,
             depots = candidate.Depots.Select(depot => new { depot = depot.DepotId, manifest = depot.ManifestId, size = depot.Size }),

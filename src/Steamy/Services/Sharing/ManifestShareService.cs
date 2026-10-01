@@ -390,24 +390,21 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
                 return new ManifestExportResult(false,
                     leftOut.Count > 0 ? $"No manifests could be fetched for {string.Join(", ", leftOut)}." : "Nothing to export.", zipPath);
 
-            var temp = zipPath + ".partial";
             try
             {
-                using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
-                    ShareArchiveBuilder.WriteBundle(stream, exportable, BuildStamp.Version, DateTime.UtcNow);
-            File.Move(temp, zipPath, overwrite: true);
-
-            var bytes = new FileInfo(zipPath).Length;
-            _logging.Add(LogLevel.Info, "Sharing", $"Exported {items.Count} app(s) to {zipPath}");
-            return new ManifestExportResult(true,
-                $"Saved {(items.Count == 1 ? items[0].Name : $"{items.Count} games")} · {DownloadFormat.Bytes(bytes)} to {Path.GetFileName(zipPath)}.",
-                zipPath, items.Count, bytes);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { }
-            return new ManifestExportResult(false, $"The ZIP could not be written: {exception.Message}", zipPath);
-        }
+                ShareArchiveBuilder.WriteBundleAtomically(zipPath, exportable, BuildStamp.Version, DateTime.UtcNow, cancellationToken);
+                var bytes = new FileInfo(zipPath).Length;
+                var skipped = leftOut.Count == 0 ? "" : $" Omitted: {string.Join(", ", leftOut)} (no source manifests).";
+                _logging.Add(LogLevel.Info, "Sharing", $"Exported {exportable.Count} app(s) to {zipPath}");
+                return new ManifestExportResult(true,
+                    $"Saved {exportable.Count} game(s) · {DownloadFormat.Bytes(bytes)} to {Path.GetFileName(zipPath)}. Metadata only.{skipped}",
+                    zipPath, exportable.Count, bytes);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                return new ManifestExportResult(false, $"The ZIP could not be written: {exception.Message}", zipPath);
+            }
     }, cancellationToken);
 
     private async Task<string?> ReadTokenAsync(CancellationToken cancellationToken)
