@@ -37,8 +37,11 @@ public sealed partial class PageSmokeTests
         model.TargetFolder = @"C:\Games\Two";
         ((IAsyncRelayCommand)model.AddToQueueCommand).ExecuteAsync(null).GetAwaiter().GetResult();
         Assert.Equal(2, store.Downloads.Count); // A genuinely separate folder is allowed.
+        var prioritized = store.Downloads.Single(job => job.Id != original.Id);
+        prioritized.Priority = DownloadPriority.High; // Priority wins over the older job's enqueue order.
         var run = model.StartQueuedCommand.ExecuteAsync(null);
-        Assert.Single(fixture.Started);
+        Assert.Equal([prioritized.Id], fixture.Started);
+        Assert.Equal(DownloadJobState.Queued, original.State);
         Assert.True(model.IsBusy);
         original.State = DownloadJobState.Cancelled; // Cancel the job while it is waiting for the slot.
         fixture.Completion.SetResult(true);
