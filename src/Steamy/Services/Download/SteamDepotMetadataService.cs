@@ -237,7 +237,7 @@ public sealed class SteamDepotMetadataService : ISteamDepotMetadataService, IDis
             acquired = true;
             using var request = new HttpRequestMessage(HttpMethod.Get,
                 $"https://api.steamcmd.net/v1/info/{appId.ToString(CultureInfo.InvariantCulture)}");
-            request.Headers.UserAgent.ParseAdd("Steamy/0.4.3 (+https://github.com/ZazaJr24/Steamy)");
+            request.Headers.UserAgent.ParseAdd("Steamy/0.4.4 (+https://github.com/ZazaJr24/Steamy)");
             using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             if (response.Content.Headers.ContentLength is > SteamDepotMetadataReader.MaximumResponseBytes)

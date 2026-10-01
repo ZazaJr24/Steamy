@@ -3,6 +3,13 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.4
+
+### Fixed
+- Dashboard uses a single native scroll presenter with a reserved scrollbar column, without a second animated offset controller. Wheel, touchpad and scrollbar input retain native scrolling behavior.
+- Spotlight still rotates every five seconds with artwork fades and fixed geometry; keyboard navigation can still reveal controls while automatic focus requests remain suppressed.
+- Windows regression checks hold the Dashboard scroll position through two real timed Spotlight rotations, then exercise upward wheel input, thumb tracking and a library/activity refresh.
+
 ## 0.4.3
 
 ### Fixed

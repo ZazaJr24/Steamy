@@ -380,6 +380,24 @@
     <Setter Property="PanningMode" Value="VerticalOnly" />
   </Style>
 
+  <!-- Dashboard owns one native scroll presenter. Reserve the scrollbar column so
+       showing/hovering the bar cannot change card widths or rebuild the content viewport. -->
+  <Style x:Key="DashboardScrollHostStyle" TargetType="ScrollViewer" BasedOn="{StaticResource PageScrollHostStyle}">
+    <Setter Property="Template"><Setter.Value>
+      <ControlTemplate TargetType="ScrollViewer">
+        <Grid Background="{TemplateBinding Background}">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="16" /></Grid.ColumnDefinitions>
+          <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Grid.Column="0"
+                                  Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  CanContentScroll="{TemplateBinding CanContentScroll}" Margin="{TemplateBinding Padding}" />
+          <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Orientation="Vertical"
+                     Minimum="0" Maximum="{TemplateBinding ScrollableHeight}" Value="{TemplateBinding VerticalOffset}"
+                     ViewportSize="{TemplateBinding ViewportHeight}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+        </Grid>
+      </ControlTemplate>
+    </Setter.Value></Setter>
+  </Style>
+
   <Style TargetType="Page">
     <Setter Property="ScrollViewer.CanContentScroll" Value="False" />
   </Style>
