@@ -172,8 +172,8 @@
         </ItemsControl>
       </StackPanel>
 
-      <ScrollViewer Grid.Row="2" x:Name="GalleryScroll" RequestBringIntoView="Gallery_RequestBringIntoView" controls:SmoothScroll.Enabled="True" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,8,0">
-        <StackPanel>
+      <ScrollViewer Grid.Row="2" x:Name="GalleryScroll" controls:SmoothScroll.Enabled="True" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,8,0">
+        <StackPanel RequestBringIntoView="Gallery_RequestBringIntoView">
           <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource GalleryEmptyStateStyle}" />
 
           <ItemsControl ItemsSource="{Binding PagedCatalogItems}">

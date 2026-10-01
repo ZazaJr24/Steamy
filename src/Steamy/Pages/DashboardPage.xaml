@@ -68,8 +68,8 @@
     </DataTemplate>
   </Page.Resources>
 
-  <ScrollViewer x:Name="DashboardScroll" Style="{StaticResource PageScrollHostStyle}" controls:SmoothScroll.Enabled="True" RequestBringIntoView="Dashboard_RequestBringIntoView" Padding="28,22,28,30">
-    <StackPanel MaxWidth="1440">
+  <ScrollViewer x:Name="DashboardScroll" Style="{StaticResource PageScrollHostStyle}" controls:SmoothScroll.Enabled="True" Padding="28,22,28,30">
+    <StackPanel MaxWidth="1440" RequestBringIntoView="Dashboard_RequestBringIntoView">
       <Grid Margin="0,0,0,22">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
         <TextBlock Text="Discover" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
