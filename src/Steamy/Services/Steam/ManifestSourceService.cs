@@ -7,15 +7,6 @@ using System.Text.RegularExpressions;
 
 namespace Steamy.Services;
 
-public enum ManifestSource
-{
-    Ryuu,
-    Zaza,
-    Hubcap,
-    DepotBox,
-    Sushi
-}
-
 public sealed record ManifestSourceInfo(
     ManifestSource Source,
     string Label,
@@ -97,6 +88,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
 
     public async Task<ManifestAvailability> CheckAvailabilityAsync(ManifestSource source, int appId, CancellationToken cancellationToken = default)
     {
+        if (appId <= 0) return new(false, true, "Choose a valid app ID.");
         return source switch
         {
             ManifestSource.Ryuu => await CheckRyuuAvailabilityAsync(cancellationToken),
@@ -175,6 +167,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        if (appId <= 0) return new(false, "Choose a valid app ID.");
         return source switch
         {
             ManifestSource.Ryuu => await DownloadFromRyuuAsync(appId, progress, cancellationToken),
@@ -216,6 +209,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
                 }
             }
             var (lua, files) = await ManifestArchiveReader.ExtractAsync(archive, staging, token).ConfigureAwait(false);
+            lua = FindLuaInWorkDir(staging, appId) ?? lua;
             if (string.IsNullOrWhiteSpace(lua)) return new(false, "The Sushi archive has no Lua metadata for DepotDownloaderMod.");
             token.ThrowIfCancellationRequested();
             // Publish a whole coherent package at once. Another target for the same app cannot
@@ -254,29 +248,18 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         if (!zipResult.Succeeded)
             return new ManifestDownloadResult(false, $"Failed to download Ryuu archive: {zipResult.Message}");
 
-        var appWorkDir = Path.Combine(_workFolder, "ryuu", appId.ToString(CultureInfo.InvariantCulture));
+        var appWorkDir = NewPackageDirectory("ryuu", appId);
         Directory.CreateDirectory(appWorkDir);
 
         try
         {
-            using var zip = System.IO.Compression.ZipFile.OpenRead(zipResult.ArchivePath);
-
-            var luaEntry = zip.Entries.FirstOrDefault(e => e.Name.EndsWith(".lua", StringComparison.OrdinalIgnoreCase));
-            if (luaEntry is null)
+            var (luaContent, files) = await ManifestArchiveReader.ExtractAsync(zipResult.ArchivePath, appWorkDir, ct).ConfigureAwait(false);
+            luaContent = FindLuaInWorkDir(appWorkDir, appId) ?? luaContent;
+            if (string.IsNullOrWhiteSpace(luaContent))
                 return new ManifestDownloadResult(false, "No Lua script found in the Ryuu archive.");
-
-            string luaContent;
-            using (var reader = new StreamReader(luaEntry.Open()))
-                luaContent = await reader.ReadToEndAsync(ct);
-
-            foreach (var entry in zip.Entries.Where(e => e.Name.EndsWith(".manifest", StringComparison.OrdinalIgnoreCase)))
-            {
-                var destPath = Path.Combine(appWorkDir, entry.Name);
-                entry.ExtractToFile(destPath, overwrite: true);
-            }
-
-            return new ManifestDownloadResult(true, "Ryuu archive extracted.", luaContent, appWorkDir);
+            return new ManifestDownloadResult(true, $"Ryuu archive extracted: {files} files.", luaContent, appWorkDir);
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             return new ManifestDownloadResult(false, $"Failed to extract Ryuu archive: {ex.Message}");
@@ -445,7 +428,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             return new ManifestDownloadResult(false, "No Hubcap API key configured. Set it in Settings → Hubcap API Key.");
 
         var baseUrl = _settings.Load().HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";
-        var appWorkDir = Path.Combine(_workFolder, "hubcap", appId.ToString(CultureInfo.InvariantCulture));
+        var appWorkDir = NewPackageDirectory("hubcap", appId);
         Directory.CreateDirectory(appWorkDir);
 
         // The Lua script (depot ids, manifest ids, decryption keys) lives on its own endpoint —
@@ -460,10 +443,10 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v1/lua/{appId}");
             AddHubcapAuth(req, key);
-            using var resp = await _httpClient.SendAsync(req, ct);
+            using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (resp.IsSuccessStatusCode)
             {
-                var text = (await resp.Content.ReadAsStringAsync(ct)).TrimStart('\uFEFF');
+                var text = System.Text.Encoding.UTF8.GetString(await ReadPayloadAsync(resp.Content, 4L * 1024 * 1024, ct)).TrimStart('\uFEFF');
                 if (!string.IsNullOrWhiteSpace(text) && !text.StartsWith('{') && !text.StartsWith('['))
                 {
                     luaContent = text;
@@ -492,16 +475,17 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v1/manifest/{appId}");
             AddHubcapAuth(req, key);
-            using var resp = await _httpClient.SendAsync(req, ct);
+            using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (resp.IsSuccessStatusCode)
             {
-                var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
+                var bytes = await ReadPayloadAsync(resp.Content, 128L * 1024 * 1024, ct);
                 if (IsZipArchive(bytes))
                 {
                     var zipPath = Path.Combine(appWorkDir, $"{appId}_hubcap.zip");
                     await File.WriteAllBytesAsync(zipPath, bytes, ct);
 
                     var (zipLua, fileCount) = await ExtractManifestArchiveAsync(zipPath, appWorkDir, ct);
+                    zipLua = FindLuaInWorkDir(appWorkDir, appId) ?? zipLua;
                     luaContent ??= zipLua;
                     _logging.Add(Models.LogLevel.Info, "ManifestSource",
                         $"Hubcap archive for App {appId} unpacked: {fileCount} file(s).", appId);
@@ -540,7 +524,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         if (string.IsNullOrWhiteSpace(key))
             return new ManifestDownloadResult(false, "No DepotBox API key configured. Set it in Settings → DepotBox API Key.");
 
-        var appWorkDir = Path.Combine(_workFolder, "depotbox", appId.ToString(CultureInfo.InvariantCulture));
+        var appWorkDir = NewPackageDirectory("depotbox", appId);
         Directory.CreateDirectory(appWorkDir);
 
         // /api/direct-download is DepotBox's documented "one request, one file" flow: the ZIP
@@ -554,10 +538,10 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             using var req = new HttpRequestMessage(HttpMethod.Get,
                 $"https://depotbox.org/api/direct-download?appid={appId}");
             AddDepotBoxAuth(req, key);
-            using var resp = await _httpClient.SendAsync(req, ct);
+            using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (resp.IsSuccessStatusCode)
             {
-                var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
+                var bytes = await ReadPayloadAsync(resp.Content, 128L * 1024 * 1024, ct);
                 var contentType = resp.Content.Headers.ContentType?.MediaType ?? string.Empty;
                 var unpacked = await HandleDepotBoxPayloadAsync(appWorkDir, appId, bytes, contentType, ct);
                 if (unpacked.Succeeded) return unpacked;
@@ -584,14 +568,14 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             using var req = new HttpRequestMessage(HttpMethod.Get,
                 $"https://depotbox.org/api/direct-lua?appid={appId}");
             AddDepotBoxAuth(req, key);
-            using var resp = await _httpClient.SendAsync(req, ct);
+            using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode)
                 return new ManifestDownloadResult(false, packageError ?? ExtractApiErrorMessage(
                     await resp.Content.ReadAsStringAsync(ct),
                     $"DepotBox returned HTTP {(int)resp.StatusCode} for App {appId}."));
 
             var contentType = resp.Content.Headers.ContentType?.MediaType ?? string.Empty;
-            var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
+            var bytes = await ReadPayloadAsync(resp.Content, 128L * 1024 * 1024, ct);
             var result = await HandleDepotBoxPayloadAsync(appWorkDir, appId, bytes, contentType, ct);
             return result.Succeeded ? result : new ManifestDownloadResult(false, packageError ?? result.Message);
         }
@@ -609,43 +593,41 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     /// Unpacks a manifest archive into the work directory. Returns the Lua text it contained (when
     /// there was one) and how many files were written.
     /// </summary>
-    private static async Task<(string? Lua, int Files)> ExtractManifestArchiveAsync(
-        string zipPath, string appWorkDir, CancellationToken ct)
+    private static Task<(string? Lua, int Files)> ExtractManifestArchiveAsync(
+        string zipPath, string appWorkDir, CancellationToken ct) =>
+        ManifestArchiveReader.ExtractAsync(zipPath, appWorkDir, ct);
+
+    private static async Task<byte[]> ReadPayloadAsync(HttpContent content, long maximumBytes, CancellationToken token)
     {
-        string? luaContent = null;
-        var files = 0;
-
-        using var zip = ZipFile.OpenRead(zipPath);
-        foreach (var entry in zip.Entries)
+        if (content.Headers.ContentLength > maximumBytes) throw new InvalidDataException("The source response exceeds the download size limit.");
+        await using var input = await content.ReadAsStreamAsync(token).ConfigureAwait(false);
+        using var output = new MemoryStream();
+        var buffer = new byte[81920];
+        int read;
+        while ((read = await input.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
         {
-            var ext = Path.GetExtension(entry.Name).ToLowerInvariant();
-            if (ext is not ".lua" and not ".key" and not ".manifest") continue;
-
-            entry.ExtractToFile(Path.Combine(appWorkDir, entry.Name), overwrite: true);
-            files++;
-
-            if (ext == ".lua")
-            {
-                using var reader = new StreamReader(entry.Open());
-                luaContent = await reader.ReadToEndAsync(ct);
-            }
+            if (output.Length + read > maximumBytes) throw new InvalidDataException("The source response exceeds the download size limit.");
+            await output.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
         }
-
-        return (luaContent, files);
+        return output.ToArray();
     }
+
+    private string NewPackageDirectory(string source, int appId) => Path.Combine(_workFolder, source,
+        appId.ToString(CultureInfo.InvariantCulture), "pack-" + Guid.NewGuid().ToString("N"));
 
     /// <summary>Finds any Lua script that already sits in the work directory.</summary>
     private static string? FindLuaInWorkDir(string appWorkDir, int appId)
     {
         var direct = Path.Combine(appWorkDir, $"{appId}.lua");
-        if (File.Exists(direct))
+        if (File.Exists(direct) && new FileInfo(direct).Length <= DownloadPreparationReader.MaximumLuaCharacters)
         {
             var text = File.ReadAllText(direct);
             if (!string.IsNullOrWhiteSpace(text)) return text;
         }
 
-        foreach (var path in Directory.EnumerateFiles(appWorkDir, "*.lua"))
+        foreach (var path in Directory.EnumerateFiles(appWorkDir, "*.lua").Take(DownloadPreparationReader.MaximumEntries))
         {
+            if (new FileInfo(path).Length > DownloadPreparationReader.MaximumLuaCharacters) continue;
             var text = File.ReadAllText(path);
             if (!string.IsNullOrWhiteSpace(text)) return text;
         }
@@ -675,12 +657,13 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             {
                 (luaContent, fileCount) = await ExtractManifestArchiveAsync(zipPath, appWorkDir, ct);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 return new ManifestDownloadResult(false, $"DepotBox archive could not be unpacked: {ex.Message}");
             }
 
-            luaContent ??= FindLuaInWorkDir(appWorkDir, appId);
+            luaContent = FindLuaInWorkDir(appWorkDir, appId) ?? luaContent;
             if (luaContent is null)
                 return new ManifestDownloadResult(false, $"No Lua script found in DepotBox archive for App {appId}.");
 
@@ -715,7 +698,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     {
         var appIdStr = appId.ToString(CultureInfo.InvariantCulture);
         var sourceName = repoPath.Split('/')[0];
-        var appWorkDir = Path.Combine(_workFolder, sourceName.ToLowerInvariant(), appIdStr);
+        var appWorkDir = NewPackageDirectory(sourceName.ToLowerInvariant(), appId);
         Directory.CreateDirectory(appWorkDir);
 
         progress?.Report($"Listing files from {sourceName}...");
@@ -728,7 +711,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             foreach (var path in GitHubManifestPaths(appIdStr))
             {
                 var contentsUrl = $"https://api.github.com/repos/{repoPath}/contents/{path}";
-                using var listResponse = await _httpClient.GetAsync(contentsUrl, ct);
+                using var listResponse = await _httpClient.GetAsync(contentsUrl, HttpCompletionOption.ResponseHeadersRead, ct);
                 if (listResponse.StatusCode == System.Net.HttpStatusCode.NotFound) continue;
                 if (!listResponse.IsSuccessStatusCode)
                 {
@@ -736,7 +719,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
                     continue;
                 }
 
-                var json = await listResponse.Content.ReadAsStringAsync(ct);
+                var json = await ReadPayloadAsync(listResponse.Content, 4L * 1024 * 1024, ct);
                 using var doc = JsonDocument.Parse(json);
                 if (doc.RootElement.ValueKind == JsonValueKind.Array)
                 {
@@ -745,7 +728,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
                         .Select(e => (
                             Name: e.GetProperty("name").GetString()!,
                             DownloadUrl: e.GetProperty("download_url").GetString()!))
-                        .ToList();
+                        .Take(DownloadPreparationReader.MaximumEntries + 1).ToList();
                 }
                 else if (doc.RootElement.ValueKind == JsonValueKind.Object
                          && doc.RootElement.GetProperty("type").GetString() == "file")
@@ -755,6 +738,10 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
                         doc.RootElement.GetProperty("download_url").GetString()!));
                 }
 
+                if (files.Count > DownloadPreparationReader.MaximumEntries)
+                    throw new InvalidDataException("The source package contains too many files.");
+                if (files.Any(file => !DownloadPreparationReader.IsSafePackageFileName(file.Name)))
+                    throw new InvalidDataException("The source package contains an unsafe filename.");
                 if (files.Count > 0) break;
             }
         }
@@ -772,6 +759,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
 
         string? luaContent = null;
         var downloadedCount = 0;
+        long downloadedBytes = 0;
 
         foreach (var file in files)
         {
@@ -789,9 +777,9 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
                 {
                     try
                     {
-                        using var resp = await _httpClient.GetAsync(url, ct);
+                        using var resp = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
                         if (!resp.IsSuccessStatusCode) continue;
-                        payload = await resp.Content.ReadAsByteArrayAsync(ct);
+                        payload = await ReadPayloadAsync(resp.Content, ext is ".lua" or ".key" ? 4L * 1024 * 1024 : 128L * 1024 * 1024, ct);
                         if (payload.Length > 0) break;
                     }
                     catch (OperationCanceledException) { throw; }
@@ -799,11 +787,15 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
                 }
 
                 if (payload is null) continue;
+                downloadedBytes += payload.Length;
+                if (downloadedBytes > 512L * 1024 * 1024)
+                    return new(false, "The source package exceeds the manifest download size limit.");
 
                 if (ext == ".lua")
                 {
-                    luaContent = System.Text.Encoding.UTF8.GetString(payload).TrimStart('\uFEFF');
-                    await File.WriteAllTextAsync(Path.Combine(appWorkDir, file.Name), luaContent, ct);
+                    var text = System.Text.Encoding.UTF8.GetString(payload).TrimStart('\uFEFF');
+                    if (luaContent is null || file.Name.Equals($"{appId}.lua", StringComparison.OrdinalIgnoreCase)) luaContent = text;
+                    await File.WriteAllTextAsync(Path.Combine(appWorkDir, file.Name), text, ct);
                 }
                 else
                 {

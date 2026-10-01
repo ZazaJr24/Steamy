@@ -31,7 +31,7 @@ public sealed partial class PageSmokeTests
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
-        Assert.True(thread.Join(TimeSpan.FromSeconds(60)), "WPF smoke test did not finish within 60 seconds. Last phase: " + _phase);
+        Assert.True(thread.Join(TimeSpan.FromSeconds(120)), "WPF smoke test did not finish within 120 seconds. Last phase: " + _phase);
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
@@ -57,6 +57,15 @@ public sealed partial class PageSmokeTests
         var fixtureArtwork = new FixtureArtwork();
         services.AddSingleton<IArtworkService>(fixtureArtwork);
         services.AddSingleton<ISpotlightService>(new FixtureSpotlight());
+        var wizardQueue = new WizardQueueFixture();
+        services.AddSingleton<IDownloadManager>(wizardQueue);
+        services.AddSingleton<IDownloadQueueStore>(wizardQueue);
+        var wizardDownloads = new WizardDownloadFixture();
+        services.AddSingleton<IRyuuGameDownloadService>(wizardDownloads);
+        var activity = new MemoryActivityFixture();
+        services.AddSingleton<IGameActivityService>(activity);
+        var historyDirectory = Path.Combine(Path.GetTempPath(), "Steamy-search-ui-smoke-" + Guid.NewGuid().ToString("N"));
+        services.AddSingleton(new SearchHistoryStore(Path.Combine(historyDirectory, "history.json")));
         var navigation = new NavigationService();
         services.AddSingleton<INavigationService>(navigation);
         services.AddSingleton<IAppDataStore>(store);
@@ -69,6 +78,10 @@ public sealed partial class PageSmokeTests
         {
             _phase = "CheckBurstUpdates()";
             CheckBurstUpdates();
+            _phase = "CheckLoggingBatches()";
+            CheckLoggingBatches();
+            _phase = "CheckReducedEffectsNativeWindow()";
+            CheckReducedEffectsNativeWindow();
             _phase = "CheckSettingsCache()";
             CheckSettingsCache();
             _phase = "CheckArtworkDecoding()";
@@ -79,10 +92,21 @@ public sealed partial class PageSmokeTests
             CheckFeaturedGames(provider, fixtureArtwork, navigation);
             _phase = "CheckDashboardSearch(provider)";
             CheckDashboardSearch(provider);
+            _phase = "CheckPersonalDashboard(provider)";
+            CheckPersonalDashboard(provider, activity);
             _phase = "CheckDepotQueue(provider)";
             CheckDepotQueue(provider);
+            _phase = "CheckDownloadsControls(provider)";
+            CheckDownloadsControls(provider);
+            _phase = "CheckDownloadWizard(provider)";
+            CheckDownloadWizard(provider, wizardDownloads, wizardQueue);
             if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
+            {
                 AddScreenshotLibrary(store, fixtureArtwork);
+                activity.ToggleFavoriteAsync(1091500).GetAwaiter().GetResult();
+                activity.ToggleFavoriteAsync(1245620).GetAwaiter().GetResult();
+                activity.RecordLaunchAsync(1091500, DateTimeOffset.UtcNow.AddHours(-2)).GetAwaiter().GetResult();
+            }
             foreach (var theme in new[] { "Dark", "Light" })
             {
                 UiThemeService.Apply(theme);
@@ -124,6 +148,11 @@ public sealed partial class PageSmokeTests
                         PumpDispatcher(TimeSpan.FromMilliseconds(350));
                         Assert.Single(viewModel.PagedCatalogItems);
                         Assert.Equal(0, pageChanges); // Unchanged rows keep their containers and loaded artwork.
+                        viewModel.SearchText = "offlien library";
+                        PumpUntil(() => viewModel.IsTypoMatch);
+                        Assert.Equal(10, Assert.Single(viewModel.PagedCatalogItems).AppId);
+                        Assert.Equal(10, Assert.Single(viewModel.SearchSuggestions).AppId);
+                        Assert.Equal(0, pageChanges);
                         viewModel.SearchText = "no game has this title 987654";
                         PumpUntil(() => viewModel.PagedCatalogItems.Count == 0);
                         Assert.Equal(1, pageChanges);
@@ -163,6 +192,7 @@ public sealed partial class PageSmokeTests
         {
             PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingLog);
             app.Shutdown();
+            if (Directory.Exists(historyDirectory)) Directory.Delete(historyDirectory, true);
         }
     }
 
@@ -267,6 +297,17 @@ public sealed partial class PageSmokeTests
         PumpDispatcher(TimeSpan.FromMilliseconds(350));
         window.UpdateLayout();
         SaveVisual(window, "game-details.png");
+        _phase = "Prepare screenshot depot choices";
+        AwaitWizardStep(page);
+        Assert.Equal(1, page.DownloadWizardStep);
+        window.UpdateLayout();
+        SaveVisual(window, "download-depots.png");
+        _phase = "Prepare screenshot download location";
+        AwaitWizardStep(page);
+        Assert.Equal(2, page.DownloadWizardStep);
+        page.ConfigureDownloadLocation(@"C:\Games");
+        window.UpdateLayout();
+        SaveVisual(window, "download-location.png");
         page.CloseOverlay();
         PumpDispatcher(TimeSpan.FromMilliseconds(250));
         Assert.True(window.RootNavigationView.Navigate(typeof(HypervisorFixesPage)));
@@ -368,7 +409,33 @@ public sealed partial class PageSmokeTests
         model.SearchText = "OFFLINE library";
         PumpUntil(() => !model.IsSearchBusy);
         Assert.Equal(10, Assert.Single(model.SearchResults).AppId);
+        Assert.Equal(10, Assert.Single(model.SearchMatches).Item.AppId);
+        model.SearchText = "offlien library";
+        PumpUntil(() => !model.IsSearchBusy);
+        Assert.Equal(10, Assert.Single(model.SearchResults).AppId);
+        Assert.Contains("Closest", model.SearchStatus, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(requests + 1, OfflineServiceProxy.CatalogRequests);
+        var navigation = Assert.IsType<NavigationService>(provider.GetRequiredService<INavigationService>());
+        Type? route = null;
+        navigation.Attach(page => route = page);
+        try
+        {
+            model.OpenSearchCommand.Execute(null);
+            PumpUntil(() => model.RecentSearches.Contains("offlien library"));
+            Assert.Equal(typeof(LibraryPage), route);
+            model.SearchText = string.Empty;
+            model.IsSearchFocused = true;
+            Assert.True(model.ShowRecentSearches);
+            Assert.True(model.ShowSearchPanel);
+            model.UseRecentSearchCommand.Execute("offlien library");
+            PumpUntil(() => !model.IsSearchBusy);
+            Assert.Equal(10, Assert.Single(model.SearchResults).AppId);
+            var clear = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)model.ClearSearchHistoryCommand).ExecuteAsync(null);
+            PumpUntil(() => clear.IsCompleted);
+            clear.GetAwaiter().GetResult();
+            Assert.Empty(model.RecentSearches);
+        }
+        finally { navigation.Detach(); model.IsSearchFocused = false; }
         model.SearchText = string.Empty;
         Assert.Empty(model.SearchResults);
         Assert.False(model.HasSearchQuery);
@@ -618,6 +685,10 @@ public class OfflineServiceProxy : DispatchProxy
         if ((method.DeclaringType == typeof(IRyuuCatalogService) || method.DeclaringType == typeof(IHubcapCatalogService)) && method.Name == "GetGamesAsync")
             return Task.FromResult(SteamCatalogSnapshot.Failure("Offline fixture"));
         if (method.DeclaringType == typeof(IManifestSourceService) && method.Name == nameof(IManifestSourceService.CheckAvailabilityAsync)) return Task.FromResult(new ManifestAvailability(true, true, "Available · offline fixture"));
+        if (method.DeclaringType == typeof(IManifestSourceService) && method.Name == "get_Sources")
+            return Enum.GetValues<ManifestSource>().Select(source => new ManifestSourceInfo(source, source.ToString(),
+                source == ManifestSource.Sushi ? "Free Lua metadata and depot manifests · no API key" : $"{source} manifest source",
+                "https://example.invalid/", source is ManifestSource.Ryuu or ManifestSource.Hubcap or ManifestSource.DepotBox)).ToArray();
         if (method.DeclaringType == typeof(IFreeManifestCatalogService)) return Task.FromResult(new FreeManifestIndex(true, ScreenshotCatalog?.Select(item => item.AppId).ToHashSet() ?? new HashSet<int> { 10 }, "Offline fixture"));
         if (method.Name == nameof(IDisposable.Dispose)) return null;
         throw new InvalidOperationException($"UI smoke attempted an external operation: {method.DeclaringType?.Name}.{method.Name}");

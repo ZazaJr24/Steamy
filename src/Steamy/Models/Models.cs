@@ -118,7 +118,8 @@ public sealed class DownloadJob : UiObservableObject
     private DownloadJobState _state;
     private double _progress;
     private string _status = string.Empty;
-    private DownloadPriority _priority;
+    private DownloadPriority _priority = DownloadPriority.Normal;
+    private long _queuePosition;
     private string _downloaded = string.Empty;
     private string _totalSize = string.Empty;
     private string _speed = string.Empty;
@@ -349,6 +350,13 @@ public sealed class DownloadJob : UiObservableObject
         set => SetProperty(ref _priority, value);
     }
 
+    /// <summary>User-selected order among downloads with the same priority.</summary>
+    public long QueuePosition
+    {
+        get => _queuePosition;
+        set => SetProperty(ref _queuePosition, value);
+    }
+
     public string StateLabel => State switch
     {
         DownloadJobState.Downloading => "Downloading",
@@ -542,6 +550,7 @@ public sealed class AppSettings : ObservableObject
 {
     private string _language = "System Default";
     private string _appearance = "Dark";
+    private bool _reduceEffects;
     private bool _autoUpdate = true;
     private bool _notifications = true;
     private bool _autoRefresh = true;
@@ -557,6 +566,7 @@ public sealed class AppSettings : ObservableObject
     private string _downloadFolder = string.Empty;
     private int _parallelDownloads = 2;
     private int _downloadConnections = 16;
+    private int _downloadRateLimitMiB;
     private bool _useLancache;
     private int _retryCount = 3;
     private int _timeoutSeconds = 60;
@@ -648,7 +658,11 @@ public sealed class AppSettings : ObservableObject
     /// <summary>Concurrent chunk downloads per job, passed to DepotDownloader as <c>-max-downloads</c>.</summary>
     public int DownloadConnections { get => _downloadConnections; set => SetProperty(ref _downloadConnections, value); }
 
+    /// <summary>Per-process bandwidth cap for the patched bundled Mod; zero is unlimited.</summary>
+    public int DownloadRateLimitMiB { get => _downloadRateLimitMiB; set => SetProperty(ref _downloadRateLimitMiB, value); }
+
     public bool UseLancache { get => _useLancache; set => SetProperty(ref _useLancache, value); }
+    public bool ReduceEffects { get => _reduceEffects; set => SetProperty(ref _reduceEffects, value); }
     public int RetryCount { get => _retryCount; set => SetProperty(ref _retryCount, value); }
     public int TimeoutSeconds { get => _timeoutSeconds; set => SetProperty(ref _timeoutSeconds, value); }
     public bool VerifyAfterDownload { get => _verifyAfterDownload; set => SetProperty(ref _verifyAfterDownload, value); }

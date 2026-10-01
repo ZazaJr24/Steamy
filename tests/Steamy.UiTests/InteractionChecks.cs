@@ -97,6 +97,8 @@ public sealed partial class PageSmokeTests
         window.UpdateLayout();
         var card = Descendants<Button>(page).Single(button => button.Tag is SteamCatalogItem);
         Assert.True(CardMotion.GetIsEnabled(card));
+        var motionSurface = Assert.IsAssignableFrom<FrameworkElement>(card.Template.FindName("MotionSurface", card));
+        var animatedTransforms = Assert.IsType<TransformGroup>(motionSurface.RenderTransform).Children.ToArray();
         var edge = card.TranslatePoint(new Point(card.ActualWidth / 2, card.ActualHeight - 1), window);
         card.Focus();
         PumpDispatcher(TimeSpan.FromMilliseconds(210));
@@ -111,7 +113,7 @@ public sealed partial class PageSmokeTests
         Assert.Equal(Visibility.Visible, overlay.Visibility);
         Assert.False(background.IsEnabled);
         Assert.False(background.IsHitTestVisible);
-        if (!SystemParameters.HighContrast)
+        if (MotionPreferences.BackdropBlurEnabled)
         {
             Assert.True(((BitmapSource)snapshot.Source).IsFrozen);
             Assert.Equal(Visibility.Visible, snapshot.Visibility);
@@ -121,13 +123,28 @@ public sealed partial class PageSmokeTests
             Assert.NotSame(previous, snapshot.Source);
             Assert.True(((BitmapSource)snapshot.Source).IsFrozen);
         }
+        else
+        {
+            Assert.Null(snapshot.Source);
+            Assert.Equal(Visibility.Collapsed, snapshot.Visibility);
+        }
         Assert.True(overlay.IsKeyboardFocusWithin);
+        Assert.Equal(0, page.DownloadWizardStep);
+        Assert.Equal(Visibility.Visible, ((FrameworkElement)page.FindName("SourceStepPanel")).Visibility);
+        Assert.Equal(Visibility.Collapsed, ((FrameworkElement)page.FindName("DepotStepPanel")).Visibility);
+        AwaitWizardStep(page);
+        Assert.Equal(1, page.DownloadWizardStep);
+        Assert.NotEmpty(page.DownloadDepotChoices);
+        Assert.Equal(Visibility.Visible, ((FrameworkElement)page.FindName("DepotStepPanel")).Visibility);
+        AwaitWizardStep(page);
+        Assert.Equal(2, page.DownloadWizardStep);
+        Assert.Equal(Visibility.Visible, ((FrameworkElement)page.FindName("LocationStepPanel")).Visibility);
         var store = provider.GetRequiredService<IAppDataStore>();
         var settings = provider.GetRequiredService<ISettingsService>().Load();
         var standardJob = new DownloadJob { AppId = model.PagedCatalogItems[0].AppId, DownloadMode = "DepotDownloader", State = DownloadJobState.Paused,
             TargetFolder = Path.Combine(string.IsNullOrWhiteSpace(settings.DownloadFolder) ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SteamGames") : settings.DownloadFolder, "An offline library game") };
         store.Downloads.Add(standardJob);
-        ((Button)page.FindName("StartButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        AwaitWizardStep(page);
         Assert.Contains("Open Downloads", ((TextBlock)page.FindName("OverlayStatus")).Text);
         Assert.Contains(standardJob, store.Downloads);
         Assert.Equal(DownloadJobState.Paused, standardJob.State);
@@ -140,9 +157,33 @@ public sealed partial class PageSmokeTests
         Assert.True(background.IsHitTestVisible);
         Assert.Null(snapshot.Source);
         Assert.True(card.IsKeyboardFocused);
+        try
+        {
+            MotionPreferences.Configure(true);
+            card.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.Equal(Visibility.Visible, overlay.Visibility);
+            Assert.Null(snapshot.Source); // Reduced effects never allocate a blurred gallery bitmap.
+            Assert.Equal(Visibility.Collapsed, snapshot.Visibility);
+            Assert.False(background.IsEnabled);
+            Assert.False(background.IsHitTestVisible);
+            page.CloseOverlay();
+            PumpUntil(() => overlay.Visibility == Visibility.Collapsed);
+            Assert.True(card.IsKeyboardFocused);
+        }
+        finally { MotionPreferences.Configure(false); }
         window.Close();
         Assert.NotNull(Application.Current);
         Assert.False(card.RenderTransform.HasAnimatedProperties); // Unloaded cards release their clocks.
+        Assert.False(motionSurface.RenderTransform.HasAnimatedProperties);
+        Assert.All(animatedTransforms, transform => Assert.False(transform.HasAnimatedProperties));
+    }
+
+    private static void AwaitWizardStep(LibraryPage page)
+    {
+        var transition = page.AdvanceDownloadWizardAsync();
+        PumpUntil(() => transition.IsCompleted);
+        transition.GetAwaiter().GetResult();
+        PumpDispatcher(TimeSpan.FromMilliseconds(60));
     }
 
     private static IEnumerable<T> Descendants<T>(DependencyObject parent) where T : DependencyObject

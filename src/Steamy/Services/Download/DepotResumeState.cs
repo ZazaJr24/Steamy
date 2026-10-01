@@ -16,6 +16,8 @@ public sealed record DepotResumeState(int AppId, string TargetFolder, IReadOnlyL
 public static class DepotResumeStateStore
 {
     private const string StateFileName = "resume.json";
+    private const long MaximumStateBytes = 2 * 1024 * 1024;
+    private const int MaximumDepots = 4096;
 
     public static string SessionDirectory(string root, int appId, string targetFolder)
     {
@@ -29,7 +31,7 @@ public static class DepotResumeStateStore
         try
         {
             var path = Path.Combine(directory, StateFileName);
-            if (!File.Exists(path)) return null;
+            if (!File.Exists(path) || new FileInfo(path).Length > MaximumStateBytes) return null;
             var state = JsonSerializer.Deserialize<DepotResumeState>(File.ReadAllText(path));
             if (state is null || state.AppId != appId || !IsValid(state)
                 || CanonicalTarget(state.TargetFolder) != CanonicalTarget(targetFolder)) return null;
@@ -62,10 +64,15 @@ public static class DepotResumeStateStore
 
     private static bool IsValid(DepotResumeState state) =>
         state.AppId > 0 && !string.IsNullOrWhiteSpace(state.TargetFolder)
-        && state.Depots is { Count: > 0 }
+        && Path.IsPathFullyQualified(state.TargetFolder)
+        && state.Depots is { Count: > 0 and <= MaximumDepots }
         && state.Depots.All(depot => depot is not null && depot.DepotId > 0
-            && !string.IsNullOrWhiteSpace(depot.ManifestId) && depot.ManifestId.All(char.IsAsciiDigit))
+            && IsManifestId(depot.ManifestId))
         && state.Depots.Select(depot => depot.DepotId).Distinct().Count() == state.Depots.Count;
+
+    private static bool IsManifestId(string? value) => value is { Length: > 0 and <= 20 }
+        && value.All(char.IsAsciiDigit)
+        && ulong.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var id) && id > 0;
 
     private static string CanonicalTarget(string folder)
     {

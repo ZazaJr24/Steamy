@@ -98,8 +98,10 @@ public static class ArchiveExtractor
 
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             using (var output = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16))
-                copy(output);
+            using (var cancellable = new CancellationCheckingWriteStream(output, cancellationToken))
+                copy(cancellable);
 
+            cancellationToken.ThrowIfCancellationRequested();
             written++;
             bytes += size;
             progress?.Report(new ArchiveExtractProgress(written, files.Count, key));
@@ -130,6 +132,7 @@ public static class ArchiveExtractor
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return new ArchiveExtractResult(true, $"Extracted {written} file(s).", written, bytes, password is not null);
     }
 
@@ -182,5 +185,89 @@ public static class ArchiveExtractor
     private sealed class EncryptedArchiveException : Exception
     {
         public EncryptedArchiveException() : base("The archive is password protected.") { }
+    }
+
+    /// <summary>
+    /// SharpCompress's solid-archive reader writes synchronously to a supplied stream.
+    /// Checking every write also interrupts a single large entry, while the caller keeps
+    /// ownership of the destination and closes it even when extraction is cancelled.
+    /// </summary>
+    internal sealed class CancellationCheckingWriteStream(Stream destination, CancellationToken cancellationToken) : Stream
+    {
+        private bool _disposed;
+        public override bool CanRead => false;
+        public override bool CanSeek => !_disposed && destination.CanSeek;
+        public override bool CanWrite => !_disposed && destination.CanWrite;
+        public override long Length { get { Check(); return destination.Length; } }
+        public override long Position
+        {
+            get { Check(); return destination.Position; }
+            set { Check(); destination.Position = value; }
+        }
+
+        private void Check()
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            Check();
+            destination.Write(buffer, offset, count);
+            Check();
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            Check();
+            destination.Write(buffer);
+            Check();
+        }
+
+        public override void WriteByte(byte value)
+        {
+            Check();
+            destination.WriteByte(value);
+            Check();
+        }
+
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken callerCancellation) =>
+            WriteAsync(buffer.AsMemory(offset, count), callerCancellation).AsTask();
+
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken callerCancellation = default)
+        {
+            Check();
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, callerCancellation);
+            await destination.WriteAsync(buffer, linked.Token).ConfigureAwait(false);
+            linked.Token.ThrowIfCancellationRequested();
+            Check();
+        }
+
+        public override void Flush()
+        {
+            Check();
+            destination.Flush();
+            Check();
+        }
+
+        public override async Task FlushAsync(CancellationToken callerCancellation)
+        {
+            Check();
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, callerCancellation);
+            await destination.FlushAsync(linked.Token).ConfigureAwait(false);
+            linked.Token.ThrowIfCancellationRequested();
+            Check();
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) { Check(); return destination.Seek(offset, origin); }
+        public override void SetLength(long value) { Check(); destination.SetLength(value); }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            _disposed = true;
+            base.Dispose(disposing);
+        }
     }
 }

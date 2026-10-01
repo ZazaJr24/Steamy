@@ -24,6 +24,8 @@ public partial class DashboardPage : Page
             viewModel.PropertyChanged += SpotlightChanged;
             _spotlightTimer.Start();
             _ = viewModel.EnsureDiscoveryArtworkAsync();
+            _ = viewModel.RefreshActivityAsync();
+            _ = viewModel.LoadSearchHistoryAsync();
             _ = viewModel.RefreshAsync(force: false);
         };
         Unloaded += (_, _) =>
@@ -43,7 +45,7 @@ public partial class DashboardPage : Page
                 _nextFeedCheck = DateTime.UtcNow.AddHours(6);
                 _ = model.EnsureDiscoveryArtworkAsync();
             }
-            if (SystemParameters.ClientAreaAnimation && !DashboardHero.IsMouseOver && !IsKeyboardFocusWithin && !model.HasSearchQuery)
+            if (Controls.MotionPreferences.AnimationsEnabled && !DashboardHero.IsMouseOver && !IsKeyboardFocusWithin && !model.HasSearchQuery)
                 model.NextFeaturedCommand.Execute(null);
         };
         SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
@@ -51,7 +53,7 @@ public partial class DashboardPage : Page
 
     private void SpotlightChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
-        if (args.PropertyName == nameof(DashboardViewModel.FeaturedGame)) Controls.EntranceMotion.Reveal(DashboardHero);
+        if (args.PropertyName == nameof(DashboardViewModel.FeaturedGame) && Controls.MotionPreferences.AnimationsEnabled) Controls.EntranceMotion.Reveal(DashboardHero);
     }
 
     private void ApplyResponsiveLayout(double width)
@@ -77,7 +79,7 @@ public partial class DashboardPage : Page
     private void DashboardSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         var model = (DashboardViewModel)DataContext;
-        if (e.Key == System.Windows.Input.Key.Escape) { model.SearchText = string.Empty; e.Handled = true; }
+        if (e.Key == System.Windows.Input.Key.Escape) { model.SearchText = string.Empty; model.IsSearchFocused = false; e.Handled = true; }
         else if (e.Key == System.Windows.Input.Key.Enter) { model.OpenSearchCommand.Execute(null); e.Handled = true; }
         else if (e.Key == System.Windows.Input.Key.Down && model.SearchResults.Count > 0)
         {
@@ -88,6 +90,29 @@ public partial class DashboardPage : Page
                 if (button is not null) { button.Focus(); e.Handled = true; }
             }
         }
+    }
+
+    private void DashboardSearch_GotKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs args)
+    {
+        var model = (DashboardViewModel)DataContext;
+        model.IsSearchFocused = true;
+        _ = model.LoadSearchHistoryAsync();
+    }
+
+    private void DashboardSearch_LostKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs args)
+    {
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() =>
+        {
+            var focused = System.Windows.Input.Keyboard.FocusedElement as DependencyObject;
+            var inside = false;
+            while (focused is not null)
+            {
+                if (ReferenceEquals(focused, DashboardSearch) || ReferenceEquals(focused, DashboardSearchPanel)) { inside = true; break; }
+                focused = focused is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
+                    ? System.Windows.Media.VisualTreeHelper.GetParent(focused) : LogicalTreeHelper.GetParent(focused);
+            }
+            ((DashboardViewModel)DataContext).IsSearchFocused = inside;
+        }));
     }
 
     private static System.Windows.Controls.Primitives.ButtonBase? FindSearchButton(DependencyObject element)

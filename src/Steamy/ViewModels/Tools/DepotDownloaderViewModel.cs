@@ -289,18 +289,21 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
     private async Task StartQueuedAsync()
     {
         var settings = _settingsService.Load();
-        using var gate = new SemaphoreSlim(Math.Clamp(settings.ParallelDownloads, 1, 16));
-        var queued = Jobs.Where(job => IsManualJob(job) && job.State == DownloadJobState.Queued).ToArray();
-        await Task.WhenAll(queued.Select(async job =>
-        {
-            await gate.WaitAsync();
-            try
+        var scheduled = new HashSet<DownloadJob>();
+        await DownloadQueueScheduler.RunAsync(
+            () => Jobs.Where(job => IsManualJob(job) && job.State == DownloadJobState.Queued).ToArray(),
+            job => (int)job.Priority, job => job.QueuePosition == 0 ? job.Started.Ticks : job.QueuePosition,
+            async job =>
             {
-                // A waiting job may have been cancelled/removed while another job used the slot.
-                if (Jobs.Contains(job) && job.State == DownloadJobState.Queued) await StartAsync(job);
-            }
-            finally { gate.Release(); }
-        }));
+                scheduled.Add(job);
+                try
+                {
+                    // A waiting job may have been cancelled/removed while another job used the slot.
+                    if (Jobs.Contains(job) && job.State == DownloadJobState.Queued) await StartAsync(job);
+                }
+                finally { scheduled.Remove(job); }
+            }, settings.ParallelDownloads, externallyActiveJobs: () => Jobs.Count(job => !scheduled.Contains(job)
+                && (job.IsActive || _downloadManager is IDownloadOperationStatus status && status.IsOperationRunning(job.Id))));
         OnPropertyChanged(nameof(QueueSummary));
     }
 

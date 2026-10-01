@@ -38,6 +38,38 @@ public sealed class DepotResumeStateTests : IDisposable
     }
 
     [Theory]
+    [InlineData("0")]
+    [InlineData("18446744073709551616")]
+    [InlineData("123\n456")]
+    [InlineData("")]
+    public async Task InvalidManifestIdentifiersCannotBeSavedOrLoaded(string manifestId)
+    {
+        var state = new DepotResumeState(42, _root, [new(43, manifestId)]);
+        await Assert.ThrowsAsync<ArgumentException>(() => DepotResumeStateStore.WriteAsync(_root, state, default));
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "resume.json"), System.Text.Json.JsonSerializer.Serialize(state));
+        Assert.Null(DepotResumeStateStore.Read(_root, 42, _root));
+    }
+
+    [Fact]
+    public async Task ResumeStateCannotUseAnUnboundedDepotSetOrRelativeLocation()
+    {
+        var tooMany = Enumerable.Range(1, 4097).Select(id => new CachedDepotManifest(id, "123")).ToArray();
+        await Assert.ThrowsAsync<ArgumentException>(() => DepotResumeStateStore.WriteAsync(
+            _root, new(42, _root, tooMany), default));
+        await Assert.ThrowsAsync<ArgumentException>(() => DepotResumeStateStore.WriteAsync(
+            _root, new(42, "relative-folder", [new(43, "123")]), default));
+    }
+
+    [Fact]
+    public void OversizedSavedStateCannotBecomeAResumeSelection()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "resume.json"), new string(' ', 2 * 1024 * 1024 + 1));
+        Assert.Null(DepotResumeStateStore.Read(_root, 42, _root));
+    }
+
+    [Theory]
     [InlineData("{broken")]
     [InlineData("null")]
     [InlineData("{\"AppId\":42,\"TargetFolder\":\"/tmp\",\"Depots\":null}")]

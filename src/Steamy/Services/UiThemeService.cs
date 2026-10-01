@@ -3,6 +3,8 @@ using System.Windows.Media;
 using Microsoft.Win32;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
+using Microsoft.Extensions.DependencyInjection;
+using Steamy.Controls;
 
 namespace Steamy.Services;
 
@@ -15,8 +17,12 @@ public static class UiThemeService
     private static string _currentBackdrop = "None";
     private static bool _isLight;
 
+    static UiThemeService() => MotionPreferences.Changed += (_, _) => ApplyBackdrop(_currentBackdrop);
+
     public static void Apply(string? appearance)
     {
+        try { MotionPreferences.Configure(App.Services?.GetService<ISettingsService>()?.Load().ReduceEffects ?? false); }
+        catch { }
         var light = string.Equals(appearance, "System", StringComparison.OrdinalIgnoreCase)
             ? IsSystemUsingLightApps()
             : string.Equals(appearance, "Light", StringComparison.OrdinalIgnoreCase);
@@ -31,7 +37,7 @@ public static class UiThemeService
         }
         catch { }
 
-        if (_currentBackdrop != "None")
+        if (_currentBackdrop != "None" && MotionPreferences.BackdropBlurEnabled)
             ApplyTransparentBackgrounds();
         else
             RestoreOpaqueBackgrounds();
@@ -46,7 +52,7 @@ public static class UiThemeService
             var window = Application.Current?.MainWindow as FluentWindow;
             if (window is null) return;
 
-            var backdropType = style?.ToLowerInvariant() switch
+            var backdropType = (MotionPreferences.BackdropBlurEnabled ? style?.ToLowerInvariant() : "none") switch
             {
                 "mica" => WindowBackdropType.Mica,
                 "micaalt" or "mica alt" => WindowBackdropType.Tabbed,
@@ -102,6 +108,10 @@ public static class UiThemeService
             if (palette.Contains("SidebarBackgroundBrush"))
                 app.Resources["SidebarBackgroundBrush"] = palette["SidebarBackgroundBrush"];
         }
+        // Applying Mica replaces the window's resource reference with a local transparent
+        // brush. Restore the reference as well when effects or the backdrop are disabled.
+        if (app.MainWindow is FluentWindow window)
+            window.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "AppBackgroundBrush");
     }
 
     // Brand blue for every Fluent accent surface (primary buttons, toggles, check boxes, focus

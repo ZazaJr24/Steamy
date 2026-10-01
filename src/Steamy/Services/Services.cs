@@ -139,7 +139,7 @@ public sealed class AppDataStore : IAppDataStore
 
     public ObservableCollection<ModFix> ModFixes { get; } = new();
     public ObservableCollection<GenerationTemplate> GenerationTemplates { get; } = new();
-    public ObservableCollection<LogEntry> Logs { get; } = new();
+    public ObservableCollection<LogEntry> Logs { get; } = new RangeObservableCollection<LogEntry>();
 }
 
 public interface ISettingsService
@@ -330,16 +330,26 @@ public sealed class WpfLogDispatcher : ILogDispatcher
         var dispatcher = Current;
         if (dispatcher is null)
             action();
-        else
-            dispatcher.BeginInvoke(action);
+        else if (!dispatcher.HasShutdownStarted && !dispatcher.HasShutdownFinished)
+            dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, action);
     }
 }
 
 public sealed class InMemoryLoggingService : ILoggingService
 {
+    public const int VisibleHistoryLimit = 1_000;
+    private const int PersistenceQueueLimit = 4_096;
+    private const int BatchSize = 200;
     private readonly IAppDataStore _store;
     private readonly ILocalDatabase _database;
     private readonly ILogDispatcher _dispatcher;
+    private readonly BoundedLogBuffer<LogEntry> _visiblePending = new(VisibleHistoryLimit, IsImportant);
+    private readonly BoundedLogBuffer<LogEntry> _persistencePending = new(PersistenceQueueLimit, IsImportant);
+    private readonly object _persistenceGate = new();
+    private Task? _persistenceTask;
+    private bool _persistenceRunning;
+    private int _visibleFlushScheduled;
+    private long _persistenceFailures;
 
     public InMemoryLoggingService(IAppDataStore store, ILocalDatabase database, ILogDispatcher? dispatcher = null)
     {
@@ -350,23 +360,145 @@ public sealed class InMemoryLoggingService : ILoggingService
 
     public void Add(LogLevel level, string component, string message, int? appId = null, Guid? jobId = null)
     {
-        var entry = new LogEntry { Timestamp = DateTime.Now, Level = level, Component = component, Message = Redact(message), AppId = appId, JobId = jobId };
-
-        if (_dispatcher.IsCurrent)
-            Insert(entry);
-        else
-            _dispatcher.Post(() => Insert(entry));
+        var entry = new LogEntry { Timestamp = DateTime.Now, Level = level, Component = component,
+            Message = Redact(message), AppId = appId, JobId = jobId };
+        _persistencePending.Enqueue(entry);
+        StartPersistence();
+        _visiblePending.Enqueue(entry);
+        ScheduleVisibleFlush();
     }
 
-    private void Insert(LogEntry entry)
+    private void ScheduleVisibleFlush()
     {
-        _store.Logs.Insert(0, entry);
-        _ = _database.AppendLogAsync(entry);
+        if (Interlocked.Exchange(ref _visibleFlushScheduled, 1) != 0) return;
+        try { _dispatcher.Post(FlushVisible); }
+        catch { Interlocked.Exchange(ref _visibleFlushScheduled, 0); }
     }
-    private static string Redact(string value)
+
+    private void FlushVisible()
     {
-        var redacted = Regex.Replace(value, @"(?i)(x-auth-key|auth_key|api_key)\s*[:=]\s*[^\s,;]+", "$1=[redacted]");
-        return Regex.Replace(redacted, @"(?i)(authorization)\s*:\s*[^\s,;]+", "$1: [redacted]");
+        var batch = _visiblePending.Drain(VisibleHistoryLimit);
+        var entries = batch.Items.ToList();
+        if (batch.OmittedRoutine > 0 || batch.OmittedImportant > 0)
+        {
+            var diagnostic = OverflowDiagnostic(batch, "visible history");
+            entries.Add(diagnostic);
+            _persistencePending.Enqueue(diagnostic);
+            StartPersistence();
+        }
+        if (entries.Count > 0)
+        {
+            var history = entries.AsEnumerable().Reverse().Concat(_store.Logs).ToList();
+            // Overflow diagnostics and new progress output must not immediately hide the
+            // warning/error entries that the pending buffer deliberately preserved.
+            for (var index = history.Count - 1; history.Count > VisibleHistoryLimit && index >= 0; index--)
+                if (!IsImportant(history[index])) history.RemoveAt(index);
+            if (history.Count > VisibleHistoryLimit)
+                history.RemoveRange(VisibleHistoryLimit, history.Count - VisibleHistoryLimit);
+            if (_store.Logs is RangeObservableCollection<LogEntry> range)
+                range.ReplaceWith(history);
+            else
+            {
+                foreach (var entry in entries) _store.Logs.Insert(0, entry);
+                var retained = history.ToHashSet();
+                for (var index = _store.Logs.Count - 1; index >= 0; index--)
+                    if (!retained.Contains(_store.Logs[index])) _store.Logs.RemoveAt(index);
+            }
+        }
+        Interlocked.Exchange(ref _visibleFlushScheduled, 0);
+        if (_visiblePending.PendingCount > 0) ScheduleVisibleFlush();
+    }
+
+    private void StartPersistence()
+    {
+        lock (_persistenceGate)
+        {
+            if (_persistenceRunning) return;
+            _persistenceRunning = true;
+            _persistenceTask = Task.Run(PersistPendingAsync);
+        }
+    }
+
+    private async Task PersistPendingAsync()
+    {
+        // Fold rapid progress output into a transaction without delaying the visible log.
+        await Task.Delay(75).ConfigureAwait(false);
+        while (true)
+        {
+            var batch = _persistencePending.Drain(BatchSize);
+            var entries = batch.Items.ToList();
+            if (batch.OmittedRoutine > 0 || batch.OmittedImportant > 0)
+            {
+                var diagnostic = OverflowDiagnostic(batch, "database queue");
+                entries.Add(diagnostic);
+                _visiblePending.Enqueue(diagnostic);
+                ScheduleVisibleFlush();
+            }
+            if (entries.Count > 0)
+            {
+                try
+                {
+                    if (_database is ILogBatchDatabase batching)
+                        await batching.AppendLogsAsync(entries).ConfigureAwait(false);
+                    else
+                        foreach (var entry in entries) await _database.AppendLogAsync(entry).ConfigureAwait(false);
+                }
+                catch (Exception exception)
+                {
+                    var failed = Interlocked.Add(ref _persistenceFailures, entries.Count);
+                    // The diagnostic is visible only; retrying it against the same failed database
+                    // would recurse. The original entries remain visible in bounded session history.
+                    _visiblePending.Enqueue(new LogEntry { Timestamp = DateTime.Now, Level = LogLevel.Error,
+                        Component = "Logging", Message = $"Could not save {failed:N0} log entries to the local database ({exception.GetType().Name}). Session history is still available." });
+                    ScheduleVisibleFlush();
+                }
+            }
+            lock (_persistenceGate)
+            {
+                if (_persistencePending.PendingCount == 0) { _persistenceRunning = false; return; }
+            }
+        }
+    }
+
+    /// <summary>Flushes persistence without requiring a live or pumped UI dispatcher.</summary>
+    public async Task FlushAsync(CancellationToken cancellationToken = default)
+    {
+        while (true)
+        {
+            Task? pending;
+            lock (_persistenceGate)
+            {
+                if (!_persistenceRunning && _persistencePending.PendingCount == 0) return;
+                pending = _persistenceTask;
+            }
+            if (pending is not null) await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+            else StartPersistence();
+        }
+    }
+
+    private static bool IsImportant(LogEntry entry) => entry.Level is LogLevel.Warning or LogLevel.Error;
+    private static LogEntry OverflowDiagnostic(LogBufferBatch<LogEntry> batch, string destination) => new()
+    {
+        Timestamp = DateTime.Now,
+        Level = batch.OmittedImportant > 0 ? LogLevel.Error : LogLevel.Warning,
+        Component = "Logging",
+        Message = $"Log burst exceeded the bounded {destination}: {batch.OmittedRoutine:N0} debug/info and {batch.OmittedImportant:N0} warning/error entries were omitted to keep the app responsive."
+    };
+
+    private static readonly Regex KeyRedaction = new(@"(?i)(x-auth-key|auth_key|api_key)\s*[:=]\s*[^\s,;]+", RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
+    private static readonly Regex AuthorizationRedaction = new(@"(?i)(authorization)\s*:\s*(?:(?:Bearer|Basic)\s+)?[^\s,;]+", RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
+    private static string Redact(string? value)
+    {
+        var text = value ?? string.Empty;
+        if (text.Length > 16_384) text = text[..16_384] + "… [truncated]";
+        try
+        {
+            return AuthorizationRedaction.Replace(KeyRedaction.Replace(text, "$1=[redacted]"), "$1: [redacted]");
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return "Log message omitted because credential redaction exceeded its time limit.";
+        }
     }
 }
 

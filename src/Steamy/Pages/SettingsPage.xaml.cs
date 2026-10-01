@@ -7,6 +7,9 @@ using Microsoft.Win32;
 using Steamy.Services;
 using Steamy.ViewModels;
 using Wpf.Ui.Appearance;
+using System.ComponentModel;
+using Steamy.Controls;
+using Steamy.Models;
 
 namespace Steamy.Pages;
 
@@ -15,6 +18,7 @@ public partial class SettingsPage : Page
     private string _selectedCategory = "general";
     private readonly Dictionary<FrameworkElement, string> _sectionSearchText = new();
     private readonly System.Windows.Threading.DispatcherTimer _searchTimer = new(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(180) };
+    private AppSettings? _motionSettings;
 
     public SettingsPage()
     {
@@ -29,15 +33,40 @@ public partial class SettingsPage : Page
         {
             ViewModel.CredentialInputsCleared -= OnCredentialInputsCleared;
             ViewModel.CredentialInputsCleared += OnCredentialInputsCleared;
+            ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+            ObserveMotionSettings();
             FilterSections();
         };
         Unloaded += (_, _) =>
         {
             _searchTimer.Stop();
             ViewModel.CredentialInputsCleared -= OnCredentialInputsCleared;
+            ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            if (_motionSettings is not null) _motionSettings.PropertyChanged -= MotionSettings_PropertyChanged;
+            _motionSettings = null;
             OnCredentialInputsCleared(this, EventArgs.Empty);
         };
         FilterSections();
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(SettingsViewModel.Settings)) ObserveMotionSettings();
+    }
+
+    private void ObserveMotionSettings()
+    {
+        if (_motionSettings is not null) _motionSettings.PropertyChanged -= MotionSettings_PropertyChanged;
+        _motionSettings = ViewModel.Settings;
+        _motionSettings.PropertyChanged += MotionSettings_PropertyChanged;
+        MotionPreferences.Configure(_motionSettings.ReduceEffects);
+    }
+
+    private void MotionSettings_PropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(AppSettings.ReduceEffects))
+            MotionPreferences.Configure(ViewModel.Settings.ReduceEffects);
     }
 
     private void Settings_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)

@@ -121,6 +121,63 @@ public class ArchiveExtractorTests
         Assert.True(File.Exists(Path.Combine(target, "ok.txt")));
     }
 
+    [Fact]
+    public void Cancellation_during_one_entry_copy_stops_further_writes()
+    {
+        using var temp = new TempFolder();
+        var path = Path.Combine(temp.Path, "large-entry.bin");
+        File.WriteAllBytes(path, new byte[1024 * 1024]);
+        using var cancellation = new CancellationTokenSource();
+        using var destination = new CancellingWriteStream(cancellation);
+        using (var guarded = new ArchiveExtractor.CancellationCheckingWriteStream(destination, cancellation.Token))
+        using (var input = File.OpenRead(path))
+        {
+            // The destination cancels exactly at its first write, with no timers or races.
+            // This is also the synchronous output path used by solid WriteEntryTo.
+            Assert.ThrowsAny<OperationCanceledException>(() => input.CopyTo(guarded, 4096));
+            Assert.Equal(1, destination.Writes);
+            Assert.InRange(destination.Length, 1, new FileInfo(path).Length - 1);
+            Assert.ThrowsAny<OperationCanceledException>(() => guarded.WriteByte(42));
+            Assert.Equal(1, destination.Writes);
+        }
+        // The wrapper leaves the underlying output open for its owning caller.
+        Assert.True(destination.CanWrite);
+        destination.WriteByte(42);
+    }
+
+    [Fact]
+    public async Task Cancellation_during_async_write_is_observed_before_success_is_reported()
+    {
+        using var cancellation = new CancellationTokenSource();
+        using var destination = new CancellingWriteStream(cancellation);
+        await using var guarded = new ArchiveExtractor.CancellationCheckingWriteStream(destination, cancellation.Token);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => guarded.WriteAsync(new byte[32].AsMemory()).AsTask());
+        Assert.Equal(1, destination.Writes);
+        Assert.ThrowsAny<OperationCanceledException>(() => guarded.Write(new byte[32].AsSpan()));
+        Assert.Equal(1, destination.Writes);
+    }
+
+    private sealed class CancellingWriteStream(CancellationTokenSource cancellation) : MemoryStream
+    {
+        public int Writes { get; private set; }
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            base.Write(buffer, offset, count);
+            Writes++;
+            cancellation.Cancel();
+        }
+
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // MemoryStream's span overload falls back to the virtual array overload
+            // for derived streams. Count the actual array write in one shared path.
+            var bytes = buffer.ToArray();
+            Write(bytes, 0, bytes.Length);
+            return ValueTask.CompletedTask;
+        }
+    }
+
     /// <summary>Reports synchronously so the test can count updates without waiting on a context.</summary>
     private sealed class SyncProgress<T>(Action<T> report) : IProgress<T>
     {

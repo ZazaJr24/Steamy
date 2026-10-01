@@ -22,14 +22,14 @@
     </DrawingGroup></DrawingBrush.Drawing>
   </DrawingBrush>
 
-  <!-- A restrained glass edge; the cover remains the focus. -->
+  <!-- Opaque game cards keep cover art and labels clear against the workspace. -->
   <Style x:Key="GalleryCardButton" TargetType="Button">
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
     <Setter Property="controls:CardMotion.IsEnabled" Value="True" />
-    <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Template"><Setter.Value>
@@ -40,11 +40,6 @@
                   BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-          </Border>
-          <Border CornerRadius="16" BorderThickness="1" IsHitTestVisible="False">
-            <Border.BorderBrush><LinearGradientBrush StartPoint="0,0" EndPoint="0.8,1">
-              <GradientStop Color="#26FFFFFF" Offset="0" /><GradientStop Color="#00FFFFFF" Offset="0.55" /><GradientStop Color="#0CFFFFFF" Offset="1" />
-            </LinearGradientBrush></Border.BorderBrush>
           </Border>
           </Grid>
         </Grid>
@@ -106,16 +101,16 @@
 
   <!-- Shared surfaces used by page headers, toolbars, notices and flyouts -->
   <Style x:Key="PageHeaderStyle" TargetType="Border">
-    <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="18,14" />
     <Setter Property="Margin" Value="0,0,0,14" />
   </Style>
   <Style x:Key="FilterBarStyle" TargetType="Border">
-    <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="10" />
@@ -329,8 +324,8 @@
 
   <!-- Plain surface card without CardControl's header/icon layout -->
   <Style x:Key="SurfaceCardStyle" TargetType="Border">
-    <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="16" />
@@ -590,8 +585,8 @@
 
   <!-- Surfaces -->
   <Style x:Key="CardStyle" TargetType="Border">
-    <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="20" />
