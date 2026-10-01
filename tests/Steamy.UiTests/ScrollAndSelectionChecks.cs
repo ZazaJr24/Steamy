@@ -55,7 +55,7 @@ public sealed partial class PageSmokeTests
             var dashboard = Descendants<DashboardPage>(window).Single();
             var homeScroll = (ScrollViewer)dashboard.FindName("DashboardScroll");
             Assert.False(SmoothScroll.GetEnabled(homeScroll));
-            Assert.Same(homeScroll, Assert.Single(Descendants<ScrollViewer>(dashboard).Where(viewer => viewer.ScrollableHeight > 0)));
+            Assert.Same(homeScroll, Assert.Single(Descendants<ScrollViewer>(dashboard), viewer => viewer.ScrollableHeight > 0));
             Assert.NotNull(homeScroll.Template.FindName("PART_ScrollContentPresenter", homeScroll));
             Assert.False(ScrollViewer.GetCanContentScroll(dashboard));
             Assert.True(homeScroll.ViewportHeight > 0 && homeScroll.ScrollableHeight > 0,
@@ -211,8 +211,17 @@ public sealed partial class PageSmokeTests
         }
     }
 
-    private static void WheelOver(UIElement element, int delta) => element.RaiseEvent(
-        new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, delta) { RoutedEvent = UIElement.PreviewMouseWheelEvent });
+    private static void WheelOver(UIElement element, int delta)
+    {
+        // Real input tunnels first, then bubbles if the preview was not consumed.
+        // Native ScrollViewer handles the bubbling phase; the custom tween handles preview.
+        var args = new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, delta)
+            { RoutedEvent = UIElement.PreviewMouseWheelEvent };
+        element.RaiseEvent(args);
+        if (args.Handled) return;
+        args.RoutedEvent = UIElement.MouseWheelEvent;
+        element.RaiseEvent(args);
+    }
 
     private static void CheckDlcSelection(IServiceProvider provider)
     {
