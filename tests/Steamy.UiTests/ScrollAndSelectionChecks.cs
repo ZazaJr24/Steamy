@@ -131,6 +131,7 @@ public sealed partial class PageSmokeTests
             Assert.InRange(gallery.VerticalOffset, galleryOffset - 1, galleryOffset + 1);
 
             Assert.True(window.RootNavigationView.Navigate(typeof(GameFixesPage)));
+            PumpUntil(() => Descendants<GameFixesPage>(window).Any(page => page.IsVisible));
             var fixesModel = provider.GetRequiredService<GameFixesViewModel>();
             var fetch = ((IAsyncRelayCommand)fixesModel.FetchCommand).ExecuteAsync(null);
             PumpUntil(() => fetch.IsCompleted);
@@ -143,6 +144,7 @@ public sealed partial class PageSmokeTests
             PumpDispatcher(TimeSpan.FromMilliseconds(250));
             Assert.False(((Grid)fixesPage.FindName("MainContentGrid")).IsEnabled);
             Assert.Equal(Visibility.Visible, ((Grid)fixesPage.FindName("OverlayGrid")).Visibility);
+            Assert.True(((Grid)fixesPage.FindName("OverlayGrid")).IsKeyboardFocusWithin);
             fixesPage.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(fixesPage)!, 0, Key.Escape)
                 { RoutedEvent = Keyboard.PreviewKeyDownEvent });
             PumpDispatcher(TimeSpan.FromMilliseconds(200));

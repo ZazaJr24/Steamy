@@ -211,6 +211,7 @@
                   <Border Style="{StaticResource StatePill}" Padding="7,2"><TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}" /></Border>
                   <TextBlock Text="{Binding SourceLabel}" Foreground="#C2CDDD" Style="{StaticResource CaptionStyle}" Margin="8,0,0,0" VerticalAlignment="Center" />
                 </WrapPanel>
+                <TextBlock Text="{Binding Status}" Foreground="#C2CDDD" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,8,0,0" ToolTip="{Binding Status}" />
               </StackPanel>
               <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                 <ui:Button Icon="{ui:SymbolIcon Pause24}" ToolTip="Pause download" AutomationProperties.Name="Pause download" Appearance="Secondary" Style="{StaticResource PauseButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
