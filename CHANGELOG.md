@@ -6,9 +6,10 @@ Add a new `## x.y.z` section at the top before tagging.
 ## 0.4.4
 
 ### Fixed
+- Animated scrolling now writes its final base offset before removing the WPF animation clock, preventing an immediate return to the top. Interrupting a scroll retains the current position as well.
 - Dashboard uses a single native scroll presenter with a reserved scrollbar column, without a second animated offset controller. Wheel, touchpad and scrollbar input retain native scrolling behavior.
 - Spotlight still rotates every five seconds with artwork fades and fixed geometry; keyboard navigation can still reveal controls while automatic focus requests remain suppressed.
-- Windows regression checks hold the Dashboard scroll position through two real timed Spotlight rotations, then exercise upward wheel input, thumb tracking and a library/activity refresh.
+- Windows regression checks explicitly run real scroll animation clocks even when Windows motion is disabled in CI. They also hold the Dashboard position through two timed Spotlight rotations, then exercise upward wheel input, thumb tracking and a library/activity refresh.
 
 ## 0.4.3
 
