@@ -137,8 +137,7 @@ public static class LocalManifestPackage
                 {
                     var id = depot.GetProperty("depot").GetInt32();
                     var manifest = depot.GetProperty("manifest").GetString();
-                    if (id <= 0 || !DownloadPreparationReader.IsManifestId(manifest)
-                        || !File.Exists(Path.Combine(directory, $"{id}_{manifest}.manifest")))
+                    if (id <= 0 || !DownloadPreparationReader.IsManifestId(manifest))
                         throw new InvalidDataException("The package depot metadata is incomplete or damaged.");
                     lua.AppendLine($"setManifestid({id}, \"{manifest}\")");
                 }

@@ -24,6 +24,7 @@ public partial class DashboardPage : Page
             viewModel.RefreshSearchPreference();
             viewModel.StartLiveStats();
             viewModel.PropertyChanged += SpotlightChanged;
+            Controls.MotionPreferences.Changed += MotionChanged;
             _spotlightTimer.Start();
             _countdownTimer.Start();
             _ = viewModel.EnsureDiscoveryArtworkAsync();
@@ -34,6 +35,8 @@ public partial class DashboardPage : Page
         {
             var model = (DashboardViewModel)DataContext;
             model.PropertyChanged -= SpotlightChanged;
+            Controls.MotionPreferences.Changed -= MotionChanged;
+            MotionChanged(this, EventArgs.Empty);
             model.StopLiveStats(); model.StopSearch();
             _spotlightTimer.Stop();
             _countdownTimer.Stop();
@@ -55,6 +58,16 @@ public partial class DashboardPage : Page
         };
         DashboardHero.SizeChanged += (_, _) => DashboardHero.Clip = new System.Windows.Media.RectangleGeometry(new Rect(DashboardHero.RenderSize), 24, 24);
         SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
+    }
+
+    private void MotionChanged(object? sender, EventArgs args)
+    {
+        if (!IsLoaded || !Controls.MotionPreferences.AnimationsEnabled)
+        {
+            ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, null);
+            ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, null);
+            SpotlightArtworkFrame.BeginAnimation(OpacityProperty, null);
+        }
     }
 
     private void SpotlightChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)

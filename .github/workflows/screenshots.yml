@@ -79,5 +79,5 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           git pull --rebase origin main
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          git push origin HEAD:main
+          git -c http.postBuffer=524288000 push origin HEAD:main
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

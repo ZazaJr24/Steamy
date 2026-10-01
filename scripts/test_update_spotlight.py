@@ -35,7 +35,7 @@ class SelectionTests(unittest.TestCase):
         self.assertIsNone(select_game(self.game, self.now)['releaseDate'])
 
     def test_expired_upcoming_dates_are_excluded(self):
-        for label in ('September 2025', '2025', '20 Sep, 2026'):
+        for label in ('September 2025', '2025', '20 Sep, 2026', 'Q2 2026', 'Late 2025'):
             self.game['release_date'] = {'coming_soon': True, 'date': label}
             self.assertIsNone(select_game(self.game, self.now))
 

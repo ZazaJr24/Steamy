@@ -99,6 +99,20 @@ public class LocalManifestPackageTests
         Assert.Empty(Directory.GetFiles(temp.Path,"*.partial"));
     }
     [Fact]
+    public async Task DeclaredManifestVersionCanBeImportedWithoutInventingAManifestFile()
+    {
+        using var temp = new TempFolder();
+        var file = temp.Write("101_123.manifest","manifest");
+        var candidate = new ShareCandidate(100,"Game",ShareSourceKind.SteamLibrary,temp.Path,[new(file,"101_123.manifest",8)],
+            [new(101,"123",50),new(102,"456",60)],DateTime.UtcNow);
+        var zip = Path.Combine(temp.Path,"partial-cache.zip");
+        File.WriteAllBytes(zip,ShareArchiveBuilder.BuildAppArchive(candidate,"0.4.6",DateTime.UtcNow));
+        var imported = await LocalManifestPackage.ImportAsync(zip,100,Path.Combine(temp.Path,"prepared"));
+        Assert.Equal(2,DownloadPreparationReader.Read(imported.Lua).Depots.Count);
+        Assert.False(File.Exists(Path.Combine(imported.Directory,"102_456.manifest")));
+    }
+
+    [Fact]
     public async Task SteamLibraryMetadataWithoutLuaCanRoundtrip()
     {
         using var temp = new TempFolder();
