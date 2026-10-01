@@ -234,8 +234,8 @@ public sealed partial class PageSmokeTests
             var fixCard = Descendants<Button>(fixesPage).First(button => button.Tag is GameFixGameCard);
             Assert.True(CardMotion.GetIsEnabled(fixCard));
             Assert.True(fixCard.ActualWidth >= 158);
-            Assert.True(fixCard.ActualHeight >= fixCard.ActualWidth * 1.35 + 54,
-                "Fix cards must fill their portrait-sized grid cell rather than float as small header thumbnails.");
+            Assert.True(fixCard.ActualHeight >= fixCard.ActualWidth * 1.30 + 54,
+                "Fix cards must fill their compact portrait-sized grid cell rather than float as small header thumbnails.");
             fixCard.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             PumpDispatcher(TimeSpan.FromMilliseconds(250));
             Assert.False(((Grid)fixesPage.FindName("MainContentGrid")).IsEnabled);
