@@ -1,16 +1,16 @@
 # Changelog
 
 Each GitHub release uses the section of its version as its release notes.
-Add a new `## 0.4.6 — 2026-10-01
+Add a new `## x.y.z` section at the top before tagging.
 
-- Upcoming-only Steam Spotlight with three cards, honest countdowns, pause/resume, preloaded official artwork and stable native scrolling.
+## 0.4.6 — 2026-10-01
+
+- Upcoming-only Steam Spotlight with three cards, bottom-left countdowns beside the download actions, a larger title, artwork previews, pause/resume and stable native scrolling.
 - Optional persistent Dashboard search; compact General settings with quieter autosave status.
 - Your package: safe local ZIP/Lua metadata import, multi-game selection, verified Steamy hashes and independent preparation copies.
 - Local download filtering and pinned manifest selections retained through Resume after deleting the original package.
 - Share ZIP exports report actual counts and omitted games, fail clearly on missing files, support cancellation and preserve existing ZIPs with atomic replacement.
 - Windows regressions cover timer rotations, pause/resume, responsive pages, aligned dialogs and package persistence. Real Windows screenshots and complete release source are included.
-
-## x.y.z` section at the top before tagging.
 
 ## 0.4.5
 

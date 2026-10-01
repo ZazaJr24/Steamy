@@ -35,13 +35,13 @@ Already using Steamy? Open **Settings → Check now** to get the latest release.
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
 | **Fixes** | Browse your configured fixes repository. **Hypervisor Fixes is Coming soon** and does not install anything yet. |
 
-Cards respond with short hover and click transitions while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → Appearance → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
+Cards respond with short hover and click transitions while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → General → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
 
 ### A Spotlight that keeps moving
 
 The feed checks public Steam data daily for upcoming releases from established publishers and studios. Released games, DLC, demos, soundtracks, old editions and expired release dates are excluded. Confirmed near dates come first; vague dates follow. The app checks for updates every six hours and retains its last valid feed when a request fails.
 
-Official artwork is preloaded. Slides change about every five seconds while the app is active; **Pause / Resume** and manual arrows give you control. Countdown and image updates retain your scroll position. Exact release dates show remaining days and **Today** on the date; month/year or unknown dates show **TBA**. Hours, minutes and seconds require a confirmed time. A date reaching zero never proves that a game has released or is downloadable.
+Official artwork is preloaded. Slides change about every five seconds while the app is active; **Pause / Resume**, manual arrows and artwork previews on wider windows give you control. The Spotlight countdown sits at the bottom left beside **Check sources** and **View game**. Countdown and image updates retain your scroll position. Exact release dates show remaining days and **Today** on the date; month/year or unknown dates show **TBA**. Hours, minutes and seconds require a confirmed time. A date reaching zero never proves that a game has released or is downloadable.
 
 Dashboard search is hidden by default. Enable **Settings → General → Dashboard search** to search Discover. Disabling it clears the hidden query and results. The regular **Games** search is always available.
 

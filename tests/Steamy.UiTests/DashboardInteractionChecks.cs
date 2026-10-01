@@ -19,6 +19,15 @@ public sealed partial class PageSmokeTests
         var actions = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightActions"));
         var paging = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightPaging"));
         var countdown = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightCountdown"));
+        var previews = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightPreviews"));
+        Assert.Equal(page.ActualWidth < 800 ? Visibility.Collapsed : Visibility.Visible, previews.Visibility);
+        if (Grid.GetRow(paging) == Grid.GetRow(actions))
+        {
+            var actionStart = actions.TranslatePoint(new Point(0,0), hero);
+            var pagingStart = paging.TranslatePoint(new Point(0,0), hero);
+            Assert.True(actionStart.X + actions.ActualWidth + 8 <= pagingStart.X,
+                "Spotlight actions and navigation must have separate space.");
+        }
         var countdownStart = countdown.TranslatePoint(new Point(0,0), actions);
         Assert.InRange(countdownStart.X, 0, 1);
         Assert.InRange(countdownStart.Y, 0, 1);

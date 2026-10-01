@@ -443,6 +443,7 @@ public partial class LibraryPage : Page
         {
             _availabilityCts?.Cancel();
             SourceAvailabilityText.Text = "Select a local metadata package. It will be checked before depot selection.";
+            SourceAvailabilityText.Foreground = TertiaryText;
             UpdateWizardControls();
         }
         else if (_selectedItem is not null)
