@@ -45,6 +45,10 @@
           </Grid>
         </Grid>
         <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True">
+            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource CardHoverGlassBrush}" />
+            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+          </Trigger>
           <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
           <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55" /></Trigger>
         </ControlTemplate.Triggers>

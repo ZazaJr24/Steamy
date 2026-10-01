@@ -118,8 +118,8 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
         foreach (var asset in release.GetProperty("assets").EnumerateArray())
         {
             var name = asset.GetProperty("name").GetString() ?? string.Empty;
-            if (!name.StartsWith("Steamy", StringComparison.OrdinalIgnoreCase)
-                || !name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!name.Equals("Steamy-latest.zip", StringComparison.OrdinalIgnoreCase)
+                && !name.Equals($"Steamy-{tag}.zip", StringComparison.OrdinalIgnoreCase)) continue;
 
             return new UpdateInfo(
                 version,
@@ -291,8 +291,9 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
         }
     }
 
-    public static Version Normalize(Version version) =>
-        new(Math.Max(version.Major, 0), Math.Max(version.Minor, 0), Math.Max(version.Build, 0));
+    public static Version Normalize(Version version) => version.Revision > 0
+        ? new(Math.Max(version.Major, 0), Math.Max(version.Minor, 0), Math.Max(version.Build, 0), version.Revision)
+        : new(Math.Max(version.Major, 0), Math.Max(version.Minor, 0), Math.Max(version.Build, 0));
 
     private static void TryDelete(string path)
     {

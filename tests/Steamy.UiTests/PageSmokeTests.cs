@@ -277,6 +277,8 @@ public sealed partial class PageSmokeTests
         jobs.Add(new DownloadJob { AppId = 2358720, GameName = "Black Myth: Wukong", State = DownloadJobState.Queued,
             TotalSize = "128 GB", Status = "Ready when you are", DownloadMode = "DepotDownloader", TargetFolder = @"C:\Games\Wukong" });
         var window = new MainWindow { WindowState = WindowState.Normal, Width = 1600, Height = 1050 };
+        var dashboard = provider.GetRequiredService<DashboardViewModel>();
+        if (dashboard.DiscoverGames.Count > 0) dashboard.SelectFeaturedCommand.Execute(dashboard.DiscoverGames[0]);
         _phase = "Show main window";
         window.Show();
         MoveCursorAway(0, 0);
@@ -320,6 +322,20 @@ public sealed partial class PageSmokeTests
         window.UpdateLayout();
         SaveVisual(window, "games.png");
         var page = Descendants<LibraryPage>(window).Single();
+        _phase = "Hover a gallery card";
+        var hoveredCard = Descendants<Button>(page).First(button => button.Tag is SteamCatalogItem);
+        var cardSize = new Size(hoveredCard.ActualWidth, hoveredCard.ActualHeight);
+        var cardPosition = hoveredCard.TranslatePoint(new Point(0,0), page);
+        window.Activate();
+        var pointer = hoveredCard.PointToScreen(new Point(hoveredCard.ActualWidth / 2, hoveredCard.ActualHeight / 2));
+        Assert.True(MoveCursorAway((int)Math.Round(pointer.X), (int)Math.Round(pointer.Y)));
+        PumpUntil(() => hoveredCard.IsMouseOver);
+        PumpDispatcher(TimeSpan.FromMilliseconds(300));
+        Assert.Equal(cardSize, new Size(hoveredCard.ActualWidth, hoveredCard.ActualHeight));
+        Assert.Equal(cardPosition, hoveredCard.TranslatePoint(new Point(0,0), page));
+        SaveVisual(window, "games-hover.png");
+        MoveCursorAway(0,0);
+        PumpDispatcher(TimeSpan.FromMilliseconds(200));
         _phase = "Open game details";
         page.OpenDownloadSetup(library.PagedCatalogItems.First(item => item.AppId == 1091500));
         PumpDispatcher(TimeSpan.FromMilliseconds(350));

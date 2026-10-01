@@ -2,7 +2,9 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!-- Midnight blue with transparent surfaces over a static ambient colour field. -->
   <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0D192D" />
-  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#0C172A" />
+  <LinearGradientBrush x:Key="SidebarBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#A6122942" Offset="0" /><GradientStop Color="#801A2440" Offset="0.65" /><GradientStop Color="#961E2844" Offset="1" />
+  </LinearGradientBrush>
   <SolidColorBrush x:Key="SidebarHoverBrush" Color="#263B608A" />
   <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#384579AA" />
   <SolidColorBrush x:Key="SurfaceBrush" Color="#207EA8DD" />
@@ -39,8 +41,16 @@
     <GradientStop Color="#EC213B5B" Offset="0" /><GradientStop Color="#DC162C47" Offset="0.55" /><GradientStop Color="#E1222C4B" Offset="1" />
   </LinearGradientBrush>
   <LinearGradientBrush x:Key="GlassBorderBrush" StartPoint="0,0" EndPoint="0.8,1">
-    <GradientStop Color="#365C6F90" Offset="0" /><GradientStop Color="#18516D93" Offset="0.55" /><GradientStop Color="#285E668D" Offset="1" />
+    <GradientStop Color="#708BC5FF" Offset="0" /><GradientStop Color="#287EADE8" Offset="0.55" /><GradientStop Color="#408E9BD7" Offset="1" />
   </LinearGradientBrush>
+  <LinearGradientBrush x:Key="CardHoverGlassBrush" StartPoint="0,0" EndPoint="0.7,1">
+    <GradientStop Color="#147DBBFF" Offset="0" /><GradientStop Color="#085F83CD" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="NavigationViewItemBackgroundSelected" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#404E8FE0" Offset="0" /><GradientStop Color="#1A5D89C7" Offset="1" />
+  </LinearGradientBrush>
+  <SolidColorBrush x:Key="NavigationViewItemBackgroundPointerOver" Color="#225891C9" />
+  <SolidColorBrush x:Key="SidebarSelectedBorderBrush" Color="#609BCCFF" />
   <RadialGradientBrush x:Key="AmbientBlueBrush" Center="0.87,0.04" GradientOrigin="0.87,0.04" RadiusX="0.85" RadiusY="0.85">
     <GradientStop Color="#805485CA" Offset="0" /><GradientStop Color="#243C6BAE" Offset="0.6" /><GradientStop Color="#003C6BAE" Offset="1" />
   </RadialGradientBrush>

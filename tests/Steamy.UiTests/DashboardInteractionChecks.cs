@@ -16,11 +16,20 @@ public sealed partial class PageSmokeTests
         var hero = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("DashboardHero"));
         var artwork = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightArtworkFrame"));
         var title = Assert.IsType<TextBlock>(page.FindName("SpotlightTitle"));
+        var description = Assert.IsType<TextBlock>(page.FindName("SpotlightDescription"));
+        Assert.InRange(description.ActualWidth, 1, 480);
         var actions = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightActions"));
         var paging = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightPaging"));
         var countdown = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightCountdown"));
         var previews = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightPreviews"));
         Assert.Equal(page.ActualWidth < 800 ? Visibility.Collapsed : Visibility.Visible, previews.Visibility);
+        if (previews.Visibility == Visibility.Visible)
+        {
+            var titleStart = title.TranslatePoint(new Point(0,0), hero);
+            var previewStart = previews.TranslatePoint(new Point(0,0), hero);
+            Assert.True(titleStart.X + title.ActualWidth + 16 <= previewStart.X,
+                "Spotlight text must retain space beside the artwork previews.");
+        }
         if (Grid.GetRow(paging) == Grid.GetRow(actions))
         {
             var actionStart = actions.TranslatePoint(new Point(0,0), hero);

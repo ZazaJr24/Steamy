@@ -3,7 +3,9 @@
   <!-- Steamy Day: cool paper-white surfaces with the same blue accent and brand gradient as the
        dark palette. Keys must match Dark.xaml one to one. -->
   <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F4F6FA" />
-  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F7F9FD" />
+  <LinearGradientBrush x:Key="SidebarBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#CCFFFFFF" Offset="0" /><GradientStop Color="#90F1F6FF" Offset="0.65" /><GradientStop Color="#AAF0EEFC" Offset="1" />
+  </LinearGradientBrush>
   <SolidColorBrush x:Key="SidebarHoverBrush" Color="#EBEEF4" />
   <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#E1E7F2" />
   <SolidColorBrush x:Key="SurfaceBrush" Color="#90FFFFFF" />
@@ -42,6 +44,14 @@
   <LinearGradientBrush x:Key="GlassBorderBrush" StartPoint="0,0" EndPoint="0.8,1">
     <GradientStop Color="#FFFFFFFF" Offset="0" /><GradientStop Color="#7091A6CA" Offset="0.55" /><GradientStop Color="#A0AEB9D0" Offset="1" />
   </LinearGradientBrush>
+  <LinearGradientBrush x:Key="CardHoverGlassBrush" StartPoint="0,0" EndPoint="0.7,1">
+    <GradientStop Color="#70FFFFFF" Offset="0" /><GradientStop Color="#20A6C6F1" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="NavigationViewItemBackgroundSelected" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#60ACCFFF" Offset="0" /><GradientStop Color="#20C2D8FA" Offset="1" />
+  </LinearGradientBrush>
+  <SolidColorBrush x:Key="NavigationViewItemBackgroundPointerOver" Color="#30A6C6F1" />
+  <SolidColorBrush x:Key="SidebarSelectedBorderBrush" Color="#6078A9E8" />
   <RadialGradientBrush x:Key="AmbientBlueBrush" Center="0.87,0.04" GradientOrigin="0.87,0.04" RadiusX="0.85" RadiusY="0.85">
     <GradientStop Color="#70A3CFFF" Offset="0" /><GradientStop Color="#18A3CFFF" Offset="0.6" /><GradientStop Color="#00A3CFFF" Offset="1" />
   </RadialGradientBrush>

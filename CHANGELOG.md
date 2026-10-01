@@ -3,6 +3,14 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.6.1 — 2026-10-01
+
+- Subtle glass sidebar and a clearer blue selection outline without changing navigation order.
+- Spotlight titles reduced by 7% and descriptions constrained to a narrower reading width.
+- Fine glass borders and translucent hover surfaces for Games, Fixes and upcoming cards, with fixed hit areas.
+- Hotfix revision numbers retained by the version display and updater; source archives are excluded from update downloads.
+- To upgrade from 0.4.6, extract the new app ZIP manually: that older updater does not recognize four-part hotfix versions.
+
 ## 0.4.6 — 2026-10-01
 
 - Larger game and fixes galleries, transparent captions and translucent blue surfaces over a richer blue/violet ambient background throughout the app.

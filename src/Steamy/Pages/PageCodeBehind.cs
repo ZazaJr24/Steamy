@@ -103,12 +103,13 @@ public partial class DashboardPage : Page
         DashboardScroll.Padding = width < 640 ? new Thickness(18, 18, 18, 26) : new Thickness(28, 22, 28, 30);
         DashboardHero.Height = width < 720 ? 400 : width < 1000 ? 420 : 460;
         SpotlightArtworkFrame.Height = DashboardHero.Height - 2;
-        SpotlightTitle.FontSize = compact ? 32 : width < 1100 ? 40 : 48;
+        SpotlightTitle.FontSize = (compact ? 32 : width < 1100 ? 40 : 48) * 0.93;
         SpotlightPreviews.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         SpotlightPaging.SetValue(Grid.RowProperty, compact ? 2 : 1);
         SpotlightPaging.SetValue(Grid.ColumnProperty, compact ? 0 : 1);
         SpotlightPaging.Margin = compact ? new Thickness(0,12,0,0) : new Thickness(18,0,0,0);
-        SpotlightDetails.MaxWidth = compact ? Math.Max(240, (width - 110) * 0.82) : Math.Max(240, width - 245);
+        SpotlightDetails.MaxWidth = (compact ? Math.Max(240, (width - 110) * 0.82) : Math.Max(240, width - 245)) * 0.93;
+        SpotlightDescription.MaxWidth = Math.Min(480, SpotlightDetails.MaxWidth * 0.88);
     }
 
     private void GameCover_Click(object sender, RoutedEventArgs e)

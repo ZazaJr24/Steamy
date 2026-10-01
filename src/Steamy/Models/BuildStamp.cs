@@ -11,7 +11,14 @@ namespace Steamy;
 public static class BuildStamp
 {
     /// <summary>The running assembly version as text, e.g. <c>0.2.5</c>.</summary>
-    public static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "dev";
+    public static string Version
+    {
+        get
+        {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            return version?.ToString(version.Revision > 0 ? 4 : 3) ?? "dev";
+        }
+    }
 
     public static string Describe()
     {
