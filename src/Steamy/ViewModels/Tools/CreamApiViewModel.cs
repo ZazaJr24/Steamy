@@ -216,6 +216,16 @@ public sealed class CreamApiViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _appIdText, value)) return;
+            if (_selectedGame is not null && _selectedGame.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture) != value)
+            {
+                _selectedGame = null;
+                OnPropertyChanged(nameof(SelectedGame));
+            }
+            _fetchCts?.Cancel();
+            _fetchCts = null; // The request owns its CTS until its guarded finally block.
+            IsFetching = false;
+            DlcList.Clear();
+            OnPropertyChanged(nameof(DlcCountLabel));
             FetchDlcCommand.NotifyCanExecuteChanged();
             ApplyCommand.NotifyCanExecuteChanged();
         }

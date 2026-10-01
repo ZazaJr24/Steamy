@@ -150,7 +150,7 @@
               </StackPanel>
               <StackPanel x:Name="SpotlightActions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                           DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
-                <ui:Button Content="Download" Appearance="Primary" Icon="{ui:SymbolIcon ArrowDownload24}" Padding="16,8" Command="{Binding DownloadFeaturedCommand}" />
+                <ui:Button Content="{Binding FeaturedDownloadLabel}" Appearance="Primary" Icon="{ui:SymbolIcon ArrowDownload24}" Padding="16,8" Command="{Binding DownloadFeaturedCommand}" ToolTip="Choose a source and check whether downloadable depots are available" />
                 <ui:Button Content="View game" Appearance="Transparent" Padding="10,8" Margin="8,0,0,0" Command="{Binding ViewFeaturedCommand}" />
               </StackPanel>
             </Grid>

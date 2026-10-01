@@ -56,6 +56,16 @@ public sealed partial class PageSmokeTests
         Assert.False(Assert.Single(model.DlcList).IsSelected);
         model.SelectAllCommand.Execute(null);
         Assert.True(Assert.Single(model.DlcList).IsSelected);
+        model.AppIdText = "300";
+        Assert.Empty(model.DlcList);
+        var pending = model.FetchDlcCommand.ExecuteAsync(null);
+        Assert.True(model.IsFetching);
+        model.AppIdText = "400";
+        fixture.Requests[300].SetResult(new[] { new DlcEntry(301, "DLC for the previous App ID") });
+        PumpUntil(() => pending.IsCompleted);
+        pending.GetAwaiter().GetResult();
+        Assert.False(model.IsFetching);
+        Assert.Empty(model.DlcList);
     }
 
     private sealed class DlcSelectionFixture : ICreamApiService

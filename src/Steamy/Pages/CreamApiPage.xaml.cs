@@ -24,6 +24,8 @@ public partial class CreamApiPage : Page
 
     private CreamApiViewModel ViewModel => (CreamApiViewModel)DataContext;
 
+    private void DlcChoice_Click(object sender, System.Windows.RoutedEventArgs e) => ViewModel.NotifyDlcCountChanged();
+
     private void BrowseGameFolder_Click(object sender, System.Windows.RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog

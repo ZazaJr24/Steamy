@@ -338,7 +338,7 @@
                 <TextBlock Text="Choose a source." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,18" />
                 <StackPanel>
                   <ui:Button x:Name="SourceSushi" Tag="Sushi" Click="SourceButton_Click" Appearance="Secondary"
-                             Padding="16,13" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
+                             Padding="16,13" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <StackPanel>
@@ -349,7 +349,7 @@
                     </Grid>
                   </ui:Button>
                   <ui:Button x:Name="SourceZaza" Tag="Zaza" Click="SourceButton_Click" Appearance="Secondary"
-                             Padding="16,13" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
+                             Padding="16,13" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <StackPanel>
@@ -360,7 +360,7 @@
                     </Grid>
                   </ui:Button>
                   <ui:Button x:Name="SourceRyuu" Tag="Ryuu" Click="SourceButton_Click" Appearance="Secondary"
-                             Padding="16,13" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
+                             Padding="16,13" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <StackPanel>
@@ -371,7 +371,7 @@
                     </Grid>
                   </ui:Button>
                   <ui:Button x:Name="SourceHubcap" Tag="Hubcap" Click="SourceButton_Click" Appearance="Secondary"
-                             Padding="16,13" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
+                             Padding="16,13" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <StackPanel>
@@ -382,7 +382,7 @@
                     </Grid>
                   </ui:Button>
                   <ui:Button x:Name="SourceDepotBox" Tag="DepotBox" Click="SourceButton_Click" Appearance="Secondary"
-                             Padding="16,13" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
+                             Padding="16,13" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <StackPanel>

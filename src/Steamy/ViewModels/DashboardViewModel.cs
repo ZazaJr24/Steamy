@@ -255,6 +255,7 @@ public sealed class DashboardViewModel : ViewModelBase
     public bool HasSpotlight => DiscoverGames.Count > 0;
     public DashboardFeature? FeaturedGame => HasSpotlight ? DiscoverGames[_featuredIndex] : null;
     public string FeaturedPosition => HasSpotlight ? $"{_featuredIndex + 1:00} / {DiscoverGames.Count:00}" : string.Empty;
+    public string FeaturedDownloadLabel => FeaturedGame?.Metadata.ComingSoon == true ? "Check sources" : "Download";
     public ICommand NextFeaturedCommand { get; }
     public ICommand PreviousFeaturedCommand { get; }
     public ICommand ViewFeaturedCommand { get; }
@@ -306,6 +307,7 @@ public sealed class DashboardViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasSpotlight));
         OnPropertyChanged(nameof(FeaturedGame));
         OnPropertyChanged(nameof(FeaturedPosition));
+        OnPropertyChanged(nameof(FeaturedDownloadLabel));
         (NextFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (PreviousFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (ViewFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
@@ -349,6 +351,7 @@ public sealed class DashboardViewModel : ViewModelBase
         _featuredIndex = (_featuredIndex + direction + DiscoverGames.Count) % DiscoverGames.Count;
         OnPropertyChanged(nameof(FeaturedGame));
         OnPropertyChanged(nameof(FeaturedPosition));
+        OnPropertyChanged(nameof(FeaturedDownloadLabel));
         _ = LoadFeaturedArtworkAsync();
     }
 

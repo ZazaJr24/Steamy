@@ -292,6 +292,8 @@ public sealed partial class PageSmokeTests
         dlcModel.FilteredGames.Add(new InstalledGameEntry(1091500, "Cyberpunk 2077", dlcModel.GameFolder));
         dlcModel.FilteredGames.Add(new InstalledGameEntry(1245620, "ELDEN RING", @"C:\Games\ELDEN RING"));
         dlcModel.DlcList.Add(new Steamy.ViewModels.CreamApiDlcItem { AppId = 2138330, Name = "Cyberpunk 2077: Phantom Liberty" });
+        dlcModel.NotifyDlcCountChanged();
+        dlcModel.Status = "Cyberpunk 2077 selected · 1 DLC available";
         window.UpdateLayout();
         SaveVisual(window, "dlc-unlocker.png");
         OfflineServiceProxy.ScreenshotCatalog = new[] { (2322010, "God of War Ragnarök"), (1245620, "ELDEN RING"),
