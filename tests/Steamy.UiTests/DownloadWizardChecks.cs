@@ -44,8 +44,7 @@ public sealed partial class PageSmokeTests
             favoriteButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             PumpUntil(() => favoriteButton.Content?.ToString() == "Favorite" && favoriteButton.IsEnabled);
             Assert.DoesNotContain(game.AppId, activity.GetAsync().GetAwaiter().GetResult().FavoriteAppIds);
-            Assert.Equal(-1, page.DownloadWizardStep); // Game information is separate from download setup.
-            AwaitWizardStep(page);
+            Assert.Equal(0, page.DownloadWizardStep); // A game opens the original compact source picker.
             CheckWizardStage(page, 0);
             page.SelectDownloadSource(ManifestSource.Zaza);
             var beforePreparation = downloads.PreparationCalls.Count;
@@ -416,10 +415,14 @@ public sealed partial class PageSmokeTests
     private static void CheckWizardStage(LibraryPage page, int selectedStage)
     {
         Assert.Equal(selectedStage, page.DownloadWizardStep);
-        Assert.Equal(Visibility.Visible, ((FrameworkElement)page.FindName("SetupHeader")).Visibility);
-        Assert.Equal(Visibility.Collapsed, ((FrameworkElement)page.FindName("DetailHeader")).Visibility);
-        Assert.Null(((Image)page.FindName("BackdropImage")).Source);
-        Assert.True(double.IsNaN(((FrameworkElement)page.FindName("DialogPanel")).Width));
+        Assert.Equal(Visibility.Collapsed, ((FrameworkElement)page.FindName("SetupHeader")).Visibility);
+        Assert.Equal(Visibility.Visible, ((FrameworkElement)page.FindName("DetailHeader")).Visibility);
+        var backdrop = (Image)page.FindName("BackdropImage");
+        Assert.Equal(Steamy.Controls.MotionPreferences.BackdropBlurEnabled ? Visibility.Visible : Visibility.Collapsed, backdrop.Visibility);
+        var dialog = (FrameworkElement)page.FindName("DialogPanel");
+        Assert.Equal(680, dialog.Width);
+        Assert.True(dialog.ActualWidth < page.ActualWidth);
+        Assert.True(dialog.ActualHeight <= page.ActualHeight - 30);
         foreach (var (name, stage) in new[] { ("SourceStepPanel", 0), ("DepotStepPanel", 1), ("LocationStepPanel", 2) })
             Assert.Equal(stage == selectedStage ? Visibility.Visible : Visibility.Collapsed,
                 ((FrameworkElement)page.FindName(name)).Visibility);

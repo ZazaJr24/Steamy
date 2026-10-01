@@ -3,6 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:controls="clr-namespace:Steamy.Controls"
+      ScrollViewer.CanContentScroll="False"
       UseLayoutRounding="True" SnapsToDevicePixels="True"
       Background="{DynamicResource AppBackgroundBrush}">
   <Page.Resources>
@@ -42,7 +43,7 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="16,13" />
-      <Setter Property="MinHeight" Value="102" />
+      <Setter Property="MinHeight" Value="88" />
     </Style>
     <DataTemplate x:Key="PersonalLibraryCard">
       <Grid>

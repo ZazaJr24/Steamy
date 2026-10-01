@@ -30,7 +30,7 @@ Already using Steamy? Open **Settings → Check now** to get the latest release.
 | **Dashboard** | Large Spotlight artwork, your installed library and favorites, recently opened games and a compact download overview. |
 | **Spotlight** | New and upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
 | **Games** | A cover grid with calmer solid surfaces, typo-tolerant title/App ID search, recent queries, favorites, sorting and source filters. |
-| **Downloads** | Separate source → depots & version → location pages, right-hand depot selection and available Steam details, plus queue priority, pause, resume and repair. |
+| **Downloads** | Compact source → depots & version → location steps, right-hand depot selection and available Steam details, plus queue priority, pause, resume and repair. |
 | **Settings** | Searchable categories, dark/light themes, reduced effects, Windows backdrop options, download limits, network options and source connections. |
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
 | **Fixes** | Browse your configured fixes repository. **Hypervisor Fixes is Coming soon** and does not install anything yet. |
@@ -41,11 +41,11 @@ Cards respond with short hover and click transitions while their clickable area 
 
 The feed checks Steam daily for recent releases and popular upcoming games from established publishers. **ACE COMBAT 8: WINGS OF THEVE** and **Assassin's Creed Black Flag Resynced** are included in the initial verified selection. New titles arrive without downloading another app release.
 
-The app checks for feed updates in the background, shares concurrent requests and retains the last good data when offline. Slides rotate while the dashboard is active; hovering, keyboard focus or searching pauses the rotation. Spotlight cards open the official Steam store. Upcoming games carry a **Coming soon** status; appearing here does not imply a download is available.
+The app checks for feed updates in the background, shares concurrent requests and retains the last good data when offline. Slides change every five seconds while the dashboard is active; searching pauses rotation. Spotlight cards open source selection inside Steamy. Upcoming games carry a **Coming soon** status; appearing here does not imply a download is available.
 
 ### Downloads you can come back to
 
-Open a game, choose **Download**, and follow three separate pages:
+Open a game, choose **Download**, and follow three steps in the compact dialog:
 
 1. **Source** — choose a provider and load its available depot metadata.
 2. **Depots & version** — all depots supplied by your source appear in a scrollable list. Tick the depots on the right and choose a source-provided manifest version. Available Steam names, platforms, languages and DLC/shared content labels appear alongside them. Optional Steam details are read through a bounded, cached SteamCMD app-info mirror request. Sizes and branch/build information are used only for an exact manifest match; missing details stay unknown. Each depot has a SteamDB inspection link.
@@ -84,7 +84,7 @@ Screenshots are captured from the actual Windows app using sample library, queue
 
 ![The Games grid](docs/screenshots/games.png)
 
-**Download setup** — begin with a clean source page.
+**Download setup** — begin with the familiar compact source picker.
 
 ![Choose the download source](docs/screenshots/game-details.png)
 

@@ -132,8 +132,8 @@ public sealed partial class PageSmokeTests
             Assert.Equal(Visibility.Collapsed, snapshot.Visibility);
         }
         Assert.True(overlay.IsKeyboardFocusWithin);
-        Assert.Equal(-1, page.DownloadWizardStep);
-        Assert.False(((FrameworkElement)page.FindName("SourceStepPanel")).IsVisible);
+        Assert.Equal(0, page.DownloadWizardStep);
+        Assert.True(((FrameworkElement)page.FindName("SourceStepPanel")).IsVisible);
         page.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(page)!, 0, Key.Escape)
         { RoutedEvent = Keyboard.PreviewKeyDownEvent });
         PumpUntil(() => overlay.Visibility == Visibility.Collapsed);
@@ -144,10 +144,8 @@ public sealed partial class PageSmokeTests
 
         _phase = "Open separate download setup " + theme;
         card.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-        AwaitWizardStep(page);
         CheckWizardStage(page, 0);
-        Assert.Null(snapshot.Source); // The source/depot/location pages use a solid workspace.
-        Assert.Equal(Visibility.Collapsed, snapshot.Visibility);
+        Assert.Equal(MotionPreferences.BackdropBlurEnabled ? Visibility.Visible : Visibility.Collapsed, snapshot.Visibility);
         AwaitWizardStep(page);
         CheckWizardStage(page, 1);
         Assert.NotEmpty(page.DownloadDepotChoices);

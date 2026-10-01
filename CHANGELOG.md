@@ -10,8 +10,10 @@ Add a new `## x.y.z` section at the top before tagging.
 - Fixed scroll reversal during animation, stopped repeated card entrance flicker, and improved artwork fallback after CDN timeouts or disk-cache failures.
 
 ### Changed
+- Spotlight now changes every five seconds without getting stuck after a card receives keyboard focus.
+- Closed selectors and non-scrolling template viewers no longer intercept the surrounding page's wheel input; dashboard and DLC pages explicitly use their own scrolling host.
 - Replaced the dashboard slogan and greeting block with full-width Spotlight artwork, clear release details, and compact library/continue/download cards.
-- Download setup now uses three separate pages: source, depots/version, and location. Game information keeps its small dialog and blurred gallery background.
+- Download setup retains the compact dialog with source, depots/manifest, and location steps over a blurred gallery.
 - Depot rows display the selection checkbox on the right, all source depots remain accessible in a virtualized list, and select-all updates the summary once.
 - Successful download starts save the queue row before opening Downloads; the registered transfer continues after leaving setup.
 
@@ -19,7 +21,7 @@ Add a new `## x.y.z` section at the top before tagging.
 - Optional public Steam app-info metadata through a cached SteamCMD mirror: depot names, platforms, languages, DLC/shared content, and SteamDB links.
 - Steam sizes, compressed sizes, build labels and branches appear only when the manifest ID exactly matches the selected source version. Metadata never adds source depots, changes versions or refreshes resume pins.
 - Bounded requests, shared lookups, timeout/outage fallback and cache limits keep metadata optional.
-- Windows checks for separate setup pages, right-hand checkbox binding, source snapshot preservation and saved-first download navigation.
+- Windows checks for compact setup steps, right-hand checkbox binding, source snapshot preservation and saved-first download navigation.
 
 ### Documentation
 - Refreshed Windows dashboard and download-page screenshots, keeping the README download link on Latest.

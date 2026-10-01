@@ -2,6 +2,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Steamy.Controls;
+using Steamy.Pages;
+using Steamy.Models;
+using System.Windows.Controls.Primitives;
+using CommunityToolkit.Mvvm.Input;
 using Steamy.Services;
 using Steamy.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,6 +40,83 @@ public sealed partial class PageSmokeTests
         }
         finally { window.Close(); SmoothScroll.SetEnabled(viewer, false); }
     }
+
+    private static void CheckShellScrolling(IServiceProvider provider)
+    {
+        var previousCatalog = OfflineServiceProxy.ScreenshotCatalog;
+        var model = provider.GetRequiredService<LibraryViewModel>();
+        var previousSize = model.PageSize;
+        var window = new MainWindow { Width = 1044, Height = 600, ShowInTaskbar = false };
+        try
+        {
+            window.Show();
+            Application.Current.MainWindow = window;
+            PumpDispatcher(TimeSpan.FromMilliseconds(100));
+            var dashboard = Descendants<DashboardPage>(window).Single();
+            var homeScroll = (ScrollViewer)dashboard.FindName("DashboardScroll");
+            Assert.False(ScrollViewer.GetCanContentScroll(dashboard));
+            Assert.True(homeScroll.ViewportHeight > 0 && homeScroll.ScrollableHeight > 0,
+                "The real navigation host must give Dashboard a finite scrolling viewport.");
+            var image = (FrameworkElement)dashboard.FindName("SpotlightArtworkFrame");
+            WheelOver(image, -120);
+            PumpDispatcher(TimeSpan.FromMilliseconds(240));
+            Assert.True(homeScroll.VerticalOffset > 0, "Wheel input over the Spotlight artwork must scroll Home.");
+
+            OfflineServiceProxy.ScreenshotCatalog = Enumerable.Range(1000, 56).Select(id =>
+                new SteamCatalogItem { AppId = id, Name = $"Scroll fixture {id}", AppType = SteamCatalogAppType.Game }).ToArray();
+            model.PageSize = 48;
+            model.SelectedSourceFilter = "All sources";
+            model.SelectedTypeFilter = "All games";
+            model.SearchText = string.Empty;
+            Assert.True(window.RootNavigationView.Navigate(typeof(LibraryPage)));
+            var refresh = ((IAsyncRelayCommand)model.RefreshCatalogCommand).ExecuteAsync(null);
+            PumpUntil(() => refresh.IsCompleted);
+            refresh.GetAwaiter().GetResult();
+            PumpUntil(() => model.PagedCatalogItems.Count == 48 && !model.IsCatalogLoading);
+            window.UpdateLayout();
+            var library = Descendants<LibraryPage>(window).Single();
+            var gallery = (ScrollViewer)library.FindName("GalleryScroll");
+            Assert.True(gallery.ScrollableHeight > gallery.ViewportHeight,
+                "Several game rows must remain inside the Gallery scrolling viewport.");
+            var card = Descendants<Button>(library).First(button => button.Tag is SteamCatalogItem);
+            WheelOver(card, -120);
+            PumpDispatcher(TimeSpan.FromMilliseconds(240));
+            Assert.True(gallery.VerticalOffset > 0, "Wheel input over a game card must scroll the game grid.");
+            var selector = new ComboBox { ItemsSource = new[] { "First", "Second" }, SelectedIndex = 0, Width = 180 };
+            var content = Assert.IsType<StackPanel>(gallery.Content);
+            content.Children.Add(selector);
+            window.UpdateLayout();
+            gallery.ScrollToBottom();
+            PumpDispatcher(TimeSpan.FromMilliseconds(40));
+            var before = gallery.VerticalOffset;
+            var selected = selector.SelectedItem;
+            WheelOver(selector, 120);
+            PumpDispatcher(TimeSpan.FromMilliseconds(240));
+            Assert.True(gallery.VerticalOffset < before, "A closed selector must not block page scrolling.");
+            Assert.Same(selected, selector.SelectedItem);
+            content.Children.Remove(selector);
+            var keyboardCard = Descendants<Button>(library).Last(button => button.Tag is SteamCatalogItem);
+            keyboardCard.Focus();
+            PumpDispatcher(TimeSpan.FromMilliseconds(40));
+            var keyboardBefore = gallery.VerticalOffset;
+            keyboardCard.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(keyboardCard)!, Environment.TickCount, Key.PageUp)
+                { RoutedEvent = Keyboard.KeyDownEvent });
+            PumpDispatcher(TimeSpan.FromMilliseconds(100));
+            Assert.True(gallery.VerticalOffset < keyboardBefore, "PageUp must work while a game card has focus.");
+        }
+        finally
+        {
+            OfflineServiceProxy.ScreenshotCatalog = previousCatalog;
+            model.PageSize = previousSize;
+            var restore = ((IAsyncRelayCommand)model.RefreshCatalogCommand).ExecuteAsync(null);
+            PumpUntil(() => restore.IsCompleted);
+            restore.GetAwaiter().GetResult();
+            window.Close();
+        }
+    }
+
+    private static void WheelOver(UIElement element, int delta) => element.RaiseEvent(
+        new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, delta) { RoutedEvent = UIElement.PreviewMouseWheelEvent });
 
     private static void CheckDlcSelection(IServiceProvider provider)
     {

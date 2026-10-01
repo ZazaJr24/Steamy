@@ -172,7 +172,7 @@
         </ItemsControl>
       </StackPanel>
 
-      <ScrollViewer Grid.Row="2" controls:SmoothScroll.Enabled="True" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,8,0">
+      <ScrollViewer Grid.Row="2" x:Name="GalleryScroll" controls:SmoothScroll.Enabled="True" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,8,0">
         <StackPanel>
           <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource GalleryEmptyStateStyle}" />
 
@@ -281,7 +281,7 @@
            IsHitTestVisible="False" RenderOptions.BitmapScalingMode="HighQuality">
       <Image.Effect><BlurEffect Radius="14" RenderingBias="Performance" /></Image.Effect>
     </Image>
-    <!-- Game information stays a small dialog; download setup uses the whole page. -->
+    <!-- Compact source, depot/manifest and location steps over the frozen gallery. -->
     <Grid x:Name="OverlayGrid" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle" KeyboardNavigation.ControlTabNavigation="Cycle">
       <Border x:Name="DialogDimmer" Background="#65070B12" MouseLeftButtonUp="Overlay_Close" />
       <Border x:Name="DialogPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -291,7 +291,7 @@
         <Grid>
           <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
           <Grid Grid.Row="0">
-            <Grid x:Name="DetailHeader" Height="160">
+            <Grid x:Name="DetailHeader" Height="128">
               <Image x:Name="OverlayCover" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
               <Border Background="{StaticResource HeroBannerFade}" />
               <ui:Button x:Name="DialogCloseButton" Style="{StaticResource IconButtonStyle}" Icon="{ui:SymbolIcon Dismiss24}"
@@ -319,80 +319,22 @@
 
           <Grid Grid.Row="1" x:Name="DownloadBody" Margin="28,8,28,16" MaxWidth="1040">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-            <StackPanel x:Name="WizardHeader" Margin="0,0,0,20">
-              <TextBlock x:Name="WizardTrailText" Text="Source  →  Depots  →  Location" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,12" />
-              <TextBlock x:Name="WizardStepText" Text="Source" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+            <StackPanel x:Name="WizardHeader" Margin="0,0,0,14">
+              <TextBlock x:Name="WizardTrailText" Text="Source  →  Depots  →  Location" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,8" />
+              <TextBlock x:Name="WizardStepText" Text="Source" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
               <ProgressBar x:Name="WizardBusyBar" Height="2" IsIndeterminate="True" Visibility="Collapsed" Margin="0,12,0,0" />
-            </StackPanel>
-
-            <StackPanel x:Name="GameInfoPanel" Grid.Row="1" Visibility="Collapsed" Margin="0,4,0,6">
-              <TextBlock x:Name="GameInstallInfo" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16" />
-              <StackPanel Orientation="Horizontal">
-                <ui:Button x:Name="FavoriteButton" Content="Favorite" Icon="{ui:SymbolIcon Heart24}" Appearance="Secondary" Click="FavoriteButton_Click" />
-                <ui:Button x:Name="PlayButton" Content="Play in Steam" Icon="{ui:SymbolIcon Play24}" Appearance="Secondary" Margin="8,0,0,0" Visibility="Collapsed" Click="PlayButton_Click" />
-              </StackPanel>
             </StackPanel>
 
             <ScrollViewer x:Name="SourceStepPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
               <StackPanel MaxWidth="760" HorizontalAlignment="Stretch">
                 <TextBlock Text="Choose a source." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,18" />
-                <StackPanel>
-                  <ui:Button x:Name="SourceSushi" Tag="Sushi" Click="SourceButton_Click" Appearance="Secondary"
-                             Padding="16,13" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
-                    <Grid>
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <StackPanel>
-                        <TextBlock Text="Sushi" FontWeight="SemiBold" FontSize="13" />
-                        <TextBlock Text="Community manifests · no API key" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" />
-                      </StackPanel>
-                      <ui:SymbolIcon Grid.Column="1" Symbol="ChevronRight24" FontSize="16" VerticalAlignment="Center" Margin="16,0,0,0" />
-                    </Grid>
-                  </ui:Button>
-                  <ui:Button x:Name="SourceZaza" Tag="Zaza" Click="SourceButton_Click" Appearance="Secondary"
-                             Padding="16,13" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
-                    <Grid>
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <StackPanel>
-                        <TextBlock Text="Zaza" FontWeight="SemiBold" FontSize="13" />
-                        <TextBlock Text="Community manifests · no API key" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" />
-                      </StackPanel>
-                      <ui:SymbolIcon Grid.Column="1" Symbol="ChevronRight24" FontSize="16" VerticalAlignment="Center" Margin="16,0,0,0" />
-                    </Grid>
-                  </ui:Button>
-                  <ui:Button x:Name="SourceRyuu" Tag="Ryuu" Click="SourceButton_Click" Appearance="Secondary"
-                             Padding="16,13" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
-                    <Grid>
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <StackPanel>
-                        <TextBlock Text="Ryuu" FontWeight="SemiBold" FontSize="13" />
-                        <TextBlock Text="Use your configured API key" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" />
-                      </StackPanel>
-                      <ui:SymbolIcon Grid.Column="1" Symbol="ChevronRight24" FontSize="16" VerticalAlignment="Center" Margin="16,0,0,0" />
-                    </Grid>
-                  </ui:Button>
-                  <ui:Button x:Name="SourceHubcap" Tag="Hubcap" Click="SourceButton_Click" Appearance="Secondary"
-                             Padding="16,13" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
-                    <Grid>
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <StackPanel>
-                        <TextBlock Text="Hubcap" FontWeight="SemiBold" FontSize="13" />
-                        <TextBlock Text="Use your configured API key" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" />
-                      </StackPanel>
-                      <ui:SymbolIcon Grid.Column="1" Symbol="ChevronRight24" FontSize="16" VerticalAlignment="Center" Margin="16,0,0,0" />
-                    </Grid>
-                  </ui:Button>
-                  <ui:Button x:Name="SourceDepotBox" Tag="DepotBox" Click="SourceButton_Click" Appearance="Secondary"
-                             Padding="16,13" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,9">
-                    <Grid>
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <StackPanel>
-                        <TextBlock Text="DepotBox" FontWeight="SemiBold" FontSize="13" />
-                        <TextBlock Text="Use your configured API key" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" />
-                      </StackPanel>
-                      <ui:SymbolIcon Grid.Column="1" Symbol="ChevronRight24" FontSize="16" VerticalAlignment="Center" Margin="16,0,0,0" />
-                    </Grid>
-                  </ui:Button>
-                </StackPanel>
+                <UniformGrid Columns="2">
+                  <ui:Button x:Name="SourceSushi" Tag="Sushi" Content="Sushi" Click="SourceButton_Click" Appearance="Secondary" Padding="14,10" HorizontalAlignment="Stretch" Margin="0,0,8,8" ToolTip="No API key" />
+                  <ui:Button x:Name="SourceZaza" Tag="Zaza" Content="Zaza" Click="SourceButton_Click" Appearance="Secondary" Padding="14,10" HorizontalAlignment="Stretch" Margin="0,0,8,8" ToolTip="No API key" />
+                  <ui:Button x:Name="SourceRyuu" Tag="Ryuu" Content="Ryuu" Click="SourceButton_Click" Appearance="Secondary" Padding="14,10" HorizontalAlignment="Stretch" Margin="0,0,8,8" ToolTip="Auth code" />
+                  <ui:Button x:Name="SourceHubcap" Tag="Hubcap" Content="Hubcap" Click="SourceButton_Click" Appearance="Secondary" Padding="14,10" HorizontalAlignment="Stretch" Margin="0,0,8,8" ToolTip="API key" />
+                  <ui:Button x:Name="SourceDepotBox" Tag="DepotBox" Content="DepotBox" Click="SourceButton_Click" Appearance="Secondary" Padding="14,10" HorizontalAlignment="Stretch" Margin="0,0,8,8" ToolTip="API key" />
+                </UniformGrid>
                 <TextBlock x:Name="SourceAvailabilityText" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,10,0,0" />
               </StackPanel>
             </ScrollViewer>
@@ -485,6 +427,14 @@
                 <ui:Button x:Name="BackButton" Content="Back" Appearance="Secondary" Click="WizardBackButton_Click" Visibility="Collapsed" />
                 <ui:Button x:Name="NewSelectionButton" Content="New selection" Appearance="Secondary" Visibility="Collapsed" Click="NewSelectionButton_Click" />
               </StackPanel>
+            <StackPanel x:Name="GameInfoPanel" Grid.Column="1" Visibility="Visible" Margin="8,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center">
+              <TextBlock x:Name="GameInstallInfo" Visibility="Collapsed" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16" />
+              <StackPanel Orientation="Horizontal">
+                <ui:Button x:Name="FavoriteButton" Content="Favorite" Icon="{ui:SymbolIcon Heart24}" Appearance="Secondary" Click="FavoriteButton_Click" />
+                <ui:Button x:Name="PlayButton" Content="Play in Steam" Icon="{ui:SymbolIcon Play24}" Appearance="Secondary" Margin="8,0,0,0" Visibility="Collapsed" Click="PlayButton_Click" />
+              </StackPanel>
+            </StackPanel>
+
               <StackPanel Grid.Column="2" Orientation="Horizontal">
                 <ui:Button x:Name="PauseButton" Content="Pause" Icon="{ui:SymbolIcon Pause24}" Appearance="Secondary" Margin="0,0,8,0" Visibility="Collapsed" Click="PauseButton_Click" />
                 <ui:Button x:Name="StartButton" Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" Appearance="Primary" Click="StartDownloadButton_Click" />
