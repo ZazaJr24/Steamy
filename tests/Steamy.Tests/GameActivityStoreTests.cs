@@ -70,7 +70,11 @@ public sealed class GameActivityStoreTests
         await store.ToggleFavoriteAsync(730);
         File.Delete(path);
         Directory.CreateDirectory(path); // A directory cannot be replaced by the settings file.
-        await Assert.ThrowsAnyAsync<IOException>(() => store.ToggleFavoriteAsync(570));
+        var failure = await Record.ExceptionAsync(() => store.ToggleFavoriteAsync(570));
+        // Replacing a directory produces IOException on Unix and UnauthorizedAccessException
+        // on Windows. Both failures must leave the saved favorite state untouched.
+        Assert.True(failure is IOException or UnauthorizedAccessException,
+            $"Expected a filesystem write failure, but received {failure?.GetType().FullName ?? "no exception"}.");
         Assert.Equal(new[] { 730 }, (await store.GetAsync()).FavoriteAppIds);
         Assert.Empty(Directory.GetFiles(folder.Path, "*.tmp"));
     }
