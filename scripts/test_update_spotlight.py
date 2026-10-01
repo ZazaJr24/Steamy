@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timezone
-from update_spotlight import select_game, plain_text
+from update_spotlight import select_game, plain_text, confirmed_release_time, enrich_releases
 
 
 class SelectionTests(unittest.TestCase):
@@ -50,6 +50,27 @@ class SelectionTests(unittest.TestCase):
 
     def test_store_markup_is_removed(self):
         self.assertEqual(plain_text('<b>A &amp; B</b><br>Adventure'), 'A & B Adventure')
+
+    def test_official_full_date_schedule_keeps_real_hours_and_seconds(self):
+        game = {'appId':123, 'releaseDate':'2026-10-02'}
+        scheduled = datetime(2026,10,2,17,30,15,tzinfo=timezone.utc)
+        release = {'is_coming_soon':True, 'coming_soon_display':'date_full', 'steam_release_date':int(scheduled.timestamp())}
+        self.assertEqual(confirmed_release_time(game,release,self.now),scheduled)
+        for precision in ('date_month','date_year','date_quarter','text',''):
+            self.assertIsNone(confirmed_release_time(game,{**release,'coming_soon_display':precision},self.now))
+
+    def test_us_store_date_can_precede_the_actual_utc_launch_day(self):
+        scheduled = datetime(2026,10,3,5,tzinfo=timezone.utc)
+        release = {'is_coming_soon':True,'coming_soon_display':'date_full','steam_release_date':int(scheduled.timestamp())}
+        self.assertEqual(confirmed_release_time({'releaseDate':'2026-10-02'},release,self.now),scheduled)
+        self.assertIsNone(confirmed_release_time({'releaseDate':'2026-09-28'},release,self.now))
+
+    def test_released_or_expired_schedules_are_excluded(self):
+        games = [{'appId':1,'releaseDate':'2026-09-30'}, {'appId':2,'releaseDate':'2026-10-02'}]
+        response = {'response':{'store_items':[
+            {'appid':1,'release':{'is_coming_soon':True,'coming_soon_display':'date_full', 'steam_release_date':int(self.now.timestamp())-1}},
+            {'appid':2,'release':{'is_coming_soon':False}}]}}
+        self.assertEqual(enrich_releases(games,response,self.now),[])
 
 
 if __name__ == '__main__':

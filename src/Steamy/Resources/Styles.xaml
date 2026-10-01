@@ -24,7 +24,13 @@
   </DrawingBrush>
 
   <!-- Cover art owns its surface; labels sit directly on the workspace. -->
+  <Style x:Key="GalleryKeyboardFocus" TargetType="Control">
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Control">
+      <Border CornerRadius="14" BorderBrush="{DynamicResource TextPrimaryBrush}" BorderThickness="1" />
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style x:Key="GalleryCardButton" TargetType="Button">
+    <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
@@ -49,7 +55,6 @@
             <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource CardHoverGlassBrush}" />
             <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
           </Trigger>
-          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
           <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55" /></Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate>

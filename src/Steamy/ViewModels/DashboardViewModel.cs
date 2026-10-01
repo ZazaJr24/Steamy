@@ -45,7 +45,21 @@ public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObjec
     public string ReleaseLabel => Metadata.ReleaseLabel;
     public string ReleaseStatus => "UPCOMING";
     public string Countdown => ReleaseCountdown.Label(Metadata, DateTimeOffset.Now);
-    public void RefreshCountdown() => OnPropertyChanged(nameof(Countdown));
+    private ReleaseCountdownParts? _countdownParts = ReleaseCountdown.Parts(metadata, DateTimeOffset.Now);
+    public bool HasTimedCountdown => _countdownParts is not null;
+    public string CountdownDays => _countdownParts?.Days.ToString("00") ?? "–";
+    public string CountdownHours => _countdownParts?.Hours.ToString("00") ?? "–";
+    public string CountdownMinutes => _countdownParts?.Minutes.ToString("00") ?? "–";
+    public string CountdownSeconds => _countdownParts?.Seconds.ToString("00") ?? "–";
+    public string CountdownDetail => Metadata.ReleaseTime is { } time
+        ? $"Steam's scheduled release: {time.ToLocalTime():MMM d, yyyy HH:mm:ss zzz}"
+        : "Steam has not published an exact release time. This date does not confirm download availability.";
+    public void RefreshCountdown()
+    {
+        _countdownParts = ReleaseCountdown.Parts(Metadata, DateTimeOffset.Now);
+        foreach (var name in new[] { nameof(Countdown), nameof(HasTimedCountdown), nameof(CountdownDays),
+            nameof(CountdownHours), nameof(CountdownMinutes), nameof(CountdownSeconds) }) OnPropertyChanged(name);
+    }
     public string Publisher => Metadata.Publisher;
     public ImageSource? HeroArtwork { get => _heroArtwork; set => SetProperty(ref _heroArtwork, value); }
 }
@@ -238,7 +252,7 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _headerLoads = new();
     private int _featuredIndex;
     public IReadOnlyList<DashboardFeature> DiscoverGames { get; private set; } = Array.Empty<DashboardFeature>();
-    public IReadOnlyList<DashboardFeature> SpotlightPreviews => DiscoverGames.Take(4).ToArray();
+    public IReadOnlyList<DashboardFeature> SpotlightPreviews => DiscoverGames.Take(8).ToArray();
     public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames.Take(3).ToArray();
     public bool HasSpotlight => DiscoverGames.Count > 0;
     public DashboardFeature? FeaturedGame => HasSpotlight ? DiscoverGames[_featuredIndex] : null;
@@ -300,7 +314,7 @@ public sealed class DashboardViewModel : ViewModelBase
 
     private void ApplySpotlight(SpotlightSnapshot snapshot)
     {
-        var upcoming = ReleaseCountdown.Upcoming(snapshot.Games, DateOnly.FromDateTime(DateTime.Now));
+        var upcoming = ReleaseCountdown.UpcomingAt(snapshot.Games, DateTimeOffset.Now);
         if (DiscoverGames.Select(feature => feature.Metadata).SequenceEqual(upcoming)) return;
         var previousId = FeaturedGame?.Game.AppId;
         DiscoverGames = upcoming.Select(game => new DashboardFeature(game)).ToArray();
@@ -323,7 +337,7 @@ public sealed class DashboardViewModel : ViewModelBase
 
     private async Task LoadDiscoveryHeadersAsync()
     {
-        // Only the three visible recommendations need headers; the rest load as selected.
+        // Preload the recommendations and the right-hand upcoming selector.
         foreach (var feature in SpotlightPreviews)
         {
             try

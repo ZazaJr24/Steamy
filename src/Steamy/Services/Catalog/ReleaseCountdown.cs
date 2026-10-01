@@ -3,15 +3,23 @@ using System.Text.RegularExpressions;
 
 namespace Steamy.Services;
 
+public sealed record ReleaseCountdownParts(int Days, int Hours, int Minutes, int Seconds);
+
 public static class ReleaseCountdown
 {
+    public static ReleaseCountdownParts? Parts(SpotlightGame game, DateTimeOffset now)
+    {
+        if (game.ReleaseTime is not { } time || time <= now) return null;
+        var remaining = TimeSpan.FromSeconds(Math.Ceiling((time - now).TotalSeconds));
+        return new((int)remaining.TotalDays, remaining.Hours, remaining.Minutes, remaining.Seconds);
+    }
     public static string Label(SpotlightGame game, DateTimeOffset now)
     {
         if (game.ReleaseTime is { } time)
         {
-            var remaining = time - now;
-            return remaining <= TimeSpan.Zero ? "Awaiting release confirmation"
-                : $"{(int)remaining.TotalDays}d {remaining.Hours:00}h {remaining.Minutes:00}m {remaining.Seconds:00}s";
+            var parts = Parts(game, now);
+            return parts is null ? "Awaiting release confirmation"
+                : $"{parts.Days}d {parts.Hours:00}h {parts.Minutes:00}m {parts.Seconds:00}s";
         }
         if (game.ReleaseDate is not { } date) return "TBA";
         var days = date.DayNumber - DateOnly.FromDateTime(now.DateTime).DayNumber;
@@ -22,6 +30,14 @@ public static class ReleaseCountdown
         .Where(game => game.ComingSoon && !Expired(game, today))
         .OrderBy(game => game.ReleaseDate is null)
         .ThenBy(game => game.ReleaseDate)
+        .ToArray();
+
+    public static IReadOnlyList<SpotlightGame> UpcomingAt(IEnumerable<SpotlightGame> games, DateTimeOffset now) => games
+        .Where(game => game.ComingSoon && (game.ReleaseTime is { } time ? time > now
+            : !Expired(game, DateOnly.FromDateTime(now.DateTime))))
+        .OrderBy(game => game.ReleaseTime is null && game.ReleaseDate is null)
+        .ThenBy(game => game.ReleaseTime ?? (game.ReleaseDate is { } day
+            ? new DateTimeOffset(day.ToDateTime(TimeOnly.MinValue), now.Offset) : DateTimeOffset.MaxValue))
         .ToArray();
 
     private static bool Expired(SpotlightGame game, DateOnly today)

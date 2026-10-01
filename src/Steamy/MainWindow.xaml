@@ -18,8 +18,8 @@
       <Setter Property="Border.CornerRadius" Value="12" />
       <Style.Triggers>
         <Trigger Property="IsActive" Value="True">
-          <Setter Property="BorderBrush" Value="{DynamicResource SidebarSelectedBorderBrush}" />
-          <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+          <Setter Property="BorderBrush" Value="Transparent" />
+          <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
           <Setter Property="FontWeight" Value="SemiBold" />
         </Trigger>
       </Style.Triggers>

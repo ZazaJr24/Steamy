@@ -17,12 +17,12 @@ public sealed partial class PageSmokeTests
         var artwork = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightArtworkFrame"));
         var title = Assert.IsType<TextBlock>(page.FindName("SpotlightTitle"));
         var description = Assert.IsType<TextBlock>(page.FindName("SpotlightDescription"));
-        Assert.InRange(description.ActualWidth, 1, 480);
+        Assert.InRange(description.ActualWidth, 1, 360);
         var actions = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightActions"));
         var paging = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightPaging"));
         var countdown = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightCountdown"));
         var previews = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightPreviews"));
-        Assert.Equal(page.ActualWidth < 800 ? Visibility.Collapsed : Visibility.Visible, previews.Visibility);
+        Assert.Equal(page.ActualWidth < 700 ? Visibility.Collapsed : Visibility.Visible, previews.Visibility);
         if (previews.Visibility == Visibility.Visible)
         {
             var titleStart = title.TranslatePoint(new Point(0,0), hero);
@@ -41,6 +41,9 @@ public sealed partial class PageSmokeTests
         Assert.InRange(countdownStart.X, 0, 1);
         Assert.InRange(countdownStart.Y, 0, 1);
         Assert.True(countdown.ActualWidth >= 100 && countdown.ActualHeight >= 40);
+        Assert.Empty(Descendants<Button>(actions));
+        Assert.InRange(hero.ActualHeight, 340, 380);
+        Assert.Equal(new Thickness(0), Assert.IsType<Border>(hero).BorderThickness);
         Assert.True(artwork.ActualWidth > 0);
         Assert.True(artwork.ActualHeight > 0);
         Assert.False(string.IsNullOrWhiteSpace(title.Text));

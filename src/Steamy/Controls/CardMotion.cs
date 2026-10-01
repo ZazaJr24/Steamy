@@ -110,8 +110,8 @@ public static class CardMotion
         if (element.GetValue(StateProperty) is not MotionState state) return;
         var motion = MotionPreferences.AnimationsEnabled;
         var hover = motion && (element.IsMouseOver || element.IsKeyboardFocusWithin);
-        var scale = motion && state.Pressed ? 0.99 : hover ? 1.005 : 1;
-        var lift = motion && state.Pressed ? -0.5 : hover ? -2 : 0;
+        var scale = motion && state.Pressed ? 0.99 : hover ? 1.015 : 1;
+        var lift = motion && state.Pressed ? -0.5 : hover ? -3 : 0;
         var revision = ++state.Revision;
         Animate(state.Scale, ScaleTransform.ScaleXProperty, scale, state, revision);
         Animate(state.Scale, ScaleTransform.ScaleYProperty, scale, state, revision);

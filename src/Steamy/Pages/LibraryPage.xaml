@@ -166,10 +166,10 @@
         <StackPanel RequestBringIntoView="Gallery_RequestBringIntoView">
           <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource GalleryEmptyStateStyle}" />
 
-          <ItemsControl ItemsSource="{Binding PagedCatalogItems}">
+          <ItemsControl ItemsSource="{Binding PagedCatalogItems}" controls:EntranceMotion.Delay="30">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="224" Spacing="24" CoverRatio="1.38" FooterHeight="70" MaxColumns="5" />
+                <controls:AdaptiveGridPanel MinItemWidth="174" Spacing="18" CoverRatio="1.32" FooterHeight="56" MaxColumns="6" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -180,7 +180,7 @@
                   <Grid>
                     <Grid.RowDefinitions>
                       <RowDefinition Height="*" />
-                      <RowDefinition Height="70" />
+                      <RowDefinition Height="56" />
                     </Grid.RowDefinitions>
 
                     <Border CornerRadius="15" Background="{DynamicResource SurfaceSubtleBrush}">
@@ -214,7 +214,7 @@
                     <StackPanel Grid.Row="1" Margin="3,0" VerticalAlignment="Center">
                       <TextBlock Text="{Binding Name}"
                                  Foreground="{DynamicResource TextPrimaryBrush}"
-                                 FontSize="14" FontWeight="SemiBold"
+                                 FontSize="12.5" FontWeight="SemiBold"
                                  TextTrimming="CharacterEllipsis" />
                       <TextBlock Text="{Binding AppLabel}" Margin="0,4,0,0"
                                  Foreground="{DynamicResource TextTertiaryBrush}"

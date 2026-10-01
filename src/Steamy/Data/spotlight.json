@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-01T17:58:26.367812+00:00",
+  "updatedAt": "2026-10-01T19:59:15.470630+00:00",
   "games": [
     {
       "appId": 2288340,
@@ -13,7 +13,8 @@
       "releaseDate": "2026-10-01",
       "storeUrl": "https://store.steampowered.com/app/2288340/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/4b28102e4f8702f48bfc03e099246a55a200204f/page_bg_raw.jpg?t=1790763244",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/13dea8084135fd130605b78189c82e39bf944c35/header.jpg?t=1790763244"
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/13dea8084135fd130605b78189c82e39bf944c35/header.jpg?t=1790763244",
+      "releaseTime": "2026-10-01T22:00:00+00:00"
     },
     {
       "appId": 3010850,
@@ -26,7 +27,8 @@
       "releaseDate": "2026-10-06",
       "storeUrl": "https://store.steampowered.com/app/3010850/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/3ab525f8c362fa205da31db35102a11f05511202/page_bg_raw.jpg?t=1790871278",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header.jpg?t=1790871278"
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header.jpg?t=1790871278",
+      "releaseTime": "2026-10-06T16:00:00+00:00"
     },
     {
       "appId": 4231820,
@@ -39,7 +41,8 @@
       "releaseDate": "2026-10-14",
       "storeUrl": "https://store.steampowered.com/app/4231820/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/0741481b7e0e4519884d1012dfe285970e078508/page_bg_raw.jpg?t=1788478863",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/6b65aec2c398006aea8b76e1463cc34d0e4ba68b/header.jpg?t=1788478863"
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/6b65aec2c398006aea8b76e1463cc34d0e4ba68b/header.jpg?t=1788478863",
+      "releaseTime": "2026-10-15T04:00:00+00:00"
     },
     {
       "appId": 3259780,
@@ -52,7 +55,8 @@
       "releaseDate": "2026-10-22",
       "storeUrl": "https://store.steampowered.com/app/3259780/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/063703b81c58de555ed405df85a985869a500eba/page_bg_raw.jpg?t=1788534743",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/710da43babb2043f9f6ad0e50023e31167d94708/header.jpg?t=1788534743"
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/710da43babb2043f9f6ad0e50023e31167d94708/header.jpg?t=1788534743",
+      "releaseTime": "2026-10-22T16:00:00+00:00"
     },
     {
       "appId": 4435490,
@@ -65,7 +69,8 @@
       "releaseDate": "2026-10-22",
       "storeUrl": "https://store.steampowered.com/app/4435490/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/daf5d7dee8c89ae737aaac6b712288b934ee84dc/page_bg_raw.jpg?t=1790698027",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/0c492be3204835d71e8b454b6eb1817f8ff68c0d/header.jpg?t=1790698027"
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/0c492be3204835d71e8b454b6eb1817f8ff68c0d/header.jpg?t=1790698027",
+      "releaseTime": "2026-10-23T05:00:00+00:00"
     }
   ]
 }

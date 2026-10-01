@@ -11,9 +11,13 @@ namespace Steamy.Pages;
 public partial class DashboardPage : Page
 {
     private readonly System.Windows.Threading.DispatcherTimer _spotlightTimer = new(System.Windows.Threading.DispatcherPriority.Background)
-        { Interval = TimeSpan.FromSeconds(5) };
+        { Interval = TimeSpan.FromMilliseconds(50) };
     private readonly System.Windows.Threading.DispatcherTimer _countdownTimer = new(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
     private DateTime _nextFeedCheck = DateTime.MinValue;
+    private TimeSpan _slideElapsed;
+    private long _lastSlideTick;
+    private Window? _carouselWindow;
+    private bool _loaderRunning;
     public DashboardPage()
     {
         InitializeComponent();
@@ -25,7 +29,14 @@ public partial class DashboardPage : Page
             viewModel.StartLiveStats();
             viewModel.PropertyChanged += SpotlightChanged;
             Controls.MotionPreferences.Changed += MotionChanged;
-            _spotlightTimer.Start();
+            _carouselWindow = Window.GetWindow(this);
+            if (_carouselWindow is not null)
+            {
+                _carouselWindow.Activated += CarouselActivated;
+                _carouselWindow.Deactivated += CarouselDeactivated;
+            }
+            _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
+            if (_carouselWindow?.IsActive == true) _spotlightTimer.Start();
             _countdownTimer.Start();
             _ = viewModel.EnsureDiscoveryArtworkAsync();
             _ = viewModel.RefreshActivityAsync();
@@ -39,25 +50,70 @@ public partial class DashboardPage : Page
             MotionChanged(this, EventArgs.Empty);
             model.StopLiveStats(); model.StopSearch();
             _spotlightTimer.Stop();
+            if (_carouselWindow is not null)
+            {
+                _carouselWindow.Activated -= CarouselActivated;
+                _carouselWindow.Deactivated -= CarouselDeactivated;
+                _carouselWindow = null;
+            }
+            HideSpotlightLoader();
             _countdownTimer.Stop();
             SpotlightArtworkFrame.BeginAnimation(OpacityProperty, null);
         };
         _countdownTimer.Tick += (_, _) => ((DashboardViewModel)DataContext).RefreshCountdowns();
-        _spotlightTimer.Tick += (_, _) =>
-        {
-            var model = (DashboardViewModel)DataContext;
-            model.RefreshCountdowns();
-            if (!IsVisible || Window.GetWindow(this)?.IsActive != true) return;
-            if (DateTime.UtcNow >= _nextFeedCheck)
-            {
-                _nextFeedCheck = DateTime.UtcNow.AddHours(6);
-                _ = model.EnsureDiscoveryArtworkAsync();
-            }
-            if (!model.SpotlightPaused && !model.HasSearchQuery)
-                model.NextFeaturedCommand.Execute(null);
-        };
-        DashboardHero.SizeChanged += (_, _) => DashboardHero.Clip = new System.Windows.Media.RectangleGeometry(new Rect(DashboardHero.RenderSize), 24, 24);
+        _spotlightTimer.Tick += CarouselTick;
+        DashboardHero.SizeChanged += (_, _) => DashboardHero.Clip = new System.Windows.Media.RectangleGeometry(new Rect(DashboardHero.RenderSize), 16, 16);
         SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
+    }
+
+    private void CarouselActivated(object? sender, EventArgs args)
+    {
+        _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (IsLoaded) _spotlightTimer.Start();
+    }
+
+    private void CarouselDeactivated(object? sender, EventArgs args)
+    {
+        _spotlightTimer.Stop();
+        HideSpotlightLoader();
+    }
+
+    private void CarouselTick(object? sender, EventArgs args)
+    {
+        var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(_lastSlideTick);
+        _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
+        var model = (DashboardViewModel)DataContext;
+        if (!IsVisible || _carouselWindow?.IsActive != true || model.SpotlightPaused || model.HasSearchQuery)
+        {
+            HideSpotlightLoader();
+            return;
+        }
+        if (DateTime.UtcNow >= _nextFeedCheck)
+        {
+            _nextFeedCheck = DateTime.UtcNow.AddHours(6);
+            _ = model.EnsureDiscoveryArtworkAsync();
+        }
+        _slideElapsed += elapsed > TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : elapsed;
+        if (_slideElapsed >= TimeSpan.FromSeconds(5))
+        {
+            _slideElapsed = TimeSpan.Zero;
+            HideSpotlightLoader();
+            model.NextFeaturedCommand.Execute(null);
+        }
+        else if (_slideElapsed >= TimeSpan.FromSeconds(4.4) && !_loaderRunning && Controls.MotionPreferences.AnimationsEnabled)
+        {
+            _loaderRunning = true;
+            SpotlightLoader.Visibility = Visibility.Visible;
+            LoaderRotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty,
+                new System.Windows.Media.Animation.DoubleAnimation(0, 360, TimeSpan.FromSeconds(5) - _slideElapsed));
+        }
+    }
+
+    private void HideSpotlightLoader()
+    {
+        _loaderRunning = false;
+        SpotlightLoader.Visibility = Visibility.Collapsed;
+        LoaderRotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, null);
     }
 
     private void RecommendationArtwork_SizeChanged(object sender, SizeChangedEventArgs args)
@@ -70,6 +126,7 @@ public partial class DashboardPage : Page
     {
         if (!IsLoaded || !Controls.MotionPreferences.AnimationsEnabled)
         {
+            HideSpotlightLoader();
             ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, null);
             ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, null);
             SpotlightArtworkFrame.BeginAnimation(OpacityProperty, null);
@@ -78,12 +135,25 @@ public partial class DashboardPage : Page
 
     private void SpotlightChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
+        if (args.PropertyName == nameof(DashboardViewModel.SpotlightPaused)) HideSpotlightLoader();
         if (args.PropertyName != nameof(DashboardViewModel.FeaturedGame)) return;
+        _slideElapsed = TimeSpan.Zero;
+        _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
+        HideSpotlightLoader();
+        var model = (DashboardViewModel)DataContext;
+        var index = model.SpotlightPreviews.ToList().FindIndex(item => item.IsSelected);
+        if (index >= 0)
+        {
+            var top = index * 48d;
+            if (top < SpotlightPreviewScroll.VerticalOffset) SpotlightPreviewScroll.ScrollToVerticalOffset(top);
+            else if (top + 48 > SpotlightPreviewScroll.VerticalOffset + SpotlightPreviewScroll.ViewportHeight)
+                SpotlightPreviewScroll.ScrollToVerticalOffset(top + 48 - SpotlightPreviewScroll.ViewportHeight);
+        }
         ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, null);
         ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, null);
         if (!Controls.MotionPreferences.AnimationsEnabled) return;
         Controls.EntranceMotion.Reveal(SpotlightArtworkFrame);
-        var zoom = new System.Windows.Media.Animation.DoubleAnimation(1, 1.025, TimeSpan.FromSeconds(5));
+        var zoom = new System.Windows.Media.Animation.DoubleAnimation(1, 1.015, TimeSpan.FromSeconds(5));
         ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, zoom);
         ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, zoom);
     }
@@ -97,19 +167,20 @@ public partial class DashboardPage : Page
 
     private void ApplyResponsiveLayout(double width)
     {
-        // Artwork owns the width. Stack only the compact controls on narrow windows.
-        var compact = width < 800;
+        var compact = width < 700;
         DashboardSearch.Width = width < 640 ? 220 : width < 900 ? 280 : 340;
         DashboardScroll.Padding = width < 640 ? new Thickness(18, 18, 18, 26) : new Thickness(28, 22, 28, 30);
-        DashboardHero.Height = width < 720 ? 400 : width < 1000 ? 420 : 460;
-        SpotlightArtworkFrame.Height = DashboardHero.Height - 2;
-        SpotlightTitle.FontSize = (compact ? 32 : width < 1100 ? 40 : 48) * 0.93;
+        DashboardHero.Height = compact ? 340 : width < 1100 ? 360 : 380;
+        SpotlightArtworkFrame.Height = DashboardHero.Height;
+        SpotlightTitle.FontSize = compact ? 24 : width < 1100 ? 28 : 30;
         SpotlightPreviews.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        SpotlightPaging.SetValue(Grid.RowProperty, compact ? 2 : 1);
-        SpotlightPaging.SetValue(Grid.ColumnProperty, compact ? 0 : 1);
-        SpotlightPaging.Margin = compact ? new Thickness(0,12,0,0) : new Thickness(18,0,0,0);
-        SpotlightDetails.MaxWidth = (compact ? Math.Max(240, (width - 110) * 0.82) : Math.Max(240, width - 245)) * 0.93;
-        SpotlightDescription.MaxWidth = Math.Min(480, SpotlightDetails.MaxWidth * 0.88);
+        SpotlightPreviewScroll.Visibility = SpotlightPreviews.Visibility;
+        SpotlightPreviewScroll.MaxHeight = DashboardHero.Height - 100;
+        SpotlightPaging.SetValue(Grid.RowProperty, 1);
+        SpotlightPaging.SetValue(Grid.ColumnProperty, 1);
+        SpotlightPaging.Margin = new Thickness(12,0,0,0);
+        SpotlightDetails.MaxWidth = compact ? Math.Max(220, Math.Min(460, width - 100)) : Math.Max(220, Math.Min(500, width - 245));
+        SpotlightDescription.MaxWidth = Math.Min(360, SpotlightDetails.MaxWidth * 0.8);
     }
 
     private void GameCover_Click(object sender, RoutedEventArgs e)
