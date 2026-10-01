@@ -73,8 +73,7 @@ public static class SmoothScroll
         {
             _generation++;
             var offset = _viewer.VerticalOffset;
-            _viewer.SetCurrentValue(OffsetProperty, offset);
-            _viewer.BeginAnimation(OffsetProperty, null);
+            CommitOffset(offset);
             _animating = false;
             _target = offset;
             _direction = 0;
@@ -104,8 +103,7 @@ public static class SmoothScroll
             if (!MotionPreferences.AnimationsEnabled)
             {
                 _generation++;
-                _viewer.BeginAnimation(OffsetProperty, null);
-                _viewer.SetCurrentValue(OffsetProperty, _target);
+                CommitOffset(_target);
                 _animating = false;
                 return;
             }
@@ -115,17 +113,25 @@ public static class SmoothScroll
         {
             var current = _viewer.VerticalOffset;
             _target = Math.Clamp(target, 0, _viewer.ScrollableHeight);
+            var destination = _target;
             var generation = ++_generation;
             _animating = true;
             var animation = new DoubleAnimation(current, _target, TimeSpan.FromMilliseconds(160)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
             animation.Completed += (_, _) =>
             {
                 if (generation != _generation) return;
-                _viewer.SetCurrentValue(OffsetProperty, _target);
-                _viewer.BeginAnimation(OffsetProperty, null);
+                CommitOffset(destination);
                 _animating = false;
             };
             _viewer.BeginAnimation(OffsetProperty, animation, HandoffBehavior.SnapshotAndReplace);
+        }
+        private void CommitOffset(double offset)
+        {
+            // Offset is private and unbound. Write its base value before removing the
+            // clock: SetCurrentValue on an animated value leaves the old base offset
+            // underneath, which makes the page jump back when the animation ends.
+            _viewer.SetValue(OffsetProperty, offset);
+            _viewer.BeginAnimation(OffsetProperty, null);
         }
     }
 }
