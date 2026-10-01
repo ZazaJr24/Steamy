@@ -22,14 +22,14 @@
     </DrawingGroup></DrawingBrush.Drawing>
   </DrawingBrush>
 
-  <!-- Opaque game cards keep cover art and labels clear against the workspace. -->
+  <!-- Cover art owns its surface; labels sit directly on the workspace. -->
   <Style x:Key="GalleryCardButton" TargetType="Button">
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
     <Setter Property="controls:CardMotion.IsEnabled" Value="True" />
-    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Template"><Setter.Value>
@@ -44,7 +44,6 @@
           </Grid>
         </Grid>
         <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
           <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
           <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55" /></Trigger>
         </ControlTemplate.Triggers>

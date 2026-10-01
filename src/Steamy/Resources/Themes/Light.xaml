@@ -68,6 +68,20 @@
   </LinearGradientBrush>
   <SolidColorBrush x:Key="ScrimBrush" Color="#990F172A" />
 
+  <SolidColorBrush x:Key="ApplicationBackgroundBrush" Color="#F4F6FA" />
+  <SolidColorBrush x:Key="SolidBackgroundFillColorBaseBrush" Color="#F4F6FA" />
+  <SolidColorBrush x:Key="SolidBackgroundFillColorSecondaryBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="ControlFillColorSecondaryBrush" Color="#EFF3F9" />
+  <SolidColorBrush x:Key="ControlFillColorTertiaryBrush" Color="#E7EDF6" />
+  <SolidColorBrush x:Key="ControlFillColorInputActiveBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="SubtleFillColorSecondaryBrush" Color="#80D8E3F3" />
+  <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush" Color="#A0D8E3F3" />
+  <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#EFF3F9" />
+  <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#D8DFEB" />
+  <SolidColorBrush x:Key="ControlStrokeColorSecondaryBrush" Color="#C5CDDA" />
+
   <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFF" />
   <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFF" />
   <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#E6FFFFFF" />

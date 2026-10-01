@@ -42,7 +42,6 @@ public sealed class LibraryViewModel : ViewModelBase
     private SteamCatalogItem[] _catalogSnapshot = Array.Empty<SteamCatalogItem>();
     private SteamCatalogItem[]? _indexedCatalog;
     private Task<GameSearchIndex<SteamCatalogItem>>? _searchIndexTask;
-    private readonly SearchHistoryStore _searchHistory;
     private readonly IGameActivityService? _activity;
     private IReadOnlySet<int> _favoriteApps = new HashSet<int>();
     private bool _isSearchBusy;
@@ -77,25 +76,20 @@ public sealed class LibraryViewModel : ViewModelBase
     }
     private string _search=""; private string _sort="Popular (AAA)"; private string _typeFilter="All games"; private int _page=1; private int _pageSize=48; private LibraryNsfwScope _nsfwScope=LibraryNsfwScope.Hide;
     public const string RyuuSource="Available (Ryuu)";
-    public LibraryViewModel(IAppDataStore s, INavigationService n, ILoggingService l, ISteamCatalogService c, IRyuuCatalogService ryuu, IArtworkService artwork, ILibrarySyncService sync, IHubcapCatalogService hubcap, IFreeManifestCatalogService freeSources, SearchHistoryStore? searchHistory = null, IGameActivityService? activity = null) : base(s,n,l)
+    public LibraryViewModel(IAppDataStore s, INavigationService n, ILoggingService l, ISteamCatalogService c, IRyuuCatalogService ryuu, IArtworkService artwork, ILibrarySyncService sync, IHubcapCatalogService hubcap, IFreeManifestCatalogService freeSources, IGameActivityService? activity = null) : base(s,n,l)
     {
         _catalog=c; _ryuu=ryuu; _hubcap=hubcap; _librarySync=sync; _freeSources=freeSources;
-        _searchHistory = searchHistory ?? SearchHistoryStore.Default;
         _activity = activity;
         if (_activity is not null) _activity.Changed += OnFavoriteActivityChanged;
         _searchDebounceTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(180) };
         _searchDebounceTimer.Tick += OnSearchDebounceElapsed;
-        UseRecentSearchCommand = new RelayCommand<string>(query => { if (query is not null) SearchText = query; });
-        ClearSearchHistoryCommand = new AsyncRelayCommand(ClearSearchHistoryAsync);
-        SubmitSearchCommand = new RelayCommand(() => { RefreshPage(); _ = RememberSearchAsync(); });
+        SubmitSearchCommand = new RelayCommand(RefreshPage);
         SelectSearchSuggestionCommand = new RelayCommand<SteamCatalogItem>(item =>
         {
             if (item is null) return;
-            _ = RememberSearchAsync();
             SearchText = item.AppId.ToString(CultureInfo.InvariantCulture);
             RefreshPage();
         });
-        _ = LoadRecentSearchesAsync();
         _ = RefreshFavoriteFilterAsync();
     }
     private void OnFavoriteActivityChanged(object? sender, EventArgs args)
@@ -137,43 +131,15 @@ public sealed class LibraryViewModel : ViewModelBase
     public string SelectedMode { get; set; }="All games";    public string SelectedTypeFilter { get=>_typeFilter; set { if(SetProperty(ref _typeFilter,value)) { _page=1; RefreshPage(); } } }
     public LibraryNsfwScope NsfwScope { get=>_nsfwScope; set { if(SetProperty(ref _nsfwScope,value)) { _page=1; RefreshPage(); } } }
     public string SelectedSort { get=>_sort; set { if(SetProperty(ref _sort,value)) RefreshPage(); } } public int PageSize { get=>_pageSize; set { if(SetProperty(ref _pageSize,value)) RefreshPage(); } }
-    public string SearchText { get=>_search; set { if(SetProperty(ref _search,value ?? string.Empty)) { _page=1; OnPropertyChanged(nameof(HasActiveFilters)); OnPropertyChanged(nameof(FilterSummary)); OnPropertyChanged(nameof(HasSearchQuery)); OnPropertyChanged(nameof(ShowRecentSearches)); OnPropertyChanged(nameof(HasSearchSuggestions)); Interlocked.Increment(ref _filterGeneration); _filterCancellation?.Cancel(); _searchDebounceTimer.Stop(); _searchDebounceTimer.Start(); } } }
-    public RangeObservableCollection<string> RecentSearches { get; } = new();
+    public string SearchText { get=>_search; set { if(SetProperty(ref _search,value ?? string.Empty)) { _page=1; OnPropertyChanged(nameof(HasActiveFilters)); OnPropertyChanged(nameof(FilterSummary)); OnPropertyChanged(nameof(HasSearchQuery)); OnPropertyChanged(nameof(HasSearchSuggestions)); Interlocked.Increment(ref _filterGeneration); _filterCancellation?.Cancel(); _searchDebounceTimer.Stop(); _searchDebounceTimer.Start(); } } }
     public RangeObservableCollection<SteamCatalogItem> SearchSuggestions { get; } = new();
-    public bool HasRecentSearches => RecentSearches.Count > 0;
     public bool HasSearchQuery => !string.IsNullOrWhiteSpace(SearchText);
-    public bool ShowRecentSearches => !HasSearchQuery && HasRecentSearches;
     public bool HasSearchSuggestions => HasSearchQuery && SearchSuggestions.Count > 0;
     public bool IsSearchBusy { get => _isSearchBusy; private set => SetProperty(ref _isSearchBusy, value); }
     public bool IsTypoMatch { get => _isTypoMatch; private set => SetProperty(ref _isTypoMatch, value); }
     public string SearchHint { get => _searchHint; private set => SetProperty(ref _searchHint, value); }
-    public ICommand UseRecentSearchCommand { get; }
-    public ICommand ClearSearchHistoryCommand { get; }
     public ICommand SubmitSearchCommand { get; }
     public ICommand SelectSearchSuggestionCommand { get; }
-    public async Task RememberSearchAsync()
-    {
-        var query = SearchText.Trim();
-        if (query.Length < 2) return;
-        try { ApplyRecentSearches(await _searchHistory.RecordAsync(query)); }
-        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Search", $"History could not be saved: {exception.GetType().Name}."); }
-    }
-    private async Task LoadRecentSearchesAsync()
-    {
-        try { ApplyRecentSearches(await _searchHistory.GetAsync()); }
-        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Search", $"History unavailable: {exception.GetType().Name}."); }
-    }
-    private async Task ClearSearchHistoryAsync()
-    {
-        try { ApplyRecentSearches(await _searchHistory.ClearAsync()); }
-        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Search", $"History could not be cleared: {exception.GetType().Name}."); }
-    }
-    private void ApplyRecentSearches(IReadOnlyList<string> queries)
-    {
-        RecentSearches.ReplaceWith(queries);
-        OnPropertyChanged(nameof(HasRecentSearches));
-        OnPropertyChanged(nameof(ShowRecentSearches));
-    }
     public bool IsCatalogLoading { get; private set; } public bool CatalogLoaded { get; private set; } public string CatalogStatus { get; private set; }="Load your Steam app list to begin."; public string LibraryMessage { get; private set; }="";
     public string CatalogCountLabel => $"{CatalogItems.Count:N0} games"; public string VisibleCountLabel=>$"Showing {PagedCatalogItems.Count} of {FilteredCatalogCount:N0}"; public string PageLabel=>$"Page {_page} of {TotalPages}"; public string UpdatedLabel { get; private set; }="Not loaded"; public int FilteredCatalogCount { get; private set; } public int TotalPages=>Math.Max(1,(FilteredCatalogCount+PageSize-1)/PageSize); public bool CanGoPrevious=>_page>1; public bool CanGoNext=>_page<TotalPages; public bool HasCatalogItems=>PagedCatalogItems.Count>0; public bool HasGames=>FilteredGames.Count>0;    public bool HasActiveFilters=>SelectedSourceFilter!="All sources"||!string.IsNullOrWhiteSpace(SearchText)||SelectedSort!="Popular (AAA)"||PageSize!=48||NsfwScope==LibraryNsfwScope.Show; public string FilterSummary=>HasActiveFilters?"Active filters":"No filters applied"; public string EmptyStateMessage=>"No games match this search.";
     public ICommand LoadCatalogCommand=>new AsyncRelayCommand(()=>LoadAsync(false)); public ICommand RefreshCatalogCommand=>new AsyncRelayCommand(async()=>{ try{await _librarySync.RefreshAsync(); RefreshLocalPage();}catch{} await LoadAsync(true); }); public ICommand ScanLibraryCommand=>new AsyncRelayCommand(async()=>{ try{await _librarySync.RefreshAsync();}catch{} RefreshLocalPage(); }); public ICommand FirstPageCommand=>new RelayCommand(()=>SetPage(1)); public ICommand PreviousPageCommand=>new RelayCommand(()=>SetPage(_page-1)); public ICommand NextPageCommand=>new RelayCommand(()=>SetPage(_page+1)); public ICommand LastPageCommand=>new RelayCommand(()=>SetPage(TotalPages)); public ICommand RefreshCommand=>new RelayCommand(RefreshPage); public ICommand OpenDownloadsCommand=>new RelayCommand(()=>Navigation.Navigate<DownloadsPage>()); public ICommand OpenFolderCommand=>new RelayCommand<Game>(_=>{}); public ICommand RefreshLocalCommand=>new RelayCommand(()=>{}); public ICommand OpenStoreCommand=>new RelayCommand(()=>{}); public IAsyncRelayCommand LoadScreenshotsCommand=>new AsyncRelayCommand(()=>Task.CompletedTask);
@@ -193,7 +159,6 @@ public sealed class LibraryViewModel : ViewModelBase
             }
             RefreshLocalPage();
             await RefreshFavoriteFilterAsync();
-            await LoadRecentSearchesAsync();
             await LoadAsync(false);
             OnPropertyChanged(nameof(InstalledCount));
             OnPropertyChanged(nameof(LocalCount));

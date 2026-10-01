@@ -1,23 +1,21 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <!-- Steamy Night: near-black blue-grey surfaces, one electric blue accent and a sky → indigo →
-       violet brand gradient. Every page reads its colours from these keys, so the light palette
-       only has to redefine the same names. -->
-  <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0D1017" />
-  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#10151E" />
-  <SolidColorBrush x:Key="SidebarHoverBrush" Color="#151923" />
-  <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#1B2130" />
-  <SolidColorBrush x:Key="SurfaceBrush" Color="#161C27" />
-  <SolidColorBrush x:Key="SolidSurfaceBrush" Color="#171E2B" />
-  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#1D2533" />
-  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#121822" />
-  <SolidColorBrush x:Key="ControlHoverBrush" Color="#242A37" />
-  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#303A4B" />
-  <SolidColorBrush x:Key="BorderStrongBrush" Color="#43516A" />
+  <!-- Deep charcoal, restrained translucent panels and one cool blue accent. -->
+  <SolidColorBrush x:Key="AppBackgroundBrush" Color="#090B10" />
+  <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#0B0E14" />
+  <SolidColorBrush x:Key="SidebarHoverBrush" Color="#151B25" />
+  <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#1A2332" />
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#B3151B25" />
+  <SolidColorBrush x:Key="SolidSurfaceBrush" Color="#151B26" />
+  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#E619202B" />
+  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#661C2430" />
+  <SolidColorBrush x:Key="ControlHoverBrush" Color="#222B3A" />
+  <SolidColorBrush x:Key="BorderSubtleBrush" Color="#80334154" />
+  <SolidColorBrush x:Key="BorderStrongBrush" Color="#485A75" />
 
   <SolidColorBrush x:Key="AccentBrush" Color="#78B5FF" />
   <SolidColorBrush x:Key="AccentStrongBrush" Color="#3B82F6" />
-  <SolidColorBrush x:Key="AccentSoftBrush" Color="#1A2E4B" />
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="#661F4474" />
   <SolidColorBrush x:Key="SuccessBrush" Color="#34D399" />
   <SolidColorBrush x:Key="SuccessSoftBrush" Color="#0F2A21" />
   <SolidColorBrush x:Key="WarningBrush" Color="#FBBF24" />
@@ -30,21 +28,21 @@
   <SolidColorBrush x:Key="PinkSoftBrush" Color="#33172A" />
 
   <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F3F5F9" />
-  <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B3BED0" />
-  <SolidColorBrush x:Key="TextTertiaryBrush" Color="#94A0B5" />
+  <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B1BDD1" />
+  <SolidColorBrush x:Key="TextTertiaryBrush" Color="#91A0B8" />
   <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
 
   <LinearGradientBrush x:Key="GlassSurfaceBrush" StartPoint="0,0" EndPoint="0.65,1">
-    <GradientStop Color="#EF232D40" Offset="0" /><GradientStop Color="#ED1A2333" Offset="0.6" /><GradientStop Color="#F01B2435" Offset="1" />
+    <GradientStop Color="#E91A2230" Offset="0" /><GradientStop Color="#EC121923" Offset="0.6" /><GradientStop Color="#F0151B26" Offset="1" />
   </LinearGradientBrush>
   <LinearGradientBrush x:Key="GlassBorderBrush" StartPoint="0,0" EndPoint="0.8,1">
     <GradientStop Color="#365C6F90" Offset="0" /><GradientStop Color="#18516D93" Offset="0.55" /><GradientStop Color="#285E668D" Offset="1" />
   </LinearGradientBrush>
   <RadialGradientBrush x:Key="AmbientBlueBrush" Center="0.87,0.04" GradientOrigin="0.87,0.04" RadiusX="0.85" RadiusY="0.85">
-    <GradientStop Color="#203877AF" Offset="0" /><GradientStop Color="#093877AF" Offset="0.6" /><GradientStop Color="#003877AF" Offset="1" />
+    <GradientStop Color="#18365E99" Offset="0" /><GradientStop Color="#05365E99" Offset="0.6" /><GradientStop Color="#00365E99" Offset="1" />
   </RadialGradientBrush>
   <RadialGradientBrush x:Key="AmbientVioletBrush" Center="0.08,0.94" GradientOrigin="0.08,0.94" RadiusX="0.72" RadiusY="0.9">
-    <GradientStop Color="#184C3689" Offset="0" /><GradientStop Color="#004C3689" Offset="1" />
+    <GradientStop Color="#0C4C3689" Offset="0" /><GradientStop Color="#004C3689" Offset="1" />
   </RadialGradientBrush>
 
   <!-- Brand gradient for the logo, the welcome hero and the primary call to action. -->
@@ -70,6 +68,21 @@
     <GradientStop Color="#E00B0D12" Offset="1" />
   </LinearGradientBrush>
   <SolidColorBrush x:Key="ScrimBrush" Color="#B8050608" />
+
+  <!-- Match Fluent input, navigation and flyout chrome to the workspace palette. -->
+  <SolidColorBrush x:Key="ApplicationBackgroundBrush" Color="#090B10" />
+  <SolidColorBrush x:Key="SolidBackgroundFillColorBaseBrush" Color="#090B10" />
+  <SolidColorBrush x:Key="SolidBackgroundFillColorSecondaryBrush" Color="#151B26" />
+  <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#B3151B25" />
+  <SolidColorBrush x:Key="ControlFillColorSecondaryBrush" Color="#E6222B3A" />
+  <SolidColorBrush x:Key="ControlFillColorTertiaryBrush" Color="#99161C27" />
+  <SolidColorBrush x:Key="ControlFillColorInputActiveBrush" Color="#F0121822" />
+  <SolidColorBrush x:Key="SubtleFillColorSecondaryBrush" Color="#661F2B3D" />
+  <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush" Color="#801C2737" />
+  <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#B3151B25" />
+  <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#661C2430" />
+  <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#80334154" />
+  <SolidColorBrush x:Key="ControlStrokeColorSecondaryBrush" Color="#A0404F64" />
 
   <!-- White text on primary (accent) buttons instead of the Fluent default black-on-light-accent. -->
   <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFF" />

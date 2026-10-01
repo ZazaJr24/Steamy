@@ -148,16 +148,6 @@
 
       <StackPanel Grid.Row="1" Margin="0,0,8,8">
         <ProgressBar IsIndeterminate="True" Height="2" Margin="0,0,0,6" Visibility="{Binding IsCatalogLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
-        <Grid Visibility="{Binding ShowRecentSearches, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,8">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <ItemsControl ItemsSource="{Binding RecentSearches}">
-            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate><DataTemplate>
-              <ui:Button Content="{Binding}" CommandParameter="{Binding}" Command="{Binding DataContext.UseRecentSearchCommand, RelativeSource={RelativeSource AncestorType=Page}}" Appearance="Transparent" FontSize="11" Padding="8,4" Margin="0,0,6,3" />
-            </DataTemplate></ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <ui:Button Grid.Column="1" Content="Clear history" Appearance="Transparent" FontSize="10.5" Command="{Binding ClearSearchHistoryCommand}" />
-        </Grid>
         <TextBlock Text="{Binding SearchHint}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
         <ItemsControl ItemsSource="{Binding SearchSuggestions}" Visibility="{Binding HasSearchSuggestions, Converter={StaticResource BooleanToVisibilityConverter}}">
           <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -193,28 +183,19 @@
                       <RowDefinition Height="64" />
                     </Grid.RowDefinitions>
 
-                    <Border CornerRadius="15,15,0,0" Background="#0B0C0F">
+                    <Border CornerRadius="15" Background="{DynamicResource SurfaceSubtleBrush}">
                       <Grid>
-                        <Border CornerRadius="15,15,0,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
+                        <Border CornerRadius="15" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
                           <Border.Background>
                             <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
                           </Border.Background>
                         </Border>
-                        <Border CornerRadius="15,15,0,0" Background="{DynamicResource SurfaceSubtleBrush}"
+                        <Border CornerRadius="15" Background="{DynamicResource SurfaceSubtleBrush}"
                                 Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         <TextBlock Text="STEAM" Foreground="#3A3E47" FontSize="15" FontWeight="Bold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <!-- Bottom fade for text readability -->
-                        <Border CornerRadius="0,0,0,0" Height="60" VerticalAlignment="Bottom">
-                          <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                              <GradientStop Color="#00000000" Offset="0" />
-                              <GradientStop Color="#40000000" Offset="1" />
-                            </LinearGradientBrush>
-                          </Border.Background>
-                        </Border>
-                        <Border x:Name="Shine" CornerRadius="15,15,0,0" Background="#FFFFFF" Opacity="0" />
+                        <Border x:Name="Shine" CornerRadius="15" Background="#FFFFFF" Opacity="0" />
                         <Border Style="{StaticResource CoverBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
                           <TextBlock Text="{Binding TypeLabel}" Style="{StaticResource CoverBadgeTextStyle}" />
                         </Border>
@@ -229,8 +210,8 @@
                       </Grid>
                     </Border>
 
-                    <!-- Footer -->
-                    <StackPanel Grid.Row="1" Margin="14,0" VerticalAlignment="Center">
+                    <!-- Transparent caption, separate from the cover image. -->
+                    <StackPanel Grid.Row="1" Margin="3,0" VerticalAlignment="Center">
                       <TextBlock Text="{Binding Name}"
                                  Foreground="{DynamicResource TextPrimaryBrush}"
                                  FontSize="13" FontWeight="SemiBold"
