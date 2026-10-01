@@ -11,7 +11,7 @@
 </p>
 <p align="center"><a href="#start-playing">Get started</a> · <a href="#inside-steamy">Features</a> · <a href="#a-closer-look">Screenshots</a> · <a href="#build-it-yourself">Build</a> · <a href="#credits">Credits</a></p>
 
-<p align="center"><img src="docs/screenshots/dashboard.png" width="1044" alt="Steamy dashboard with large Spotlight artwork and three upcoming games" /></p>
+<p align="center"><img src="docs/screenshots/dashboard.png" width="1044" alt="Steamy dashboard with compact Spotlight artwork and three upcoming games" /></p>
 
 ## Start playing
 
@@ -23,13 +23,13 @@ The release is portable and includes the Windows runtime. Use Windows 10 or 11 o
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
-Upgrading from **0.4.6** to the **0.4.6.1 hotfix** requires a manual ZIP update: the older updater ignores the fourth version number. Close Steamy, extract the full new app ZIP over your portable installation, then reopen it. The hotfix preserves revision numbers for future updates.
+Upgrading from **0.4.6** to the **0.4.6.1 hotfix** requires a manual ZIP update: the older updater ignores the fourth version number. Close Steamy, extract the full new app ZIP over your portable installation, then reopen it. The hotfix preserves revision numbers for future updates. If you already installed 0.4.6.1, download the ZIP again to get this refreshed build; the version stays 0.4.6.1.
 
 ## Inside Steamy
 
 | Your next stop | What you'll find |
 | --- | --- |
-| **Dashboard** | Large Spotlight artwork, clear download actions and at most three upcoming games in a focused discovery view. |
+| **Dashboard** | Compact Spotlight artwork, a live release countdown and at most three upcoming games in a focused discovery view. |
 | **Spotlight** | Upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
 | **Games** | Rounded cover artwork with transparent captions, typo-tolerant title/App ID search, favorites, sorting and source filters. |
 | **Downloads** | Compact source → depots & version → location steps, right-hand depot selection and available Steam details, plus queue priority, pause, resume and repair. |
@@ -37,13 +37,13 @@ Upgrading from **0.4.6** to the **0.4.6.1 hotfix** requires a manual ZIP update:
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
 | **Fixes** | Browse your configured fixes repository. **Hypervisor Fixes is Coming soon** and does not install anything yet. |
 
-Larger cover grids put the artwork first, with transparent captions and light blue surfaces over an ambient blue/violet background. Cards respond with short hover and click transitions while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → General → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
+Compact, frameless cover grids put the artwork first, with transparent captions over a neutral black background. Galleries appear with a calm fade; cards lift gently on hover while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → General → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
 
 ### A Spotlight that keeps moving
 
 The feed checks public Steam data daily for upcoming releases from established publishers and studios. Released games, DLC, demos, soundtracks, old editions and expired release dates are excluded. Confirmed near dates come first; vague dates follow. The app checks for updates every six hours and retains its last valid feed when a request fails.
 
-Official artwork is preloaded. Slides change about every five seconds while the app is active; **Pause / Resume**, manual arrows and artwork previews on wider windows give you control. The Spotlight countdown sits at the bottom left beside **Check sources** and **View game**. Countdown and image updates retain your scroll position. Exact release dates show remaining days and **Today** on the date; month/year or unknown dates show **TBA**. Hours, minutes and seconds require a confirmed time. A date reaching zero never proves that a game has released or is downloadable.
+Official artwork is preloaded. Slides change about every five seconds while the app is active; **Pause / Resume**, manual arrows and artwork previews on wider windows give you control. Up to eight artwork previews appear on the right. A small rotating indicator precedes each slide change when motion is enabled. The Spotlight countdown sits at the bottom left; the source and game buttons have been removed. Countdown and image updates retain your scroll position. Exact release dates show remaining days and **Today** on the date; month/year or unknown dates show **TBA**. Steam’s published full-date schedules show separate days, hours, minutes and seconds, updated every second. Missing schedules retain honest date-only labels. A date reaching zero never proves that a game has released or is downloadable.
 
 Dashboard search is hidden by default. Enable **Settings → General → Dashboard search** to search Discover. Disabling it clears the hidden query and results. The regular **Games** search is always available.
 

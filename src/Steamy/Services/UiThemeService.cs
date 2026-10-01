@@ -81,7 +81,9 @@ public static class UiThemeService
         var app = Application.Current;
         if (app is null) return;
 
-        app.Resources["AppBackgroundBrush"] = new SolidColorBrush(Colors.Transparent);
+        app.Resources["AppBackgroundBrush"] = _isLight
+            ? new SolidColorBrush(Color.FromArgb(0xEA, 0xF4, 0xF6, 0xFA))
+            : new SolidColorBrush(Color.FromArgb(0xEF, 0x09, 0x09, 0x0B));
         // Keep the palette's translucent sidebar gradient when native backdrops are enabled.
         app.Resources["SidebarBackgroundBrush"] = (_isLight ? LightPalette : DarkPalette)["SidebarBackgroundBrush"];
     }
@@ -116,7 +118,7 @@ public static class UiThemeService
     // rings). WPF-UI lightens it a little in the dark theme, so both themes get the same hue.
     private static void ApplyAccent(bool light)
     {
-        var accent = light ? Color.FromRgb(0x25, 0x63, 0xEB) : Color.FromRgb(0x2F, 0x6F, 0xEB);
+        var accent = light ? Color.FromRgb(0x25, 0x63, 0xEB) : Color.FromRgb(0xC3, 0xC5, 0xCB);
         ApplicationAccentColorManager.Apply(accent, light ? ApplicationTheme.Light : ApplicationTheme.Dark);
     }
 

@@ -125,6 +125,38 @@ def collect_candidates():
     return list(ids)[:120], requested_ids
 
 
+def confirmed_release_time(game, release, now):
+    """Use Steam's published schedule only when its display precision is a full date."""
+    timestamp = release.get('steam_release_date')
+    if (release.get('is_coming_soon') is not True or release.get('coming_soon_display') != 'date_full'
+            or not isinstance(timestamp, int) or isinstance(timestamp, bool) or timestamp <= 0
+            or not game.get('releaseDate')):
+        return None
+    try:
+        scheduled = datetime.fromtimestamp(timestamp, timezone.utc)
+        store_day = datetime.fromisoformat(game['releaseDate']).date()
+        # Store dates use the selected country. A US launch can fall on the next UTC day.
+        if abs((scheduled.date() - store_day).days) > 1 or scheduled > now + timedelta(days=730):
+            return None
+        return scheduled
+    except (ValueError, OverflowError, OSError):
+        return None
+
+
+def enrich_releases(games, response, now):
+    items = {item.get('appid'): item.get('release', {}) for item in response.get('response', {}).get('store_items', [])}
+    result = []
+    for game in games:
+        release = items.get(game['appId'], {})
+        if release.get('is_coming_soon') is False:
+            continue
+        scheduled = confirmed_release_time(game, release, now)
+        if scheduled is not None and scheduled <= now:
+            continue
+        result.append({**game, 'releaseTime': scheduled.isoformat() if scheduled else None})
+    return result
+
+
 def refresh(output):
     now = datetime.now(timezone.utc)
     candidates, requested_ids = collect_candidates()
@@ -141,6 +173,15 @@ def refresh(output):
     games.sort(key=lambda game: (game['releaseDate'] is None, game['releaseDate'] or '9999-12-31',
                                   game['appId'] not in requested_ids))
     games = games[:16]
+    if games:
+        query = {'ids': [{'appid': game['appId']} for game in games],
+                 'context': {'language': 'english', 'country_code': 'US', 'steam_realm': 1},
+                 'data_request': {'include_release': True}}
+        url = 'https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json=' + urllib.parse.quote(json.dumps(query))
+        try:
+            games = enrich_releases(games, fetch_json(url), now)
+        except Exception as error:
+            print(f'Exact Steam schedule unavailable: {type(error).__name__}; retaining date-only countdowns')
     if len(games) < 3:
         raise RuntimeError('Too few verified recent/upcoming games; retaining the previous feed')
     document = {'schemaVersion': 1, 'updatedAt': now.isoformat(), 'games': games}

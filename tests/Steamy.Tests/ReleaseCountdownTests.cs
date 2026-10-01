@@ -30,4 +30,26 @@ public class ReleaseCountdownTests
         Assert.Empty(ReleaseCountdown.Upcoming([new() { ComingSoon = true, ReleaseLabel = "Q2 2026" }, new() { ComingSoon = true, ReleaseLabel = "Late 2025" }], new(2026,10,1)));
         Assert.Equal([8,7,6,5], ReleaseCountdown.Upcoming(games, new(2026,10,1)).Select(game => game.AppId));
     }
+    [Fact]
+    public void ConfirmedClockTicksSecondsAndDoesNotInventTimesForDateOnlyGames()
+    {
+        var game = new SpotlightGame { ReleaseTime = Now.AddDays(2).AddHours(3).AddMinutes(4).AddSeconds(5) };
+        Assert.Equal(new ReleaseCountdownParts(2, 3, 4, 5), ReleaseCountdown.Parts(game, Now));
+        Assert.Equal(new ReleaseCountdownParts(2, 3, 4, 4), ReleaseCountdown.Parts(game, Now.AddSeconds(1)));
+        Assert.Equal(new ReleaseCountdownParts(0, 0, 0, 1), ReleaseCountdown.Parts(game, game.ReleaseTime!.Value.AddMilliseconds(-100)));
+        Assert.Null(ReleaseCountdown.Parts(game, game.ReleaseTime.Value));
+        Assert.Null(ReleaseCountdown.Parts(new() { ReleaseDate = new(2026, 10, 2) }, Now));
+    }
+
+    [Fact]
+    public void UpcomingUsesConfirmedTimeAcrossStoreDateAndTimezoneBoundaries()
+    {
+        SpotlightGame[] games = [
+            new() { AppId = 1, ComingSoon = true, ReleaseDate = new(2026, 9, 30), ReleaseTime = Now.AddHours(1).ToUniversalTime() },
+            new() { AppId = 2, ComingSoon = true, ReleaseDate = new(2026, 10, 2), ReleaseTime = Now.AddSeconds(-1) },
+            new() { AppId = 3, ComingSoon = false, ReleaseTime = Now.AddHours(1) },
+            new() { AppId = 4, ComingSoon = true, ReleaseTime = Now.ToUniversalTime() }];
+        Assert.Equal(1, Assert.Single(ReleaseCountdown.UpcomingAt(games, Now)).AppId);
+    }
+
 }

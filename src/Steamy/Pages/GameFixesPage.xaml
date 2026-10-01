@@ -120,10 +120,10 @@
         </TextBlock>
 
         <!-- Game cards grid -->
-        <ItemsControl ItemsSource="{Binding PagedGames}" HorizontalAlignment="Stretch">
+        <ItemsControl ItemsSource="{Binding PagedGames}" HorizontalAlignment="Stretch" controls:EntranceMotion.Delay="30">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <controls:AdaptiveGridPanel MinItemWidth="224" Spacing="24" CoverRatio="1.38" FooterHeight="70" MaxColumns="5" />
+              <controls:AdaptiveGridPanel MinItemWidth="174" Spacing="18" CoverRatio="1.32" FooterHeight="56" MaxColumns="6" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
@@ -133,7 +133,7 @@
                 <Grid>
                   <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
-                    <RowDefinition Height="70" />
+                    <RowDefinition Height="56" />
                   </Grid.RowDefinitions>
 
                   <!-- Cover -->
@@ -162,7 +162,7 @@
                   <StackPanel Grid.Row="1" Margin="3,0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}"
                                Foreground="{DynamicResource TextPrimaryBrush}"
-                               FontSize="14"
+                               FontSize="12.5"
                                FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="{Binding AppLabel}"

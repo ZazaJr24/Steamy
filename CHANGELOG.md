@@ -5,11 +5,12 @@ Add a new `## x.y.z` section at the top before tagging.
 
 ## 0.4.6.1 — 2026-10-01
 
-- Subtle glass sidebar and a clearer blue selection outline without changing navigation order.
-- Spotlight titles reduced by 7% and descriptions constrained to a narrower reading width.
-- Fine glass borders and translucent hover surfaces for Games, Fixes and upcoming cards, with fixed hit areas.
+- Neutral black transparent surfaces, a quiet sidebar and frameless Games, Fixes and upcoming cards.
+- Compact Spotlight and cover grids with shorter titles and descriptions, calm entrance transitions and gentle hover motion with fixed hit areas.
+- Upcoming-only Spotlight with a real bottom-left days/hours/minutes/seconds countdown from Steam's published release schedules. Date-only releases keep honest day/TBA labels.
+- Removed Check sources and View game from Spotlight. Up to eight previews on the right, with a small rotating indicator before the next slide; pause, inactivity, reduced motion and scrolling remain respected.
 - Hotfix revision numbers retained by the version display and updater; source archives are excluded from update downloads.
-- To upgrade from 0.4.6, extract the new app ZIP manually: that older updater does not recognize four-part hotfix versions.
+- Updated build retains version 0.4.6.1. Download and extract the app ZIP again if already installed. Upgrades from 0.4.6 also require a manual ZIP update because its updater ignores revision numbers.
 
 ## 0.4.6 — 2026-10-01
 
