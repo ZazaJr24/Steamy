@@ -37,7 +37,7 @@ public static class UiThemeService
         }
         catch { }
 
-        if (_currentBackdrop != "None" && MotionPreferences.BackdropBlurEnabled)
+        if (_currentBackdrop != "None" && MotionPreferences.NativeBackdropEnabled)
             ApplyTransparentBackgrounds();
         else
             RestoreOpaqueBackgrounds();
@@ -52,7 +52,7 @@ public static class UiThemeService
             var window = Application.Current?.MainWindow as FluentWindow;
             if (window is null) return;
 
-            var backdropType = (MotionPreferences.BackdropBlurEnabled ? style?.ToLowerInvariant() : "none") switch
+            var backdropType = (MotionPreferences.NativeBackdropEnabled ? style?.ToLowerInvariant() : "none") switch
             {
                 "mica" => WindowBackdropType.Mica,
                 "micaalt" or "mica alt" => WindowBackdropType.Tabbed,

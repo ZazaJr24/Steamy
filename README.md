@@ -78,7 +78,7 @@ Additional tools are fetched when needed. Credentials are kept in a Windows DPAP
 
 ## A closer look
 
-Screenshots are captured from the actual Windows app using a sample library and queue. The Spotlight uses verified public Steam data. Game artwork belongs to the respective rights holders.
+Screenshots are captured from the actual Windows app using sample library, queue and depot metadata. The Spotlight uses verified public Steam data. Game artwork belongs to the respective rights holders.
 
 **Games** — cover art, clear labels and room to breathe.
 

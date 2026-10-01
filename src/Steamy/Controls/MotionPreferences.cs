@@ -10,7 +10,9 @@ public static class MotionPreferences
 
     public static bool ReduceEffects { get; private set; }
     public static bool AnimationsEnabled => !ReduceEffects && SystemParameters.ClientAreaAnimation;
-    public static bool BackdropBlurEnabled => AnimationsEnabled && !SystemParameters.HighContrast;
+    // The gallery is a static snapshot: disabling motion does not disable its blur.
+    public static bool BackdropBlurEnabled => !ReduceEffects && !SystemParameters.HighContrast;
+    public static bool NativeBackdropEnabled => AnimationsEnabled && !SystemParameters.HighContrast;
     public static event EventHandler? Changed;
 
     public static void Configure(bool reduceEffects)
