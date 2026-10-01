@@ -1,6 +1,9 @@
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
+using System.Windows;
+using System.Windows.Controls;
 using Steamy.Models;
+using Steamy.Pages;
 using Steamy.Services;
 using Steamy.ViewModels;
 
@@ -8,6 +11,34 @@ namespace Steamy.UiTests;
 
 public sealed partial class PageSmokeTests
 {
+    private static void CheckDashboardLayout(DashboardPage page)
+    {
+        var hero = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("DashboardHero"));
+        var artwork = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightArtworkFrame"));
+        var title = Assert.IsType<TextBlock>(page.FindName("SpotlightTitle"));
+        var actions = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightActions"));
+        var paging = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightPaging"));
+        Assert.True(artwork.ActualWidth > 0);
+        Assert.True(artwork.ActualHeight > 0);
+        Assert.False(string.IsNullOrWhiteSpace(title.Text));
+        foreach (var element in new[] { hero, artwork, title, actions, paging })
+        {
+            var start = element.TranslatePoint(new Point(0, 0), page);
+            Assert.True(start.X >= -1 && start.X + element.ActualWidth <= page.ActualWidth + 1,
+                $"{element.Name} extends beyond the dashboard at width {page.ActualWidth}.");
+        }
+        foreach (var button in Descendants<Button>(actions))
+        {
+            Assert.True(button.ActualWidth >= 24 && button.ActualHeight >= 24);
+            var start = button.TranslatePoint(new Point(0, 0), hero);
+            Assert.True(start.X >= -1 && start.X + button.ActualWidth <= hero.ActualWidth + 1);
+            Assert.True(start.Y >= -1 && start.Y + button.ActualHeight <= hero.ActualHeight + 1,
+                $"Spotlight action is clipped at width {page.ActualWidth}.");
+        }
+        Assert.All(Descendants<Button>(paging), button =>
+            Assert.True(button.ActualWidth >= 24 && button.ActualHeight >= 24));
+    }
+
     private static void CheckPersonalDashboard(IServiceProvider provider, MemoryActivityFixture activity)
     {
         var store = provider.GetRequiredService<IAppDataStore>();

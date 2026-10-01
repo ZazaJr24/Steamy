@@ -92,12 +92,14 @@ public static class ServiceRegistration
             sp.GetRequiredService<ISecureCredentialService>(),
             sp.GetRequiredService<IRyuuSecureDownloadService>(),
             sp.GetRequiredService<ILoggingService>()));
+        services.AddSingleton<ISteamDepotMetadataService, SteamDepotMetadataService>();
         services.AddSingleton<IRyuuGameDownloadService>(sp => new RyuuGameDownloadService(
             sp.GetRequiredService<ISettingsService>(),
             sp.GetRequiredService<ISecureCredentialService>(),
             sp.GetRequiredService<IRyuuSecureDownloadService>(),
             sp.GetRequiredService<IManifestSourceService>(),
-            sp.GetRequiredService<ILoggingService>()));
+            sp.GetRequiredService<ILoggingService>(),
+            depotMetadata: sp.GetRequiredService<ISteamDepotMetadataService>()));
         services.AddSingleton<IManifestRefetchService>(sp => new ManifestRefetchService(
             sp.GetRequiredService<IManifestSourceService>(),
             sp.GetRequiredService<ILoggingService>()));

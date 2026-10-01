@@ -258,6 +258,7 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand NextFeaturedCommand { get; }
     public ICommand PreviousFeaturedCommand { get; }
     public ICommand ViewFeaturedCommand { get; }
+    public ICommand DownloadFeaturedCommand { get; }
     public ICommand OpenSpotlightCommand { get; }
 
     public Task EnsureDiscoveryArtworkAsync(bool force = false) => _discoveryArtworkTask is { IsCompleted: false }
@@ -265,6 +266,14 @@ public sealed class DashboardViewModel : ViewModelBase
 
     private async Task LoadDiscoveryArtworkAsync(bool force)
     {
+        // Retry optional failures on an explicit refresh, without refetching successful images.
+        if (force)
+        {
+            foreach (var key in _heroLoads.Where(pair => pair.Value.IsCompleted &&
+                (!pair.Value.IsCompletedSuccessfully || pair.Value.Result is null)).Select(pair => pair.Key).ToArray()) _heroLoads.Remove(key);
+            foreach (var key in _headerLoads.Where(pair => pair.Value.IsCompleted &&
+                (!pair.Value.IsCompletedSuccessfully || pair.Value.Result is null)).Select(pair => pair.Key).ToArray()) _headerLoads.Remove(key);
+        }
         // Show cached artwork immediately; checking the feed must not delay the first paint.
         var savedArtwork = LoadVisibleArtworkAsync();
         try { ApplySpotlight(await _spotlight.GetAsync(force)); }
@@ -300,6 +309,7 @@ public sealed class DashboardViewModel : ViewModelBase
         (NextFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (PreviousFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
         (ViewFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
+        (DownloadFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
     }
 
     private async Task LoadDiscoveryHeadersAsync()
@@ -349,6 +359,20 @@ public sealed class DashboardViewModel : ViewModelBase
         library.SelectedSourceFilter = "All sources";
         library.SelectedTypeFilter = "All games";
         library.SearchText = FeaturedGame.Game.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        Navigation.Navigate<LibraryPage>();
+    }
+
+    private void DownloadFeatured()
+    {
+        if (FeaturedGame is not { } featured) return;
+        var library = App.Services.GetRequiredService<LibraryViewModel>();
+        library.SelectedSourceFilter = "All sources";
+        library.RequestedDownload = new SteamCatalogItem
+        {
+            AppId = featured.Game.AppId, Name = featured.Game.Name,
+            AppType = SteamCatalogAppType.Game, HeaderImage = featured.Game.HeaderImage,
+            ArtworkImage = featured.Game.ArtworkImage
+        };
         Navigation.Navigate<LibraryPage>();
     }
 
@@ -435,6 +459,7 @@ public sealed class DashboardViewModel : ViewModelBase
         NextFeaturedCommand = new RelayCommand(() => MoveFeatured(1), () => DiscoverGames.Count > 1);
         PreviousFeaturedCommand = new RelayCommand(() => MoveFeatured(-1), () => DiscoverGames.Count > 1);
         ViewFeaturedCommand = new RelayCommand(ViewFeatured, () => HasSpotlight);
+        DownloadFeaturedCommand = new RelayCommand(DownloadFeatured, () => HasSpotlight);
         OpenSpotlightCommand = new RelayCommand<DashboardFeature>(OpenSpotlight);
         ApplySpotlight(spotlight.Cached);
         _librarySync = librarySync;

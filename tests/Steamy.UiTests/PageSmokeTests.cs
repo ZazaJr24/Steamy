@@ -86,6 +86,10 @@ public sealed partial class PageSmokeTests
             CheckSettingsCache();
             _phase = "CheckArtworkDecoding()";
             CheckArtworkDecoding();
+            _phase = "CheckScrollReversal()";
+            CheckScrollReversal();
+            _phase = "CheckDlcSelection(provider)";
+            CheckDlcSelection(provider);
             _phase = "CheckSushiImport(provider)";
             CheckSushiImport(provider);
             _phase = "CheckFeaturedGames(provider, fixtureArtwork, navigation)";
@@ -112,7 +116,7 @@ public sealed partial class PageSmokeTests
                 UiThemeService.Apply(theme);
                 _phase = "Library dialog " + theme;
                 CheckLibraryDialog(provider, theme);
-                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage(), new HypervisorFixesPage() })
+                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage(), new HypervisorFixesPage(), new CreamApiPage() })
                 {
                     _phase = theme + " " + page.GetType().Name;
                     PumpDispatcher(TimeSpan.FromMilliseconds(100));
@@ -126,6 +130,7 @@ public sealed partial class PageSmokeTests
                         Assert.Equal(size.Width, page.ActualWidth);
                         Assert.Equal(size.Height, page.ActualHeight);
                         Assert.NotNull(page.DataContext);
+                        if (page is DashboardPage dashboard) CheckDashboardLayout(dashboard);
                         SaveScreenshot(page, theme, size);
                     }
                     if (page is LibraryPage)
@@ -228,6 +233,10 @@ public sealed partial class PageSmokeTests
         Assert.Equal(firstId.ToString(System.Globalization.CultureInfo.InvariantCulture), library.SearchText);
         Assert.Equal("All sources", library.SelectedSourceFilter);
         Assert.Equal("All games", library.SelectedTypeFilter);
+        model.DownloadFeaturedCommand.Execute(null);
+        Assert.Equal(typeof(LibraryPage), route);
+        Assert.Equal(firstId, library.RequestedDownload!.AppId);
+        library.RequestedDownload = null;
         library.SearchText = string.Empty;
         navigation.Detach();
     }
@@ -275,6 +284,16 @@ public sealed partial class PageSmokeTests
             window.UpdateLayout();
             SaveVisual(window, filename);
         }
+        Assert.True(window.RootNavigationView.Navigate(typeof(CreamApiPage)));
+        PumpDispatcher(TimeSpan.FromMilliseconds(150));
+        var dlcModel = provider.GetRequiredService<Steamy.ViewModels.CreamApiViewModel>();
+        dlcModel.GameFolder = @"C:\Games\Cyberpunk 2077";
+        dlcModel.AppIdText = "1091500";
+        dlcModel.FilteredGames.Add(new InstalledGameEntry(1091500, "Cyberpunk 2077", dlcModel.GameFolder));
+        dlcModel.FilteredGames.Add(new InstalledGameEntry(1245620, "ELDEN RING", @"C:\Games\ELDEN RING"));
+        dlcModel.DlcList.Add(new Steamy.ViewModels.CreamApiDlcItem { AppId = 2138330, Name = "Cyberpunk 2077: Phantom Liberty" });
+        window.UpdateLayout();
+        SaveVisual(window, "dlc-unlocker.png");
         OfflineServiceProxy.ScreenshotCatalog = new[] { (2322010, "God of War Ragnarök"), (1245620, "ELDEN RING"),
             (1091500, "Cyberpunk 2077"), (1174180, "Red Dead Redemption 2"), (2358720, "Black Myth: Wukong") }
             .Select(entry => new SteamCatalogItem { AppId = entry.Item1, Name = entry.Item2, AppType = SteamCatalogAppType.Game,
@@ -293,7 +312,7 @@ public sealed partial class PageSmokeTests
         SaveVisual(window, "games.png");
         var page = Descendants<LibraryPage>(window).Single();
         _phase = "Open game details";
-        page.OpenGameDetails(library.PagedCatalogItems.First(item => item.AppId == 1091500));
+        page.OpenDownloadSetup(library.PagedCatalogItems.First(item => item.AppId == 1091500));
         PumpDispatcher(TimeSpan.FromMilliseconds(350));
         window.UpdateLayout();
         SaveVisual(window, "game-details.png");
@@ -476,6 +495,15 @@ public sealed partial class PageSmokeTests
             Assert.Equal(requestCount + 1, handler.Requests); // A changed Steam asset URL invalidates its cache.
             Task.Run(() => service.LoadSpotlightHeaderAsync(spotlight)).GetAwaiter().GetResult();
             Assert.Equal(spotlight.HeaderUrl, handler.LastUri!.AbsoluteUri);
+            handler.TimeoutNextRequest = true;
+            var recovered = Task.Run(() => service.LoadHeroAsync(3)).GetAwaiter().GetResult();
+            Assert.NotNull(recovered); // A CDN timeout still tries the alternate artwork host.
+            Assert.Contains("cdn.akamai", handler.LastUri!.Host);
+            var blockedCache = Path.Combine(directory, "blocked-cache");
+            File.WriteAllText(blockedCache, "This is a file, not a cache directory.");
+            using var uncachedClient = new HttpClient(new ArtworkHandler());
+            using var uncached = new SteamArtworkService(uncachedClient, blockedCache);
+            Assert.NotNull(Task.Run(() => uncached.LoadHeroAsync(4)).GetAwaiter().GetResult());
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }
@@ -485,10 +513,16 @@ public sealed partial class PageSmokeTests
         public int Width { get; set; } = 16;
         public int Requests { get; private set; }
         public Uri? LastUri { get; private set; }
+        public bool TimeoutNextRequest { get; set; }
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Requests++;
             LastUri = request.RequestUri;
+            if (TimeoutNextRequest)
+            {
+                TimeoutNextRequest = false;
+                return Task.FromException<HttpResponseMessage>(new TaskCanceledException("Simulated CDN timeout"));
+            }
             var source = BitmapSource.Create(Width, 2, 96, 96, PixelFormats.Bgra32, null, new byte[Width * 2 * 4], Width * 4);
             var encoder = new PngBitmapEncoder();
             encoder.Frames.Add(BitmapFrame.Create(source));
@@ -668,6 +702,8 @@ public class OfflineServiceProxy : DispatchProxy
         if (method.Name.StartsWith("add_", StringComparison.Ordinal) || method.Name.StartsWith("remove_", StringComparison.Ordinal)) return null;
         if (method.DeclaringType == typeof(ISecureCredentialService) && method.Name == nameof(ISecureCredentialService.ReadAsync)) return Task.FromResult<string?>(null);
         if (method.DeclaringType == typeof(ILoggingService)) return null;
+        if (method.DeclaringType == typeof(IGameLocatorService) && method.Name == nameof(IGameLocatorService.ListInstalledGames)) return Array.Empty<InstalledGameEntry>();
+        if (method.DeclaringType == typeof(ICreamApiService) && method.Name == nameof(ICreamApiService.HasCachedDlls)) return true;
         if (method.DeclaringType == typeof(IDenuvoGeneratorDownloadService))
         {
             if (method.Name == "get_HasCachedExecutable") return false;

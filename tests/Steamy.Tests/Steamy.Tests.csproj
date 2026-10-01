@@ -23,6 +23,7 @@
     <Compile Include="..\..\src\Steamy\Services\Download\LocalDownloadInspector.cs" Link="Linked\LocalDownloadInspector.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DepotResumeState.cs" Link="Linked\DepotResumeState.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadPreparation.cs" Link="Linked\DownloadPreparation.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\SteamDepotMetadataService.cs" Link="Linked\SteamDepotMetadataService.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadOperationRegistry.cs" Link="Linked\DownloadOperationRegistry.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadQueueScheduler.cs" Link="Linked\DownloadQueueScheduler.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadStorageGuard.cs" Link="Linked\DownloadStorageGuard.cs" />

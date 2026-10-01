@@ -53,6 +53,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
     private readonly IRyuuSecureDownloadService _ryuuDownload;
     private readonly IManifestSourceService _manifestSource;
     private readonly ILoggingService _logging;
+    private readonly ISteamDepotMetadataService? _depotMetadata;
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
     private readonly string _toolsFolder;
@@ -64,13 +65,15 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         ISecureCredentialService credentials,
         IRyuuSecureDownloadService ryuuDownload,
         IManifestSourceService manifestSource,
-        ILoggingService logging, HttpClient? httpClient = null, string? workFolder = null, string? toolsFolder = null)
+        ILoggingService logging, HttpClient? httpClient = null, string? workFolder = null, string? toolsFolder = null,
+        ISteamDepotMetadataService? depotMetadata = null)
     {
         _settings = settings;
         _credentials = credentials;
         _ryuuDownload = ryuuDownload;
         _manifestSource = manifestSource;
         _logging = logging;
+        _depotMetadata = depotMetadata;
         _ownsHttpClient = httpClient is null;
         _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(5) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
@@ -192,7 +195,13 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             var catalog = DownloadPreparationReader.Read(lua, additionalLua, manifestNames, keys);
             if (catalog.Depots.Count == 0) return new(false, $"{source} returned no downloadable depot manifests for App {appId}.");
             await File.WriteAllTextAsync(Path.Combine(snapshotDirectory, $"{appId}.lua"), lua, cancellationToken).ConfigureAwait(false);
-            var plan = new PreparedGameDownload(Guid.NewGuid(), appId, source, catalog.Depots);
+            // Public app-info adds display labels only. The private source catalog, keys and
+            // manifest IDs remain authoritative for the selected download and every resume.
+            if (_depotMetadata is not null) progress?.Report("Loading optional Steam depot information…");
+            var displayDepots = _depotMetadata is null
+                ? SteamDepotMetadataReader.Enrich(catalog.Depots, new Dictionary<int, SteamDepotMetadata>())
+                : await _depotMetadata.EnrichAsync(appId, catalog.Depots, cancellationToken).ConfigureAwait(false);
+            var plan = new PreparedGameDownload(Guid.NewGuid(), appId, source, displayDepots);
             cancellationToken.ThrowIfCancellationRequested();
             if (!_prepared.TryAdd(plan.Id, new PreparedSnapshot(plan, catalog, snapshotDirectory)))
                 throw new InvalidOperationException("The download preparation could not be registered.");

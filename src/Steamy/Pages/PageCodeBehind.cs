@@ -58,16 +58,24 @@ public partial class DashboardPage : Page
 
     private void ApplyResponsiveLayout(double width)
     {
-        DashboardSearch.Width = width < 900 ? 260 : 340;
-        HomeHeading.FontSize = width < 1000 ? 36 : 42;
-        HomeHeading.LineHeight = HomeHeading.FontSize * 1.15;
-        var stacked = width < 720;
-        Grid.SetRow(DashboardHero, stacked ? 1 : 0);
-        Grid.SetColumn(DashboardHero, stacked ? 0 : 2);
-        Grid.SetColumnSpan(DashboardHero, stacked ? 3 : 1);
-        Grid.SetColumnSpan(HeroCopy, stacked ? 3 : 1);
-        DashboardHero.Margin = stacked ? new Thickness(0, 18, 0, 0) : new Thickness(0);
-        SpotlightGutter.Width = new GridLength(stacked ? 0 : 28);
+        // Artwork owns the width. Stack only the compact controls on narrow windows.
+        var compact = width < 720;
+        DashboardSearch.Width = width < 640 ? 220 : width < 900 ? 280 : 340;
+        DashboardScroll.Padding = width < 640 ? new Thickness(18, 18, 18, 26) : new Thickness(28, 22, 28, 30);
+        SpotlightArtworkFrame.Height = width < 640 ? 212 : width < 1000 ? 260 : 304;
+        SpotlightTitle.FontSize = width < 640 ? 19 : 22;
+        Grid.SetRow(SpotlightActions, compact ? 1 : 0);
+        Grid.SetColumn(SpotlightActions, compact ? 0 : 1);
+        Grid.SetColumnSpan(SpotlightActions, compact ? 2 : 1);
+        Grid.SetColumnSpan(SpotlightDetails, compact ? 2 : 1);
+        SpotlightActions.Margin = compact ? new Thickness(0, 12, 0, 0) : new Thickness(0);
+        SpotlightDetails.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 18, 0);
+        Grid.SetRow(CurrentDownloadCard, compact ? 1 : 0);
+        Grid.SetColumn(CurrentDownloadCard, compact ? 0 : 2);
+        Grid.SetColumnSpan(CurrentDownloadCard, compact ? 3 : 1);
+        Grid.SetColumnSpan(ContinueCard, compact ? 3 : 1);
+        CurrentDownloadCard.Margin = compact ? new Thickness(0, 10, 0, 0) : new Thickness(0);
+        QuickActionsGutter.Width = new GridLength(compact ? 0 : 14);
     }
 
     private void GameCover_Click(object sender, RoutedEventArgs e)

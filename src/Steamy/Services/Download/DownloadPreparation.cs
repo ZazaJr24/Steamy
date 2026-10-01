@@ -15,13 +15,16 @@ public enum ManifestSource
 
 public sealed record RyuuDepotInfo(int DepotId, string ManifestId, string DecryptionKey);
 public sealed record RyuuGameDownloadResult(bool Succeeded, string Message);
-public sealed record PreparedDepotVersion(string ManifestId, long? SizeBytes = null, string? BuildLabel = null)
+public sealed record PreparedDepotVersion(string ManifestId, long? SizeBytes = null, string? BuildLabel = null,
+    long? CompressedSizeBytes = null, string? BranchName = null)
 {
     public string Label => string.IsNullOrWhiteSpace(BuildLabel) ? $"Manifest {ManifestId}" : $"{BuildLabel} · Manifest {ManifestId}";
 }
 
 public sealed record PreparedDownloadDepot(int DepotId, string Name,
-    IReadOnlyList<PreparedDepotVersion> Versions, string DefaultManifestId);
+    IReadOnlyList<PreparedDepotVersion> Versions, string DefaultManifestId,
+    string? ContentType = null, string? OperatingSystems = null, string? Languages = null,
+    string? MetadataSource = null, string? SteamDbUrl = null, int? DlcAppId = null, int? SharedAppId = null);
 public sealed record PreparedGameDownload(Guid Id, int AppId, ManifestSource Source,
     IReadOnlyList<PreparedDownloadDepot> Depots);
 public sealed record GameDownloadPreparation(bool Succeeded, string Message, PreparedGameDownload? Plan = null);
