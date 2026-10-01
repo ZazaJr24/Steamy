@@ -306,6 +306,7 @@ public sealed partial class PageSmokeTests
         AwaitWizardStep(page);
         Assert.Equal(2, page.DownloadWizardStep);
         page.ConfigureDownloadLocation(@"C:\Games");
+        PumpUntil(() => !((TextBlock)page.FindName("LocationSpaceText")).Text.StartsWith("Checking", StringComparison.Ordinal));
         window.UpdateLayout();
         SaveVisual(window, "download-location.png");
         page.CloseOverlay();

@@ -16,6 +16,7 @@ Add a new `## x.y.z` section at the top before tagging.
 
 ### Improved
 - Quieter opaque game selection surfaces, compact download cards and shorter, stable-hit-area animations.
+- Static gallery blur remains available when Windows motion is disabled; reduced effects and high contrast still turn it off.
 - A running download can continue while another game's download assistant is opened.
 - The README explains download setup and includes Windows screenshots of each step.
 
