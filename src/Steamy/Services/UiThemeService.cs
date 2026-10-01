@@ -82,10 +82,8 @@ public static class UiThemeService
         if (app is null) return;
 
         app.Resources["AppBackgroundBrush"] = new SolidColorBrush(Colors.Transparent);
-        // A light tint in the light theme; the old fixed dark tint turned the sidebar grey there.
-        app.Resources["SidebarBackgroundBrush"] = _isLight
-            ? new SolidColorBrush(Color.FromArgb(0x73, 0xFF, 0xFF, 0xFF))
-            : new SolidColorBrush(Color.FromArgb(0x40, 0x09, 0x0B, 0x10));
+        // Keep the palette's translucent sidebar gradient when native backdrops are enabled.
+        app.Resources["SidebarBackgroundBrush"] = (_isLight ? LightPalette : DarkPalette)["SidebarBackgroundBrush"];
     }
 
     private static void RestoreOpaqueBackgrounds()

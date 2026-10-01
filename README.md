@@ -23,6 +23,8 @@ The release is portable and includes the Windows runtime. Use Windows 10 or 11 o
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
+Upgrading from **0.4.6** to the **0.4.6.1 hotfix** requires a manual ZIP update: the older updater ignores the fourth version number. Close Steamy, extract the full new app ZIP over your portable installation, then reopen it. The hotfix preserves revision numbers for future updates.
+
 ## Inside Steamy
 
 | Your next stop | What you'll find |
@@ -93,6 +95,10 @@ Screenshots are captured from the actual Windows app using sample library, queue
 **Games** — cover art, clear labels and room to breathe.
 
 ![The Games grid](docs/screenshots/games.png)
+
+**Card hover** — a fine glass outline adds depth while the card's layout and clickable area stay fixed.
+
+![A game card under the actual Windows mouse pointer](docs/screenshots/games-hover.png)
 
 **Download setup** — begin with the familiar compact source picker.
 

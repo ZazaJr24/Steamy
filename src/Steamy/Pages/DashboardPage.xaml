@@ -19,12 +19,18 @@
           <ControlTemplate TargetType="Button">
             <Grid Background="Transparent">
               <Grid x:Name="MotionSurface">
+                <Border x:Name="HoverGlass" Background="{DynamicResource CardHoverGlassBrush}" CornerRadius="12" Opacity="0" IsHitTestVisible="False" />
                 <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
                 <Border x:Name="Ring" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CornerRadius="12" Opacity="0" IsHitTestVisible="False" />
               </Grid>
             </Grid>
             <ControlTemplate.Triggers>
-              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Opacity" Value="1" /></Trigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="HoverGlass" Property="Opacity" Value="1" />
+                <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+                <Setter TargetName="Ring" Property="Opacity" Value="1" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter TargetName="Ring" Property="Opacity" Value="1" /></Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
@@ -125,13 +131,13 @@
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel x:Name="SpotlightDetails" Grid.ColumnSpan="2" HorizontalAlignment="Left" MaxWidth="720">
-              <TextBlock x:Name="SpotlightTitle" Text="{Binding Game.Name}" FontSize="46" FontWeight="Bold" Foreground="#F6F8FC" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="116" ToolTip="{Binding Game.Name}" />
+              <TextBlock x:Name="SpotlightTitle" Text="{Binding Game.Name}" FontSize="42.78" FontWeight="Bold" Foreground="#F6F8FC" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="116" ToolTip="{Binding Game.Name}" />
               <TextBlock Text="{Binding Publisher}" Foreground="#A4B9D5" FontSize="12" Margin="0,8,0,0" TextTrimming="CharacterEllipsis" />
               <TextBlock Foreground="#B9C9DF" FontSize="11" Margin="0,12,0,0" TextTrimming="CharacterEllipsis">
                 <Run Text="{Binding ReleaseStatus, Mode=OneWay}" /><Run Text="  /  " /><Run Text="{Binding ReleaseLabel, Mode=OneWay}" />
               </TextBlock>
-              <TextBlock Text="{Binding Description}" Foreground="#CAD6E6" FontSize="13" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
-                         Height="40" LineHeight="20" LineStackingStrategy="BlockLineHeight" Margin="0,12,0,0" />
+              <TextBlock x:Name="SpotlightDescription" Text="{Binding Description}" Foreground="#CAD6E6" FontSize="13" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                         MaxWidth="480" HorizontalAlignment="Left" Height="40" LineHeight="20" LineStackingStrategy="BlockLineHeight" Margin="0,12,0,0" />
             </StackPanel>
             <StackPanel x:Name="SpotlightActions" Grid.Row="1" Orientation="Horizontal" Margin="0,20,0,0" HorizontalAlignment="Left"
                         DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">

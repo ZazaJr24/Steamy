@@ -13,6 +13,18 @@
                  ExtendsContentIntoTitleBar="True"
                  Icon="pack://application:,,,/Steamy;component/Resources/Brand/steamy.ico"
                  Background="{DynamicResource AppBackgroundBrush}">
+  <ui:FluentWindow.Resources>
+    <Style TargetType="ui:NavigationViewItem" BasedOn="{StaticResource {x:Type ui:NavigationViewItem}}">
+      <Setter Property="Border.CornerRadius" Value="12" />
+      <Style.Triggers>
+        <Trigger Property="IsActive" Value="True">
+          <Setter Property="BorderBrush" Value="{DynamicResource SidebarSelectedBorderBrush}" />
+          <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+          <Setter Property="FontWeight" Value="SemiBold" />
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+  </ui:FluentWindow.Resources>
   <Grid Background="{DynamicResource WorkspaceBackgroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />

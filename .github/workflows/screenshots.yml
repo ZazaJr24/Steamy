@@ -67,7 +67,7 @@ jobs:
       - name: Update README images on main
         shell: pwsh
         run: |
-          foreach ($file in @('dashboard.png', 'downloads.png', 'settings.png', 'games.png', 'game-details.png', 'local-package.png', 'download-depots.png', 'download-location.png', 'hypervisor-fixes.png', 'game-fixes.png', 'dlc-unlocker.png')) {
+          foreach ($file in @('dashboard.png', 'downloads.png', 'settings.png', 'games.png', 'games-hover.png', 'game-details.png', 'local-package.png', 'download-depots.png', 'download-location.png', 'hypervisor-fixes.png', 'game-fixes.png', 'dlc-unlocker.png')) {
             Copy-Item "artifacts/ui/$file" "docs/screenshots/$file" -Force
           }
           git config user.name 'github-actions[bot]'
