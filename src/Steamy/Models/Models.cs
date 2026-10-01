@@ -551,6 +551,7 @@ public sealed class AppSettings : ObservableObject
     private string _language = "System Default";
     private string _appearance = "Dark";
     private bool _reduceEffects;
+    private bool _dashboardSearch;
     private bool _autoUpdate = true;
     private bool _notifications = true;
     private bool _autoRefresh = true;
@@ -662,6 +663,7 @@ public sealed class AppSettings : ObservableObject
     public int DownloadRateLimitMiB { get => _downloadRateLimitMiB; set => SetProperty(ref _downloadRateLimitMiB, value); }
 
     public bool UseLancache { get => _useLancache; set => SetProperty(ref _useLancache, value); }
+    public bool DashboardSearch { get => _dashboardSearch; set => SetProperty(ref _dashboardSearch, value); }
     public bool ReduceEffects { get => _reduceEffects; set => SetProperty(ref _reduceEffects, value); }
     public int RetryCount { get => _retryCount; set => SetProperty(ref _retryCount, value); }
     public int TimeoutSeconds { get => _timeoutSeconds; set => SetProperty(ref _timeoutSeconds, value); }

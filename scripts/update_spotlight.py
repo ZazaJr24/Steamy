@@ -46,7 +46,7 @@ def major_studio(data):
 
 
 def release_date(label):
-    for fmt in ('%d %b, %Y', '%b %d, %Y', '%d %B, %Y', '%B %d, %Y', '%B %Y', '%b %Y'):
+    for fmt in ('%d %b, %Y', '%b %d, %Y', '%d %B, %Y', '%B %d, %Y'):
         try:
             return datetime.strptime(label, fmt).replace(tzinfo=timezone.utc)
         except ValueError:
@@ -59,12 +59,23 @@ def select_game(data, now):
         return None
     if 3 in data.get('content_descriptors', {}).get('ids', []):
         return None
+    title = plain_text(data.get('name')).casefold()
+    if re.search(r'\b(demo|soundtrack|dlc|complete edition|definitive edition|ultimate edition|collection|remaster(?:ed)?)\b', title):
+        return None
     release = data.get('release_date', {})
     coming = bool(release.get('coming_soon'))
     date_label = plain_text(release.get('date'))
     date = release_date(date_label)
-    if not coming and (date is None or not now - timedelta(days=180) <= date <= now + timedelta(days=1)):
+    if not coming or (date and date.date() < now.date()):
         return None
+    for fmt in ('%B %Y', '%b %Y', '%Y'):
+        try:
+            period = datetime.strptime(date_label, fmt)
+            if (period.year < now.year if fmt == '%Y' else (period.year, period.month) < (now.year, now.month)):
+                return None
+            break
+        except ValueError:
+            pass
     if coming and date and date > now + timedelta(days=730):
         return None
     app_id = data.get('steam_appid')
@@ -95,11 +106,11 @@ def collect_candidates():
                 ids[item['id']] = None
                 requested_ids.add(item['id'])
     categories = fetch_json(STORE + 'api/featuredcategories/?cc=us&l=english')
-    for key in ('new_releases', 'coming_soon', 'top_sellers'):
+    for key in ('coming_soon',):
         for item in categories.get(key, {}).get('items', []):
             if isinstance(item.get('id'), int):
                 ids[item['id']] = None
-    for filter_name in ('popularcomingsoon', 'newreleases'):
+    for filter_name in ('popularcomingsoon', 'comingsoon'):
         query = urllib.parse.urlencode({'query': '', 'start': 0, 'count': 50, 'filter': filter_name,
                                        'category1': 998, 'infinite': 1, 'cc': 'us', 'l': 'english', 'ignore_preferences': 1})
         result = fetch_json(STORE + 'search/results/?' + query)
@@ -121,8 +132,8 @@ def refresh(output):
             return None
     with ThreadPoolExecutor(max_workers=3) as pool:
         games = [game for game in pool.map(details, candidates) if game]
-    games.sort(key=lambda game: (game['appId'] in requested_ids,
-               game['comingSoon'], game['releaseDate'] or '9999-12-31'), reverse=True)
+    games.sort(key=lambda game: (game['releaseDate'] is None, game['releaseDate'] or '9999-12-31',
+                                  game['appId'] not in requested_ids))
     games = games[:16]
     if len(games) < 3:
         raise RuntimeError('Too few verified recent/upcoming games; retaining the previous feed')

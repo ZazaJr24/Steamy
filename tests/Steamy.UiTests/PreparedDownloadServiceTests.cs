@@ -10,6 +10,52 @@ namespace Steamy.UiTests;
 public sealed class PreparedDownloadServiceTests
 {
     [Fact]
+    public async Task ChangedResumeManifestFailsBeforeFetchingAToolAndKeepsGameFiles()
+    {
+        using var fixture = new Fixture();
+        var plan = (await fixture.Service.PrepareDownloadAsync(100, ManifestSource.Sushi)).Plan!;
+        await fixture.Service.DownloadPreparedAsync(plan, [new(101, "111")], fixture.Target);
+        var session = DepotResumeStateStore.SessionDirectory(fixture.Work, 100, fixture.Target);
+        File.WriteAllText(Path.Combine(session,"101_111.manifest"),"corrupted saved manifest");
+        Directory.CreateDirectory(fixture.Target);
+        var existing = Path.Combine(fixture.Target,"game.bin");
+        File.WriteAllText(existing,"keep game files");
+        var requestsBeforeResume = fixture.Http.Calls;
+        var resumed = await fixture.Service.ResumeDownloadAsync(100,fixture.Target);
+        Assert.False(resumed.Succeeded);
+        Assert.Contains("missing or invalid",resumed.Message);
+        Assert.Equal(requestsBeforeResume,fixture.Http.Calls);
+        Assert.Equal("keep game files",File.ReadAllText(existing));
+    }
+
+    [Fact]
+    public async Task LocalSelectionAndResumeSurviveDeletionOfOriginalZip()
+    {
+        using var fixture = new Fixture();
+        var package = Path.Combine(fixture.Work, "local.zip");
+        Directory.CreateDirectory(fixture.Work);
+        using (var zip = System.IO.Compression.ZipFile.Open(package, System.IO.Compression.ZipArchiveMode.Create))
+        {
+            using (var writer = new StreamWriter(zip.CreateEntry("100.lua").Open()))
+                writer.Write("addappid(100)\naddappid(101,1,\"aabbccddeeff0011\")\nsetManifestid(101,\"111\")");
+            using (var writer = new StreamWriter(zip.CreateEntry("101_111.manifest").Open())) writer.Write("local pinned manifest");
+        }
+        var preparation = await fixture.Service.PrepareLocalPackageAsync(100, package);
+        Assert.True(preparation.Succeeded, preparation.Message);
+        var plan = preparation.Plan!;
+        Assert.Equal(ManifestSource.Local, plan.Source);
+        File.Delete(package);
+        await fixture.Service.DownloadPreparedAsync(plan, [new(101, "111")], fixture.Target);
+        fixture.Service.DiscardPreparedDownload(plan.Id);
+        await fixture.Service.ResumeDownloadAsync(100, fixture.Target);
+        Assert.Equal(0, fixture.Source.Calls);
+        var session = DepotResumeStateStore.SessionDirectory(fixture.Work, 100, fixture.Target);
+        Assert.Equal("local pinned manifest", File.ReadAllText(Path.Combine(session, "101_111.manifest")));
+        Assert.Equal(new CachedDepotManifest(101,"111"),Assert.Single(DepotResumeStateStore.Read(session,100,fixture.Target)!.Depots));
+        Assert.Empty(Directory.GetDirectories(Path.Combine(fixture.Work,"prepared")));
+    }
+
+    [Fact]
     public async Task StartUsesThePreparedSourceSnapshotAndPinsOnlyTheSelectedVersion()
     {
         using var fixture = new Fixture();

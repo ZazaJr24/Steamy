@@ -41,7 +41,9 @@ public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObjec
     public string Description => Metadata.Description;
     public string Genres => Metadata.Genres;
     public string ReleaseLabel => Metadata.ReleaseLabel;
-    public string ReleaseStatus => Metadata.ComingSoon ? "COMING SOON" : "NEW RELEASE";
+    public string ReleaseStatus => "UPCOMING";
+    public string Countdown => ReleaseCountdown.Label(Metadata, DateTimeOffset.Now);
+    public void RefreshCountdown() => OnPropertyChanged(nameof(Countdown));
     public string Publisher => Metadata.Publisher;
     public ImageSource? HeroArtwork { get => _heroArtwork; set => SetProperty(ref _heroArtwork, value); }
 }
@@ -71,7 +73,22 @@ public sealed class DashboardViewModel : ViewModelBase
         get => _isSearchFocused;
         set { if (SetProperty(ref _isSearchFocused, value)) OnPropertyChanged(nameof(ShowSearchPanel)); }
     }
-    public bool ShowSearchPanel => HasSearchQuery;
+    public bool DashboardSearchEnabled => _settings.Load().DashboardSearch;
+    public void RefreshSearchPreference()
+    {
+        OnPropertyChanged(nameof(DashboardSearchEnabled));
+        if (!DashboardSearchEnabled)
+        {
+            SearchText = string.Empty;
+            StopSearch();
+            SearchResults.ReplaceWith(Array.Empty<SteamCatalogItem>());
+            SearchMatches.ReplaceWith(Array.Empty<DashboardSearchMatch>());
+            SearchStatus = string.Empty;
+            IsSearchFocused = false;
+        }
+        OnPropertyChanged(nameof(ShowSearchPanel));
+    }
+    public bool ShowSearchPanel => DashboardSearchEnabled && HasSearchQuery;
     public string SearchText
     {
         get => _searchText;
@@ -83,7 +100,7 @@ public sealed class DashboardViewModel : ViewModelBase
             _searchCancellation?.Cancel();
             _searchCancellation?.Dispose();
             _searchCancellation = new CancellationTokenSource();
-            _ = SearchAsync(value.Trim(), _searchCancellation.Token);
+            if (DashboardSearchEnabled) _ = SearchAsync(value.Trim(), _searchCancellation.Token);
         }
     }
     public bool HasSearchQuery => !string.IsNullOrWhiteSpace(SearchText);
@@ -219,11 +236,22 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _headerLoads = new();
     private int _featuredIndex;
     public IReadOnlyList<DashboardFeature> DiscoverGames { get; private set; } = Array.Empty<DashboardFeature>();
-    public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames.Take(6).ToArray();
+    public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames.Take(3).ToArray();
     public bool HasSpotlight => DiscoverGames.Count > 0;
     public DashboardFeature? FeaturedGame => HasSpotlight ? DiscoverGames[_featuredIndex] : null;
     public string FeaturedPosition => HasSpotlight ? $"{_featuredIndex + 1:00} / {DiscoverGames.Count:00}" : string.Empty;
     public string FeaturedDownloadLabel => FeaturedGame?.Metadata.ComingSoon == true ? "Check sources" : "Download";
+    private bool _spotlightPaused;
+    public bool SpotlightPaused { get => _spotlightPaused; private set { if (SetProperty(ref _spotlightPaused, value)) OnPropertyChanged(nameof(SpotlightPlaybackLabel)); } }
+    public string SpotlightPlaybackLabel => SpotlightPaused ? "Resume" : "Pause";
+    public ICommand ToggleSpotlightCommand => new RelayCommand(() => SpotlightPaused = !SpotlightPaused);
+    public void RefreshCountdowns()
+    {
+        var previous = DiscoverGames;
+        ApplySpotlight(_spotlight.Cached);
+        if (!ReferenceEquals(previous, DiscoverGames)) _ = LoadVisibleArtworkAsync();
+        foreach (var feature in DiscoverGames) feature.RefreshCountdown();
+    }
     public ICommand NextFeaturedCommand { get; }
     public ICommand PreviousFeaturedCommand { get; }
     public ICommand ViewFeaturedCommand { get; }
@@ -264,9 +292,10 @@ public sealed class DashboardViewModel : ViewModelBase
 
     private void ApplySpotlight(SpotlightSnapshot snapshot)
     {
-        if (DiscoverGames.Select(feature => feature.Metadata).SequenceEqual(snapshot.Games)) return;
+        var upcoming = ReleaseCountdown.Upcoming(snapshot.Games, DateOnly.FromDateTime(DateTime.Now));
+        if (DiscoverGames.Select(feature => feature.Metadata).SequenceEqual(upcoming)) return;
         var previousId = FeaturedGame?.Game.AppId;
-        DiscoverGames = snapshot.Games.Select(game => new DashboardFeature(game)).ToArray();
+        DiscoverGames = upcoming.Select(game => new DashboardFeature(game)).ToArray();
         _featuredIndex = Math.Max(0, Array.FindIndex(DiscoverGames.ToArray(), feature => feature.Game.AppId == previousId));
         _heroLoads.Clear();
         _headerLoads.Clear();

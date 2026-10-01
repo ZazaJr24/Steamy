@@ -14,6 +14,7 @@ public sealed record SpotlightGame
     public bool ComingSoon { get; init; }
     public string ReleaseLabel { get; init; } = string.Empty;
     public DateOnly? ReleaseDate { get; init; }
+    public DateTimeOffset? ReleaseTime { get; init; }
     public string StoreUrl { get; init; } = string.Empty;
     public string HeroUrl { get; init; } = string.Empty;
     public string HeaderUrl { get; init; } = string.Empty;

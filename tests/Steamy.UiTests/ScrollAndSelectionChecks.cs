@@ -137,6 +137,19 @@ public sealed partial class PageSmokeTests
                     Assert.Equal(heldViewport, homeScroll.ViewportHeight);
                 }
                 Assert.True(timedRotations >= 2, "Exercise at least two automatic Spotlight changes while scrolled down.");
+                dashboardModel.ToggleSpotlightCommand.Execute(null);
+                Assert.True(dashboardModel.SpotlightPaused);
+                var pausedId = dashboardModel.FeaturedGame!.Game.AppId;
+                PumpDispatcher(TimeSpan.FromSeconds(5.5));
+                Assert.Equal(pausedId, dashboardModel.FeaturedGame!.Game.AppId);
+                Assert.InRange(homeScroll.VerticalOffset, heldOffset - 1, heldOffset + 1);
+                dashboardModel.RefreshCountdowns();
+                dashboardModel.ToggleSpotlightCommand.Execute(null);
+                Assert.False(dashboardModel.SpotlightPaused);
+                var rotationsBeforeResume = timedRotations;
+                PumpDispatcher(TimeSpan.FromSeconds(5.5));
+                Assert.True(timedRotations > rotationsBeforeResume);
+                Assert.InRange(homeScroll.VerticalOffset, heldOffset - 1, heldOffset + 1);
                 // Upward wheel input and scrollbar dragging must still be able to move.
                 WheelOver(image, 120);
                 PumpDispatcher(TimeSpan.FromMilliseconds(240));

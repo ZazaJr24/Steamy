@@ -40,6 +40,7 @@ public partial class LibraryPage : Page
     private bool _showingDownloadSetup;
     private bool _wizardBusy;
     private bool _sourceUnavailable;
+    private string? _localPackagePath;
     private PreparedGameDownload? _preparedDownload;
     private CancellationTokenSource? _preparationCts;
     private readonly ObservableCollection<DownloadDepotChoice> _depotChoices = new();
@@ -126,6 +127,9 @@ public partial class LibraryPage : Page
     {
         if (_overlayClosing || _downloadRunning) return;
         ResetPreparedDownload();
+        _localPackagePath = null;
+        LocalPackageName.Text = "No package selected";
+        LocalPackagePanel.Visibility = Visibility.Collapsed;
         _showingDownloadSetup = setup;
         ConfigureOverlayLayout();
         SourceStepPanel.IsEnabled = true;
@@ -155,6 +159,7 @@ public partial class LibraryPage : Page
         SetOptionState(SourceHubcap, _selectedSource == ManifestSource.Hubcap);
         SetOptionState(SourceDepotBox, _selectedSource == ManifestSource.DepotBox);
         SetOptionState(SourceSushi, _selectedSource == ManifestSource.Sushi);
+        SetOptionState(SourceLocal, _selectedSource == ManifestSource.Local);
         SourceAvailabilityText.Text = "";
 
         _availabilityCts?.Cancel();
@@ -193,6 +198,7 @@ public partial class LibraryPage : Page
             SetOptionState(SourceHubcap, _selectedSource == ManifestSource.Hubcap);
             SetOptionState(SourceDepotBox, _selectedSource == ManifestSource.DepotBox);
             SetOptionState(SourceSushi, _selectedSource == ManifestSource.Sushi);
+        SetOptionState(SourceLocal, _selectedSource == ManifestSource.Local);
             SourceAvailabilityText.Text = $"Resume uses the saved {_selectedSource} manifests and existing files.";
             SourceAvailabilityText.Foreground = TertiaryText;
         }
@@ -423,10 +429,56 @@ public partial class LibraryPage : Page
         SetOptionState(SourceHubcap, source == ManifestSource.Hubcap);
         SetOptionState(SourceDepotBox, source == ManifestSource.DepotBox);
         SetOptionState(SourceSushi, source == ManifestSource.Sushi);
+        SetOptionState(SourceLocal, source == ManifestSource.Local);
+        LocalPackagePanel.Visibility = source == ManifestSource.Local ? Visibility.Visible : Visibility.Collapsed;
         OverlayStatus.Text = "";
 
-        if (_selectedItem is not null)
+        if (source == ManifestSource.Local)
+        {
+            _availabilityCts?.Cancel();
+            SourceAvailabilityText.Text = "Select a local metadata package. It will be checked before depot selection.";
+            UpdateWizardControls();
+        }
+        else if (_selectedItem is not null)
             _ = CheckSourceAvailabilityAsync(source, _selectedItem.AppId);
+    }
+
+    private void BrowseLocalPackage_Click(object sender, RoutedEventArgs args)
+    {
+        if (_wizardBusy || _resumingExisting || _downloadRunning) return;
+        var dialog = new OpenFileDialog { Title = "Select your metadata package", Filter = "Metadata packages (*.zip;*.lua)|*.zip;*.lua", CheckFileExists = true };
+        if (dialog.ShowDialog(Window.GetWindow(this)) == true) SetLocalPackage(dialog.FileName);
+    }
+
+    private void SetLocalPackage(string path)
+    {
+        if (_wizardBusy || _resumingExisting || _downloadRunning) return;
+        ResetPreparedDownload();
+        _localPackagePath = path;
+        LocalPackageName.Text = Path.GetFileName(path);
+        OverlayStatus.Text = "Ready to verify this package.";
+        UpdateWizardControls();
+    }
+
+    private void LocalPackage_DragOver(object sender, DragEventArgs args)
+    {
+        args.Effects = !_wizardBusy && !_resumingExisting && !_downloadRunning && args.Data.GetDataPresent(DataFormats.FileDrop)
+            ? DragDropEffects.Copy : DragDropEffects.None;
+        args.Handled = true;
+    }
+
+    private void LocalPackage_Drop(object sender, DragEventArgs args)
+    {
+        args.Handled = true;
+        if (args.Data.GetData(DataFormats.FileDrop) is string[] { Length: 1 } files) SetLocalPackage(files[0]);
+        else OverlayStatus.Text = "Drop one ZIP or Lua package at a time.";
+    }
+
+    public void SelectLocalPackage(string path)
+    {
+        if (_wizardBusy || _resumingExisting || _downloadRunning) return;
+        SelectDownloadSource(ManifestSource.Local);
+        SetLocalPackage(path);
     }
 
     private async Task CheckSourceAvailabilityAsync(ManifestSource source, int appId)
@@ -602,11 +654,11 @@ public partial class LibraryPage : Page
         BackButton.IsEnabled = !_downloadRunning && !_wizardBusy;
         NewSelectionButton.Visibility = _showingDownloadSetup && _resumingExisting ? Visibility.Visible : Visibility.Collapsed;
         NewSelectionButton.IsEnabled = !_downloadRunning && !_wizardBusy;
-        var canChangeSource = !_downloadRunning && !_resumingExisting;
+        var canChangeSource = !_downloadRunning && !_resumingExisting && !_wizardBusy;
         SourceStepPanel.IsEnabled = canChangeSource;
         // The source page can be collapsed/unrealized during Resume. Keep each
         // control's state explicit rather than relying on a hidden scroll parent's coercion.
-        SourceSushi.IsEnabled = SourceZaza.IsEnabled = SourceRyuu.IsEnabled = SourceHubcap.IsEnabled = SourceDepotBox.IsEnabled = canChangeSource;
+        SourceLocal.IsEnabled = BrowseLocalPackage.IsEnabled = SourceSushi.IsEnabled = SourceZaza.IsEnabled = SourceRyuu.IsEnabled = SourceHubcap.IsEnabled = SourceDepotBox.IsEnabled = canChangeSource;
         DepotStepPanel.IsEnabled = !_downloadRunning && !_wizardBusy;
         LocationBrowseButton.IsEnabled = !_downloadRunning && !_resumingExisting;
         StartButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = _showingDownloadSetup && _wizardStep < 2 && !_resumingExisting
@@ -751,7 +803,10 @@ public partial class LibraryPage : Page
                 if (!cancellation.IsCancellationRequested && ReferenceEquals(_selectedItem, item) && _selectedSource == source)
                     OverlayStatus.Text = message;
             });
-            var preparation = await Task.Run(() => downloader.PrepareDownloadAsync(item.AppId, source, progress, cancellation.Token));
+            var packagePath = _localPackagePath;
+            var preparation = await Task.Run(() => source == ManifestSource.Local
+                ? downloader.PrepareLocalPackageAsync(item.AppId, packagePath ?? "", progress, cancellation.Token)
+                : downloader.PrepareDownloadAsync(item.AppId, source, progress, cancellation.Token));
             if (cancellation.IsCancellationRequested || !ReferenceEquals(_selectedItem, item) || _selectedSource != source)
             {
                 if (preparation.Plan is not null) downloader.DiscardPreparedDownload(preparation.Plan.Id);
@@ -979,7 +1034,7 @@ public partial class LibraryPage : Page
         var source = selectedSource;
         if (isResume)
         {
-            foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox", "Sushi" })
+            foreach (var name in Enum.GetNames<ManifestSource>())
                 if (job.DownloadMode.Contains(name, StringComparison.OrdinalIgnoreCase)
                     && Enum.TryParse<ManifestSource>(name, out var originalSource))
                 { source = originalSource; break; }

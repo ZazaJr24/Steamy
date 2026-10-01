@@ -12,6 +12,7 @@ public partial class DashboardPage : Page
 {
     private readonly System.Windows.Threading.DispatcherTimer _spotlightTimer = new(System.Windows.Threading.DispatcherPriority.Background)
         { Interval = TimeSpan.FromSeconds(5) };
+    private readonly System.Windows.Threading.DispatcherTimer _countdownTimer = new(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
     private DateTime _nextFeedCheck = DateTime.MinValue;
     public DashboardPage()
     {
@@ -20,9 +21,11 @@ public partial class DashboardPage : Page
         Loaded += (_, _) =>
         {
             var viewModel = (DashboardViewModel)DataContext;
+            viewModel.RefreshSearchPreference();
             viewModel.StartLiveStats();
             viewModel.PropertyChanged += SpotlightChanged;
             _spotlightTimer.Start();
+            _countdownTimer.Start();
             _ = viewModel.EnsureDiscoveryArtworkAsync();
             _ = viewModel.RefreshActivityAsync();
             _ = viewModel.RefreshAsync(force: false);
@@ -33,26 +36,37 @@ public partial class DashboardPage : Page
             model.PropertyChanged -= SpotlightChanged;
             model.StopLiveStats(); model.StopSearch();
             _spotlightTimer.Stop();
+            _countdownTimer.Stop();
             SpotlightArtworkFrame.BeginAnimation(OpacityProperty, null);
         };
+        _countdownTimer.Tick += (_, _) => ((DashboardViewModel)DataContext).RefreshCountdowns();
         _spotlightTimer.Tick += (_, _) =>
         {
             var model = (DashboardViewModel)DataContext;
-            if (!IsVisible || Application.Current?.MainWindow?.IsActive != true) return;
+            model.RefreshCountdowns();
+            if (!IsVisible || Window.GetWindow(this)?.IsActive != true) return;
             if (DateTime.UtcNow >= _nextFeedCheck)
             {
                 _nextFeedCheck = DateTime.UtcNow.AddHours(6);
                 _ = model.EnsureDiscoveryArtworkAsync();
             }
-            if (!model.HasSearchQuery)
+            if (!model.SpotlightPaused && !model.HasSearchQuery)
                 model.NextFeaturedCommand.Execute(null);
         };
+        DashboardHero.SizeChanged += (_, _) => DashboardHero.Clip = new System.Windows.Media.RectangleGeometry(new Rect(DashboardHero.RenderSize), 24, 24);
         SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
     }
 
     private void SpotlightChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
-        if (args.PropertyName == nameof(DashboardViewModel.FeaturedGame) && Controls.MotionPreferences.AnimationsEnabled) Controls.EntranceMotion.Reveal(SpotlightArtworkFrame);
+        if (args.PropertyName != nameof(DashboardViewModel.FeaturedGame)) return;
+        ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, null);
+        ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, null);
+        if (!Controls.MotionPreferences.AnimationsEnabled) return;
+        Controls.EntranceMotion.Reveal(SpotlightArtworkFrame);
+        var zoom = new System.Windows.Media.Animation.DoubleAnimation(1, 1.025, TimeSpan.FromSeconds(5));
+        ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, zoom);
+        ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, zoom);
     }
 
     private void Dashboard_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs args)
@@ -71,6 +85,9 @@ public partial class DashboardPage : Page
         DashboardHero.Height = width < 720 ? 400 : width < 1000 ? 420 : 460;
         SpotlightArtworkFrame.Height = DashboardHero.Height - 2;
         SpotlightTitle.FontSize = compact ? 28 : width < 1000 ? 34 : 40;
+        SpotlightPaging.SetValue(Grid.RowProperty, compact ? 2 : 1);
+        SpotlightPaging.SetValue(Grid.ColumnProperty, compact ? 0 : 1);
+        SpotlightPaging.Margin = compact ? new Thickness(0,12,0,0) : new Thickness(18,0,0,0);
         SpotlightDetails.MaxWidth = Math.Max(240, (width - 110) * 0.82);
     }
 

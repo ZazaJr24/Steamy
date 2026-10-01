@@ -30,6 +30,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Test discovery selection
+        run: python -m unittest discover -s scripts -p 'test_*.py'
+
       - name: Test and build the pinned DepotDownloaderMod
         run: python tools/DepotDownloaderMod/build.py
 

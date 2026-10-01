@@ -41,7 +41,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private CancellationTokenSource? _autosaveCts;
     private CancellationTokenSource? _credentialAutosaveCts;
     private System.ComponentModel.PropertyChangedEventHandler? _settingsChangedHandler;
-    private string _status = "Changes are saved automatically.";
+    private string _status = "Saved";
     private string _steamCredentialStatus = "Not configured";
     private string _ryuuCredentialStatus = "Not configured";
     private string _hubcapCredentialStatus = "Not configured";
@@ -134,7 +134,7 @@ public sealed class SettingsViewModel : ViewModelBase
             if (token.IsCancellationRequested) return;
 
             await SaveCredentialsAsync();
-            SaveStatus = $"Credential stored · {DateTime.Now:HH:mm:ss}";
+            SaveStatus = "Saved";
         }
         catch (TaskCanceledException)
         {
@@ -501,7 +501,7 @@ public sealed class SettingsViewModel : ViewModelBase
             await SaveCredentialsAsync();
 
             HasUnsavedChanges = false;
-            SaveStatus = $"{note ?? "Saved"} · {DateTime.Now:HH:mm:ss}";
+            SaveStatus = "Saved";
         }
         catch (Exception exception)
         {

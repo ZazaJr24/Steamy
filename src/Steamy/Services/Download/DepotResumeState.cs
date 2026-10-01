@@ -7,7 +7,8 @@ using System.Text.Json;
 namespace Steamy.Services;
 
 public sealed record CachedDepotManifest(int DepotId, string ManifestId);
-public sealed record DepotResumeState(int AppId, string TargetFolder, IReadOnlyList<CachedDepotManifest> Depots);
+public sealed record DepotResumeState(int AppId, string TargetFolder, IReadOnlyList<CachedDepotManifest> Depots,
+    IReadOnlyDictionary<string, string>? FileHashes = null);
 
 /// <summary>
 /// Pins one download's exact manifest set independently of the source cache. The state file
@@ -35,6 +36,18 @@ public static class DepotResumeStateStore
             var state = JsonSerializer.Deserialize<DepotResumeState>(File.ReadAllText(path));
             if (state is null || state.AppId != appId || !IsValid(state)
                 || CanonicalTarget(state.TargetFolder) != CanonicalTarget(targetFolder)) return null;
+            if (state.FileHashes is not null)
+                foreach (var file in state.FileHashes)
+                {
+                    var saved = Path.Combine(directory, file.Key);
+                    if (!LocalManifestPackage.SafeSegment(file.Key)
+                        || Path.GetExtension(file.Key).ToLowerInvariant() is not ".manifest" and not ".key"
+                        || file.Value is not { Length: 64 } || !file.Value.All(Uri.IsHexDigit)
+                        || !File.Exists(saved) || new FileInfo(saved).Length > LocalManifestPackage.MaximumBytes)
+                        return null;
+                    using var stream = File.OpenRead(saved);
+                    if (!Convert.ToHexString(SHA256.HashData(stream)).Equals(file.Value, StringComparison.OrdinalIgnoreCase)) return null;
+                }
             return state;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
@@ -65,6 +78,7 @@ public static class DepotResumeStateStore
     private static bool IsValid(DepotResumeState state) =>
         state.AppId > 0 && !string.IsNullOrWhiteSpace(state.TargetFolder)
         && Path.IsPathFullyQualified(state.TargetFolder)
+        && (state.FileHashes is null || state.FileHashes.Count <= MaximumDepots + 1)
         && state.Depots is { Count: > 0 and <= MaximumDepots }
         && state.Depots.All(depot => depot is not null && depot.DepotId > 0
             && IsManifestId(depot.ManifestId))

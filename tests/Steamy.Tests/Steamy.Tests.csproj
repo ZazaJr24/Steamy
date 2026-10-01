@@ -42,6 +42,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\src\Steamy\Services\Catalog\ReleaseCountdown.cs" Link="Linked\ReleaseCountdown.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Steam\LocalManifestPackage.cs" Link="Linked\LocalManifestPackage.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

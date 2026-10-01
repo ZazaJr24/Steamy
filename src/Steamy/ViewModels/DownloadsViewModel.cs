@@ -227,7 +227,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     public string SearchText { get=>_search; set { if(SetProperty(ref _search,value)) RefreshFilter(); } }
     public string SelectedFilter { get=>_filter; set { if(SetProperty(ref _filter,value)) RefreshFilter(); } }
     private string _sourceFilter = "All sources";
-    public string[] SourceFilters { get; } = { "All sources", "Sushi", "Zaza", "Ryuu", "Hubcap", "DepotBox", "DepotDownloader", "Custom archive" };
+    public string[] SourceFilters { get; } = { "All sources", "Sushi", "Zaza", "Ryuu", "Hubcap", "DepotBox", "Local", "DepotDownloader", "Custom archive" };
     public string SelectedSourceFilter { get => _sourceFilter; set { if (SetProperty(ref _sourceFilter, value)) RefreshFilter(); } }
     public bool HasActiveFilters => !string.IsNullOrWhiteSpace(SearchText) || SelectedFilter != "All downloads" || SelectedSourceFilter != "All sources";
     public string FilterSummary => HasActiveFilters ? "Active filters" : "No filters applied";
@@ -600,7 +600,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     private static ManifestSource? DownloadModeSource(DownloadJob job)
     {
         var mode = job.DownloadMode ?? string.Empty;
-        foreach (var name in new[] { "Ryuu", "Zaza", "Hubcap", "DepotBox", "Sushi" })
+        foreach (var name in Enum.GetNames<ManifestSource>())
         {
             if (mode.Contains(name, StringComparison.OrdinalIgnoreCase)
                 && Enum.TryParse<ManifestSource>(name, out var source))

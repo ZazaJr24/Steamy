@@ -21,6 +21,10 @@ public interface IRyuuGameDownloadService
         IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
         Task.FromResult(new RyuuGameDownloadResult(false, "This downloader does not support prepared downloads."));
 
+    Task<GameDownloadPreparation> PrepareLocalPackageAsync(int appId, string packagePath,
+        IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new GameDownloadPreparation(false, "Local packages are not supported by this downloader."));
+
     void DiscardPreparedDownload(Guid id) { }
 
     Task<RyuuGameDownloadResult> DownloadGameAsync(
@@ -111,8 +115,16 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             manifest.DepotId == depot.DepotId && manifest.ManifestId == depot.DefaultManifestId)).ToArray();
     }
 
-    public async Task<GameDownloadPreparation> PrepareDownloadAsync(int appId, ManifestSource source,
-        IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+    public Task<GameDownloadPreparation> PrepareDownloadAsync(int appId, ManifestSource source,
+        IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
+        PrepareCoreAsync(appId, source, null, progress, cancellationToken);
+
+    public Task<GameDownloadPreparation> PrepareLocalPackageAsync(int appId, string packagePath,
+        IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
+        PrepareCoreAsync(appId, ManifestSource.Local, packagePath, progress, cancellationToken);
+
+    private async Task<GameDownloadPreparation> PrepareCoreAsync(int appId, ManifestSource source, string? packagePath,
+        IProgress<string>? progress, CancellationToken cancellationToken)
     {
         if (appId <= 0 || !Enum.IsDefined(source)) return new(false, "Choose a valid game and manifest source.");
         cancellationToken.ThrowIfCancellationRequested();
@@ -121,13 +133,22 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         var gate = _sourceGates.GetOrAdd((appId, source), _ => new SemaphoreSlim(1, 1));
         var gateEntered = false;
         var snapshotDirectory = Path.Combine(_workFolder, "prepared", Guid.NewGuid().ToString("N"));
+        var importDirectory = snapshotDirectory + "-import";
         var published = false;
         try
         {
             await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
             gateEntered = true;
             progress?.Report($"Loading available depots from {source}…");
-            var result = await _manifestSource.DownloadManifestsAsync(source, appId, progress, cancellationToken).ConfigureAwait(false);
+            ManifestDownloadResult result;
+            if (source == ManifestSource.Local)
+            {
+                if (string.IsNullOrWhiteSpace(packagePath)) return new(false, "Select your ZIP or Lua package first.");
+                progress?.Report("Checking local package metadata and hashes…");
+                var imported = await LocalManifestPackage.ImportAsync(packagePath, appId, importDirectory, cancellationToken).ConfigureAwait(false);
+                result = new(true, "Local package verified.", imported.Lua, imported.Directory);
+            }
+            else result = await _manifestSource.DownloadManifestsAsync(source, appId, progress, cancellationToken).ConfigureAwait(false);
             if (!result.Succeeded || string.IsNullOrWhiteSpace(result.LuaContent)) return new(false, result.Message);
             cancellationToken.ThrowIfCancellationRequested();
             var lua = result.LuaContent;
@@ -215,6 +236,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         { return new(false, $"The source depots could not be prepared: {exception.Message}"); }
         finally
         {
+            DeletePreparedDirectory(importDirectory);
             if (!published)
             {
                 DeletePreparedDirectory(snapshotDirectory);
@@ -410,9 +432,15 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                     copiedBytes += await CopyBoundedAsync(source, Path.Combine(staging, fileName), MaximumManifestBytes - copiedBytes, cancellationToken).ConfigureAwait(false);
             }
             await WriteDepotKeysAsync(staging, appId, depots, cancellationToken).ConfigureAwait(false);
+            var hashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var file in Directory.EnumerateFiles(staging))
+            {
+                await using var input = File.OpenRead(file);
+                hashes.Add(Path.GetFileName(file), Convert.ToHexString(await SHA256.HashDataAsync(input, cancellationToken).ConfigureAwait(false)));
+            }
             await DepotResumeStateStore.WriteAsync(staging,
                 new DepotResumeState(appId, Path.GetFullPath(targetFolder),
-                    depots.Select(depot => new CachedDepotManifest(depot.DepotId, depot.ManifestId)).ToArray()), cancellationToken).ConfigureAwait(false);
+                    depots.Select(depot => new CachedDepotManifest(depot.DepotId, depot.ManifestId)).ToArray(), hashes), cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             // No cancellation between the two renames: publish files, keys and pins together.
             // The caller holds this session's gate until its tool exits.

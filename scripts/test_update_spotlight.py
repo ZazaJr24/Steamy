@@ -19,9 +19,9 @@ class SelectionTests(unittest.TestCase):
         self.game['release_date'] = {'coming_soon': False, 'date': '25 Feb, 2022'}
         self.assertIsNone(select_game(self.game, self.now))
 
-    def test_fresh_game_is_kept(self):
+    def test_released_game_is_excluded(self):
         self.game['release_date'] = {'coming_soon': False, 'date': 'Sep 18, 2026'}
-        self.assertEqual(select_game(self.game, self.now)['releaseDate'], '2026-09-18')
+        self.assertIsNone(select_game(self.game, self.now))
 
     def test_dlcs_and_unknown_publishers_are_excluded(self):
         self.game['type'] = 'dlc'
@@ -29,6 +29,24 @@ class SelectionTests(unittest.TestCase):
         self.game['type'] = 'game'
         self.game['publishers'] = ['Unknown studio']
         self.assertIsNone(select_game(self.game, self.now))
+
+    def test_month_year_is_not_an_exact_date(self):
+        self.game['release_date'] = {'coming_soon': True, 'date': 'October 2026'}
+        self.assertIsNone(select_game(self.game, self.now)['releaseDate'])
+
+    def test_expired_upcoming_dates_are_excluded(self):
+        for label in ('September 2025', '2025', '20 Sep, 2026'):
+            self.game['release_date'] = {'coming_soon': True, 'date': label}
+            self.assertIsNone(select_game(self.game, self.now))
+
+    def test_near_upcoming_date_is_kept(self):
+        self.game['release_date'] = {'coming_soon': True, 'date': '2 Oct, 2026'}
+        self.assertEqual(select_game(self.game, self.now)['releaseDate'], '2026-10-02')
+
+    def test_demo_soundtrack_and_old_editions_are_excluded(self):
+        for title in ('Game Demo', 'Game Soundtrack', 'Game Complete Edition'):
+            self.game['name'] = title
+            self.assertIsNone(select_game(self.game, self.now))
 
     def test_store_markup_is_removed(self):
         self.assertEqual(plain_text('<b>A &amp; B</b><br>Adventure'), 'A & B Adventure')

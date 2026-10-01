@@ -6,7 +6,7 @@ on:
       version:
         description: 'Version tag (e.g. 0.2.2)'
         required: true
-        default: '0.4.5'
+        default: '0.4.6'
   push:
     tags:
       - 'v*'
@@ -41,6 +41,34 @@ jobs:
             echo "v=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Validate release version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content src/Steamy/Steamy.csproj
+          $version = '${{ steps.ver.outputs.v }}'
+          foreach ($field in @('Version', 'FileVersion', 'AssemblyVersion')) {
+            if ($project.Project.PropertyGroup.$field -ne $version) { throw "Release version must match project $field" }
+          }
+
+      - name: Test release commit
+        env:
+          STEAMY_UI_ARTIFACTS: ${{ github.workspace }}/artifacts/ui
+        run: |
+          python -m unittest discover -s scripts -p 'test_*.py'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test Steamy.sln -c Release --logger trx --results-directory artifacts/test-results
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload release test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Steamy-release-test-evidence
+          path: |
+            artifacts/test-results/
+            artifacts/ui/
+          if-no-files-found: error
+
       - name: Publish self-contained
         run: |
           dotnet publish src/Steamy/Steamy.csproj `
@@ -59,6 +87,13 @@ jobs:
         run: |
           Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ steps.ver.outputs.v }}.zip
           Copy-Item Steamy-v${{ steps.ver.outputs.v }}.zip Steamy-latest.zip
+
+      - name: Archive complete source
+        shell: pwsh
+        run: |
+          git archive --format=zip --prefix=Steamy-v${{ steps.ver.outputs.v }}-source/ HEAD -o Steamy-v${{ steps.ver.outputs.v }}-source.zip
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-FileHash Steamy-*.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $([IO.Path]::GetFileName($_.Path))" } | Set-Content SHA256SUMS.txt
 
       # The release description is the CHANGELOG.md section of this version.
       - name: Release notes from CHANGELOG
@@ -87,4 +122,6 @@ jobs:
           files: |
             Steamy-v${{ steps.ver.outputs.v }}.zip
             Steamy-latest.zip
+            Steamy-v${{ steps.ver.outputs.v }}-source.zip
+            SHA256SUMS.txt
           body_path: release-notes.md
