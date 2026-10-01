@@ -128,15 +128,9 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Button Tag="{Binding}" Click="GameCard_Click" ToolTip="{Binding Name}" controls:CardMotion.IsEnabled="True"
-                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Cursor="Hand" Padding="0" Background="Transparent" BorderThickness="0">
-                <Button.Template><ControlTemplate TargetType="Button">
-                  <Grid Background="Transparent"><Border x:Name="MotionSurface" CornerRadius="12" Background="{DynamicResource SurfaceBrush}"
-                      BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"><ContentPresenter /></Border></Grid>
-                  <ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="MotionSurface" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
-                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="MotionSurface" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
-                  </ControlTemplate.Triggers>
-                </ControlTemplate></Button.Template>
+              <Button Tag="{Binding}" Click="GameCard_Click" ToolTip="{Binding Name}"
+                      Style="{StaticResource GalleryCardButton}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                      Background="{DynamicResource SurfaceBrush}">
                 <Grid>
                   <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
@@ -145,7 +139,7 @@
 
                   <!-- Cover -->
                   <Grid ClipToBounds="True" Background="Transparent">
-                    <Border CornerRadius="11,11,0,0"><Border.Background><ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" /></Border.Background></Border>
+                    <Border CornerRadius="15,15,0,0"><Border.Background><ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" /></Border.Background></Border>
                     <Border Background="{DynamicResource SurfaceSubtleBrush}"
                             Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                       <StackPanel VerticalAlignment="Center">
@@ -173,7 +167,7 @@
                                FontSize="12"
                                FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding Summary}"
+                    <TextBlock Text="{Binding AppLabel}"
                                Foreground="{DynamicResource TextTertiaryBrush}"
                                FontSize="10.5"
                                Margin="0,4,0,0"

@@ -407,7 +407,7 @@ public sealed partial class PageSmokeTests
         public Task LoadAsync(Game game, CancellationToken cancellationToken = default)
         {
             game.HeaderImage = Read(game.AppId, "header");
-            game.ArtworkImage = game.HeaderImage;
+            game.ArtworkImage = Read(game.AppId, "portrait") ?? game.HeaderImage;
             return Task.CompletedTask;
         }
         public Task LoadHeadersAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default) => LoadManyAsync(games, cancellationToken);
