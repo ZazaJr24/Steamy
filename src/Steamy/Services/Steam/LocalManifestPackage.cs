@@ -58,6 +58,17 @@ public static class LocalManifestPackage
 
     private static void ValidateApp(string lua, int appId)
     {
+        var active = Comments.Replace(lua, "");
+        var calls = Regex.Matches(active, @"\bsetManifestid\s*\(([^)]*)\)", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
+        if (calls.Count != Regex.Matches(active, @"\bsetManifestid\s*\(", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250)).Count)
+            throw new InvalidDataException("The Lua contains incomplete manifest metadata.");
+        foreach (Match call in calls)
+        {
+            var parsed = Regex.Match(call.Groups[1].Value, "^\\s*(\\d+)\\s*,\\s*\"(\\d+)\"(?:\\s*,\\s*\\d+)?\\s*$");
+            if (!parsed.Success || !int.TryParse(parsed.Groups[1].Value, out var depot) || depot <= 0
+                || !DownloadPreparationReader.IsManifestId(parsed.Groups[2].Value))
+                throw new InvalidDataException("The Lua contains damaged depot or manifest metadata.");
+        }
         var identities = AppCall.Matches(Comments.Replace(lua, "")).Select(match => match.Groups[1].Value).Distinct().ToArray();
         if (identities.Length != 1) throw new InvalidDataException("The Lua package has missing or ambiguous game metadata. Use a package with one explicit addappid(gameId) call.");
         if (identities[0] != appId.ToString(CultureInfo.InvariantCulture))
