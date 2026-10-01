@@ -152,12 +152,14 @@ public sealed partial class PageSmokeTests
             PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
             page.OpenDownloadSetup(game);
             Assert.Equal(2, page.DownloadWizardStep);
-            Assert.False(((Button)page.FindName("SourceSushi")).IsEnabled);
+            foreach (var sourceControl in new[] { "SourceSushi", "SourceZaza", "SourceRyuu", "SourceHubcap", "SourceDepotBox" })
+                Assert.False(((Button)page.FindName(sourceControl)).IsEnabled);
             page.SelectDownloadSource(ManifestSource.Zaza);
             Assert.Contains("original source", ((TextBlock)page.FindName("OverlayStatus")).Text, StringComparison.OrdinalIgnoreCase);
             ((Button)page.FindName("NewSelectionButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             Assert.Equal(0, page.DownloadWizardStep);
-            Assert.True(((Button)page.FindName("SourceSushi")).IsEnabled);
+            foreach (var sourceControl in new[] { "SourceSushi", "SourceZaza", "SourceRyuu", "SourceHubcap", "SourceDepotBox" })
+                Assert.True(((Button)page.FindName(sourceControl)).IsEnabled);
             Assert.Contains(added, store.Downloads);
             Assert.Equal(DownloadJobState.Paused, added.State);
             Assert.Equal("Sushi", added.SourceLabel);
