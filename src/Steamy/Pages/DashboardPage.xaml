@@ -162,7 +162,7 @@
       <StackPanel Margin="0,0,0,26" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
         <TextBlock Text="Upcoming releases" Style="{StaticResource SectionTitle}" Margin="0,0,0,12" />
         <ItemsControl ItemsSource="{Binding NewGames}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="210" MaxColumns="3" Spacing="24" CoverRatio="0.56" FooterHeight="56" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="210" MaxColumns="3" Spacing="24" CoverRatio="0.4674" FooterHeight="56" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate><DataTemplate>
             <Button Style="{StaticResource CoverCardButton}" ToolTip="{Binding Game.Name}" CommandParameter="{Binding}"
                     Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}">
