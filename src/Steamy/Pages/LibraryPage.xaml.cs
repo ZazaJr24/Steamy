@@ -395,7 +395,6 @@ public partial class LibraryPage : Page
 
     private void SetOptionState(Control option, bool selected)
     {
-        if (!option.IsEnabled) return;
         option.Background = selected ? ActiveChipBg : InactiveChipBg;
         option.BorderBrush = selected ? ActiveChipFg : InactiveBorder;
         option.Foreground = selected ? ActiveChipFg : InactiveChipFg;
@@ -604,7 +603,11 @@ public partial class LibraryPage : Page
         BackButton.IsEnabled = !_downloadRunning && !_wizardBusy;
         NewSelectionButton.Visibility = _showingDownloadSetup && _resumingExisting ? Visibility.Visible : Visibility.Collapsed;
         NewSelectionButton.IsEnabled = !_downloadRunning && !_wizardBusy;
-        SourceStepPanel.IsEnabled = !_downloadRunning && !_resumingExisting;
+        var canChangeSource = !_downloadRunning && !_resumingExisting;
+        SourceStepPanel.IsEnabled = canChangeSource;
+        // The source page can be collapsed/unrealized during Resume. Keep each
+        // control's state explicit rather than relying on a hidden scroll parent's coercion.
+        SourceSushi.IsEnabled = SourceZaza.IsEnabled = SourceRyuu.IsEnabled = SourceHubcap.IsEnabled = SourceDepotBox.IsEnabled = canChangeSource;
         DepotStepPanel.IsEnabled = !_downloadRunning && !_wizardBusy;
         LocationBrowseButton.IsEnabled = !_downloadRunning && !_resumingExisting;
         StartButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = _showingDownloadSetup && _wizardStep < 2 && !_resumingExisting
