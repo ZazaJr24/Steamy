@@ -182,7 +182,7 @@
       </StackPanel>
     </Grid>
 
-    <Grid Grid.Row="1" x:Name="FeaturedPanel" Height="190" Margin="0,0,0,18" controls:EntranceMotion.Delay="20">
+    <Grid Grid.Row="1" x:Name="FeaturedPanel" Height="236" Margin="0,0,0,18" controls:EntranceMotion.Delay="20">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" />
         <ColumnDefinition x:Name="NetworkColumn" Width="226" />
@@ -191,18 +191,25 @@
         <Border DataContext="{Binding HeroJob}" CornerRadius="20" Background="{DynamicResource SurfaceElevatedBrush}"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderSubtleBrush}"
                 Visibility="{Binding DataContext.HasHeroJob, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolVis}}">
-          <Grid Margin="20,16">
+          <Grid>
+            <Border CornerRadius="19" Background="{Binding CoverColor}" />
+            <Border CornerRadius="19" RenderOptions.BitmapScalingMode="HighQuality"><Border.Background>
+              <ImageBrush ImageSource="{Binding HeaderArtUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=1280}" Stretch="UniformToFill" />
+            </Border.Background></Border>
+            <Border CornerRadius="19" RenderOptions.BitmapScalingMode="HighQuality"><Border.Background>
+              <ImageBrush ImageSource="{Binding HeroArtUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=1280}" Stretch="UniformToFill" />
+            </Border.Background></Border>
+            <Border CornerRadius="19" Background="{StaticResource HeroSideShade}" />
+            <Border CornerRadius="19" Background="{StaticResource HeroBottomShade}" />
+          <Grid Margin="22,18">
             <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <Border Width="80" Height="58" CornerRadius="12" VerticalAlignment="Center">
-                <Border.Background><ImageBrush ImageSource="{Binding HeaderArtUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=256}" Stretch="UniformToFill" /></Border.Background>
-              </Border>
-              <StackPanel Grid.Column="1" Margin="14,0,10,0" VerticalAlignment="Center">
-                <TextBlock Text="{Binding GameName}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding GameName}" />
+              <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding GameName}" FontSize="28" FontWeight="SemiBold" Foreground="#F6F8FC" TextTrimming="CharacterEllipsis" ToolTip="{Binding GameName}" />
                 <WrapPanel Margin="0,6,0,0">
                   <Border Style="{StaticResource StatePill}" Padding="7,2"><TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}" /></Border>
-                  <TextBlock Text="{Binding SourceLabel}" Style="{StaticResource CaptionStyle}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding SourceLabel}" Foreground="#C2CDDD" Style="{StaticResource CaptionStyle}" Margin="8,0,0,0" VerticalAlignment="Center" />
                 </WrapPanel>
               </StackPanel>
               <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -215,16 +222,17 @@
             <Grid Grid.Row="1" Margin="0,14,0,10">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
               <controls:SmoothProgressBar SmoothValue="{Binding Progress}" Maximum="100" Height="5" Style="{StaticResource JobProgressBar}" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Text="{Binding ProgressCaption}" Style="{StaticResource JobNumberText}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="16" Margin="12,0,0,0" />
+              <TextBlock Grid.Column="1" Text="{Binding ProgressCaption}" Style="{StaticResource JobNumberText}" Foreground="#F6F8FC" FontWeight="SemiBold" FontSize="16" Margin="12,0,0,0" />
             </Grid>
             <Grid Grid.Row="2">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{Binding SizeSummary}" Style="{StaticResource CaptionStyle}" TextTrimming="CharacterEllipsis" Margin="0,0,10,0" ToolTip="{Binding SizeSummary}" />
+              <TextBlock Text="{Binding SizeSummary}" Foreground="#C2CDDD" Style="{StaticResource CaptionStyle}" TextTrimming="CharacterEllipsis" Margin="0,0,10,0" ToolTip="{Binding SizeSummary}" />
               <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <TextBlock Text="{Binding SpeedDisplay}" Style="{StaticResource JobNumberText}" FontSize="11" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" />
-                <TextBlock Text="{Binding EtaDisplay}" Style="{StaticResource JobNumberText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Text="{Binding EtaDisplay}" Style="{StaticResource JobNumberText}" FontSize="11" Foreground="#C2CDDD" />
               </StackPanel>
             </Grid>
+          </Grid>
           </Grid>
         </Border>
 
@@ -246,9 +254,9 @@
 
       <Border x:Name="NetworkCard" Grid.Column="1" Style="{StaticResource CardStyle}" Margin="16,0,0,0" Padding="16,14">
         <StackPanel>
-          <TextBlock Text="TRANSFER ACTIVITY" Style="{StaticResource OverlineStyle}" />
-          <TextBlock Text="{Binding JobsSpeedLabel}" FontSize="23" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,6,0,0" />
-          <TextBlock Text="Steamy downloads" Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
+          <TextBlock Text="NETWORK ACTIVITY" Style="{StaticResource OverlineStyle}" />
+          <TextBlock Text="{Binding InternetSpeedLabel}" FontSize="23" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,6,0,0" />
+          <TextBlock Text="Entire device · last 30 seconds" Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
           <Viewbox Stretch="Fill" Height="26" Margin="0,9,0,10">
             <Canvas Width="200" Height="40" ClipToBounds="True">
               <Polygon Points="{Binding InternetSparklineArea}" Fill="{DynamicResource AccentSoftBrush}" />
@@ -257,8 +265,8 @@
           </Viewbox>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBlock Text="Device network" Style="{StaticResource CaptionStyle}" />
-            <TextBlock Grid.Column="1" Text="{Binding InternetSpeedLabel}" Style="{StaticResource CardTitleStyle}" />
+            <TextBlock Text="Steamy downloads" Style="{StaticResource CaptionStyle}" />
+            <TextBlock Grid.Column="1" Text="{Binding JobsSpeedLabel}" Style="{StaticResource CardTitleStyle}" />
           </Grid>
           <Grid Margin="0,8,0,0" ToolTip="{Binding OverallEtaHint}">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>

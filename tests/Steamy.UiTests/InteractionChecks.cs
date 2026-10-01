@@ -109,7 +109,17 @@ public sealed partial class PageSmokeTests
         while (hit is not null && !ReferenceEquals(hit, card)) hit = VisualTreeHelper.GetParent(hit);
         Assert.Same(card, hit); // The hit area stays fixed while only the visual surface lifts/scales.
         _phase = "Open dialog " + theme;
+        var originalPosition = card.TranslatePoint(new Point(0, 0), page);
+        var originalWidth = card.ActualWidth;
+        var backgroundGrid = (Grid)page.FindName("MainContentGrid");
+        var marker = new Border { Width = 20, Height = 20, Background = Brushes.Magenta,
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+        backgroundGrid.Children.Add(marker);
+        window.UpdateLayout();
         card.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); // The same action works for Enter/Space.
+        window.UpdateLayout();
+        Assert.Equal(originalPosition, card.TranslatePoint(new Point(0, 0), page));
+        Assert.Equal(originalWidth, card.ActualWidth);
         var overlay = (Grid)page.FindName("OverlayGrid");
         var background = (Grid)page.FindName("MainContentGrid");
         var snapshot = (Image)page.FindName("BackdropImage");
@@ -119,6 +129,10 @@ public sealed partial class PageSmokeTests
         if (MotionPreferences.BackdropBlurEnabled)
         {
             Assert.True(((BitmapSource)snapshot.Source).IsFrozen);
+            var pixel = new byte[4];
+            ((BitmapSource)snapshot.Source).CopyPixels(new Int32Rect(4, 4, 1, 1), pixel, 4, 0);
+            Assert.Equal(new byte[] { 255, 0, 255, 255 }, pixel); // BGRA marker at local origin, without the page margin twice.
+            backgroundGrid.Children.Remove(marker);
             Assert.Equal(Visibility.Visible, snapshot.Visibility);
             var previous = snapshot.Source;
             window.Width -= 20;
@@ -131,6 +145,7 @@ public sealed partial class PageSmokeTests
             Assert.Null(snapshot.Source);
             Assert.Equal(Visibility.Collapsed, snapshot.Visibility);
         }
+        backgroundGrid.Children.Remove(marker);
         Assert.True(overlay.IsKeyboardFocusWithin);
         Assert.Equal(0, page.DownloadWizardStep);
         Assert.True(((FrameworkElement)page.FindName("SourceStepPanel")).IsVisible);

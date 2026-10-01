@@ -503,6 +503,7 @@ public sealed class GameFixesViewModel : ViewModelBase
     private const int PageSize = 48;
 
     private readonly IFixCatalogService _fixesService;
+    private readonly IArtworkService _artwork;
     private readonly List<GameFixGameCard> _allCards = new();
     private string _searchText = string.Empty;
     private string _lastFetchSummary = "Not loaded yet.";
@@ -513,9 +514,10 @@ public sealed class GameFixesViewModel : ViewModelBase
         IAppDataStore store,
         INavigationService navigation,
         ILoggingService logging,
-        IFixCatalogService fixesService) : base(store, navigation, logging)
+        IFixCatalogService fixesService, IArtworkService artwork) : base(store, navigation, logging)
     {
         _fixesService = fixesService;
+        _artwork = artwork;
     }
 
     public ObservableCollection<GameFixGameCard> PagedGames { get; } = new();
@@ -640,13 +642,13 @@ public sealed class GameFixesViewModel : ViewModelBase
         _ = LoadVisibleArtworkAsync(pageCards);
     }
 
-    private static async Task LoadVisibleArtworkAsync(List<GameFixGameCard> cards)
+    private async Task LoadVisibleArtworkAsync(List<GameFixGameCard> cards)
     {
         var semaphore = new SemaphoreSlim(4);
         var tasks = cards.Where(c => c.ArtworkImage is null).Select(async card =>
         {
             await semaphore.WaitAsync();
-            try { await card.LoadArtworkAsync(); }
+            try { await card.LoadArtworkAsync(_artwork); }
             finally { semaphore.Release(); }
         });
         await Task.WhenAll(tasks);
@@ -655,16 +657,6 @@ public sealed class GameFixesViewModel : ViewModelBase
 
 public sealed class GameFixGameCard : UiObservableObject
 {
-    private static readonly Lazy<HttpClient> SharedClient = new(() =>
-    {
-        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
-        return client;
-    });
-    private static readonly string CacheDir = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Steamy", "artwork");
-
     private System.Windows.Media.Imaging.BitmapImage? _artworkImage;
     private bool _isArtworkLoading;
 
@@ -692,52 +684,20 @@ public sealed class GameFixGameCard : UiObservableObject
 
     public bool IsArtworkFallback => ArtworkImage is null;
 
-    public async Task LoadArtworkAsync()
+    public async Task LoadArtworkAsync(IArtworkService artwork)
     {
-        if (ArtworkImage is not null || string.IsNullOrWhiteSpace(AppId)) return;
+        if (ArtworkImage is not null || IsArtworkLoading || !int.TryParse(AppId, out var appId)) return;
         IsArtworkLoading = true;
         try
         {
-            var cachePath = System.IO.Path.Combine(CacheDir, $"{AppId}_library.jpg");
-            byte[]? bytes = null;
-
-            if (System.IO.File.Exists(cachePath))
-            {
-                bytes = await System.IO.File.ReadAllBytesAsync(cachePath);
-            }
-            else
-            {
-                using var response = await SharedClient.Value.GetAsync(ArtworkUrl, HttpCompletionOption.ResponseHeadersRead);
-                if (response.IsSuccessStatusCode)
-                {
-                    bytes = await response.Content.ReadAsByteArrayAsync();
-                    try
-                    {
-                        System.IO.Directory.CreateDirectory(CacheDir);
-                        await System.IO.File.WriteAllBytesAsync(cachePath, bytes);
-                    }
-                    catch { }
-                }
-            }
-
-            if (bytes is { Length: > 0 })
-            {
-                using var stream = new System.IO.MemoryStream(bytes, writable: false);
-                var img = new System.Windows.Media.Imaging.BitmapImage();
-                img.BeginInit();
-                img.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                img.StreamSource = stream;
-                img.EndInit();
-                img.Freeze();
-                ArtworkImage = img;
-            }
+            var game = new Game { AppId = appId, Name = Name };
+            await artwork.LoadAsync(game);
+            ArtworkImage = (game.ArtworkImage ?? game.HeaderImage) as System.Windows.Media.Imaging.BitmapImage;
         }
-        catch { }
-        finally
-        {
-            IsArtworkLoading = false;
-        }
+        catch (Exception exception) { System.Diagnostics.Debug.WriteLine($"Fix cover: {exception.Message}"); }
+        finally { IsArtworkLoading = false; }
     }
+
 }
 
 

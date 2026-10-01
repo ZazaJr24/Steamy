@@ -329,7 +329,13 @@ public partial class LibraryPage : Page
         {
             var snapshot = new RenderTargetBitmap(Math.Max(1, (int)Math.Ceiling(MainContentGrid.ActualWidth / 2)),
                 Math.Max(1, (int)Math.Ceiling(MainContentGrid.ActualHeight / 2)), 48, 48, PixelFormats.Pbgra32);
-            snapshot.Render(MainContentGrid);
+            // Render in local coordinates. Rendering the positioned Grid directly also
+            // includes its parent offset, which moved the blurred gallery right/down.
+            var drawing = new DrawingVisual();
+            using (var context = drawing.RenderOpen())
+                context.DrawRectangle(new VisualBrush(MainContentGrid) { Stretch = Stretch.Fill }, null,
+                    new Rect(0, 0, MainContentGrid.ActualWidth, MainContentGrid.ActualHeight));
+            snapshot.Render(drawing);
             snapshot.Freeze();
             BackdropImage.Source = snapshot;
             BackdropImage.Visibility = Visibility.Visible;
@@ -374,6 +380,12 @@ public partial class LibraryPage : Page
         else if (target is Animatable transform) transform.BeginAnimation(property, animation);
     }
 
+    private void Gallery_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs args)
+    {
+        // Mouse opening and focus restoration preserve the user's gallery position.
+        if (!Steamy.Controls.ScrollNavigation.IsNavigationKeyDown()) args.Handled = true;
+    }
+
     private void Page_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape || OverlayGrid.Visibility != Visibility.Visible) return;
@@ -387,6 +399,7 @@ public partial class LibraryPage : Page
         option.Background = selected ? ActiveChipBg : InactiveChipBg;
         option.BorderBrush = selected ? ActiveChipFg : InactiveBorder;
         option.Foreground = selected ? ActiveChipFg : InactiveChipFg;
+        System.Windows.Automation.AutomationProperties.SetItemStatus(option, selected ? "Selected" : "Not selected");
     }
 
     private void SourceButton_Click(object sender, RoutedEventArgs e)

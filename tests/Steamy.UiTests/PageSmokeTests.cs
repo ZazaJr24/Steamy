@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using Microsoft.Extensions.DependencyInjection;
 using Steamy.Models;
 using Steamy.Pages;
+using Steamy.ViewModels;
 using Steamy.Services;
 using Steamy.Controls;
 using System.Windows.Threading;
@@ -116,7 +117,7 @@ public sealed partial class PageSmokeTests
                 UiThemeService.Apply(theme);
                 _phase = "Library dialog " + theme;
                 CheckLibraryDialog(provider, theme);
-                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage(), new HypervisorFixesPage(), new CreamApiPage() })
+                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage(), new HypervisorFixesPage(), new GameFixesPage(), new CreamApiPage() })
                 {
                     _phase = theme + " " + page.GetType().Name;
                     PumpDispatcher(TimeSpan.FromMilliseconds(100));
@@ -340,6 +341,14 @@ public sealed partial class PageSmokeTests
         Assert.True(window.RootNavigationView.Navigate(typeof(HypervisorFixesPage)));
         PumpDispatcher(TimeSpan.FromMilliseconds(300));
         SaveVisual(window, "hypervisor-fixes.png");
+        Assert.True(window.RootNavigationView.Navigate(typeof(GameFixesPage)));
+        var fixesModel = provider.GetRequiredService<GameFixesViewModel>();
+        var fixesFetch = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)fixesModel.FetchCommand).ExecuteAsync(null);
+        PumpUntil(() => fixesFetch.IsCompleted);
+        fixesFetch.GetAwaiter().GetResult();
+        PumpDispatcher(TimeSpan.FromMilliseconds(300));
+        window.UpdateLayout();
+        SaveVisual(window, "game-fixes.png");
         window.Close();
     }
 
@@ -720,6 +729,10 @@ public class OfflineServiceProxy : DispatchProxy
         }
         if (method.DeclaringType == typeof(ILibrarySyncService) && method.Name == nameof(ILibrarySyncService.RefreshAsync))
             return Task.FromResult(SteamLibraryScanResult.Failure("Offline UI fixture"));
+        if (method.DeclaringType == typeof(IFixCatalogService))
+            return Task.FromResult(new FixFeedSnapshot(true, (ScreenshotCatalog ?? new[] { new SteamCatalogItem { AppId = 10, Name = "An offline library game" } })
+                .Select(game => new FixGame { AppId = game.AppId.ToString(), Name = game.Name,
+                    Fixes = new[] { new FixEntry { Filename = "Sample fix.zip", Path = "sample.zip", Size = "Offline sample" } } }).ToArray(), DateTimeOffset.UtcNow, true, "Offline sample fixes"));
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.GetCatalogAsync))
         {
             Interlocked.Increment(ref CatalogRequests);

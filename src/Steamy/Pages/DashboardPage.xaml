@@ -50,8 +50,8 @@
         <Button Tag="{Binding Game}" Click="GameCover_Click" Style="{StaticResource CoverCardButton}" ToolTip="{Binding Game.Name}">
           <Grid>
             <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="44" /></Grid.RowDefinitions>
-            <Border CornerRadius="12" Background="{Binding Game.CoverColor}" />
-            <Border CornerRadius="12" RenderOptions.BitmapScalingMode="HighQuality">
+            <Border Grid.Row="0" CornerRadius="12" Background="{Binding Game.CoverColor}" />
+            <Border Grid.Row="0" CornerRadius="12" RenderOptions.BitmapScalingMode="HighQuality">
               <Border.Background><ImageBrush ImageSource="{Binding Game.HeaderImage}" Stretch="UniformToFill" /></Border.Background>
             </Border>
             <StackPanel Grid.Row="1" Margin="2,9,2,0">
@@ -68,11 +68,11 @@
     </DataTemplate>
   </Page.Resources>
 
-  <ScrollViewer x:Name="DashboardScroll" Style="{StaticResource PageScrollHostStyle}" controls:SmoothScroll.Enabled="True" Padding="28,22,28,30">
+  <ScrollViewer x:Name="DashboardScroll" Style="{StaticResource PageScrollHostStyle}" controls:SmoothScroll.Enabled="True" RequestBringIntoView="Dashboard_RequestBringIntoView" Padding="28,22,28,30">
     <StackPanel MaxWidth="1440">
       <Grid Margin="0,0,0,22">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-        <TextBlock Text="Home" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+        <TextBlock Text="Discover" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
         <ui:TextBox x:Name="DashboardSearch" Grid.Column="1" Width="340" Height="38"
                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                     PlaceholderText="Search games or App ID" Icon="{ui:SymbolIcon Search24}"
@@ -136,27 +136,54 @@
         <Border x:Name="DashboardHero" CornerRadius="16" Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" DataContext="{Binding FeaturedGame}">
           <Grid>
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-            <Border x:Name="SpotlightArtworkFrame" Height="282" CornerRadius="15,15,0,0" RenderOptions.BitmapScalingMode="HighQuality">
+            <Border x:Name="SpotlightArtworkFrame" Height="282" CornerRadius="15" RenderOptions.BitmapScalingMode="HighQuality">
               <Border.Background><ImageBrush ImageSource="{Binding HeroArtwork}" Stretch="UniformToFill" /></Border.Background>
             </Border>
-            <Grid x:Name="SpotlightFooter" Grid.Row="1" Margin="18,14,18,15">
+            <Border CornerRadius="15" IsHitTestVisible="False">
+              <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#000B1018" Offset="0.25" /><GradientStop Color="#AA0B1018" Offset="0.63" /><GradientStop Color="#F80B1018" Offset="1" />
+              </LinearGradientBrush></Border.Background>
+            </Border>
+            <Grid x:Name="SpotlightFooter" VerticalAlignment="Bottom" Margin="22,20">
               <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
               <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
               <StackPanel x:Name="SpotlightDetails" VerticalAlignment="Center" Margin="0,0,18,0">
-                <TextBlock x:Name="SpotlightTitle" Text="{Binding Game.Name}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Game.Name}" />
-                <TextBlock Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,6,0,0" TextTrimming="CharacterEllipsis">
+                <TextBlock x:Name="SpotlightTitle" Text="{Binding Game.Name}" FontSize="26" FontWeight="SemiBold" Foreground="#F6F8FC" TextTrimming="CharacterEllipsis" ToolTip="{Binding Game.Name}" />
+                <TextBlock Foreground="#C2CDDD" FontSize="11" Margin="0,8,0,0" TextTrimming="CharacterEllipsis">
                   <Run Text="{Binding ReleaseStatus, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding ReleaseLabel, Mode=OneWay}" />
                 </TextBlock>
               </StackPanel>
               <StackPanel x:Name="SpotlightActions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                           DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
                 <ui:Button Content="{Binding FeaturedDownloadLabel}" Appearance="Primary" Icon="{ui:SymbolIcon ArrowDownload24}" Padding="16,8" Command="{Binding DownloadFeaturedCommand}" ToolTip="Choose a source and check whether downloadable depots are available" />
-                <ui:Button Content="View game" Appearance="Transparent" Padding="10,8" Margin="8,0,0,0" Command="{Binding ViewFeaturedCommand}" />
+                <ui:Button Content="View game" Foreground="#F6F8FC" Appearance="Transparent" Padding="10,8" Margin="8,0,0,0" Command="{Binding ViewFeaturedCommand}" />
               </StackPanel>
             </Grid>
           </Grid>
         </Border>
+      </StackPanel>
+
+      <StackPanel Margin="0,0,0,26" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
+        <TextBlock Text="New &amp; upcoming" Style="{StaticResource SectionTitle}" Margin="0,0,0,12" />
+        <ItemsControl ItemsSource="{Binding NewGames}">
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="185" MaxColumns="3" Spacing="16" CoverRatio="0.42" FooterHeight="44" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate><DataTemplate>
+            <Button Style="{StaticResource CoverCardButton}" ToolTip="{Binding Game.Name}" CommandParameter="{Binding}"
+                    Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+              <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="44" /></Grid.RowDefinitions>
+                <Border Grid.Row="0" CornerRadius="12" Background="{Binding Game.CoverColor}" />
+                <Border Grid.Row="0" CornerRadius="12" RenderOptions.BitmapScalingMode="HighQuality">
+                  <Border.Background><ImageBrush ImageSource="{Binding Game.HeaderImage}" Stretch="UniformToFill" /></Border.Background>
+                </Border>
+                <StackPanel Grid.Row="1" Margin="2,9,2,0">
+                  <TextBlock Text="{Binding Game.Name}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding ReleaseLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Grid>
+            </Button>
+          </DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
       </StackPanel>
 
       <Grid x:Name="QuickActionsGrid" Margin="0,0,0,28">
@@ -225,7 +252,7 @@
           <ui:Button Content="All favorites" Appearance="Transparent" HorizontalAlignment="Right" Command="{Binding NavigateFavoritesCommand}" FontSize="11" Padding="0,5" />
         </Grid>
         <ItemsControl ItemsSource="{Binding FavoriteGames}" ItemTemplate="{StaticResource PersonalLibraryCard}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="185" MaxColumns="4" Spacing="16" CoverRatio="0.48" FooterHeight="44" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="185" MaxColumns="4" Spacing="16" CoverRatio="0.42" FooterHeight="44" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         </ItemsControl>
       </StackPanel>
 
@@ -235,30 +262,7 @@
           <ui:Button Content="All games" Appearance="Transparent" HorizontalAlignment="Right" Command="{Binding NavigateLibraryCommand}" FontSize="11" Padding="0,5" />
         </Grid>
         <ItemsControl ItemsSource="{Binding PersonalLibrary}" ItemTemplate="{StaticResource PersonalLibraryCard}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="185" MaxColumns="4" Spacing="16" CoverRatio="0.48" FooterHeight="44" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-        </ItemsControl>
-      </StackPanel>
-
-      <StackPanel Margin="0,0,0,26" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
-        <TextBlock Text="New &amp; upcoming" Style="{StaticResource SectionTitle}" Margin="0,0,0,12" />
-        <ItemsControl ItemsSource="{Binding NewGames}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="185" MaxColumns="3" Spacing="16" CoverRatio="0.48" FooterHeight="44" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate><DataTemplate>
-            <Button Style="{StaticResource CoverCardButton}" ToolTip="{Binding Game.Name}" CommandParameter="{Binding}"
-                    Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}">
-              <Grid>
-                <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="44" /></Grid.RowDefinitions>
-                <Border CornerRadius="12" Background="{Binding Game.CoverColor}" />
-                <Border CornerRadius="12" RenderOptions.BitmapScalingMode="HighQuality">
-                  <Border.Background><ImageBrush ImageSource="{Binding Game.HeaderImage}" Stretch="UniformToFill" /></Border.Background>
-                </Border>
-                <StackPanel Grid.Row="1" Margin="2,9,2,0">
-                  <TextBlock Text="{Binding Game.Name}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Text="{Binding ReleaseLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-              </Grid>
-            </Button>
-          </DataTemplate></ItemsControl.ItemTemplate>
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="185" MaxColumns="4" Spacing="16" CoverRatio="0.42" FooterHeight="44" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         </ItemsControl>
       </StackPanel>
 

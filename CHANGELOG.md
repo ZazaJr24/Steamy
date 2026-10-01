@@ -3,6 +3,20 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.3
+
+### Fixed
+- Automatic Spotlight and binding focus requests no longer bring a manually scrolled Dashboard back to the top. Spotlight keeps a fixed height during rotation; explicit keyboard navigation still reveals focused controls.
+- Capture the blurred game gallery in local coordinates, removing the duplicated page margin that shifted the background right and down when opening a game.
+- Load game-fix dialog artwork asynchronously through the shared cached artwork service, with protection against late results from a previously opened game.
+
+### Improved
+- An artwork-led Dashboard with readable overlay controls and new/upcoming games directly below Spotlight.
+- Compact source selection with two free community cards, quieter credential-provider rows and a visible selection check.
+- Restored the large featured-download artwork, progress and network-activity card at common window sizes; existing queue, pause/resume and recovery controls remain available.
+- Responsive game-fix cards, a clear search header, keyboard activation and reduced-effect support.
+- Windows regression checks for scroll stability during Spotlight changes and correctly aligned frozen backgrounds.
+
 ## 0.4.2
 
 - Published the corrected app under a new version so installations running 0.4.1 can detect it through the updater.

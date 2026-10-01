@@ -30,9 +30,9 @@ public partial class GameFixesPage : Page
         DataContext = App.Services.GetRequiredService<GameFixesViewModel>();
     }
 
-    private async void GameCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private async void GameCard_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Border border || border.Tag is not GameFixGameCard card || card.Game is null) return;
+        if (sender is not Button button || button.Tag is not GameFixGameCard card || card.Game is null) return;
 
         _selectedCard = card;
         _folderPath = string.Empty;
@@ -45,29 +45,32 @@ public partial class GameFixesPage : Page
         ApplyAllButton.Content = "Download & Apply All";
         ApplyAllButton.IsEnabled = true;
 
-        LoadHeroImage(card.AppId);
+        _ = LoadHeroImageAsync(card);
         BuildFixRows(card.Game);
 
-        MainContentGrid.Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 6 };
+        MainContentGrid.IsEnabled = false;
+        MainContentGrid.Effect = Steamy.Controls.MotionPreferences.BackdropBlurEnabled
+            ? new System.Windows.Media.Effects.BlurEffect { Radius = 6, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance } : null;
         await ShowOverlayAsync();
     }
 
-    private void LoadHeroImage(string appId)
+    private async Task LoadHeroImageAsync(GameFixGameCard card)
     {
-        OverlayHeroImage.Source = null;
-        if (string.IsNullOrWhiteSpace(appId)) return;
+        OverlayHeroImage.Source = card.ArtworkImage;
+        if (!int.TryParse(card.AppId, out var appId)) return;
         try
         {
-            var uri = new Uri($"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/library_hero.jpg", UriKind.Absolute);
-            var bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.UriSource = uri;
-            bmp.CacheOption = BitmapCacheOption.OnLoad;
-            bmp.DecodePixelHeight = 280;
-            bmp.EndInit();
-            OverlayHeroImage.Source = bmp;
+            var image = await App.Services.GetRequiredService<IArtworkService>().LoadHeroAsync(appId);
+            if (ReferenceEquals(_selectedCard, card) && image is not null) OverlayHeroImage.Source = image;
         }
-        catch { }
+        catch (Exception exception) { System.Diagnostics.Debug.WriteLine($"Fix artwork: {exception.Message}"); }
+    }
+
+    private void Page_PreviewKeyDown(object sender, KeyEventArgs args)
+    {
+        if (args.Key != Key.Escape || OverlayGrid.Visibility != Visibility.Visible) return;
+        args.Handled = true;
+        _ = CloseOverlayAsync();
     }
 
     private enum StatusKind { Info, Success, Error }
@@ -315,6 +318,12 @@ public partial class GameFixesPage : Page
 
     private async Task ShowOverlayAsync()
     {
+        if (!Steamy.Controls.MotionPreferences.AnimationsEnabled)
+        {
+            OverlayGrid.Visibility = Visibility.Visible;
+            DialogPanel.Opacity = OverlayGrid.Opacity = 1;
+            return;
+        }
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
         DialogScale.ScaleX = DialogScale.ScaleY = 0.94;
         DialogPanel.Opacity = 0;
@@ -333,6 +342,8 @@ public partial class GameFixesPage : Page
         _isOverlayClosing = true;
         try
         {
+            if (Steamy.Controls.MotionPreferences.AnimationsEnabled)
+            {
             var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
             var close = TimeSpan.FromMilliseconds(150);
             OverlayGrid.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, 0, close) { EasingFunction = ease });
@@ -340,12 +351,14 @@ public partial class GameFixesPage : Page
             DialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 0.96, close) { EasingFunction = ease });
             DialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 0.96, close) { EasingFunction = ease });
             await Task.Delay(165);
+            }
             OverlayGrid.BeginAnimation(UIElement.OpacityProperty, null);
             DialogPanel.BeginAnimation(UIElement.OpacityProperty, null);
             DialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             DialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
             OverlayGrid.Visibility = Visibility.Collapsed;
             MainContentGrid.Effect = null;
+            MainContentGrid.IsEnabled = true;
             _selectedCard = null;
         }
         finally { _isOverlayClosing = false; }

@@ -84,7 +84,7 @@
   </Page.Resources>
 
   <Grid>
-    <Grid x:Name="MainContentGrid" Margin="32,26,24,0">
+    <Grid x:Name="MainContentGrid" Margin="28,26,28,0">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
         <RowDefinition Height="Auto" />
@@ -172,7 +172,7 @@
         </ItemsControl>
       </StackPanel>
 
-      <ScrollViewer Grid.Row="2" x:Name="GalleryScroll" controls:SmoothScroll.Enabled="True" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,8,0">
+      <ScrollViewer Grid.Row="2" x:Name="GalleryScroll" RequestBringIntoView="Gallery_RequestBringIntoView" controls:SmoothScroll.Enabled="True" Style="{StaticResource PageScrollHostStyle}" Padding="0,0,8,0">
         <StackPanel>
           <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource GalleryEmptyStateStyle}" />
 
@@ -277,7 +277,7 @@
       </ScrollViewer>
     </Grid>
     <!-- A half-resolution frozen backdrop keeps modal blur independent of live progress updates. -->
-    <Image x:Name="BackdropImage" Margin="32,26,24,0" Visibility="Collapsed" Stretch="Fill"
+    <Image x:Name="BackdropImage" Margin="28,26,28,0" Visibility="Collapsed" Stretch="Fill"
            IsHitTestVisible="False" RenderOptions.BitmapScalingMode="HighQuality">
       <Image.Effect><BlurEffect Radius="14" RenderingBias="Performance" /></Image.Effect>
     </Image>
@@ -327,14 +327,70 @@
 
             <ScrollViewer x:Name="SourceStepPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
               <StackPanel MaxWidth="760" HorizontalAlignment="Stretch">
-                <TextBlock Text="Choose a source." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,18" />
+                <TextBlock Text="Community sources" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,9" />
                 <UniformGrid Columns="2">
-                  <ui:Button x:Name="SourceSushi" Tag="Sushi" Content="Sushi" Click="SourceButton_Click" Appearance="Secondary" Padding="14,10" HorizontalAlignment="Stretch" Margin="0,0,8,8" ToolTip="No API key" />
-                  <ui:Button x:Name="SourceZaza" Tag="Zaza" Content="Zaza" Click="SourceButton_Click" Appearance="Secondary" Padding="14,10" HorizontalAlignment="Stretch" Margin="0,0,8,8" ToolTip="No API key" />
-                  <ui:Button x:Name="SourceRyuu" Tag="Ryuu" Content="Ryuu" Click="SourceButton_Click" Appearance="Secondary" Padding="14,10" HorizontalAlignment="Stretch" Margin="0,0,8,8" ToolTip="Auth code" />
-                  <ui:Button x:Name="SourceHubcap" Tag="Hubcap" Content="Hubcap" Click="SourceButton_Click" Appearance="Secondary" Padding="14,10" HorizontalAlignment="Stretch" Margin="0,0,8,8" ToolTip="API key" />
-                  <ui:Button x:Name="SourceDepotBox" Tag="DepotBox" Content="DepotBox" Click="SourceButton_Click" Appearance="Secondary" Padding="14,10" HorizontalAlignment="Stretch" Margin="0,0,8,8" ToolTip="API key" />
+                  <ui:Button x:Name="SourceSushi" Tag="Sushi" Click="SourceButton_Click" Appearance="Secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="14,12" Margin="0,0,5,0" AutomationProperties.Name="Sushi">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="Sushi" FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="Free · No API key" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
+                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </ui:Button>
+<ui:Button x:Name="SourceZaza" Tag="Zaza" Click="SourceButton_Click" Appearance="Secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="14,12" Margin="5,0,0,0" AutomationProperties.Name="Zaza">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="Zaza" FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="Free · No API key" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
+                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </ui:Button>
                 </UniformGrid>
+                <TextBlock Text="More providers" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,17,0,9" />
+                <ui:Button x:Name="SourceRyuu" Tag="Ryuu" Click="SourceButton_Click" Appearance="Secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="14,12" Margin="0,0,0,7" AutomationProperties.Name="Ryuu">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="Ryuu" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="Auth code from Settings" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
+                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </ui:Button>
+<ui:Button x:Name="SourceHubcap" Tag="Hubcap" Click="SourceButton_Click" Appearance="Secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="14,12" Margin="0,0,0,7" AutomationProperties.Name="Hubcap">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="Hubcap" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="API key from Settings" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
+                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </ui:Button>
+<ui:Button x:Name="SourceDepotBox" Tag="DepotBox" Click="SourceButton_Click" Appearance="Secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="14,12" Margin="0,0,0,7" AutomationProperties.Name="DepotBox">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="DepotBox" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="API key from Settings" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
+                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </ui:Button>
                 <TextBlock x:Name="SourceAvailabilityText" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,10,0,0" />
               </StackPanel>
             </ScrollViewer>
