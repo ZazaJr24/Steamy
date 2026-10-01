@@ -281,13 +281,19 @@ public partial class LibraryPage : Page
         finally { if (ReferenceEquals(_selectedItem, item)) FavoriteButton.IsEnabled = true; }
     }
 
-    private void AddToSteamTools_Click(object sender, RoutedEventArgs args)
+    private async void AddToSteamTools_Click(object sender, RoutedEventArgs args)
     {
         if (_selectedItem is not { } item || _wizardBusy || _downloadRunning) return;
         var tools = App.Services.GetRequiredService<BetterSteamToolsViewModel>();
-        tools.GameInput = item.AppId.ToString(CultureInfo.InvariantCulture);
+        if (!tools.IsBusy)
+        {
+            tools.GameInput = item.AppId.ToString(CultureInfo.InvariantCulture);
+            tools.SelectedSource = tools.Sources[0];
+            tools.RefreshDetection();
+        }
         ResetOverlay();
         App.Services.GetRequiredService<INavigationService>().Navigate<BetterSteamToolsPage>();
+        if (tools.AddGameCommand.CanExecute(null)) await tools.AddGameCommand.ExecuteAsync(null);
     }
 
     private async void PlayButton_Click(object sender, RoutedEventArgs args)
