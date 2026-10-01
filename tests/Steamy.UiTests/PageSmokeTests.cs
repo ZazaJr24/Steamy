@@ -189,6 +189,8 @@ public sealed partial class PageSmokeTests
                     }
                 }
             }
+            _phase = "CheckShellScrolling(provider)";
+            CheckShellScrolling(provider);
             if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
                 SaveShellScreenshots(provider, fixtureArtwork);
             Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Steamy.ViewModels", StringComparison.Ordinal) && line.Contains("property not found", StringComparison.OrdinalIgnoreCase));
@@ -236,6 +238,9 @@ public sealed partial class PageSmokeTests
         model.DownloadFeaturedCommand.Execute(null);
         Assert.Equal(typeof(LibraryPage), route);
         Assert.Equal(firstId, library.RequestedDownload!.AppId);
+        library.RequestedDownload = null;
+        model.OpenSpotlightCommand.Execute(model.DiscoverGames[1]);
+        Assert.Equal(model.DiscoverGames[1].Game.AppId, library.RequestedDownload!.AppId);
         library.RequestedDownload = null;
         library.SearchText = string.Empty;
         navigation.Detach();

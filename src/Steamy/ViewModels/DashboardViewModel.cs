@@ -338,11 +338,28 @@ public sealed class DashboardViewModel : ViewModelBase
             if (!_heroLoads.TryGetValue(feature.Metadata, out var task))
                 _heroLoads[feature.Metadata] = task = Task.Run(() => _artwork.LoadSpotlightHeroAsync(feature.Metadata));
             feature.HeroArtwork = await task;
+            _ = WarmNextSpotlightArtworkAsync();
         }
         catch (Exception exception)
         {
             Logging.Add(LogLevel.Debug, "Dashboard", $"Optional artwork unavailable: {exception.GetType().Name}.");
         }
+    }
+
+    private async Task WarmNextSpotlightArtworkAsync()
+    {
+        if (DiscoverGames.Count < 2) return;
+        var next = DiscoverGames[(_featuredIndex + 1) % DiscoverGames.Count];
+        try
+        {
+            if (!_heroLoads.TryGetValue(next.Metadata, out var hero))
+                _heroLoads[next.Metadata] = hero = Task.Run(() => _artwork.LoadSpotlightHeroAsync(next.Metadata));
+            if (!_headerLoads.TryGetValue(next.Metadata, out var header))
+                _headerLoads[next.Metadata] = header = Task.Run(() => _artwork.LoadSpotlightHeaderAsync(next.Metadata));
+            next.HeroArtwork = await hero;
+            next.Game.HeaderImage = await header;
+        }
+        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Optional next image unavailable: {exception.GetType().Name}."); }
     }
 
     private void MoveFeatured(int direction)
@@ -365,9 +382,12 @@ public sealed class DashboardViewModel : ViewModelBase
         Navigation.Navigate<LibraryPage>();
     }
 
-    private void DownloadFeatured()
+    private void DownloadFeatured() => OpenSpotlight(FeaturedGame);
+
+    private void OpenSpotlight(DashboardFeature? featured)
     {
-        if (FeaturedGame is not { } featured) return;
+        featured ??= FeaturedGame;
+        if (featured is null) return;
         var library = App.Services.GetRequiredService<LibraryViewModel>();
         library.SelectedSourceFilter = "All sources";
         library.RequestedDownload = new SteamCatalogItem
@@ -379,13 +399,6 @@ public sealed class DashboardViewModel : ViewModelBase
         Navigation.Navigate<LibraryPage>();
     }
 
-    private void OpenSpotlight(DashboardFeature? feature)
-    {
-        feature ??= FeaturedGame;
-        if (feature is null) return;
-        try { Process.Start(new ProcessStartInfo(feature.Metadata.StoreUrl) { UseShellExecute = true }); }
-        catch (Exception exception) { Logging.Add(LogLevel.Warning, "Spotlight", $"Could not open the Steam store: {exception.Message}"); }
-    }
 
     private readonly ILibrarySyncService _librarySync;
     private readonly ISettingsService _settings;

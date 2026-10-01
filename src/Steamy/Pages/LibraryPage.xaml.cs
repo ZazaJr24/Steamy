@@ -82,14 +82,14 @@ public partial class LibraryPage : Page
         _backdropResizeTimer.Tick += (_, _) =>
         {
             _backdropResizeTimer.Stop();
-            if (OverlayGrid.Visibility == Visibility.Visible && !_showingDownloadSetup) CaptureBackdrop();
+            if (OverlayGrid.Visibility == Visibility.Visible) CaptureBackdrop();
         };
-        DialogPanel.SizeChanged += (_, _) => DialogPanel.Clip = new RectangleGeometry(new Rect(DialogPanel.RenderSize), _showingDownloadSetup ? 0 : 16, _showingDownloadSetup ? 0 : 16);
+        DialogPanel.SizeChanged += (_, _) => DialogPanel.Clip = new RectangleGeometry(new Rect(DialogPanel.RenderSize), 16, 16);
         SizeChanged += (_, _) =>
         {
-            DialogPanel.MaxWidth = Math.Max(0, ActualWidth - (_showingDownloadSetup ? 0 : 32));
-            DialogPanel.MaxHeight = Math.Max(0, ActualHeight - (_showingDownloadSetup ? 0 : 32));
-            if (OverlayGrid.Visibility == Visibility.Visible && !_showingDownloadSetup)
+            DialogPanel.MaxWidth = Math.Max(0, ActualWidth - 32);
+            DialogPanel.MaxHeight = Math.Max(0, ActualHeight - 32);
+            if (OverlayGrid.Visibility == Visibility.Visible)
             {
                 _backdropResizeTimer.Stop();
                 _backdropResizeTimer.Start();
@@ -119,7 +119,7 @@ public partial class LibraryPage : Page
         OpenGameDetails(item);
     }
 
-    public void OpenGameDetails(SteamCatalogItem item) => OpenGame(item, setup: false);
+    public void OpenGameDetails(SteamCatalogItem item) => OpenGame(item, setup: true);
     public void OpenDownloadSetup(SteamCatalogItem item) => OpenGame(item, setup: true);
 
     private void OpenGame(SteamCatalogItem item, bool setup)
@@ -209,20 +209,20 @@ public partial class LibraryPage : Page
 
     private void ConfigureOverlayLayout()
     {
-        DialogPanel.Width = _showingDownloadSetup ? double.NaN : 640;
-        DialogPanel.HorizontalAlignment = _showingDownloadSetup ? HorizontalAlignment.Stretch : HorizontalAlignment.Center;
-        DialogPanel.VerticalAlignment = _showingDownloadSetup ? VerticalAlignment.Stretch : VerticalAlignment.Center;
-        DialogPanel.Margin = _showingDownloadSetup ? new Thickness(0) : new Thickness(16);
-        DialogPanel.BorderThickness = _showingDownloadSetup ? new Thickness(0) : new Thickness(1);
-        DialogPanel.CornerRadius = _showingDownloadSetup ? new CornerRadius(0) : new CornerRadius(16);
-        DialogPanel.SetResourceReference(Border.BackgroundProperty, _showingDownloadSetup ? "WorkspaceBackgroundBrush" : "SolidSurfaceBrush");
-        DialogPanel.MaxWidth = Math.Max(0, ActualWidth - (_showingDownloadSetup ? 0 : 32));
-        DialogPanel.MaxHeight = Math.Max(0, ActualHeight - (_showingDownloadSetup ? 0 : 32));
-        DetailHeader.Visibility = _showingDownloadSetup ? Visibility.Collapsed : Visibility.Visible;
-        SetupHeader.Visibility = _showingDownloadSetup ? Visibility.Visible : Visibility.Collapsed;
-        DialogDimmer.Visibility = _showingDownloadSetup ? Visibility.Collapsed : Visibility.Visible;
-        GameInfoPanel.Visibility = _showingDownloadSetup ? Visibility.Collapsed : Visibility.Visible;
-        WizardHeader.Visibility = _showingDownloadSetup ? Visibility.Visible : Visibility.Collapsed;
+        DialogPanel.Width = 680;
+        DialogPanel.HorizontalAlignment = HorizontalAlignment.Center;
+        DialogPanel.VerticalAlignment = VerticalAlignment.Center;
+        DialogPanel.Margin = new Thickness(16);
+        DialogPanel.BorderThickness = new Thickness(1);
+        DialogPanel.CornerRadius = new CornerRadius(16);
+        DialogPanel.SetResourceReference(Border.BackgroundProperty, "SolidSurfaceBrush");
+        DialogPanel.MaxWidth = Math.Max(0, ActualWidth - 32);
+        DialogPanel.MaxHeight = Math.Max(0, ActualHeight - 32);
+        DetailHeader.Visibility = Visibility.Visible;
+        SetupHeader.Visibility = Visibility.Collapsed;
+        DialogDimmer.Visibility = Visibility.Visible;
+        GameInfoPanel.Visibility = Visibility.Visible;
+        WizardHeader.Visibility = Visibility.Visible;
     }
 
     private void OpenDepotInfo_Click(object sender, RoutedEventArgs args)
@@ -306,12 +306,6 @@ public partial class LibraryPage : Page
 
     private void CaptureBackdrop()
     {
-        if (_showingDownloadSetup)
-        {
-            BackdropImage.Source = null;
-            BackdropImage.Visibility = Visibility.Collapsed;
-            return;
-        }
         // A frozen half-resolution snapshot avoids re-blurring the gallery for every live update.
         MainContentGrid.Visibility = Visibility.Visible;
         MainContentGrid.Opacity = 1;
@@ -340,17 +334,10 @@ public partial class LibraryPage : Page
         CaptureBackdrop();
         MainContentGrid.IsHitTestVisible = false;
         MainContentGrid.IsEnabled = false;
-        MainContentGrid.Visibility = _showingDownloadSetup ? Visibility.Collapsed : Visibility.Visible;
+        MainContentGrid.Visibility = Visibility.Visible;
         OverlayGrid.Visibility = Visibility.Visible;
-        if (_showingDownloadSetup) SetupCloseButton.Focus();
-        else
-        {
-            Animate(OverlayGrid, OpacityProperty, 0, 1);
-            Animate(DialogScale, ScaleTransform.ScaleXProperty, 0.97, 1);
-            Animate(DialogScale, ScaleTransform.ScaleYProperty, 0.97, 1);
-            Animate(DialogOffset, TranslateTransform.YProperty, 10, 0);
-            DialogCloseButton.Focus();
-        }
+        Animate(OverlayGrid, OpacityProperty, 0, 1);
+        DialogCloseButton.Focus();
     }
 
     private void Animate(DependencyObject target, DependencyProperty property, double from, double to)
@@ -585,7 +572,7 @@ public partial class LibraryPage : Page
     private void UpdateWizardControls()
     {
         WizardBusyBar.Visibility = _wizardBusy ? Visibility.Visible : Visibility.Collapsed;
-        BackButton.Visibility = _showingDownloadSetup && !_resumingExisting ? Visibility.Visible : Visibility.Collapsed;
+        BackButton.Visibility = _showingDownloadSetup && _wizardStep > 0 && !_resumingExisting ? Visibility.Visible : Visibility.Collapsed;
         BackButton.IsEnabled = !_downloadRunning && !_wizardBusy;
         NewSelectionButton.Visibility = _showingDownloadSetup && _resumingExisting ? Visibility.Visible : Visibility.Collapsed;
         NewSelectionButton.IsEnabled = !_downloadRunning && !_wizardBusy;

@@ -11,7 +11,7 @@ namespace Steamy.Pages;
 public partial class DashboardPage : Page
 {
     private readonly System.Windows.Threading.DispatcherTimer _spotlightTimer = new(System.Windows.Threading.DispatcherPriority.Background)
-        { Interval = TimeSpan.FromSeconds(12) };
+        { Interval = TimeSpan.FromSeconds(5) };
     private DateTime _nextFeedCheck = DateTime.MinValue;
     public DashboardPage()
     {
@@ -45,7 +45,7 @@ public partial class DashboardPage : Page
                 _nextFeedCheck = DateTime.UtcNow.AddHours(6);
                 _ = model.EnsureDiscoveryArtworkAsync();
             }
-            if (Controls.MotionPreferences.AnimationsEnabled && !DashboardHero.IsMouseOver && !IsKeyboardFocusWithin && !model.HasSearchQuery)
+            if (!model.HasSearchQuery)
                 model.NextFeaturedCommand.Execute(null);
         };
         SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
@@ -62,7 +62,7 @@ public partial class DashboardPage : Page
         var compact = width < 720;
         DashboardSearch.Width = width < 640 ? 220 : width < 900 ? 280 : 340;
         DashboardScroll.Padding = width < 640 ? new Thickness(18, 18, 18, 26) : new Thickness(28, 22, 28, 30);
-        SpotlightArtworkFrame.Height = width < 640 ? 212 : width < 1000 ? 260 : 304;
+        SpotlightArtworkFrame.Height = width < 640 ? 176 : width < 1000 ? 204 : 240;
         SpotlightTitle.FontSize = width < 640 ? 19 : 22;
         Grid.SetRow(SpotlightActions, compact ? 1 : 0);
         Grid.SetColumn(SpotlightActions, compact ? 0 : 1);

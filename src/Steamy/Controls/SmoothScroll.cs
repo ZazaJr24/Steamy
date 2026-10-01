@@ -83,9 +83,14 @@ public static class SmoothScroll
         {
             if (args.Handled || Keyboard.Modifiers != ModifierKeys.None || _viewer.ScrollableHeight <= 0
                 || _viewer.CanContentScroll) return; // Logical/virtualized lists own their offset units.
-            // Nested lists and text controls retain their own wheel behavior.
+            // A scrollable child or open dropdown owns the wheel. Closed selectors and
+            // non-scrolling template viewers must not swallow the surrounding page's input.
             for (var element = args.OriginalSource as DependencyObject; element is not null && element != _viewer; element = element is Visual ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element))
-                if (element is ComboBox or TextBoxBase || element is ScrollViewer) return;
+            {
+                if (element is ComboBox { IsDropDownOpen: true } or TextBox { AcceptsReturn: true } or RichTextBox) return;
+                if (element is ScrollViewer child && (args.Delta < 0
+                    ? child.VerticalOffset < child.ScrollableHeight : child.VerticalOffset > 0)) return;
+            }
             var current = _viewer.VerticalOffset;
             var lines = SystemParameters.WheelScrollLines;
             if (lines == 0) return;
