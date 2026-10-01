@@ -3,6 +3,13 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.2
+
+- Published the corrected app under a new version so installations running 0.4.1 can detect it through the updater.
+- Includes the restored compact Source → Depots/manifest → Location download dialog with a blurred gallery background.
+- Includes scrolling fixes for game cards and closed manifest selectors, while retaining the selected manifest version.
+- Includes the five-second Spotlight rotation with artwork preloading, improved image fallback and the refreshed DLC selection page.
+
 ## 0.4.1
 
 - Added a direct Spotlight Download action that opens source selection instead of the Steam store.
