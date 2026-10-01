@@ -1,0 +1,169 @@
+using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
+using Steamy.Services;
+
+namespace Steamy.Tests;
+
+public sealed class SteamToolsTests
+{
+    private static byte[] Zip(params (string Name, string Contents)[] entries)
+    {
+        using var bytes = new MemoryStream();
+        using (var archive = new ZipArchive(bytes, ZipArchiveMode.Create, true))
+            foreach (var (name, contents) in entries)
+            { using var writer = new StreamWriter(archive.CreateEntry(name).Open()); writer.Write(contents); }
+        return bytes.ToArray();
+    }
+
+    [Fact]
+    public async Task SushiStyleZipAndLooseFilesDetectAppsAndUseTheRealSteamFolders()
+    {
+        using var temp = new TempFolder();
+        var zip = Path.Combine(temp.Path, "480.zip");
+        File.WriteAllBytes(zip, Zip(("nested/480.lua", "addappid(480)\naddappid(481,0,\"aabbccddeeff0011\")\nsetManifestid(481,\"123\")"), ("nested/481_123.manifest", "manifest bytes"), ("nested/ignored.exe", "never installed")));
+        var plan = await SteamToolsMetadata.ReadAsync([zip]);
+        Assert.Equal(480, Assert.Single(plan.AppIds));
+        Assert.Equal(1, plan.ManifestCount);
+        Assert.Equal(2, plan.Files.Count);
+        Assert.Contains("config/stplug-in/480.lua", plan.Files.Keys);
+        Assert.Contains("depotcache/481_123.manifest", plan.Files.Keys);
+        var lua = temp.Write("other.lua", "-- addappid(999)\naddappid(100)\nsetManifestid(101,\"456\")");
+        plan = await SteamToolsMetadata.ReadAsync([lua]);
+        Assert.Equal(100, Assert.Single(plan.AppIds));
+        Assert.DoesNotContain("999", Encoding.UTF8.GetString(plan.Files["config/stplug-in/100.lua"]));
+    }
+
+    [Fact]
+    public async Task ManifestOnlyImportDoesNotInventAnAppId()
+    {
+        using var temp = new TempFolder();
+        var path = temp.Write("481_123.manifest", "metadata");
+        var plan = await SteamToolsMetadata.ReadAsync([path]);
+        Assert.Empty(plan.AppIds);
+        Assert.Equal("depotcache/481_123.manifest", Assert.Single(plan.Files).Key);
+    }
+
+    [Theory]
+    [InlineData("addappid(480)\nos.execute('bad')")]
+    [InlineData("addappid(480)\nsetManifestid(481,\"not-an-id\")")]
+    [InlineData("addappid(480)\nsetManifestid(481,\"0\")")]
+    [InlineData("addappid(480)\nsetManifestid(481,\"123\"")]
+    [InlineData("addappid(480)\naddappid(481)")]
+    public void UnsupportedAndAmbiguousLuaCannotBecomeInstalledScripts(string lua)
+        => Assert.Throws<InvalidDataException>(() => SteamToolsMetadata.ReadLua(lua, "unnamed.lua"));
+
+    [Fact]
+    public async Task AmbiguousLuaRequiresExplicitIdAndBundleSelectionDoesNotMixGames()
+    {
+        var script = "addappid(480)\naddappid(481)";
+        Assert.Equal(480, SteamToolsMetadata.ReadLua(script, "unknown.lua", 480).AppId);
+        Assert.Throws<InvalidDataException>(() => SteamToolsMetadata.ReadLua(script, "unknown.lua", 999));
+        using var temp = new TempFolder();
+        var zip = Path.Combine(temp.Path, "games.zip");
+        File.WriteAllBytes(zip, Zip(("a/100.lua", "addappid(100)\nsetManifestid(101,\"123\")"), ("a/101_123.manifest", "first"), ("b/200.lua", "addappid(200)\nsetManifestid(201,\"456\")"), ("b/201_456.manifest", "second")));
+        var plan = await SteamToolsMetadata.ReadAsync([zip], 200);
+        Assert.Equal(200, Assert.Single(plan.AppIds));
+        Assert.Equal(2, plan.Files.Count);
+        Assert.Contains("depotcache/201_456.manifest", plan.Files.Keys);
+        Assert.DoesNotContain("depotcache/101_123.manifest", plan.Files.Keys);
+        Assert.Equal(2, (await SteamToolsMetadata.ReadAsync([zip])).AppIds.Count);
+    }
+
+    [Theory]
+    [InlineData("../480.lua")]
+    [InlineData("folder\\480.lua")]
+    [InlineData("CON.lua")]
+    [InlineData("/480.lua")]
+    public async Task UnsafeArchivePathsAreRejectedBeforeAnySteamWrite(string entry)
+    {
+        using var temp = new TempFolder();
+        var zip = Path.Combine(temp.Path, "bad.zip");
+        File.WriteAllBytes(zip, Zip((entry, "addappid(480)")));
+        await Assert.ThrowsAsync<InvalidDataException>(() => SteamToolsMetadata.ReadAsync([zip]));
+    }
+
+    [Fact]
+    public async Task ConflictingFilesFailInsteadOfReplacingOneGamesMetadataWithAnotherCopy()
+    {
+        using var temp = new TempFolder();
+        var first = temp.Write("a/480.lua", "addappid(480)");
+        var second = temp.Write("b/480.lua", "addappid(480)\nsetManifestid(481,\"123\")");
+        await Assert.ThrowsAsync<InvalidDataException>(() => SteamToolsMetadata.ReadAsync([first, second]));
+    }
+
+    [Fact]
+    public void BackendPayloadRequiresItsOfficialDigestAndAllThreeDlls()
+    {
+        var path = Environment.GetEnvironmentVariable("STEAMY_BST_TEST_ARCHIVE");
+        var bytes = string.IsNullOrEmpty(path) ? Zip(("dwmapi.dll", "MZloader"), ("xinput1_4.dll", "MZloader"), ("OpenSteamTool.dll", "MZbackend"), ("extra.lib", "ignored")) : File.ReadAllBytes(path);
+        var hash = Convert.ToHexString(SHA256.HashData(bytes));
+        var payload = SteamToolsBackend.ReadArchive(bytes, hash);
+        Assert.Equal(3, payload.Count);
+        Assert.Throws<InvalidDataException>(() => SteamToolsBackend.ReadArchive(bytes, new string('0',64)));
+        var incomplete = Zip(("OpenSteamTool.dll", "MZbackend"));
+        Assert.Throws<InvalidDataException>(() => SteamToolsBackend.ReadArchive(incomplete, Convert.ToHexString(SHA256.HashData(incomplete))));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("[lua]")]
+    [InlineData("[lua]\n# existing settings\n")]
+    [InlineData("[lua]\npaths = [\"custom#folder\"] # retain this\n[other]\nenabled = true\n")]
+    [InlineData("[lua]\npaths = [\n  'custom', # comment with \"quotes\" and ]\n]\n[other]\nx=1\n")]
+    [InlineData("[lua]\npaths = [] # empty\n")]
+    public void LuaFolderRegistrationPreservesSettingsAndIsIdempotent(string config)
+    {
+        var updated = SteamToolsFiles.RegisterLuaPath(config);
+        Assert.Contains("config/stplug-in", updated);
+        Assert.Equal(updated, SteamToolsFiles.RegisterLuaPath(updated));
+        if (config.Contains("[other]")) Assert.Contains(config[config.IndexOf("[other]")..], updated);
+        if (config.Contains("custom")) Assert.Contains("custom", updated);
+    }
+
+    [Theory]
+    [InlineData("[lua]\npaths = [\"custom\"\n")]
+    [InlineData("[lua]\npaths = \"custom\"\n")]
+    public void BrokenConfigurationIsRejectedBeforeItCanBeOverwritten(string config)
+        => Assert.Throws<InvalidDataException>(() => SteamToolsFiles.RegisterLuaPath(config));
+
+    [Fact]
+    public void AWriteFailureRestoresOldFilesAndRemovesNewFiles()
+    {
+        using var temp = new TempFolder();
+        temp.Write("steam.exe", "fixture only");
+        var old = temp.Write("config/stplug-in/480.lua", "original");
+        var files = new Dictionary<string, byte[]> { ["config/stplug-in/480.lua"] = Encoding.UTF8.GetBytes("replacement"), ["depotcache/481_123.manifest"] = Encoding.UTF8.GetBytes("new") };
+        var writes = 0;
+        Assert.Throws<IOException>(() => SteamToolsFiles.Apply(temp.Path, files, (path, bytes) => { File.WriteAllBytes(path, bytes); if (++writes == 2) throw new IOException("injected write failure"); }));
+        Assert.Equal("original", File.ReadAllText(old));
+        Assert.False(File.Exists(Path.Combine(temp.Path,"depotcache/481_123.manifest")));
+        Assert.Equal("original", File.ReadAllText(Directory.EnumerateFiles(Path.Combine(temp.Path,"config/steamy-backups"),"480.lua",SearchOption.AllDirectories).Single()));
+    }
+
+    [Fact]
+    public void CancellationAndLinkedTargetsDoNotTouchTheOtherFolder()
+    {
+        using var temp = new TempFolder();
+        using var outside = new TempFolder();
+        temp.Write("steam.exe", "fixture only");
+        var file = outside.Write("480.lua", "external original");
+        Directory.CreateDirectory(Path.Combine(temp.Path,"config"));
+        var linked = Path.Combine(temp.Path,"config/stplug-in");
+        if (OperatingSystem.IsWindows())
+        {
+            var info = new System.Diagnostics.ProcessStartInfo("cmd.exe") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            foreach (var argument in new[] { "/d", "/c", "mklink", "/J", linked, outside.Path }) info.ArgumentList.Add(argument);
+            using var process = System.Diagnostics.Process.Start(info)!;
+            Assert.True(process.WaitForExit(5000));
+            Assert.Equal(0, process.ExitCode);
+        }
+        else Directory.CreateSymbolicLink(linked, outside.Path);
+        var files = new Dictionary<string, byte[]> { ["config/stplug-in/480.lua"] = Encoding.UTF8.GetBytes("replacement") };
+        Assert.Throws<IOException>(() => SteamToolsFiles.Apply(temp.Path, files));
+        Assert.Equal("external original", File.ReadAllText(file));
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        Assert.Throws<OperationCanceledException>(() => SteamToolsFiles.Apply(temp.Path, new Dictionary<string, byte[]> { ["opensteamtool.toml"] = Encoding.UTF8.GetBytes("new") }, token:cancellation.Token));
+        Assert.False(File.Exists(Path.Combine(temp.Path,"opensteamtool.toml")));
+    }
+}

@@ -55,6 +55,8 @@ public sealed partial class PageSmokeTests
         store.Downloads.Add(new DownloadJob { GameName = "A game ready to continue", State = DownloadJobState.Paused, Progress = 42.5, Status = "Paused — existing files are retained", TargetFolder = "C:\\Games\\Example", DownloadMode = "DepotDownloaderMod (Zaza)" });
         store.Downloads.Add(new DownloadJob { GameName = "A completed download", State = DownloadJobState.Completed, Progress = 100, Status = "Download completed", DownloadMode = "DepotDownloader" });
         store.Downloads.Add(new DownloadJob { GameName = "A free Sushi source download", State = DownloadJobState.Paused, Progress = 61, Status = "Paused · resume keeps the saved manifests", DownloadMode = "DepotDownloaderMod (Sushi)" });
+        var betterSteamTools = new BetterSteamToolsFixture();
+        services.AddSingleton<IBetterSteamToolsService>(betterSteamTools);
         var fixtureArtwork = new FixtureArtwork();
         services.AddSingleton<IArtworkService>(fixtureArtwork);
         services.AddSingleton<ISpotlightService>(new FixtureSpotlight());
@@ -115,7 +117,7 @@ public sealed partial class PageSmokeTests
                 UiThemeService.Apply(theme);
                 _phase = "Library dialog " + theme;
                 CheckLibraryDialog(provider, theme);
-                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage(), new HypervisorFixesPage(), new GameFixesPage(), new CreamApiPage() })
+                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage(), new HypervisorFixesPage(), new GameFixesPage(), new CreamApiPage(), new BetterSteamToolsPage() })
                 {
                     _phase = theme + " " + page.GetType().Name;
                     PumpDispatcher(TimeSpan.FromMilliseconds(100));
@@ -188,6 +190,8 @@ public sealed partial class PageSmokeTests
                     }
                 }
             }
+            _phase = "CheckBetterSteamTools";
+            CheckBetterSteamTools(provider, betterSteamTools);
             _phase = "CheckShellScrolling(provider)";
             CheckShellScrolling(provider);
             if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
@@ -382,6 +386,10 @@ public sealed partial class PageSmokeTests
         PumpDispatcher(TimeSpan.FromMilliseconds(300));
         window.UpdateLayout();
         SaveVisual(window, "game-fixes.png");
+        Assert.True(window.RootNavigationView.Navigate(typeof(BetterSteamToolsPage)));
+        PumpDispatcher(TimeSpan.FromMilliseconds(250));
+        window.UpdateLayout();
+        SaveVisual(window, "better-steamtools.png");
         window.Close();
     }
 

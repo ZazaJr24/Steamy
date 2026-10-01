@@ -281,6 +281,15 @@ public partial class LibraryPage : Page
         finally { if (ReferenceEquals(_selectedItem, item)) FavoriteButton.IsEnabled = true; }
     }
 
+    private void AddToSteamTools_Click(object sender, RoutedEventArgs args)
+    {
+        if (_selectedItem is not { } item || _wizardBusy || _downloadRunning) return;
+        var tools = App.Services.GetRequiredService<BetterSteamToolsViewModel>();
+        tools.GameInput = item.AppId.ToString(CultureInfo.InvariantCulture);
+        ResetOverlay();
+        App.Services.GetRequiredService<INavigationService>().Navigate<BetterSteamToolsPage>();
+    }
+
     private async void PlayButton_Click(object sender, RoutedEventArgs args)
     {
         if (_selectedItem is not { } item || !App.Services.GetRequiredService<IAppDataStore>().Games

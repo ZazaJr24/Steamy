@@ -71,3 +71,9 @@ SOFTWARE.
 
 The UI layout and Fluent styling are inspired by [CloudRedirect](https://github.com/Selectively11/CloudRedirect) (MIT).
 No CloudRedirect source code is included.
+
+## Optional BetterSteamTools integration
+
+[BetterSteamTools](https://github.com/madoiscool/BetterSteamTools) is an independently maintained GPL-3.0 Steam backend. It is not bundled with Steamy; the user can download its official Windows release from its publisher through the Tools page. Its license and corresponding source are available in that repository.
+
+The metadata installation workflow references [LuaTools](https://github.com/madoiscool/LuaTools) (MIT). No LuaTools binaries or source code are bundled. Steamy's detection, validation, transaction and UI code are independently implemented.

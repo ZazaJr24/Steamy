@@ -91,6 +91,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<ISecureCredentialService>(),
             sp.GetRequiredService<IRyuuSecureDownloadService>(),
             sp.GetRequiredService<ILoggingService>()));
+        services.AddSingleton<IBetterSteamToolsService, BetterSteamToolsService>();
+        services.AddSingleton<BetterSteamToolsViewModel>();
         services.AddSingleton<ISteamDepotMetadataService, SteamDepotMetadataService>();
         services.AddSingleton<IRyuuGameDownloadService>(sp => new RyuuGameDownloadService(
             sp.GetRequiredService<ISettingsService>(),
