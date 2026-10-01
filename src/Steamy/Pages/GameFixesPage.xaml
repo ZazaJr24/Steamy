@@ -129,8 +129,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <Button Tag="{Binding}" Click="GameCard_Click" ToolTip="{Binding Name}"
-                      Style="{StaticResource GalleryCardButton}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                      Background="{DynamicResource SurfaceBrush}">
+                      Style="{StaticResource GalleryCardButton}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Grid>
                   <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
@@ -139,8 +138,8 @@
 
                   <!-- Cover -->
                   <Grid ClipToBounds="True" Background="Transparent">
-                    <Border CornerRadius="15,15,0,0"><Border.Background><ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" /></Border.Background></Border>
-                    <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                    <Border CornerRadius="15"><Border.Background><ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" /></Border.Background></Border>
+                    <Border CornerRadius="15" Background="{DynamicResource SurfaceSubtleBrush}"
                             Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                       <StackPanel VerticalAlignment="Center">
                         <Rectangle Height="10" Margin="34,0,34,12" RadiusX="5" RadiusY="5" Fill="{DynamicResource ControlHoverBrush}" />
@@ -154,14 +153,13 @@
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <Rectangle VerticalAlignment="Bottom" Height="70" Fill="{StaticResource CoverFadeBrush}" />
                     <Border Style="{StaticResource CoverBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
                       <TextBlock Text="{Binding Summary}" Style="{StaticResource CoverBadgeTextStyle}" />
                     </Border>
                   </Grid>
 
                   <!-- Footer -->
-                  <StackPanel Grid.Row="1" Margin="11,8,11,0" VerticalAlignment="Center">
+                  <StackPanel Grid.Row="1" Margin="3,0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}"
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                FontSize="12"

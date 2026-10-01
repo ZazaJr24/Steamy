@@ -227,7 +227,7 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = Math.Min(1600, nativeWidth);
+            image.DecodePixelWidth = Math.Min(2048, nativeWidth);
             image.StreamSource = stream;
             image.EndInit();
             image.Freeze();

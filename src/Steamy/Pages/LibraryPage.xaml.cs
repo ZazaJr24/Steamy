@@ -130,7 +130,6 @@ public partial class LibraryPage : Page
         ConfigureOverlayLayout();
         SourceStepPanel.IsEnabled = true;
         _selectedItem = item;
-        _ = ((LibraryViewModel)DataContext).RememberSearchAsync();
         _selectedSource = ManifestSource.Sushi;
 
         OverlayTitle.Text = item.Name;

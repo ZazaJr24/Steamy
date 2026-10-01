@@ -65,8 +65,6 @@ public sealed partial class PageSmokeTests
         services.AddSingleton<IRyuuGameDownloadService>(wizardDownloads);
         var activity = new MemoryActivityFixture();
         services.AddSingleton<IGameActivityService>(activity);
-        var historyDirectory = Path.Combine(Path.GetTempPath(), "Steamy-search-ui-smoke-" + Guid.NewGuid().ToString("N"));
-        services.AddSingleton(new SearchHistoryStore(Path.Combine(historyDirectory, "history.json")));
         var navigation = new NavigationService();
         services.AddSingleton<INavigationService>(navigation);
         services.AddSingleton<IAppDataStore>(store);
@@ -200,7 +198,6 @@ public sealed partial class PageSmokeTests
         {
             PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingLog);
             app.Shutdown();
-            if (Directory.Exists(historyDirectory)) Directory.Delete(historyDirectory, true);
         }
     }
 
@@ -422,11 +419,12 @@ public sealed partial class PageSmokeTests
             if (string.IsNullOrWhiteSpace(folder)) return null;
             var path = Path.Combine(folder, $"{appId}_{kind}.jpg");
             if (!File.Exists(path)) return null;
+            var nativeWidth = BitmapFrame.Create(new Uri(path), BitmapCreateOptions.DelayCreation, BitmapCacheOption.OnLoad).PixelWidth;
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.UriSource = new Uri(path);
-            image.DecodePixelWidth = kind == "hero" ? 1200 : kind == "portrait" ? 600 : 460;
+            image.DecodePixelWidth = Math.Min(nativeWidth, kind == "hero" ? 2048 : kind == "portrait" ? 600 : 460);
             image.EndInit();
             image.Freeze();
             Images.TryAdd((appId, kind), image);
@@ -457,19 +455,10 @@ public sealed partial class PageSmokeTests
         try
         {
             model.OpenSearchCommand.Execute(null);
-            PumpUntil(() => model.RecentSearches.Contains("offlien library"));
             Assert.Equal(typeof(LibraryPage), route);
             model.SearchText = string.Empty;
             model.IsSearchFocused = true;
-            Assert.True(model.ShowRecentSearches);
-            Assert.True(model.ShowSearchPanel);
-            model.UseRecentSearchCommand.Execute("offlien library");
-            PumpUntil(() => !model.IsSearchBusy);
-            Assert.Equal(10, Assert.Single(model.SearchResults).AppId);
-            var clear = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)model.ClearSearchHistoryCommand).ExecuteAsync(null);
-            PumpUntil(() => clear.IsCompleted);
-            clear.GetAwaiter().GetResult();
-            Assert.Empty(model.RecentSearches);
+            Assert.False(model.ShowSearchPanel, "An empty focused search must not open a history panel.");
         }
         finally { navigation.Detach(); model.IsSearchFocused = false; }
         model.SearchText = string.Empty;
@@ -498,7 +487,7 @@ public sealed partial class PageSmokeTests
             Assert.Equal(16, cached!.PixelWidth);
             Assert.Equal(1, handler.Requests); // Revisiting a game reads the local cache.
             var large = Task.Run(() => service.LoadHeroAsync(2)).GetAwaiter().GetResult();
-            Assert.Equal(1600, large!.PixelWidth);
+            Assert.Equal(2048, large!.PixelWidth);
             var spotlight = SpotlightCatalogService.LoadBundled().Games[0];
             var hero = Task.Run(() => service.LoadSpotlightHeroAsync(spotlight)).GetAwaiter().GetResult();
             Assert.True(hero!.IsFrozen);

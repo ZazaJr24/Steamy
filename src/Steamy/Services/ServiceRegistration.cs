@@ -17,7 +17,6 @@ public static class ServiceRegistration
         services.AddSingleton<ILibrarySyncService, LibrarySyncService>();
         services.AddSingleton<ISettingsService, JsonSettingsService>();
         services.AddSingleton<IGameActivityService>(_ => new JsonGameActivityService());
-        services.AddSingleton<SearchHistoryStore>(_ => SearchHistoryStore.Default);
         services.AddSingleton<ISecureCredentialService, DpapiCredentialService>();
         services.AddSingleton<ILogDispatcher, WpfLogDispatcher>();
         services.AddSingleton<ILoggingService, InMemoryLoggingService>();

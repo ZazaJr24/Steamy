@@ -25,7 +25,6 @@ public partial class DashboardPage : Page
             _spotlightTimer.Start();
             _ = viewModel.EnsureDiscoveryArtworkAsync();
             _ = viewModel.RefreshActivityAsync();
-            _ = viewModel.LoadSearchHistoryAsync();
             _ = viewModel.RefreshAsync(force: false);
         };
         Unloaded += (_, _) =>
@@ -69,21 +68,10 @@ public partial class DashboardPage : Page
         var compact = width < 720;
         DashboardSearch.Width = width < 640 ? 220 : width < 900 ? 280 : 340;
         DashboardScroll.Padding = width < 640 ? new Thickness(18, 18, 18, 26) : new Thickness(28, 22, 28, 30);
-        DashboardHero.Height = width < 720 ? 320 : width < 1000 ? 300 : 340;
+        DashboardHero.Height = width < 720 ? 400 : width < 1000 ? 420 : 460;
         SpotlightArtworkFrame.Height = DashboardHero.Height - 2;
-        SpotlightTitle.FontSize = width < 640 ? 22 : 26;
-        Grid.SetRow(SpotlightActions, compact ? 1 : 0);
-        Grid.SetColumn(SpotlightActions, compact ? 0 : 1);
-        Grid.SetColumnSpan(SpotlightActions, compact ? 2 : 1);
-        Grid.SetColumnSpan(SpotlightDetails, compact ? 2 : 1);
-        SpotlightActions.Margin = compact ? new Thickness(0, 12, 0, 0) : new Thickness(0);
-        SpotlightDetails.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 18, 0);
-        Grid.SetRow(CurrentDownloadCard, compact ? 1 : 0);
-        Grid.SetColumn(CurrentDownloadCard, compact ? 0 : 2);
-        Grid.SetColumnSpan(CurrentDownloadCard, compact ? 3 : 1);
-        Grid.SetColumnSpan(ContinueCard, compact ? 3 : 1);
-        CurrentDownloadCard.Margin = compact ? new Thickness(0, 10, 0, 0) : new Thickness(0);
-        QuickActionsGutter.Width = new GridLength(compact ? 0 : 14);
+        SpotlightTitle.FontSize = compact ? 28 : width < 1000 ? 34 : 40;
+        SpotlightDetails.MaxWidth = Math.Max(240, (width - 110) * 0.82);
     }
 
     private void GameCover_Click(object sender, RoutedEventArgs e)
@@ -112,7 +100,6 @@ public partial class DashboardPage : Page
     {
         var model = (DashboardViewModel)DataContext;
         model.IsSearchFocused = true;
-        _ = model.LoadSearchHistoryAsync();
     }
 
     private void DashboardSearch_LostKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs args)

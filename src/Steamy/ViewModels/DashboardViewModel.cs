@@ -53,7 +53,6 @@ public sealed class DashboardViewModel : ViewModelBase
     private static readonly TimeSpan RefreshDebounce = TimeSpan.FromSeconds(30);
 
     private readonly ISteamCatalogService _catalog;
-    private readonly SearchHistoryStore _searchHistory;
     private Task<SteamCatalogSnapshot>? _searchCatalogTask;
     private SteamCatalogSnapshot? _searchIndexedSnapshot;
     private Task<GameSearchIndex<SteamCatalogItem>>? _searchIndexTask;
@@ -66,15 +65,13 @@ public sealed class DashboardViewModel : ViewModelBase
     private bool _isSearchBusy;
     public RangeObservableCollection<SteamCatalogItem> SearchResults { get; } = new();
     public RangeObservableCollection<DashboardSearchMatch> SearchMatches { get; } = new();
-    public RangeObservableCollection<string> RecentSearches { get; } = new();
     private bool _isSearchFocused;
     public bool IsSearchFocused
     {
         get => _isSearchFocused;
         set { if (SetProperty(ref _isSearchFocused, value)) OnPropertyChanged(nameof(ShowSearchPanel)); }
     }
-    public bool ShowSearchPanel => HasSearchQuery || (IsSearchFocused && RecentSearches.Count > 0);
-    public bool ShowRecentSearches => !HasSearchQuery && RecentSearches.Count > 0;
+    public bool ShowSearchPanel => HasSearchQuery;
     public string SearchText
     {
         get => _searchText;
@@ -83,7 +80,6 @@ public sealed class DashboardViewModel : ViewModelBase
             if (!SetProperty(ref _searchText, value)) return;
             OnPropertyChanged(nameof(HasSearchQuery));
             OnPropertyChanged(nameof(ShowSearchPanel));
-            OnPropertyChanged(nameof(ShowRecentSearches));
             _searchCancellation?.Cancel();
             _searchCancellation?.Dispose();
             _searchCancellation = new CancellationTokenSource();
@@ -95,34 +91,7 @@ public sealed class DashboardViewModel : ViewModelBase
     public bool IsSearchBusy { get => _isSearchBusy; private set => SetProperty(ref _isSearchBusy, value); }
     public ICommand OpenSearchResultCommand { get; }
     public ICommand OpenSearchCommand { get; }
-    public ICommand UseRecentSearchCommand { get; }
-    public ICommand ClearSearchHistoryCommand { get; }
     public void StopSearch() { _searchCancellation?.Cancel(); IsSearchBusy = false; }
-
-    public async Task LoadSearchHistoryAsync()
-    {
-        try { SetRecentSearches(await _searchHistory.GetAsync()); }
-        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Search", $"History unavailable: {exception.GetType().Name}."); }
-    }
-
-    private void SetRecentSearches(IReadOnlyList<string> queries)
-    {
-        RecentSearches.ReplaceWith(queries);
-        OnPropertyChanged(nameof(ShowSearchPanel));
-        OnPropertyChanged(nameof(ShowRecentSearches));
-    }
-
-    private async Task ClearSearchHistoryAsync()
-    {
-        try { SetRecentSearches(await _searchHistory.ClearAsync()); }
-        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Search", $"History could not be cleared: {exception.GetType().Name}."); }
-    }
-
-    private async Task RememberSearchAsync(string query)
-    {
-        try { SetRecentSearches(await _searchHistory.RecordAsync(query)); }
-        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Search", $"History could not be saved: {exception.GetType().Name}."); }
-    }
 
     private async Task SearchAsync(string query, CancellationToken cancellationToken)
     {
@@ -230,11 +199,10 @@ public sealed class DashboardViewModel : ViewModelBase
         finally { _searchArtworkGate.Release(); }
     }
 
-    private void OpenSearch(string query, string? historyQuery = null)
+    private void OpenSearch(string query)
     {
         query = query.Trim();
         if (query.Length == 0) return;
-        _ = RememberSearchAsync(historyQuery ?? query);
         var library = App.Services.GetRequiredService<LibraryViewModel>();
         library.SelectedSourceFilter = "All sources";
         library.SelectedTypeFilter = "All games";
@@ -251,7 +219,7 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _headerLoads = new();
     private int _featuredIndex;
     public IReadOnlyList<DashboardFeature> DiscoverGames { get; private set; } = Array.Empty<DashboardFeature>();
-    public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames.Take(3).ToArray();
+    public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames.Take(6).ToArray();
     public bool HasSpotlight => DiscoverGames.Count > 0;
     public DashboardFeature? FeaturedGame => HasSpotlight ? DiscoverGames[_featuredIndex] : null;
     public string FeaturedPosition => HasSpotlight ? $"{_featuredIndex + 1:00} / {DiscoverGames.Count:00}" : string.Empty;
@@ -461,15 +429,11 @@ public sealed class DashboardViewModel : ViewModelBase
         IArtworkService artwork,
         ISteamCatalogService catalog,
         ISpotlightService spotlight,
-        IGameActivityService activity,
-        SearchHistoryStore? searchHistory = null) : base(store, navigation, logging)
+        IGameActivityService activity) : base(store, navigation, logging)
     {
         _catalog = catalog;
-        _searchHistory = searchHistory ?? SearchHistoryStore.Default;
-        OpenSearchResultCommand = new RelayCommand<SteamCatalogItem>(item => { if (item is not null) OpenSearch(item.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture), item.Name); });
+        OpenSearchResultCommand = new RelayCommand<SteamCatalogItem>(item => { if (item is not null) OpenSearch(item.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture)); });
         OpenSearchCommand = new RelayCommand(() => OpenSearch(SearchText.Trim()));
-        UseRecentSearchCommand = new RelayCommand<string>(query => { if (query is not null) SearchText = query; });
-        ClearSearchHistoryCommand = new AsyncRelayCommand(ClearSearchHistoryAsync);
         _artwork = artwork;
         _spotlight = spotlight;
         NextFeaturedCommand = new RelayCommand(() => MoveFeatured(1), () => DiscoverGames.Count > 1);
@@ -777,7 +741,6 @@ public sealed class DashboardViewModel : ViewModelBase
     {
         _ = EnsureDiscoveryArtworkAsync();
         _ = RefreshActivityAsync();
-        _ = LoadSearchHistoryAsync();
         return RefreshAsync(force: false);
     }
 

@@ -3,6 +3,15 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.5
+
+### Changed
+- Transparent game and fix captions replace the solid footer plates; cover artwork has rounded corners on all sides, with keyboard focus outlines retained.
+- A deeper charcoal palette, restrained translucent panels and matching Fluent controls carry the same theme across the app.
+- Spotlight has a larger artwork canvas, clearer title and actions, and compact navigation inside the artwork. Six new/upcoming games follow it.
+- Removed search-history controls and query recording from Games and Dashboard, and removed Dashboard's installed-library, history and download-summary blocks.
+- Public artwork keeps up to 2048 pixels of original detail without enlarging smaller images; native Dashboard scrolling and five-second Spotlight rotation remain in place.
+
 ## 0.4.4
 
 ### Fixed

@@ -11,7 +11,7 @@
 </p>
 <p align="center"><a href="#start-playing">Get started</a> · <a href="#inside-steamy">Features</a> · <a href="#a-closer-look">Screenshots</a> · <a href="#build-it-yourself">Build</a> · <a href="#credits">Credits</a></p>
 
-<p align="center"><img src="docs/screenshots/dashboard.png" width="1044" alt="Steamy dashboard with new and upcoming games, favorites, recently opened games and download queue" /></p>
+<p align="center"><img src="docs/screenshots/dashboard.png" width="1044" alt="Steamy dashboard with large Spotlight artwork and six new and upcoming games" /></p>
 
 ## Start playing
 
@@ -27,9 +27,9 @@ Already using Steamy? Open **Settings → Check now** to get the latest release.
 
 | Your next stop | What you'll find |
 | --- | --- |
-| **Dashboard** | Large Spotlight artwork, your installed library and favorites, recently opened games and a compact download overview. |
+| **Dashboard** | Large Spotlight artwork, clear download actions and six new/upcoming games in a focused discovery view. |
 | **Spotlight** | New and upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
-| **Games** | A cover grid with calmer solid surfaces, typo-tolerant title/App ID search, recent queries, favorites, sorting and source filters. |
+| **Games** | Rounded cover artwork with transparent captions, typo-tolerant title/App ID search, favorites, sorting and source filters. |
 | **Downloads** | Compact source → depots & version → location steps, right-hand depot selection and available Steam details, plus queue priority, pause, resume and repair. |
 | **Settings** | Searchable categories, dark/light themes, reduced effects, Windows backdrop options, download limits, network options and source connections. |
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
