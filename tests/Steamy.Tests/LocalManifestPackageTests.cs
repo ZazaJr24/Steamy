@@ -13,6 +13,31 @@ public class LocalManifestPackageTests
             [new(lua,$"{id}.lua",new FileInfo(lua).Length), new(manifest,$"{id+1}_123.manifest",new FileInfo(manifest).Length)],
             [new((uint)id+1,"123",10)],DateTime.UtcNow);
     }
+    [Theory]
+    [InlineData("addappid(100)\nsetManifestid(101,\"bad\")")]
+    [InlineData("addappid(100)\nsetManifestid(101,\"123\"")]
+    [InlineData("addappid(100)\nsetManifestid(101,\"123\")\nsetManifestid(102,\"0\")")]
+    public async Task DamagedLuaIsRejectedWithoutExecutingIt(string lua)
+    {
+        using var temp = new TempFolder();
+        var path = temp.Write("100.lua",lua);
+        var destination = Path.Combine(temp.Path,"prepared");
+        await Assert.ThrowsAsync<InvalidDataException>(()=>LocalManifestPackage.ImportAsync(path,100,destination));
+        Assert.False(Directory.Exists(destination));
+    }
+    [Fact]
+    public async Task OversizedLuaAndBrokenSteamyMetadataAreRejected()
+    {
+        using var temp = new TempFolder();
+        var lua = temp.Write("huge.lua",new string('x',DownloadPreparationReader.MaximumLuaCharacters+1));
+        await Assert.ThrowsAsync<InvalidDataException>(()=>LocalManifestPackage.ImportAsync(lua,100,Path.Combine(temp.Path,"large")));
+        var zip = Path.Combine(temp.Path,"broken.zip");
+        using(var archive = ZipFile.Open(zip,ZipArchiveMode.Create))
+        { using var writer = new StreamWriter(archive.CreateEntry("steamy.json").Open()); writer.Write("{not JSON}"); }
+        await Assert.ThrowsAsync<InvalidDataException>(()=>LocalManifestPackage.ImportAsync(zip,100,Path.Combine(temp.Path,"broken")));
+        Assert.False(Directory.Exists(Path.Combine(temp.Path,"broken")));
+    }
+
     [Fact]
     public async Task MultiAppRoundtripSelectsOnlyOneAppAndOwnsItsFilesAfterZipIsDeleted()
     {
