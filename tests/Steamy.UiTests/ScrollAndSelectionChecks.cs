@@ -23,6 +23,37 @@ public sealed partial class PageSmokeTests
         window.Show();
         try
         {
+            // Exercise a real animation clock even when CI disables Windows motion.
+            // Invoking the tween directly leaves the user's OS preference untouched.
+            var stateProperty = (DependencyProperty)typeof(SmoothScroll)
+                .GetField("StateProperty", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
+            var state = viewer.GetValue(stateProperty);
+            var animate = state.GetType().GetMethod("AnimateTo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+            viewer.ScrollToVerticalOffset(300);
+            PumpDispatcher(TimeSpan.FromMilliseconds(40));
+            animate.Invoke(state, new object[] { 354d });
+            PumpDispatcher(TimeSpan.FromMilliseconds(320));
+            Assert.InRange(viewer.VerticalOffset, 353, 355);
+            PumpDispatcher(TimeSpan.FromMilliseconds(240));
+            Assert.InRange(viewer.VerticalOffset, 353, 355);
+            animate.Invoke(state, new object[] { 408d });
+            PumpDispatcher(TimeSpan.FromMilliseconds(320));
+            Assert.InRange(viewer.VerticalOffset, 407, 409);
+            var reduceEffects = MotionPreferences.ReduceEffects;
+            try
+            {
+                MotionPreferences.Configure(false);
+                animate.Invoke(state, new object[] { 650d });
+                PumpDispatcher(TimeSpan.FromMilliseconds(60));
+                Assert.InRange(viewer.VerticalOffset, 408, 650);
+                MotionPreferences.Configure(true);
+                PumpDispatcher(TimeSpan.FromMilliseconds(40));
+                var stoppedOffset = viewer.VerticalOffset;
+                Assert.True(stoppedOffset >= 408, "Stopping a tween must retain its current position.");
+                PumpDispatcher(TimeSpan.FromMilliseconds(260));
+                Assert.InRange(viewer.VerticalOffset, stoppedOffset - 1, stoppedOffset + 1);
+            }
+            finally { MotionPreferences.Configure(reduceEffects); }
             viewer.ScrollToVerticalOffset(300);
             PumpDispatcher(TimeSpan.FromMilliseconds(40));
             static void Wheel(ScrollViewer target, int delta) => target.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, delta)
@@ -112,6 +143,8 @@ public sealed partial class PageSmokeTests
                 Assert.True(homeScroll.VerticalOffset < heldOffset);
                 var bar = (ScrollBar)homeScroll.Template.FindName("PART_VerticalScrollBar", homeScroll);
                 var thumbOffset = Math.Min(180, homeScroll.ScrollableHeight);
+                // The real thumb changes Value before raising its routed Scroll event.
+                bar.Value = thumbOffset;
                 bar.RaiseEvent(new ScrollEventArgs(ScrollEventType.ThumbTrack, thumbOffset) { RoutedEvent = ScrollBar.ScrollEvent });
                 PumpDispatcher(TimeSpan.FromMilliseconds(240));
                 Assert.InRange(homeScroll.VerticalOffset, thumbOffset - 1, thumbOffset + 1);
