@@ -320,20 +320,31 @@ public sealed partial class PageSmokeTests
         PumpUntil(() => library.PagedCatalogItems.Count == 5 && !library.IsCatalogLoading);
         PumpDispatcher(TimeSpan.FromMilliseconds(400));
         window.UpdateLayout();
-        SaveVisual(window, "games.png");
         var page = Descendants<LibraryPage>(window).Single();
-        _phase = "Hover a gallery card";
         var hoveredCard = Descendants<Button>(page).First(button => button.Tag is SteamCatalogItem);
+        window.Activate();
+        _phase = "Capture gallery without hover";
+        var outsideCard = page.PointToScreen(new Point(page.ActualWidth - 12, 12));
+        Assert.True(MoveCursorAway((int)Math.Round(outsideCard.X), (int)Math.Round(outsideCard.Y)));
+        System.Windows.Input.Mouse.Synchronize();
+        PumpUntil(() => !hoveredCard.IsMouseOver);
+        PumpDispatcher(TimeSpan.FromMilliseconds(200));
+        SaveVisual(window, "games.png");
+        _phase = "Hover a gallery card";
         var cardSize = new Size(hoveredCard.ActualWidth, hoveredCard.ActualHeight);
         var cardPosition = hoveredCard.TranslatePoint(new Point(0,0), page);
-        window.Activate();
         var pointer = hoveredCard.PointToScreen(new Point(hoveredCard.ActualWidth / 2, hoveredCard.ActualHeight / 2));
         Assert.True(MoveCursorAway((int)Math.Round(pointer.X), (int)Math.Round(pointer.Y)));
+        System.Windows.Input.Mouse.Synchronize();
         PumpUntil(() => hoveredCard.IsMouseOver);
         PumpDispatcher(TimeSpan.FromMilliseconds(300));
         Assert.Equal(cardSize, new Size(hoveredCard.ActualWidth, hoveredCard.ActualHeight));
         Assert.Equal(cardPosition, hoveredCard.TranslatePoint(new Point(0,0), page));
         SaveVisual(window, "games-hover.png");
+        var screenshots = Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS")!;
+        Assert.False(File.ReadAllBytes(Path.Combine(screenshots,"games.png"))
+            .SequenceEqual(File.ReadAllBytes(Path.Combine(screenshots,"games-hover.png"))),
+            "The native mouse hover must produce a visible card highlight.");
         MoveCursorAway(0,0);
         PumpDispatcher(TimeSpan.FromMilliseconds(200));
         _phase = "Open game details";
