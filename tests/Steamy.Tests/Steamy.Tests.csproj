@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\src\Steamy\Services\Storage\GameActivityStore.cs" Link="Linked\GameActivityStore.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Catalog\GameSearchIndex.cs" Link="Linked\GameSearchIndex.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Catalog\SearchHistoryStore.cs" Link="Linked\SearchHistoryStore.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Diagnostics\BoundedLogBuffer.cs" Link="Linked\BoundedLogBuffer.cs" />
     <Compile Include="..\..\src\Steamy\Services\Catalog\SpotlightCatalog.cs" Link="Linked\SpotlightCatalog.cs" />
     <Compile Include="..\..\src\Steamy\Services\Catalog\GitHubManifestIndex.cs" Link="Linked\GitHubManifestIndex.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\ManifestArchiveReader.cs" Link="Linked\ManifestArchiveReader.cs" />
@@ -18,7 +22,12 @@
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadJobPolicy.cs" Link="Linked\DownloadJobPolicy.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\LocalDownloadInspector.cs" Link="Linked\LocalDownloadInspector.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DepotResumeState.cs" Link="Linked\DepotResumeState.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\DownloadPreparation.cs" Link="Linked\DownloadPreparation.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadOperationRegistry.cs" Link="Linked\DownloadOperationRegistry.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\DownloadQueueScheduler.cs" Link="Linked\DownloadQueueScheduler.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\DownloadStorageGuard.cs" Link="Linked\DownloadStorageGuard.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\DownloadFailurePolicy.cs" Link="Linked\DownloadFailurePolicy.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\BundledModCapabilities.cs" Link="Linked\BundledModCapabilities.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\VdfParser.cs" Link="Linked\VdfParser.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ShareModels.cs" Link="Linked\ShareModels.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ManifestLibraryScanner.cs" Link="Linked\ManifestLibraryScanner.cs" />

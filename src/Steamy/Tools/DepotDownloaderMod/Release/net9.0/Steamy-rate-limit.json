@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "maxDownloadSpeed": true,
+  "singleFile": true,
+  "exeSha256": "74dc89af2dd1992fdf8f778e81c5f96bd0e1c1bd11ea0ed1c8a1a2e72f7240ad",
+  "upstreamRevision": "c0f62fb7f020087f36ae76adfc51fde1446af344"
+}

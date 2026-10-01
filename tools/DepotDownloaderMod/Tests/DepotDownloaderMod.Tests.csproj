@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <!-- Match the pinned upstream sources, which predate nullable annotations. -->
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(DepotDownloaderSource)' != ''">
+    <DefineConstants>$(DefineConstants);HAVE_PATCHED_FACTORY</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../RateLimitedReadStream.cs" Link="RateLimitedReadStream.cs" />
+    <Compile Condition="'$(DepotDownloaderSource)' != ''" Include="$(DepotDownloaderSource)/DepotDownloader/HttpClientFactory.cs" Link="PatchedHttpClientFactory.cs" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

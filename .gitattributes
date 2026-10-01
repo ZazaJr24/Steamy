@@ -1,0 +1,2 @@
+# The pinned upstream patch must keep LF on Windows runners.
+tools/DepotDownloaderMod/*.patch text eol=lf whitespace=-blank-at-eol

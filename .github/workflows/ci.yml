@@ -26,6 +26,13 @@ jobs:
         with:
           global-json-file: global.json
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test and build the pinned DepotDownloaderMod
+        run: python tools/DepotDownloaderMod/build.py
+
       - name: Restore
         run: dotnet restore Steamy.sln
 

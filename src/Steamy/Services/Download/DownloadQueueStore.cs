@@ -16,7 +16,17 @@ public interface IDownloadQueueStore
     Task RemoveAsync(DownloadJob job, CancellationToken cancellationToken = default);
 }
 
-public sealed class DownloadQueueStore : IDownloadQueueStore
+public sealed record DownloadQueuePosition(Guid JobId, long Position);
+public sealed record DownloadQueuePriority(Guid JobId, DownloadPriority Priority);
+
+/// <summary>Persists a complete reorder in one transaction, without replacing job progress.</summary>
+public interface IDownloadQueueOrderingStore
+{
+    Task SavePositionsAsync(IReadOnlyList<DownloadQueuePosition> positions, CancellationToken cancellationToken = default);
+    Task SavePriorityAsync(DownloadQueuePriority priority, CancellationToken cancellationToken = default);
+}
+
+public sealed class DownloadQueueStore : IDownloadQueueStore, IDownloadQueueOrderingStore
 {
     private readonly ILocalDatabase _database;
     private readonly ILoggingService _logging;
@@ -36,7 +46,7 @@ public sealed class DownloadQueueStore : IDownloadQueueStore
         {
             // No ConfigureAwait(false) here: the collection is bound to the UI, so it must be
             // filled on the thread that called this method.
-            rows = await _database.LoadDownloadJobsAsync(cancellationToken);
+            rows = await Task.Run(() => _database.LoadDownloadJobsAsync(cancellationToken), cancellationToken);
         }
         catch (Exception exception) when (exception is InvalidOperationException or Microsoft.Data.Sqlite.SqliteException or IOException)
         {
@@ -61,13 +71,44 @@ public sealed class DownloadQueueStore : IDownloadQueueStore
     public async Task SaveAsync(DownloadJob job, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);
+        // Microsoft.Data.Sqlite's async methods perform synchronous disk work. Snapshot
+        // the UI model before moving that work away from the dispatcher.
+        var row = ToRow(job);
         try
         {
-            await _database.SaveDownloadJobAsync(ToRow(job), cancellationToken).ConfigureAwait(false);
+            await Task.Run(() => _database.SaveDownloadJobAsync(row, cancellationToken), cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception exception) when (exception is InvalidOperationException or Microsoft.Data.Sqlite.SqliteException or IOException)
+        catch (Exception exception) when (exception is InvalidOperationException or Microsoft.Data.Sqlite.SqliteException or IOException or UnauthorizedAccessException)
         {
-            _logging.Add(LogLevel.Debug, "DownloadManager", $"Queue state could not be stored: {exception.GetType().Name}.");
+            _logging.Add(LogLevel.Warning, "DownloadManager", $"Queue state could not be stored: {exception.GetType().Name}.");
+            throw new DownloadQueuePersistenceException("The download queue could not be saved.", exception);
+        }
+    }
+
+    public async Task SavePositionsAsync(IReadOnlyList<DownloadQueuePosition> positions, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(positions);
+        if (_database is not IDownloadQueueOrderingDatabase ordering)
+            throw new InvalidOperationException("This database does not support saving queue order atomically.");
+        var snapshot = positions.ToArray();
+        try { await Task.Run(() => ordering.SaveDownloadPositionsAsync(snapshot, cancellationToken), cancellationToken).ConfigureAwait(false); }
+        catch (Exception exception) when (exception is InvalidOperationException or Microsoft.Data.Sqlite.SqliteException or IOException or UnauthorizedAccessException)
+        {
+            _logging.Add(LogLevel.Warning, "DownloadManager", $"Queue order could not be stored: {exception.GetType().Name}.");
+            throw new DownloadQueuePersistenceException("The download queue order could not be saved.", exception);
+        }
+    }
+
+    public async Task SavePriorityAsync(DownloadQueuePriority priority, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(priority);
+        if (_database is not IDownloadQueueOrderingDatabase ordering)
+            throw new InvalidOperationException("This database does not support saving queue priority.");
+        try { await Task.Run(() => ordering.SaveDownloadPriorityAsync(priority, cancellationToken), cancellationToken).ConfigureAwait(false); }
+        catch (Exception exception) when (exception is InvalidOperationException or Microsoft.Data.Sqlite.SqliteException or IOException or UnauthorizedAccessException)
+        {
+            _logging.Add(LogLevel.Warning, "DownloadManager", $"Queue priority could not be stored: {exception.GetType().Name}.");
+            throw new DownloadQueuePersistenceException("The download queue priority could not be saved.", exception);
         }
     }
 
@@ -76,11 +117,12 @@ public sealed class DownloadQueueStore : IDownloadQueueStore
         ArgumentNullException.ThrowIfNull(job);
         try
         {
-            await _database.DeleteDownloadJobAsync(job.Id, cancellationToken).ConfigureAwait(false);
+            await Task.Run(() => _database.DeleteDownloadJobAsync(job.Id, cancellationToken), cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception exception) when (exception is InvalidOperationException or Microsoft.Data.Sqlite.SqliteException or IOException)
+        catch (Exception exception) when (exception is InvalidOperationException or Microsoft.Data.Sqlite.SqliteException or IOException or UnauthorizedAccessException)
         {
-            _logging.Add(LogLevel.Debug, "DownloadManager", $"Queue entry could not be removed: {exception.GetType().Name}.");
+            _logging.Add(LogLevel.Warning, "DownloadManager", $"Queue entry could not be removed: {exception.GetType().Name}.");
+            throw new DownloadQueuePersistenceException("The download could not be removed from the saved queue.", exception);
         }
     }
 
@@ -104,6 +146,7 @@ public sealed class DownloadQueueStore : IDownloadQueueStore
             TotalSize = row.TotalSize,
             Started = row.Started,
             Priority = row.Priority,
+            QueuePosition = row.QueuePosition,
             Downloaded = row.Downloaded,
             DownloadMode = row.DownloadMode
         };
@@ -154,6 +197,7 @@ public sealed class DownloadQueueStore : IDownloadQueueStore
             job.Started,
             DateTime.Now,
             job.CoverImageUrl,
-            job.DownloadMode);
+            job.DownloadMode,
+            job.QueuePosition);
     }
 }

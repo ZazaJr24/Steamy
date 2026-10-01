@@ -3,11 +3,16 @@ using Steamy.Models;
 
 namespace Steamy.Services;
 
+public interface IDownloadOperationStatus
+{
+    bool IsOperationRunning(Guid jobId);
+}
+
 /// <summary>
 /// Coordinates queue jobs and delegates real work to the configured DepotDownloader adapter.
 /// A job remains reserved until its process, local checks and queue save have all finished.
 /// </summary>
-public sealed class DownloadManager : IDownloadManager, IDisposable
+public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus, IDisposable
 {
     private readonly IAppDataStore _store;
     private readonly ISettingsService _settingsService;
@@ -80,7 +85,15 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(job.TargetFolder) || !Directory.Exists(job.TargetFolder))
+            var storage = DownloadStorageGuard.Check(job.TargetFolder);
+            if (!storage.CanDownload)
+            {
+                SetFailure(job, storage.Message);
+                job.AppendLog(storage.Message);
+                return false;
+            }
+
+            if (!Directory.Exists(job.TargetFolder))
             {
                 try
                 {
@@ -169,6 +182,11 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
 
                 if (result.Succeeded || result.WasPaused || result.WasCancelled || _operations.IsPauseRequested(job.Id) || linked.IsCancellationRequested)
                     break;
+                if (!DownloadFailurePolicy.CanRetry(result.ErrorOutput + "\n" + result.Output))
+                {
+                    job.AppendLog("Automatic retry stopped — this failure needs your attention before another attempt.");
+                    break;
+                }
             }
 
             if (_operations.IsPauseRequested(job.Id) || result.WasPaused && !linked.IsCancellationRequested)
@@ -195,7 +213,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
                     ? FirstMeaningfulLine(result.ErrorOutput)
                     : DepotDownloaderOutputParser.ExtractFailureReason(result.Output)
                       ?? $"exit code {result.ExitCode?.ToString() ?? "unknown"}";
-                SetFailure(job, $"DepotDownloader failed: {detail}. No completed download was reported.");
+                SetFailure(job, $"DepotDownloader failed: {detail}. Existing files were kept; retry continues in the same folder.");
                 _logging.Add(LogLevel.Error, "DownloadManager", $"DepotDownloader failed ({detail}).", job.AppId, job.Id);
                 return false;
             }
@@ -219,14 +237,14 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         }
         catch (Exception exception)
         {
-            SetFailure(job, $"Download failed: {exception.GetType().Name}");
+            SetFailure(job, DownloadFailurePolicy.Describe(exception));
             _logging.Add(LogLevel.Error, "DownloadManager", $"Download failed: {exception.GetType().Name}.", job.AppId, job.Id);
             return false;
         }
         finally
         {
             job.Finished = job.IsTerminal || job.State == DownloadJobState.Paused ? DateTime.Now : job.Finished;
-            try { await _queueStore.SaveAsync(job).ConfigureAwait(false); }
+            try { await SaveFinalStateAsync(job).ConfigureAwait(false); }
             finally { UnregisterJob(job.Id); }
         }
     }
@@ -241,6 +259,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     public void UnregisterJob(Guid jobId) => _operations.Complete(jobId);
 
     public bool IsPauseRequested(Guid jobId) => _operations.IsPauseRequested(jobId);
+    public bool IsOperationRunning(Guid jobId) => _operations.IsRunning(jobId);
 
     public Task PauseAsync(DownloadJob job, CancellationToken cancellationToken = default) =>
         StopAsync(job, pause: true, cancellationToken);
@@ -335,7 +354,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         }
         finally
         {
-            try { await _queueStore.SaveAsync(job).ConfigureAwait(false); }
+            try { await SaveFinalStateAsync(job).ConfigureAwait(false); }
             finally { UnregisterJob(job.Id); }
         }
     }
@@ -370,6 +389,18 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         _logging.Add(LogLevel.Info, "DownloadManager", "Download completed.", job.AppId, job.Id);
         _notifications.Show("Download completed", $"{job.GameName} is ready.");
         return true;
+    }
+
+    private async Task SaveFinalStateAsync(DownloadJob job)
+    {
+        try { await _queueStore.SaveAsync(job).ConfigureAwait(false); }
+        catch (Exception exception)
+        {
+            const string warning = "Download state could not be saved — keep this app open and retry before closing it.";
+            job.Status = $"{job.Status} · {warning}";
+            job.AppendLog(warning);
+            _logging.Add(LogLevel.Warning, "DownloadManager", $"Final queue save failed: {exception.GetType().Name}.", job.AppId, job.Id);
+        }
     }
 
     private static void AppendProcessOutput(DownloadJob job, DepotDownloaderRunResult result)

@@ -28,25 +28,43 @@ public static class SmoothScroll
         private double _target;
         private int _generation;
         private bool _animating;
+        private bool _preferencesAttached;
         public ScrollState(ScrollViewer viewer)
         {
             _viewer = viewer;
             viewer.PreviewMouseWheel += OnWheel;
             viewer.Unloaded += OnUnloaded;
+            viewer.Loaded += OnLoaded;
             viewer.PreviewMouseDown += OnMouseDown;
             viewer.PreviewKeyDown += OnKeyDown;
+            if (viewer.IsLoaded) OnLoaded(viewer, new RoutedEventArgs());
         }
         public void Detach()
         {
             Stop();
             _viewer.PreviewMouseWheel -= OnWheel;
             _viewer.Unloaded -= OnUnloaded;
+            _viewer.Loaded -= OnLoaded;
             _viewer.PreviewMouseDown -= OnMouseDown;
             _viewer.PreviewKeyDown -= OnKeyDown;
+            MotionPreferences.Changed -= OnPreferencesChanged;
+            _preferencesAttached = false;
         }
+        private void OnPreferencesChanged(object? sender, EventArgs args) { if (!MotionPreferences.AnimationsEnabled) Stop(); }
         private void OnMouseDown(object sender, MouseButtonEventArgs args) { if (_animating) Stop(); }
         private void OnKeyDown(object sender, KeyEventArgs args) { if (_animating) Stop(); }
-        private void OnUnloaded(object sender, RoutedEventArgs args) => Stop();
+        private void OnLoaded(object sender, RoutedEventArgs args)
+        {
+            if (_preferencesAttached) return;
+            MotionPreferences.Changed += OnPreferencesChanged;
+            _preferencesAttached = true;
+        }
+        private void OnUnloaded(object sender, RoutedEventArgs args)
+        {
+            Stop();
+            MotionPreferences.Changed -= OnPreferencesChanged;
+            _preferencesAttached = false;
+        }
         private void Stop()
         {
             _generation++;
@@ -69,7 +87,7 @@ public static class SmoothScroll
             if (Math.Abs(_target - current) < 0.5) return;
             args.Handled = true;
             var generation = ++_generation;
-            if (!SystemParameters.ClientAreaAnimation)
+            if (!MotionPreferences.AnimationsEnabled)
             {
                 _viewer.BeginAnimation(OffsetProperty, null);
                 _viewer.SetCurrentValue(OffsetProperty, _target);

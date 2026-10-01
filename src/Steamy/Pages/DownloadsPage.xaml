@@ -18,13 +18,13 @@
       <GradientStop Color="#000A0D14" Offset="0.3" />
       <GradientStop Color="#E80A0D14" Offset="1" />
     </LinearGradientBrush>
-    <!-- Queue row: crisp glass card, lights up on hover -->
+    <!-- Queue row: a solid card with a quiet hover outline. -->
     <Style x:Key="QueueRow" TargetType="Border" BasedOn="{StaticResource JobCardEntrance}">
-      <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="18" />
-      <Setter Property="Padding" Value="14" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="12" />
       <Setter Property="Margin" Value="0" />
       <Style.Triggers>
         <Trigger Property="IsMouseOver" Value="True">
@@ -32,6 +32,11 @@
           <Setter Property="BorderBrush" Value="{DynamicResource ControlHoverBrush}" />
         </Trigger>
       </Style.Triggers>
+    </Style>
+
+    <Style x:Key="QueueOnlyButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+      <Setter Property="Visibility" Value="Collapsed" />
+      <Style.Triggers><DataTrigger Binding="{Binding StateLabel}" Value="Queued"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers>
     </Style>
 
     <Style x:Key="HideWhenEmpty" TargetType="TextBlock" BasedOn="{StaticResource JobNumberText}">
@@ -74,6 +79,9 @@
               </Border>
               <TextBlock Text="{Binding AppLabel}" Style="{StaticResource CaptionStyle}" Margin="10,0,0,0" VerticalAlignment="Center" />
               <TextBlock Text="{Binding SourceLabel}" Style="{StaticResource CaptionStyle}" Foreground="{DynamicResource AccentBrush}" Margin="10,0,0,0" VerticalAlignment="Center" ToolTip="{Binding DownloadMode}" />
+              <TextBlock Text="{Binding Priority, StringFormat='Priority: {0}'}" Margin="10,0,0,0" VerticalAlignment="Center">
+                <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource CaptionStyle}"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding StateLabel}" Value="Queued"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+              </TextBlock>
             </WrapPanel>
             <Grid Margin="0,10,0,0">
               <Grid.ColumnDefinitions>
@@ -97,6 +105,15 @@
 
           <!-- Actions -->
           <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+            <ui:Button Icon="{ui:SymbolIcon ArrowUp24}" ToolTip="Move up within this priority" AutomationProperties.Name="Move download up"
+                       Style="{StaticResource QueueOnlyButton}" Width="30" Height="30" Padding="0" CornerRadius="15"
+                       Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
+            <ui:Button Icon="{ui:SymbolIcon ArrowDown24}" ToolTip="Move down within this priority" AutomationProperties.Name="Move download down"
+                       Style="{StaticResource QueueOnlyButton}" Width="30" Height="30" Padding="0" CornerRadius="15"
+                       Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
+            <ui:Button Icon="{ui:SymbolIcon Star24}" ToolTip="Change priority: Normal → High → Low" AutomationProperties.Name="Change download priority"
+                       Style="{StaticResource QueueOnlyButton}" Width="30" Height="30" Padding="0" CornerRadius="15"
+                       Command="{Binding DataContext.CyclePriorityCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
             <ui:Button Icon="{ui:SymbolIcon Play24}" ToolTip="Start" AutomationProperties.Name="Start" Appearance="Primary"
                        Style="{StaticResource StartButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
                        Command="{Binding DataContext.StartCommand, RelativeSource={RelativeSource AncestorType=Page}}"
@@ -157,8 +174,12 @@
           <Run Text="{Binding CompletedCount, Mode=OneWay}" /><Run Text=" completed" />
         </TextBlock>
       </StackPanel>
-      <ui:Button Grid.Column="1" Content="Browse games" Icon="{ui:SymbolIcon Apps24}" Appearance="Primary"
-                 VerticalAlignment="Center" Command="{Binding NavigateLibraryCommand}" Padding="18,10" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <ui:Button Content="Start queue" Icon="{ui:SymbolIcon Play24}" Appearance="Primary" Command="{Binding StartQueuedCommand}" Margin="0,0,8,0" />
+        <ui:Button Content="Stop queue" Command="{Binding StopQueueCommand}" Margin="0,0,8,0" Visibility="{Binding IsQueueRunning, Converter={StaticResource BoolVis}}"
+                   ToolTip="Stop starting waiting jobs. Running downloads keep their own Pause and Cancel controls." />
+        <ui:Button Content="Browse games" Icon="{ui:SymbolIcon Apps24}" Command="{Binding NavigateLibraryCommand}" />
+      </StackPanel>
     </Grid>
 
     <Grid Grid.Row="1" x:Name="FeaturedPanel" Height="190" Margin="0,0,0,18" controls:EntranceMotion.Delay="20">
@@ -294,6 +315,18 @@
 
     <StackPanel Grid.Row="4" Margin="0,8,0,0">
       <TextBlock Text="{Binding ResultLabel}" Style="{StaticResource CaptionStyle}" />
+      <TextBlock Text="{Binding QueueStatus}" Style="{StaticResource CaptionStyle}" Margin="0,4,0,0" TextWrapping="Wrap" />
+      <Expander Header="Transfer controls" Margin="0,6,0,0">
+        <StackPanel Margin="14,10">
+          <WrapPanel>
+            <StackPanel Width="110" Margin="0,0,14,8"><TextBlock Text="Parallel jobs" Style="{StaticResource CaptionStyle}" Margin="0,0,0,5" /><ui:TextBox Text="{Binding ParallelJobsText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Parallel downloads" /></StackPanel>
+            <StackPanel Width="110" Margin="0,0,14,8"><TextBlock Text="Connections" Style="{StaticResource CaptionStyle}" Margin="0,0,0,5" /><ui:TextBox Text="{Binding ConnectionsText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Download connections" /></StackPanel>
+            <StackPanel Width="140" Margin="0,0,14,8"><TextBlock Text="Mod limit · MiB/s" Style="{StaticResource CaptionStyle}" Margin="0,0,0,5" /><ui:TextBox Text="{Binding RateLimitText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Bundled Mod speed limit in MiB per second per game" ToolTip="Per game with the bundled Mod, applies on next start or resume. 0 = unlimited. Standard and custom unpatched tools do not support this limit." /></StackPanel>
+            <ui:Button Content="Apply" Command="{Binding ApplyTransferSettingsCommand}" Appearance="Primary" VerticalAlignment="Center" Margin="0,10,0,0" />
+          </WrapPanel>
+          <TextBlock Text="{Binding TransferSettingsHint}" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Expander>
       <Expander Header="Details &amp; recovery" Margin="0,6,0,0" DataContext="{Binding SelectedJob}">
         <Expander.Style><Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
           <Style.Triggers><DataTrigger Binding="{Binding}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>

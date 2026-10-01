@@ -20,7 +20,7 @@
       <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style x:Key="SettingsCard" TargetType="Border" BasedOn="{StaticResource SurfaceCardStyle}">
-      <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
       <Style.Triggers>
         <Trigger Property="IsKeyboardFocusWithin" Value="True">
           <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -167,6 +167,16 @@
                 <TextBlock Text="Mica, Acrylic or Tabbed translucent background effect (Windows 11). Applied immediately." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
               </StackPanel></Grid>
             <ComboBox Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding BackdropStyles}" SelectedItem="{Binding Settings.BackdropStyle}" SelectionChanged="BackdropComboBox_SelectionChanged" />
+          </Grid>
+          <Grid Margin="0,0,0,18">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="41,0,24,0">
+              <TextBlock Text="Reduce effects" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Use instant transitions and clear backgrounds. Helpful on slower PCs; Windows motion preferences are always respected."
+                         Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+            </StackPanel>
+            <ui:ToggleSwitch x:Name="ReduceEffectsToggle" Grid.Column="1" IsChecked="{Binding Settings.ReduceEffects, Mode=TwoWay}"
+                             AutomationProperties.Name="Reduce effects" />
           </Grid>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="0.9*" /></Grid.ColumnDefinitions>

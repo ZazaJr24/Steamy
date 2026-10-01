@@ -13,6 +13,7 @@ namespace Steamy;
 public partial class App : Application
 {
     public static IServiceProvider Services { get; private set; } = null!;
+    private UiResponsivenessMonitor? _responsivenessMonitor;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -47,13 +48,13 @@ public partial class App : Application
         ApplySavedCulture();
 
         Services = new ServiceCollection().AddSteamyServices().BuildServiceProvider();
-        Services.GetRequiredService<ILocalDatabase>().Initialize();
         base.OnStartup(e);
         ApplySavedAppearance();
 
         var window = new MainWindow();
         MainWindow = window;
         window.Show();
+        _responsivenessMonitor = new UiResponsivenessMonitor(window, Services.GetRequiredService<ILoggingService>());
 
         ApplySavedBackdrop();
 
@@ -131,9 +132,24 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _responsivenessMonitor?.Dispose();
         SaveAllDownloads();
-        KillDepotDownloaderProcesses();
+        StopOwnedDownloads();
+        FlushLogsOnExit();
         base.OnExit(e);
+    }
+
+    private static void FlushLogsOnExit()
+    {
+        try
+        {
+            if (Services?.GetService<ILoggingService>() is not InMemoryLoggingService logging) return;
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            // Persistence runs on a worker and never waits for the UI dispatcher. A busy or
+            // failing disk cannot keep application shutdown waiting indefinitely.
+            logging.FlushAsync(deadline.Token).GetAwaiter().GetResult();
+        }
+        catch { }
     }
 
     private static void SaveAllDownloads()
@@ -142,26 +158,24 @@ public partial class App : Application
         {
             var store = Services.GetRequiredService<IAppDataStore>();
             var queueStore = Services.GetRequiredService<IDownloadQueueStore>();
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             foreach (var job in store.Downloads.ToList())
             {
-                try { queueStore.SaveAsync(job).GetAwaiter().GetResult(); }
+                if (deadline.IsCancellationRequested) break;
+                try { queueStore.SaveAsync(job, deadline.Token).WaitAsync(deadline.Token).GetAwaiter().GetResult(); }
+                catch (OperationCanceledException) { break; }
                 catch { }
             }
         }
         catch { }
     }
 
-    private static void KillDepotDownloaderProcesses()
+    private static void StopOwnedDownloads()
     {
-        try
-        {
-            foreach (var proc in Process.GetProcessesByName("DepotDownloaderMod"))
-            {
-                try { proc.Kill(true); } catch { }
-                proc.Dispose();
-            }
-        }
-        catch { }
+        // Cancelling registered operations invokes their process-tree cancellation hooks.
+        // Independently launched downloader processes belong to the user.
+        try { (Services?.GetService<IDownloadManager>() as IDisposable)?.Dispose(); } catch { }
+        try { (Services?.GetService<IDepotDownloaderService>() as IDisposable)?.Dispose(); } catch { }
     }
 
     /// <summary>

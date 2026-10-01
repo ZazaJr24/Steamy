@@ -3,6 +3,34 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.3.10
+
+### Added
+- A three-step download assistant: source, source-provided depots/manifest versions, then location with final target and free space.
+- Favorites for installed and catalog games, a Favorites filter, and recently opened games recorded by Steamy.
+- Typo-tolerant and punctuation-aware title search, recent queries and cover suggestions.
+- Queue priority, persistent ordering and transfer controls directly on Downloads.
+- A real per-game speed limit for the bundled DepotDownloaderMod, shared by its parallel HTTP connections. The existing fork is pinned, rebuilt and tested; GPL license and complete patched source are included.
+- Reduce effects setting for optional animation, gallery blur and native transparency.
+- Local UI stall diagnostics and bounded log batching to keep bursts off the UI thread.
+
+### Improved
+- Quieter opaque game selection surfaces, compact download cards and shorter, stable-hit-area animations.
+- A running download can continue while another game's download assistant is opened.
+- The README explains download setup and includes Windows screenshots of each step.
+
+### Fixed
+- Download start uses an immutable source snapshot and the exact selected depot versions, without a second provider fetch.
+- Resume rejects missing or corrupt saved selections instead of silently switching to current source manifests; New selection offers explicit recovery while retaining files.
+- Selected manifests, decryption keys and resume state are staged before launch; concurrent operations for the same app and folder are serialized.
+- Queue restart counts already-running or still-finishing jobs against the parallel limit.
+- Reorder and priority changes persist atomically, preserving progress and showing storage failures.
+- Downloads are not started when their initial queue save fails; final save failures remain visible.
+- Stale preparation, artwork and transfer results cannot overwrite a newer game dialog.
+- Queue and log SQLite work runs outside the UI dispatcher, including initial database setup.
+- Log buffers, artwork work and motion subscriptions remain bounded; shutdown queue/log flushing has timeouts.
+- App shutdown stops its own registered download processes instead of killing unrelated tools by executable name.
+
 ## 0.3.9
 
 ### Added

@@ -25,6 +25,7 @@ public static class CardMotion
         public Point OriginalOrigin;
         public bool Pressed;
         public int Revision;
+        public EventHandler? PreferencesChanged;
     }
 
     private static void OnEnabledChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
@@ -57,6 +58,12 @@ public static class CardMotion
         target.RenderTransformOrigin = new Point(0.5, 0.5);
         target.RenderTransform = group;
         element.SetValue(StateProperty, state);
+        state.PreferencesChanged = (_, _) =>
+        {
+            if (!MotionPreferences.AnimationsEnabled) element.BeginAnimation(UIElement.OpacityProperty, null);
+            Update(element);
+        };
+        MotionPreferences.Changed += state.PreferencesChanged;
         element.MouseEnter += Changed;
         element.MouseLeave += Changed;
         element.GotKeyboardFocus += FocusChanged;
@@ -100,9 +107,10 @@ public static class CardMotion
     private static void Update(FrameworkElement element)
     {
         if (element.GetValue(StateProperty) is not MotionState state) return;
-        var hover = element.IsMouseOver || element.IsKeyboardFocusWithin;
-        var scale = state.Pressed ? 0.985 : hover ? 1.008 : 1;
-        var lift = state.Pressed ? -1 : hover ? -3 : 0;
+        var motion = MotionPreferences.AnimationsEnabled;
+        var hover = motion && (element.IsMouseOver || element.IsKeyboardFocusWithin);
+        var scale = motion && state.Pressed ? 0.99 : hover ? 1.005 : 1;
+        var lift = motion && state.Pressed ? -0.5 : hover ? -2 : 0;
         var revision = ++state.Revision;
         Animate(state.Scale, ScaleTransform.ScaleXProperty, scale, state, revision);
         Animate(state.Scale, ScaleTransform.ScaleYProperty, scale, state, revision);
@@ -112,7 +120,7 @@ public static class CardMotion
     {
         var previous = (double)target.GetValue(property);
         target.SetValue(property, value);
-        if (!SystemParameters.ClientAreaAnimation)
+        if (!MotionPreferences.AnimationsEnabled)
         {
             target.BeginAnimation(property, null);
             return;
@@ -140,6 +148,7 @@ public static class CardMotion
     private static void Reset(FrameworkElement element)
     {
         if (element.GetValue(StateProperty) is not MotionState state) return;
+        MotionPreferences.Changed -= state.PreferencesChanged;
         state.Revision++;
         state.Scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
         state.Scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);

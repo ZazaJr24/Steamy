@@ -11,7 +11,7 @@
 </p>
 <p align="center"><a href="#start-playing">Get started</a> · <a href="#inside-steamy">Features</a> · <a href="#a-closer-look">Screenshots</a> · <a href="#build-it-yourself">Build</a> · <a href="#credits">Credits</a></p>
 
-<p align="center"><img src="docs/screenshots/dashboard.png" width="1044" alt="Steamy's glass dashboard with automatic new and upcoming games, a sample installed library and download queue" /></p>
+<p align="center"><img src="docs/screenshots/dashboard.png" width="1044" alt="Steamy dashboard with new and upcoming games, favorites, recently opened games and download queue" /></p>
 
 ## Start playing
 
@@ -27,15 +27,15 @@ Already using Steamy? Open **Settings → Check now** to get the latest release.
 
 | Your next stop | What you'll find |
 | --- | --- |
-| **Dashboard** | An original glass layout with soft blue and violet light, your installed games and a compact queue overview. |
+| **Dashboard** | Your favorites, games recently opened through Steamy, installed library and a compact queue overview in an original, quieter layout. |
 | **Spotlight** | New and upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
-| **Games** | A responsive cover grid, quick search by title or App ID, sorting, source filters and a detail dialog over a blurred background. |
-| **Downloads** | Progress, speed, time left and a transfer graph. Pause, resume, cancel, retry and verify & repair, with the saved source and target folder retained. |
-| **Settings** | Searchable categories, dark and light themes, Windows Mica/Acrylic, download limits, network options and source connections. |
+| **Games** | A cover grid with calmer solid surfaces, typo-tolerant title/App ID search, recent queries, favorites, sorting and source filters. |
+| **Downloads** | A source → depots & version → location assistant, plus a compact queue with priority, reordering, transfer controls, pause, resume and verify & repair. |
+| **Settings** | Searchable categories, dark/light themes, reduced effects, Windows backdrop options, download limits, network options and source connections. |
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
 | **Fixes** | Browse your configured fixes repository. **Hypervisor Fixes is Coming soon** and does not install anything yet. |
 
-Cards lift gently on hover and respond to clicks. Page entrances, scrolling and dialogs use short transitions; animation follows the Windows motion preference. Desktop transparency depends on your selected backdrop and Windows support.
+Cards respond with short hover and click transitions while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → Appearance → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
 
 ### A Spotlight that keeps moving
 
@@ -45,7 +45,15 @@ The app checks for feed updates in the background, shares concurrent requests an
 
 ### Downloads you can come back to
 
-Queue a game, choose its folder and let the downloader work. Pausing retains downloaded files and saved depot/manifest information. Resume uses the original download mode and source; duplicate jobs targeting the same folder are rejected.
+Open a game and follow three steps:
+
+1. **Source** — choose a provider and load its available depot metadata.
+2. **Depots & version** — select only the depots you want. Choose a manifest version from those actually supplied by that source; build labels and sizes appear when the source includes them.
+3. **Location** — review the selected depots, final game folder and available drive space, then download.
+
+Pausing retains existing files and the exact selected depot manifests. Resume uses that saved selection without asking a provider for newer versions. Missing or corrupt saved data produces a clear error; **New selection** starts an explicit new setup. Duplicate jobs targeting the same folder are rejected.
+
+Waiting jobs can be reordered or prioritized; **Start queue** respects the selected parallel limit and existing running jobs. Transfer controls are directly on Downloads. The bundled Mod supports a real **MiB/s limit per game**, shared across its parallel HTTP connections and applied at start/resume. Standard or custom unpatched tools do not receive that option.
 
 **Verify & repair** asks DepotDownloader to check and repair the files. The separate **local file check** reports what is already on disk. Queue actions show errors in the app, and waiting jobs are checked again before they start.
 
@@ -76,9 +84,18 @@ Screenshots are captured from the actual Windows app using a sample library and 
 
 ![The Games grid](docs/screenshots/games.png)
 
-**Game details** — the selected game stays sharp over a blurred gallery.
+**Download setup** — choose a source while the game stays sharp over a blurred gallery.
 
-![Game details over the blurred background](docs/screenshots/game-details.png)
+![Source selection over the blurred background](docs/screenshots/game-details.png)
+
+<details>
+<summary>Depot/version selection and download location</summary>
+
+![Choose depot versions supplied by the source](docs/screenshots/download-depots.png)
+
+![Review your selection, target folder and free space](docs/screenshots/download-location.png)
+
+</details>
 
 **Downloads** — see what's running, what's next and what's ready to resume.
 
@@ -109,7 +126,7 @@ dotnet test tests/Steamy.UiTests/Steamy.UiTests.csproj -c Release
 ./run.ps1
 ```
 
-GitHub Actions builds and tests `main` on Windows. The UI checks exercise the real view models, layout in both themes, search, game dialogs and download queue interactions using offline test services. The screenshot workflow renders the app and updates this page's images.
+GitHub Actions rebuilds the pinned Mod tool and builds/tests `main` on Windows. The UI checks exercise the real view models, both themes, search, favorites, all download assistant stages, pause/resume, stale requests and queue persistence failures using offline test services. The screenshot workflow renders the app and updates this page's images.
 
 <details>
 <summary>Project map and automated discovery</summary>
@@ -120,6 +137,7 @@ GitHub Actions builds and tests `main` on Windows. The UI checks exercise the re
 - `src/Steamy/Controls` — grid, artwork, scrolling and motion.
 - `tests/Steamy.Tests` — core and download policy tests.
 - `tests/Steamy.UiTests` — Windows layout and interaction tests.
+- `tools/DepotDownloaderMod` — pinned fork patch, build script and shared rate limiter tests.
 - `scripts/update_spotlight.py` — public Steam metadata → discovery feed; no API key or extra Python packages.
 - `.github/workflows/spotlight.yml` — daily discovery refresh, also runnable manually.
 
@@ -133,7 +151,7 @@ Steamy is maintained by [ZazaJr24](https://github.com/ZazaJr24). Thanks to the a
 
 | Project | Creator / community | Used for |
 | --- | --- | --- |
-| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod) | SteamAutoCracks and SteamRE contributors | Bundled Mod downloader, distributed with its license |
+| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod) | SteamAutoCracks and SteamRE contributors | Bundled Mod downloader; [pinned patch, build and tests](tools/DepotDownloaderMod), GPL license and complete corresponding source included |
 | [DepotDownloader](https://github.com/SteamRE/DepotDownloader) | SteamRE | Standard depot downloader |
 | [SushiTools games repository](https://github.com/sushi-dev55/sushitools-games-repo) | [sushi-dev55](https://github.com/sushi-dev55) · [SushiTools server](https://discord.gg/sushitools) | Free Lua metadata and depot manifests, used under MIT |
 | [Steamless](https://github.com/atom0s/Steamless) | atom0s | Steamless engine |
