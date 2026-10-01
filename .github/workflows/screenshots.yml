@@ -21,6 +21,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Fetch public artwork for the sample library
         shell: pwsh
         run: |
@@ -65,19 +68,6 @@ jobs:
             artifacts/test-results/
           if-no-files-found: ignore
       - name: Update README images on main
-        shell: pwsh
-        run: |
-          foreach ($file in @('dashboard.png', 'downloads.png', 'settings.png', 'games.png', 'games-hover.png', 'game-details.png', 'local-package.png', 'download-depots.png', 'download-location.png', 'hypervisor-fixes.png', 'game-fixes.png', 'dlc-unlocker.png')) {
-            Copy-Item "artifacts/ui/$file" "docs/screenshots/$file" -Force
-          }
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- docs/screenshots/
-          git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) { exit 0 }
-          git commit -m 'docs: refresh screenshots from the Windows app'
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          git pull --rebase origin main
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          git -c http.postBuffer=524288000 push origin HEAD:main
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/publish_screenshots.py
