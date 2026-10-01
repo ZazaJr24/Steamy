@@ -212,6 +212,10 @@ public sealed partial class PageSmokeTests
         Assert.Equal(firstId, model.FeaturedGame!.Game.AppId);
         Assert.Contains(model.DiscoverGames, feature => feature.Metadata.ComingSoon);
         Assert.Equal("UPCOMING", model.DiscoverGames.First(feature => feature.Metadata.ComingSoon).ReleaseStatus);
+        model.SelectFeaturedCommand.Execute(model.DiscoverGames[2]);
+        Assert.Equal(model.DiscoverGames[2], model.FeaturedGame);
+        Assert.Single(model.SpotlightPreviews, feature => feature.IsSelected);
+        model.SelectFeaturedCommand.Execute(model.DiscoverGames[0]);
         Assert.False(model.HasRecentGames); // Discovery must not pretend these games are installed.
         model.PreviousFeaturedCommand.Execute(null);
         var lastId = model.DiscoverGames[^1].Game.AppId;
@@ -322,6 +326,7 @@ public sealed partial class PageSmokeTests
         window.UpdateLayout();
         SaveVisual(window, "game-details.png");
         page.SelectDownloadSource(ManifestSource.Local);
+        PumpDispatcher(TimeSpan.FromMilliseconds(150));
         window.UpdateLayout();
         SaveVisual(window, "local-package.png");
         page.SelectDownloadSource(ManifestSource.Sushi);

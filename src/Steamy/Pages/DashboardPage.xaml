@@ -107,25 +107,46 @@
               <TextBlock Text="SPOTLIGHT" FontSize="10" FontWeight="SemiBold" Foreground="#D7EBFF" />
             </StackPanel>
           </Border>
-          <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="26" CornerRadius="10" Padding="14,9" Background="#D00B1422">
-            <StackPanel><TextBlock Text="RELEASE COUNTDOWN" Foreground="#91A9C7" FontSize="9" />
-              <TextBlock Text="{Binding Countdown}" Foreground="#EDF5FF" FontSize="18" FontWeight="SemiBold" Margin="0,4,0,0" />
-            </StackPanel>
-          </Border>
+          <ItemsControl x:Name="SpotlightPreviews" ItemsSource="{Binding DataContext.SpotlightPreviews, RelativeSource={RelativeSource AncestorType=Page}}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,74,24,0" Width="106">
+            <ItemsControl.ItemTemplate><DataTemplate>
+              <Button Style="{StaticResource CoverCardButton}" Height="52" Margin="0,0,0,8" ToolTip="{Binding Game.Name}"
+                      Command="{Binding DataContext.SelectFeaturedCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}">
+                <Border CornerRadius="8" BorderThickness="2" Padding="2" Background="#C00B1422">
+                  <Border.Style><Style TargetType="Border"><Setter Property="BorderBrush" Value="#39475A" />
+                    <Style.Triggers><DataTrigger Binding="{Binding IsSelected}" Value="True"><Setter Property="BorderBrush" Value="#79B5FF" /></DataTrigger></Style.Triggers>
+                  </Style></Border.Style>
+                  <Border CornerRadius="5"><Border.Background><ImageBrush ImageSource="{Binding Game.HeaderImage}" Stretch="UniformToFill" /></Border.Background></Border>
+                </Border>
+              </Button>
+            </DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
           <Grid x:Name="SpotlightFooter" VerticalAlignment="Bottom" Margin="26,26">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel x:Name="SpotlightDetails" Grid.ColumnSpan="2" HorizontalAlignment="Left" MaxWidth="720">
-              <TextBlock x:Name="SpotlightTitle" Text="{Binding Game.Name}" FontSize="36" FontWeight="SemiBold" Foreground="#F6F8FC" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="104" ToolTip="{Binding Game.Name}" />
+              <TextBlock x:Name="SpotlightTitle" Text="{Binding Game.Name}" FontSize="46" FontWeight="Bold" Foreground="#F6F8FC" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="116" ToolTip="{Binding Game.Name}" />
               <TextBlock Text="{Binding Publisher}" Foreground="#A4B9D5" FontSize="12" Margin="0,8,0,0" TextTrimming="CharacterEllipsis" />
               <TextBlock Foreground="#B9C9DF" FontSize="11" Margin="0,12,0,0" TextTrimming="CharacterEllipsis">
                 <Run Text="{Binding ReleaseStatus, Mode=OneWay}" /><Run Text="  /  " /><Run Text="{Binding ReleaseLabel, Mode=OneWay}" />
               </TextBlock>
+              <TextBlock Text="{Binding Description}" Foreground="#CAD6E6" FontSize="13" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                         Height="40" LineHeight="20" LineStackingStrategy="BlockLineHeight" Margin="0,12,0,0" />
             </StackPanel>
             <StackPanel x:Name="SpotlightActions" Grid.Row="1" Orientation="Horizontal" Margin="0,20,0,0" HorizontalAlignment="Left"
                         DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
-              <ui:Button Content="{Binding FeaturedDownloadLabel}" Appearance="Primary" Icon="{ui:SymbolIcon ArrowDownload24}" Padding="18,10" Command="{Binding DownloadFeaturedCommand}" ToolTip="Choose a source and check whether downloadable depots are available" />
-              <ui:Button Content="View game" Foreground="#E2ECFA" Background="#30152134" Appearance="Transparent" Padding="14,10" Margin="10,0,0,0" Command="{Binding ViewFeaturedCommand}" />
+              <Border x:Name="SpotlightCountdown" CornerRadius="11" Padding="14,8" BorderBrush="#5C7EB0" BorderThickness="1" Margin="0,0,10,0" MinWidth="118"
+                      ToolTip="Steam release countdown. The date does not confirm download availability.">
+                <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#D11D3D64" Offset="0" /><GradientStop Color="#DA0D192B" Offset="1" /></LinearGradientBrush></Border.Background>
+                <StackPanel><TextBlock Text="RELEASE COUNTDOWN" Foreground="#99BCE9" FontSize="8.5" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding FeaturedGame.Countdown}" Foreground="#F4F8FF" FontSize="21" FontWeight="SemiBold" Margin="0,2,0,0" />
+                </StackPanel>
+              </Border>
+              <ui:Button Content="{Binding FeaturedDownloadLabel}" Appearance="Primary" Background="#347FF0" Foreground="White" BorderBrush="#5798FF"
+                         Icon="{ui:SymbolIcon ArrowDownload24}" Padding="14,10" Height="52" VerticalAlignment="Center" Command="{Binding DownloadFeaturedCommand}"
+                         ToolTip="Choose a source and check whether downloadable depots are available" />
+              <ui:Button Content="View game" Icon="{ui:SymbolIcon Games24}" Foreground="#E2ECFA" Background="#600C1726" BorderBrush="#354D6E" BorderThickness="1"
+                         Appearance="Transparent" Padding="12,10" Height="52" VerticalAlignment="Center" Margin="10,0,0,0" Command="{Binding ViewFeaturedCommand}" />
             </StackPanel>
             <StackPanel x:Name="SpotlightPaging" Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="18,0,0,0"
                         DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
@@ -139,7 +160,7 @@
       </Border>
 
       <StackPanel Margin="0,0,0,26" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
-        <TextBlock Text="On the horizon" Style="{StaticResource SectionTitle}" Margin="0,0,0,12" />
+        <TextBlock Text="Upcoming releases" Style="{StaticResource SectionTitle}" Margin="0,0,0,12" />
         <ItemsControl ItemsSource="{Binding NewGames}">
           <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="185" MaxColumns="3" Spacing="22" CoverRatio="0.50" FooterHeight="48" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate><DataTemplate>
@@ -148,10 +169,10 @@
               <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="48" /></Grid.RowDefinitions>
                 <Border Grid.Row="0" CornerRadius="12" Background="{Binding Game.CoverColor}" />
-                <Border Grid.Row="0" CornerRadius="12" ClipToBounds="True" RenderOptions.BitmapScalingMode="HighQuality">
+                <Border Grid.Row="0" CornerRadius="12" SizeChanged="RecommendationArtwork_SizeChanged" ClipToBounds="True" RenderOptions.BitmapScalingMode="HighQuality">
                   <Image Source="{Binding Game.HeaderImage}" Stretch="UniformToFill" StretchDirection="DownOnly" />
                 </Border>
-                <Border Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Bottom" CornerRadius="7" Padding="9,5" Margin="10" Background="#EB0B1422">
+                <Border Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Bottom" CornerRadius="7" Padding="9,5" Margin="10" Background="#EB0B1422">
                   <TextBlock Text="{Binding Countdown}" Foreground="#D5E8FF" FontSize="11" FontWeight="SemiBold" />
                 </Border>
                 <StackPanel Grid.Row="1" Margin="2,9,2,0">

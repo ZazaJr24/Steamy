@@ -18,6 +18,11 @@ public sealed partial class PageSmokeTests
         var title = Assert.IsType<TextBlock>(page.FindName("SpotlightTitle"));
         var actions = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightActions"));
         var paging = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightPaging"));
+        var countdown = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightCountdown"));
+        var countdownStart = countdown.TranslatePoint(new Point(0,0), actions);
+        Assert.InRange(countdownStart.X, 0, 1);
+        Assert.InRange(countdownStart.Y, 0, 1);
+        Assert.True(countdown.ActualWidth >= 100 && countdown.ActualHeight >= 40);
         Assert.True(artwork.ActualWidth > 0);
         Assert.True(artwork.ActualHeight > 0);
         Assert.False(string.IsNullOrWhiteSpace(title.Text));

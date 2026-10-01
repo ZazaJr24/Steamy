@@ -35,7 +35,15 @@ public sealed partial class PageSmokeTests
             PumpUntil(() => model.PagedCatalogItems.Count == 1);
             var game = model.PagedCatalogItems[0];
             page.OpenDownloadSetup(game);
+            page.SelectDownloadSource(ManifestSource.Local);
+            Assert.False(((Button)page.FindName("StartButton")).IsEnabled);
             page.SelectLocalPackage(Path.Combine(directory, "metadata.zip"));
+            PumpDispatcher(TimeSpan.FromMilliseconds(100));
+            var localPanel = (FrameworkElement)page.FindName("LocalPackagePanel");
+            var sourceScroll = (ScrollViewer)page.FindName("SourceStepPanel");
+            var localTop = localPanel.TranslatePoint(new Point(0,0),sourceScroll).Y;
+            Assert.True(localTop >= -1 && localTop + localPanel.ActualHeight <= sourceScroll.ActualHeight + 1,
+                "Selecting Your package must reveal its input controls.");
             Assert.Equal(Visibility.Visible, ((FrameworkElement)page.FindName("LocalPackagePanel")).Visibility);
             AwaitWizardStep(page);
             Assert.Equal(ManifestSource.Local, downloads.Plans.Last().Source);
