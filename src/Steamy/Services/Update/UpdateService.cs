@@ -113,23 +113,22 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
         var tag = release.GetProperty("tag_name").GetString() ?? string.Empty;
         if (!Version.TryParse(tag.TrimStart('v', 'V'), out var parsed)) return null;
         var version = Normalize(parsed);
-        if (version <= currentVersion) return null;
+        if (version <= Normalize(currentVersion)) return null;
 
+        JsonElement? legacyAsset = null;
         foreach (var asset in release.GetProperty("assets").EnumerateArray())
         {
             var name = asset.GetProperty("name").GetString() ?? string.Empty;
-            if (!name.Equals("Steamy-latest.zip", StringComparison.OrdinalIgnoreCase)
-                && !name.Equals($"Steamy-{tag}.zip", StringComparison.OrdinalIgnoreCase)) continue;
-
-            return new UpdateInfo(
-                version,
-                tag,
-                new Uri(asset.GetProperty("browser_download_url").GetString()!),
-                asset.GetProperty("size").GetInt64());
+            if (name.Equals($"Steamy-{tag}.zip", StringComparison.OrdinalIgnoreCase))
+                return ReadAsset(asset, version, tag);
+            if (name.Equals("Steamy-latest.zip", StringComparison.OrdinalIgnoreCase)) legacyAsset = asset;
         }
-
-        return null;
+        return legacyAsset is { } fallback ? ReadAsset(fallback, version, tag) : null;
     }
+
+    private static UpdateInfo ReadAsset(JsonElement asset, Version version, string tag) => new(
+        version, tag, new Uri(asset.GetProperty("browser_download_url").GetString()!),
+        asset.GetProperty("size").GetInt64());
 
     public async Task InstallAsync(UpdateInfo update, IProgress<UpdateProgress>? progress = null, CancellationToken cancellationToken = default)
     {
