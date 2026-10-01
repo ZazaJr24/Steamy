@@ -110,6 +110,13 @@ Screenshots are captured from the actual Windows app using sample library, queue
 ![DLC Unlocker with separate scrolling game and DLC lists](docs/screenshots/dlc-unlocker.png)
 
 <details>
+<summary>Game Fixes gallery</summary>
+
+![Game Fixes with responsive covers and source-provided fixes](docs/screenshots/game-fixes.png)
+
+</details>
+
+<details>
 <summary>Hypervisor Fixes preview</summary>
 
 ![Hypervisor Fixes Coming soon page](docs/screenshots/hypervisor-fixes.png)

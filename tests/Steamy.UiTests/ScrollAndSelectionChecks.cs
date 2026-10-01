@@ -61,6 +61,22 @@ public sealed partial class PageSmokeTests
             WheelOver(image, -120);
             PumpDispatcher(TimeSpan.FromMilliseconds(240));
             Assert.True(homeScroll.VerticalOffset > 0, "Wheel input over the Spotlight artwork must scroll Home.");
+            var dashboardModel = (DashboardViewModel)dashboard.DataContext;
+            var hero = (FrameworkElement)dashboard.FindName("DashboardHero");
+            var originalHeroHeight = hero.ActualHeight;
+            homeScroll.ScrollToVerticalOffset(Math.Min(240, homeScroll.ScrollableHeight));
+            PumpDispatcher(TimeSpan.FromMilliseconds(60));
+            var scrolled = homeScroll.VerticalOffset;
+            for (var index = 0; index < 3; index++)
+            {
+                dashboardModel.NextFeaturedCommand.Execute(null);
+                // A binding/focus update can raise this even with no navigation key pressed.
+                image.BringIntoView();
+                PumpDispatcher(TimeSpan.FromMilliseconds(240));
+                Assert.InRange(homeScroll.VerticalOffset, scrolled - 1, scrolled + 1);
+                Assert.Equal(originalHeroHeight, hero.ActualHeight);
+            }
+
 
             OfflineServiceProxy.ScreenshotCatalog = Enumerable.Range(1000, 56).Select(id =>
                 new SteamCatalogItem { AppId = id, Name = $"Scroll fixture {id}", AppType = SteamCatalogAppType.Game }).ToArray();
@@ -103,6 +119,36 @@ public sealed partial class PageSmokeTests
                 { RoutedEvent = Keyboard.KeyDownEvent });
             PumpDispatcher(TimeSpan.FromMilliseconds(100));
             Assert.True(gallery.VerticalOffset < keyboardBefore, "PageUp must work while a game card has focus.");
+            var galleryOffset = gallery.VerticalOffset;
+            var galleryPosition = gallery.TranslatePoint(new Point(0, 0), library);
+            library.OpenDownloadSetup(model.PagedCatalogItems[0]);
+            PumpDispatcher(TimeSpan.FromMilliseconds(220));
+            Assert.Equal(galleryPosition, gallery.TranslatePoint(new Point(0, 0), library));
+            Assert.InRange(gallery.VerticalOffset, galleryOffset - 1, galleryOffset + 1);
+            library.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(library)!, 0, Key.Escape)
+                { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+            PumpDispatcher(TimeSpan.FromMilliseconds(220));
+            Assert.InRange(gallery.VerticalOffset, galleryOffset - 1, galleryOffset + 1);
+
+            Assert.True(window.RootNavigationView.Navigate(typeof(GameFixesPage)));
+            var fixesModel = provider.GetRequiredService<GameFixesViewModel>();
+            var fetch = ((IAsyncRelayCommand)fixesModel.FetchCommand).ExecuteAsync(null);
+            PumpUntil(() => fetch.IsCompleted);
+            fetch.GetAwaiter().GetResult();
+            window.UpdateLayout();
+            var fixesPage = Descendants<GameFixesPage>(window).Single();
+            var fixCard = Descendants<Button>(fixesPage).First(button => button.Tag is GameFixGameCard);
+            Assert.True(CardMotion.GetIsEnabled(fixCard));
+            fixCard.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            PumpDispatcher(TimeSpan.FromMilliseconds(250));
+            Assert.False(((Grid)fixesPage.FindName("MainContentGrid")).IsEnabled);
+            Assert.Equal(Visibility.Visible, ((Grid)fixesPage.FindName("OverlayGrid")).Visibility);
+            fixesPage.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(fixesPage)!, 0, Key.Escape)
+                { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+            PumpDispatcher(TimeSpan.FromMilliseconds(200));
+            Assert.Equal(Visibility.Collapsed, ((Grid)fixesPage.FindName("OverlayGrid")).Visibility);
+            Assert.True(((Grid)fixesPage.FindName("MainContentGrid")).IsEnabled);
+
         }
         finally
         {

@@ -34,7 +34,7 @@ public partial class DashboardPage : Page
             model.PropertyChanged -= SpotlightChanged;
             model.StopLiveStats(); model.StopSearch();
             _spotlightTimer.Stop();
-            DashboardHero.BeginAnimation(OpacityProperty, null);
+            SpotlightArtworkFrame.BeginAnimation(OpacityProperty, null);
         };
         _spotlightTimer.Tick += (_, _) =>
         {
@@ -53,7 +53,14 @@ public partial class DashboardPage : Page
 
     private void SpotlightChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
-        if (args.PropertyName == nameof(DashboardViewModel.FeaturedGame) && Controls.MotionPreferences.AnimationsEnabled) Controls.EntranceMotion.Reveal(DashboardHero);
+        if (args.PropertyName == nameof(DashboardViewModel.FeaturedGame) && Controls.MotionPreferences.AnimationsEnabled) Controls.EntranceMotion.Reveal(SpotlightArtworkFrame);
+    }
+
+    private void Dashboard_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs args)
+    {
+        // Focus and refreshed bindings must not pull a manually scrolled page back to
+        // Spotlight. Explicit keyboard navigation can still reveal the focused control.
+        if (!Controls.ScrollNavigation.IsNavigationKeyDown()) args.Handled = true;
     }
 
     private void ApplyResponsiveLayout(double width)
@@ -62,8 +69,9 @@ public partial class DashboardPage : Page
         var compact = width < 720;
         DashboardSearch.Width = width < 640 ? 220 : width < 900 ? 280 : 340;
         DashboardScroll.Padding = width < 640 ? new Thickness(18, 18, 18, 26) : new Thickness(28, 22, 28, 30);
-        SpotlightArtworkFrame.Height = width < 640 ? 176 : width < 1000 ? 204 : 240;
-        SpotlightTitle.FontSize = width < 640 ? 19 : 22;
+        DashboardHero.Height = width < 720 ? 320 : width < 1000 ? 300 : 340;
+        SpotlightArtworkFrame.Height = DashboardHero.Height - 2;
+        SpotlightTitle.FontSize = width < 640 ? 22 : 26;
         Grid.SetRow(SpotlightActions, compact ? 1 : 0);
         Grid.SetColumn(SpotlightActions, compact ? 0 : 1);
         Grid.SetColumnSpan(SpotlightActions, compact ? 2 : 1);
@@ -152,10 +160,10 @@ public partial class DownloadsPage : Page
         Unloaded += (_, _) => viewModel.StopLiveStats();
         SizeChanged += (_, e) =>
         {
-            var showNetwork = e.NewSize.Width >= 920 && e.NewSize.Height >= 620;
+            var showNetwork = e.NewSize.Width >= 740 && e.NewSize.Height >= 560;
             NetworkColumn.Width = new GridLength(showNetwork ? 226 : 0);
             NetworkCard.Visibility = showNetwork ? Visibility.Visible : Visibility.Collapsed;
-            FeaturedPanel.Height = 190;
+            FeaturedPanel.Height = e.NewSize.Height < 620 ? 190 : 236;
         };
     }
 
