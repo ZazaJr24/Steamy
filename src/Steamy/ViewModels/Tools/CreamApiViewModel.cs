@@ -402,7 +402,8 @@ public sealed class CreamApiViewModel : ObservableObject
         if (!int.TryParse(AppIdText, out var appId) || appId <= 0) return;
 
         _fetchCts?.Cancel();
-        _fetchCts = new CancellationTokenSource();
+        var cancellation = new CancellationTokenSource();
+        _fetchCts = cancellation;
         IsFetching = true;
         DlcList.Clear();
         OnPropertyChanged(nameof(DlcCountLabel));
@@ -410,7 +411,8 @@ public sealed class CreamApiViewModel : ObservableObject
 
         try
         {
-            var dlcs = await _creamApi.FetchDlcListAsync(appId, _fetchCts.Token);
+            var dlcs = await _creamApi.FetchDlcListAsync(appId, cancellation.Token);
+            if (!ReferenceEquals(_fetchCts, cancellation) || cancellation.IsCancellationRequested) return;
 
             foreach (var dlc in dlcs)
                 DlcList.Add(new CreamApiDlcItem { AppId = dlc.AppId, Name = dlc.Name });
@@ -421,19 +423,22 @@ public sealed class CreamApiViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            Status = "Cancelled.";
+            if (ReferenceEquals(_fetchCts, cancellation)) Status = "Cancelled.";
         }
         catch (Exception ex)
         {
-            Status = $"Fetch error: {ex.Message}";
+            if (ReferenceEquals(_fetchCts, cancellation)) Status = $"Fetch error: {ex.Message}";
         }
         finally
         {
-            IsFetching = false;
-            OnPropertyChanged(nameof(DlcCountLabel));
-            ApplyCommand.NotifyCanExecuteChanged();
-            _fetchCts?.Dispose();
-            _fetchCts = null;
+            if (ReferenceEquals(_fetchCts, cancellation))
+            {
+                IsFetching = false;
+                OnPropertyChanged(nameof(DlcCountLabel));
+                ApplyCommand.NotifyCanExecuteChanged();
+                _fetchCts = null;
+            }
+            cancellation.Dispose();
         }
     }
 

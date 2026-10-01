@@ -201,10 +201,16 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
             var image = Decode(bytes);
             if (image is null) return null;
 
-            Directory.CreateDirectory(_cacheDirectory);
-            await File.WriteAllBytesAsync(cachePath, bytes, cancellationToken);
+            try
+            {
+                Directory.CreateDirectory(_cacheDirectory);
+                await File.WriteAllBytesAsync(cachePath, bytes, cancellationToken);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            { /* A valid image remains usable when the optional disk cache is unavailable. */ }
             return image;
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { return null; }
         catch (OperationCanceledException) { throw; }
         catch { return null; }
     }

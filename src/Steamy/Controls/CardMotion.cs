@@ -73,7 +73,8 @@ public static class CardMotion
         element.LostMouseCapture += Release;
         element.PreviewKeyDown += KeyDown;
         element.PreviewKeyUp += KeyUp;
-        EntranceMotion.Reveal(element);
+        // Containers can be reloaded while scrolling or filtering. Keep their images
+        // fully visible; movement is reserved for deliberate hover and press actions.
     }
 
     private static void Changed(object sender, MouseEventArgs args)

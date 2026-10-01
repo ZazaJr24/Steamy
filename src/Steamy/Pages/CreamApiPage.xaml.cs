@@ -12,6 +12,14 @@ public partial class CreamApiPage : Page
     {
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<CreamApiViewModel>();
+        SizeChanged += (_, args) =>
+        {
+            var compact = args.NewSize.Width < 780;
+            System.Windows.Controls.Grid.SetRow(FolderField, compact ? 1 : 0);
+            System.Windows.Controls.Grid.SetColumn(FolderField, compact ? 0 : 2);
+            System.Windows.Controls.Grid.SetColumnSpan(FolderField, compact ? 5 : 1);
+            FolderField.Margin = compact ? new System.Windows.Thickness(0, 14, 0, 0) : new System.Windows.Thickness(0);
+        };
     }
 
     private CreamApiViewModel ViewModel => (CreamApiViewModel)DataContext;

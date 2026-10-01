@@ -3,6 +3,27 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.1
+
+- Added a direct Spotlight Download action that opens source selection instead of the Steam store.
+- Rebuilt the DLC Unlocker as a compact workspace with virtualized game/DLC lists, visible selection and fixed actions. Older DLC requests can no longer overwrite a newer game selection.
+- Fixed scroll reversal during animation, stopped repeated card entrance flicker, and improved artwork fallback after CDN timeouts or disk-cache failures.
+
+### Changed
+- Replaced the dashboard slogan and greeting block with full-width Spotlight artwork, clear release details, and compact library/continue/download cards.
+- Download setup now uses three separate pages: source, depots/version, and location. Game information keeps its small dialog and blurred gallery background.
+- Depot rows display the selection checkbox on the right, all source depots remain accessible in a virtualized list, and select-all updates the summary once.
+- Successful download starts save the queue row before opening Downloads; the registered transfer continues after leaving setup.
+
+### Added
+- Optional public Steam app-info metadata through a cached SteamCMD mirror: depot names, platforms, languages, DLC/shared content, and SteamDB links.
+- Steam sizes, compressed sizes, build labels and branches appear only when the manifest ID exactly matches the selected source version. Metadata never adds source depots, changes versions or refreshes resume pins.
+- Bounded requests, shared lookups, timeout/outage fallback and cache limits keep metadata optional.
+- Windows checks for separate setup pages, right-hand checkbox binding, source snapshot preservation and saved-first download navigation.
+
+### Documentation
+- Refreshed Windows dashboard and download-page screenshots, keeping the README download link on Latest.
+
 ## 0.3.10
 
 ### Added

@@ -29,6 +29,7 @@ public static class SmoothScroll
         private int _generation;
         private bool _animating;
         private bool _preferencesAttached;
+        private int _direction;
         public ScrollState(ScrollViewer viewer)
         {
             _viewer = viewer;
@@ -37,6 +38,7 @@ public static class SmoothScroll
             viewer.Loaded += OnLoaded;
             viewer.PreviewMouseDown += OnMouseDown;
             viewer.PreviewKeyDown += OnKeyDown;
+            viewer.SizeChanged += OnSizeChanged;
             if (viewer.IsLoaded) OnLoaded(viewer, new RoutedEventArgs());
         }
         public void Detach()
@@ -47,12 +49,14 @@ public static class SmoothScroll
             _viewer.Loaded -= OnLoaded;
             _viewer.PreviewMouseDown -= OnMouseDown;
             _viewer.PreviewKeyDown -= OnKeyDown;
+            _viewer.SizeChanged -= OnSizeChanged;
             MotionPreferences.Changed -= OnPreferencesChanged;
             _preferencesAttached = false;
         }
         private void OnPreferencesChanged(object? sender, EventArgs args) { if (!MotionPreferences.AnimationsEnabled) Stop(); }
         private void OnMouseDown(object sender, MouseButtonEventArgs args) { if (_animating) Stop(); }
         private void OnKeyDown(object sender, KeyEventArgs args) { if (_animating) Stop(); }
+        private void OnSizeChanged(object sender, SizeChangedEventArgs args) { if (_animating) Stop(); }
         private void OnLoaded(object sender, RoutedEventArgs args)
         {
             if (_preferencesAttached) return;
@@ -72,10 +76,13 @@ public static class SmoothScroll
             _viewer.SetCurrentValue(OffsetProperty, offset);
             _viewer.BeginAnimation(OffsetProperty, null);
             _animating = false;
+            _target = offset;
+            _direction = 0;
         }
         private void OnWheel(object sender, MouseWheelEventArgs args)
         {
-            if (args.Handled || Keyboard.Modifiers != ModifierKeys.None || _viewer.ScrollableHeight <= 0) return;
+            if (args.Handled || Keyboard.Modifiers != ModifierKeys.None || _viewer.ScrollableHeight <= 0
+                || _viewer.CanContentScroll) return; // Logical/virtualized lists own their offset units.
             // Nested lists and text controls retain their own wheel behavior.
             for (var element = args.OriginalSource as DependencyObject; element is not null && element != _viewer; element = element is Visual ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element))
                 if (element is ComboBox or TextBoxBase || element is ScrollViewer) return;
@@ -83,6 +90,9 @@ public static class SmoothScroll
             var lines = SystemParameters.WheelScrollLines;
             if (lines == 0) return;
             var distance = lines < 0 ? _viewer.ViewportHeight : Math.Max(1, lines) * 18;
+            var direction = Math.Sign(args.Delta);
+            if (_animating && direction != _direction) Stop(); // Reversal responds immediately, without accumulated momentum.
+            _direction = direction;
             _target = Math.Clamp((_animating ? _target : current) - args.Delta / 120d * distance, 0, _viewer.ScrollableHeight);
             if (Math.Abs(_target - current) < 0.5) return;
             args.Handled = true;

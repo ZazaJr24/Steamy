@@ -30,6 +30,38 @@ public sealed class PreparedDownloadServiceTests
     }
 
     [Fact]
+    public async Task SteamDisplayInformationCannotChangeTheSourceSelectionOrRefreshItDuringResume()
+    {
+        var metadata = new MetadataFixture();
+        using var fixture = new Fixture(metadata);
+        var preparation = await fixture.Service.PrepareDownloadAsync(100, ManifestSource.Sushi);
+        var plan = Assert.IsType<PreparedGameDownload>(preparation.Plan);
+        Assert.Equal(1, metadata.Calls);
+        Assert.Equal([101, 102], plan.Depots.Select(depot => depot.DepotId).ToArray());
+        var enriched = plan.Depots.Single(depot => depot.DepotId == 101);
+        Assert.Equal("Windows game content", enriched.Name);
+        Assert.Equal("999", enriched.DefaultManifestId);
+        var selected = enriched.Versions.Single(version => version.ManifestId == "111");
+        Assert.Equal(512L, selected.SizeBytes);
+        Assert.Equal("Build 42", selected.BuildLabel);
+        Assert.Equal("public", selected.BranchName);
+        var unmatched = enriched.Versions.Single(version => version.ManifestId == "999");
+        Assert.Equal(2048L, unmatched.SizeBytes);
+        Assert.Null(unmatched.BuildLabel);
+
+        await fixture.Service.DownloadPreparedAsync(plan, [new(101, "111")], fixture.Target);
+        var session = DepotResumeStateStore.SessionDirectory(fixture.Work, 100, fixture.Target);
+        Assert.Equal(new CachedDepotManifest(101, "111"), Assert.Single(DepotResumeStateStore.Read(session, 100, fixture.Target)!.Depots));
+        Assert.Equal("original older manifest", File.ReadAllText(Path.Combine(session, "101_111.manifest")));
+        Assert.Equal("101;aabbccddeeff0011", File.ReadAllText(Path.Combine(session, "100.key")).Trim());
+
+        await fixture.Service.ResumeDownloadAsync(100, fixture.Target);
+        Assert.Equal(1, metadata.Calls);
+        Assert.Equal(1, fixture.Source.Calls);
+        Assert.Equal(new CachedDepotManifest(101, "111"), Assert.Single(DepotResumeStateStore.Read(session, 100, fixture.Target)!.Depots));
+    }
+
+    [Fact]
     public async Task AChangingSourceCannotOverwriteAnotherPreparedVersion()
     {
         using var fixture = new Fixture();
@@ -270,14 +302,14 @@ public sealed class PreparedDownloadServiceTests
         public DeferredHttpHandler Http { get; } = new();
         public HttpClient Client { get; }
         public RyuuGameDownloadService Service { get; }
-        public Fixture()
+        public Fixture(ISteamDepotMetadataService? depotMetadata = null)
         {
             Source = new(Path.Combine(_root, "source"));
             Client = new(Http);
             Service = new(DispatchProxy.Create<ISettingsService, NoCallsProxy>(),
                 DispatchProxy.Create<ISecureCredentialService, NoCallsProxy>(),
                 DispatchProxy.Create<IRyuuSecureDownloadService, NoCallsProxy>(), Source,
-                DispatchProxy.Create<ILoggingService, NoCallsProxy>(), Client, Work, Path.Combine(_root, "missing-tools"));
+                DispatchProxy.Create<ILoggingService, NoCallsProxy>(), Client, Work, Path.Combine(_root, "missing-tools"), depotMetadata);
         }
         public void Dispose()
         {
@@ -285,6 +317,26 @@ public sealed class PreparedDownloadServiceTests
             Service.Dispose();
             Client.Dispose();
             if (System.IO.Directory.Exists(_root)) System.IO.Directory.Delete(_root, true);
+        }
+    }
+
+    private sealed class MetadataFixture : ISteamDepotMetadataService
+    {
+        public int Calls { get; private set; }
+        public Task<IReadOnlyList<PreparedDownloadDepot>> EnrichAsync(int appId,
+            IReadOnlyList<PreparedDownloadDepot> sourceDepots, CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            Assert.Equal(100, appId);
+            return Task.FromResult(SteamDepotMetadataReader.Enrich(sourceDepots,
+                new Dictionary<int, SteamDepotMetadata>
+                {
+                    [101] = new("Windows game content", "Game content", "Windows", "English", null, null,
+                        new Dictionary<string, SteamDepotManifestMetadata>
+                        {
+                            ["111"] = new("111", 512, 400, "Build 42", "public")
+                        })
+                }));
         }
     }
 

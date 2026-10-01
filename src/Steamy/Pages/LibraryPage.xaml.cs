@@ -37,13 +37,15 @@ public partial class LibraryPage : Page
     private bool _resumingExisting;
     private DownloadJob? _resumeJob;
     private int _wizardStep;
+    private bool _showingDownloadSetup;
     private bool _wizardBusy;
     private bool _sourceUnavailable;
     private PreparedGameDownload? _preparedDownload;
     private CancellationTokenSource? _preparationCts;
     private readonly ObservableCollection<DownloadDepotChoice> _depotChoices = new();
     private int _locationRevision;
-    public int DownloadWizardStep => _wizardStep;
+    private bool _batchDepotSelection;
+    public int DownloadWizardStep => _showingDownloadSetup ? _wizardStep : -1;
     public IReadOnlyList<DownloadDepotChoice> DownloadDepotChoices => _depotChoices;
     private readonly System.Windows.Threading.DispatcherTimer _backdropResizeTimer = new(System.Windows.Threading.DispatcherPriority.Background)
     { Interval = TimeSpan.FromMilliseconds(140) };
@@ -68,19 +70,26 @@ public partial class LibraryPage : Page
         InitializeComponent();
         DepotChoices.ItemsSource = _depotChoices;
         DataContext = App.Services.GetRequiredService<LibraryViewModel>();
+        Loaded += (_, _) =>
+        {
+            var model = (LibraryViewModel)DataContext;
+            if (model.RequestedDownload is not { } requested) return;
+            model.RequestedDownload = null;
+            OpenDownloadSetup(requested);
+        };
         _ = ((LibraryViewModel)DataContext).OnNavigatedToAsync();
         Unloaded += (_, _) => ResetOverlay();
         _backdropResizeTimer.Tick += (_, _) =>
         {
             _backdropResizeTimer.Stop();
-            if (OverlayGrid.Visibility == Visibility.Visible) CaptureBackdrop();
+            if (OverlayGrid.Visibility == Visibility.Visible && !_showingDownloadSetup) CaptureBackdrop();
         };
-        DialogPanel.SizeChanged += (_, _) => DialogPanel.Clip = new RectangleGeometry(new Rect(DialogPanel.RenderSize), 16, 16);
+        DialogPanel.SizeChanged += (_, _) => DialogPanel.Clip = new RectangleGeometry(new Rect(DialogPanel.RenderSize), _showingDownloadSetup ? 0 : 16, _showingDownloadSetup ? 0 : 16);
         SizeChanged += (_, _) =>
         {
-            DialogPanel.MaxWidth = Math.Max(0, ActualWidth - 32);
-            DialogPanel.MaxHeight = Math.Max(0, ActualHeight - 32);
-            if (OverlayGrid.Visibility == Visibility.Visible)
+            DialogPanel.MaxWidth = Math.Max(0, ActualWidth - (_showingDownloadSetup ? 0 : 32));
+            DialogPanel.MaxHeight = Math.Max(0, ActualHeight - (_showingDownloadSetup ? 0 : 32));
+            if (OverlayGrid.Visibility == Visibility.Visible && !_showingDownloadSetup)
             {
                 _backdropResizeTimer.Stop();
                 _backdropResizeTimer.Start();
@@ -110,10 +119,16 @@ public partial class LibraryPage : Page
         OpenGameDetails(item);
     }
 
-    public void OpenGameDetails(SteamCatalogItem item)
+    public void OpenGameDetails(SteamCatalogItem item) => OpenGame(item, setup: false);
+    public void OpenDownloadSetup(SteamCatalogItem item) => OpenGame(item, setup: true);
+
+    private void OpenGame(SteamCatalogItem item, bool setup)
     {
         if (_overlayClosing || _downloadRunning) return;
         ResetPreparedDownload();
+        _showingDownloadSetup = setup;
+        ConfigureOverlayLayout();
+        SourceStepPanel.IsEnabled = true;
         _selectedItem = item;
         _ = ((LibraryViewModel)DataContext).RememberSearchAsync();
         _selectedSource = ManifestSource.Sushi;
@@ -126,7 +141,8 @@ public partial class LibraryPage : Page
         PlayButton.Visibility = App.Services.GetRequiredService<IAppDataStore>().Games.Any(game => game.AppId == item.AppId && game.InstallState == GameInstallState.Installed)
             ? Visibility.Visible : Visibility.Collapsed;
         _ = UpdateFavoriteButtonAsync(item);
-        OverlayStatus.Text = "Choose a source, then select its depots and versions.";
+        GameInstallInfo.Text = PlayButton.Visibility == Visibility.Visible ? "Installed in your Steam library." : "Not installed in your Steam library.";
+        OverlayStatus.Text = "";
 
         OverlayCover.Source = item.HeaderImage ?? item.ArtworkImage;
         _artworkCts?.Cancel();
@@ -142,7 +158,9 @@ public partial class LibraryPage : Page
         SetOptionState(SourceSushi, _selectedSource == ManifestSource.Sushi);
         SourceAvailabilityText.Text = "";
 
-        _ = CheckSourceAvailabilityAsync(_selectedSource, item.AppId);
+        _availabilityCts?.Cancel();
+        _sourceUnavailable = false;
+        if (setup) _ = CheckSourceAvailabilityAsync(_selectedSource, item.AppId);
 
         var settings = App.Services.GetRequiredService<ISettingsService>().Load();
         _downloadPath = string.IsNullOrWhiteSpace(settings.DownloadFolder)
@@ -180,13 +198,38 @@ public partial class LibraryPage : Page
             SourceAvailabilityText.Foreground = TertiaryText;
         }
         SetWizardStep(resumable is null ? 0 : 2);
-        if (resumable is not null)
+        if (resumable is not null && setup)
         {
             OverlayStatus.Text = $"Resume retains the original {_selectedSource} source, depot versions and game folder.";
             LocationSelectionText.Text = $"Saved {_selectedSource} download · depot versions are retained";
         }
         PauseButton.Visibility = Visibility.Collapsed;
         ShowOverlay();
+    }
+
+    private void ConfigureOverlayLayout()
+    {
+        DialogPanel.Width = _showingDownloadSetup ? double.NaN : 640;
+        DialogPanel.HorizontalAlignment = _showingDownloadSetup ? HorizontalAlignment.Stretch : HorizontalAlignment.Center;
+        DialogPanel.VerticalAlignment = _showingDownloadSetup ? VerticalAlignment.Stretch : VerticalAlignment.Center;
+        DialogPanel.Margin = _showingDownloadSetup ? new Thickness(0) : new Thickness(16);
+        DialogPanel.BorderThickness = _showingDownloadSetup ? new Thickness(0) : new Thickness(1);
+        DialogPanel.CornerRadius = _showingDownloadSetup ? new CornerRadius(0) : new CornerRadius(16);
+        DialogPanel.SetResourceReference(Border.BackgroundProperty, _showingDownloadSetup ? "WorkspaceBackgroundBrush" : "SolidSurfaceBrush");
+        DialogPanel.MaxWidth = Math.Max(0, ActualWidth - (_showingDownloadSetup ? 0 : 32));
+        DialogPanel.MaxHeight = Math.Max(0, ActualHeight - (_showingDownloadSetup ? 0 : 32));
+        DetailHeader.Visibility = _showingDownloadSetup ? Visibility.Collapsed : Visibility.Visible;
+        SetupHeader.Visibility = _showingDownloadSetup ? Visibility.Visible : Visibility.Collapsed;
+        DialogDimmer.Visibility = _showingDownloadSetup ? Visibility.Collapsed : Visibility.Visible;
+        GameInfoPanel.Visibility = _showingDownloadSetup ? Visibility.Collapsed : Visibility.Visible;
+        WizardHeader.Visibility = _showingDownloadSetup ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OpenDepotInfo_Click(object sender, RoutedEventArgs args)
+    {
+        if (sender is not FrameworkElement { Tag: int depotId } || depotId <= 0) return;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo($"https://steamdb.info/depot/{depotId}/") { UseShellExecute = true }); }
+        catch (Exception exception) { OverlayStatus.Text = $"Could not open depot information: {exception.Message}"; }
     }
 
     private async Task UpdateFavoriteButtonAsync(SteamCatalogItem item)
@@ -263,7 +306,14 @@ public partial class LibraryPage : Page
 
     private void CaptureBackdrop()
     {
+        if (_showingDownloadSetup)
+        {
+            BackdropImage.Source = null;
+            BackdropImage.Visibility = Visibility.Collapsed;
+            return;
+        }
         // A frozen half-resolution snapshot avoids re-blurring the gallery for every live update.
+        MainContentGrid.Visibility = Visibility.Visible;
         MainContentGrid.Opacity = 1;
         MainContentGrid.IsEnabled = true;
         if (MainContentGrid.ActualWidth > 0 && MainContentGrid.ActualHeight > 0 && Steamy.Controls.MotionPreferences.BackdropBlurEnabled)
@@ -282,16 +332,25 @@ public partial class LibraryPage : Page
     private void ShowOverlay()
     {
         _overlayRevision++;
-        _previousFocus = Keyboard.FocusedElement;
+        if (OverlayGrid.Visibility != Visibility.Visible) _previousFocus = Keyboard.FocusedElement;
+        OverlayGrid.BeginAnimation(OpacityProperty, null);
+        DialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        DialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        DialogOffset.BeginAnimation(TranslateTransform.YProperty, null);
         CaptureBackdrop();
         MainContentGrid.IsHitTestVisible = false;
         MainContentGrid.IsEnabled = false;
+        MainContentGrid.Visibility = _showingDownloadSetup ? Visibility.Collapsed : Visibility.Visible;
         OverlayGrid.Visibility = Visibility.Visible;
-        Animate(OverlayGrid, OpacityProperty, 0, 1);
-        Animate(DialogScale, ScaleTransform.ScaleXProperty, 0.97, 1);
-        Animate(DialogScale, ScaleTransform.ScaleYProperty, 0.97, 1);
-        Animate(DialogOffset, TranslateTransform.YProperty, 10, 0);
-        DialogCloseButton.Focus();
+        if (_showingDownloadSetup) SetupCloseButton.Focus();
+        else
+        {
+            Animate(OverlayGrid, OpacityProperty, 0, 1);
+            Animate(DialogScale, ScaleTransform.ScaleXProperty, 0.97, 1);
+            Animate(DialogScale, ScaleTransform.ScaleYProperty, 0.97, 1);
+            Animate(DialogOffset, TranslateTransform.YProperty, 10, 0);
+            DialogCloseButton.Focus();
+        }
     }
 
     private void Animate(DependencyObject target, DependencyProperty property, double from, double to)
@@ -351,9 +410,7 @@ public partial class LibraryPage : Page
         SetOptionState(SourceHubcap, source == ManifestSource.Hubcap);
         SetOptionState(SourceDepotBox, source == ManifestSource.DepotBox);
         SetOptionState(SourceSushi, source == ManifestSource.Sushi);
-        var info = App.Services.GetRequiredService<IManifestSourceService>().Sources
-            .FirstOrDefault(s => s.Source == source);
-        OverlayStatus.Text = info is not null ? info.Description : $"{source} selected.";
+        OverlayStatus.Text = "";
 
         if (_selectedItem is not null)
             _ = CheckSourceAvailabilityAsync(source, _selectedItem.AppId);
@@ -457,7 +514,7 @@ public partial class LibraryPage : Page
         _availabilityCts?.Cancel();
         _artworkCts?.Cancel();
         _preparationCts?.Cancel();
-        if (Steamy.Controls.MotionPreferences.AnimationsEnabled)
+        if (!_showingDownloadSetup && Steamy.Controls.MotionPreferences.AnimationsEnabled)
         {
             Animate(OverlayGrid, OpacityProperty, 1, 0);
             Animate(DialogScale, ScaleTransform.ScaleXProperty, 1, 0.98);
@@ -499,6 +556,7 @@ public partial class LibraryPage : Page
         BackdropImage.Visibility = Visibility.Collapsed;
         BackdropImage.Source = null;
         OverlayCover.Source = null;
+        MainContentGrid.Visibility = Visibility.Visible;
         MainContentGrid.Opacity = 1;
         MainContentGrid.IsHitTestVisible = true;
         MainContentGrid.IsEnabled = true;
@@ -514,34 +572,36 @@ public partial class LibraryPage : Page
     private void SetWizardStep(int step)
     {
         _wizardStep = Math.Clamp(step, 0, 2);
-        SourceStepPanel.Visibility = step == 0 ? Visibility.Visible : Visibility.Collapsed;
-        DepotStepPanel.Visibility = step == 1 ? Visibility.Visible : Visibility.Collapsed;
-        LocationStepPanel.Visibility = step == 2 ? Visibility.Visible : Visibility.Collapsed;
-        WizardStepText.Text = step switch { 0 => "1 · Choose a source", 1 => "2 · Select depots & version", _ => _resumingExisting ? "Resume your download" : "3 · Choose a location" };
+        SourceStepPanel.Visibility = _showingDownloadSetup && step == 0 ? Visibility.Visible : Visibility.Collapsed;
+        DepotStepPanel.Visibility = _showingDownloadSetup && step == 1 ? Visibility.Visible : Visibility.Collapsed;
+        LocationStepPanel.Visibility = _showingDownloadSetup && step == 2 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStepText.Text = step switch { 0 => "Source", 1 => "Depots", _ => _resumingExisting ? "Resume download" : "Location" };
         WizardTrailText.Text = _resumingExisting ? "Original source · saved depot versions · existing files" : "Source  →  Depots & version  →  Location";
         if (step == 2) ConfigureDownloadLocation(_downloadPath);
         UpdateWizardControls();
-        Steamy.Controls.EntranceMotion.Reveal(step == 0 ? SourceStepPanel : step == 1 ? DepotStepPanel : LocationStepPanel);
+        if (_showingDownloadSetup) Steamy.Controls.EntranceMotion.Reveal(step == 0 ? SourceStepPanel : step == 1 ? DepotStepPanel : LocationStepPanel);
     }
 
     private void UpdateWizardControls()
     {
         WizardBusyBar.Visibility = _wizardBusy ? Visibility.Visible : Visibility.Collapsed;
-        BackButton.Visibility = _wizardStep > 0 && !_resumingExisting ? Visibility.Visible : Visibility.Collapsed;
+        BackButton.Visibility = _showingDownloadSetup && !_resumingExisting ? Visibility.Visible : Visibility.Collapsed;
         BackButton.IsEnabled = !_downloadRunning && !_wizardBusy;
-        NewSelectionButton.Visibility = _resumingExisting ? Visibility.Visible : Visibility.Collapsed;
+        NewSelectionButton.Visibility = _showingDownloadSetup && _resumingExisting ? Visibility.Visible : Visibility.Collapsed;
         NewSelectionButton.IsEnabled = !_downloadRunning && !_wizardBusy;
         SourceStepPanel.IsEnabled = !_downloadRunning && !_resumingExisting;
         DepotStepPanel.IsEnabled = !_downloadRunning && !_wizardBusy;
         LocationBrowseButton.IsEnabled = !_downloadRunning && !_resumingExisting;
-        StartButton.Content = _downloadCompleted ? "Completed" : _wizardBusy ? "Loading depots…" : _resumingExisting ? "Resume download" : _wizardStep == 2 ? "Download" : "Next";
-        StartButton.IsEnabled = !_downloadCompleted && !_downloadRunning && !_wizardBusy && (_resumingExisting
+        StartButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = _showingDownloadSetup && _wizardStep < 2 && !_resumingExisting
+            ? Wpf.Ui.Controls.SymbolRegular.ChevronRight24 : Wpf.Ui.Controls.SymbolRegular.ArrowDownload24 };
+        StartButton.Content = !_showingDownloadSetup ? (_resumingExisting ? "Resume download" : "Download") : _downloadCompleted ? "Completed" : _wizardBusy ? "Loading depots…" : _resumingExisting ? "Resume download" : _wizardStep == 2 ? "Download" : "Next";
+        StartButton.IsEnabled = !_downloadCompleted && !_downloadRunning && !_wizardBusy && (!_showingDownloadSetup || _resumingExisting
             || (_wizardStep == 0 ? !_sourceUnavailable : _wizardStep == 1 ? ValidDepotSelection() : ValidDepotSelection() && ValidLocation(_downloadPath)));
         var selected = _depotChoices.Where(choice => choice.IsSelected).ToArray();
         var knownBytes = SelectedSizeBytes();
         DepotSelectionSummary.Text = $"{selected.Length} of {_depotChoices.Count} depots selected"
-            + (knownBytes is { } bytes ? $" · {DownloadFormat.Bytes(bytes)} reported by source" : " · size not supplied by source");
-        if (!_resumingExisting) LocationSelectionText.Text = $"{_selectedSource} · {selected.Length} selected depot{(selected.Length == 1 ? "" : "s")} · pinned manifest versions";
+            + (knownBytes is { } bytes ? $" · {DownloadFormat.Bytes(bytes)} reported size" : " · size unavailable");
+        if (!_resumingExisting) LocationSelectionText.Text = $"{_selectedSource} · {selected.Length} selected depot{(selected.Length == 1 ? "" : "s")} · selected versions";
     }
 
     private bool ValidDepotSelection() => _preparedDownload is not null && _depotChoices.Any(choice => choice.IsSelected)
@@ -600,17 +660,27 @@ public partial class LibraryPage : Page
 
     private void DepotChoiceChanged(object? sender, PropertyChangedEventArgs args)
     {
+        if (_batchDepotSelection) return;
         UpdateWizardControls();
         if (_wizardStep == 2) _ = UpdateLocationSpaceAsync();
     }
 
-    private void SelectAllDepots_Click(object sender, RoutedEventArgs args)
-    { foreach (var choice in _depotChoices) choice.IsSelected = true; }
-    private void ClearDepotSelection_Click(object sender, RoutedEventArgs args)
-    { foreach (var choice in _depotChoices) choice.IsSelected = false; }
+    private void SelectAllDepots_Click(object sender, RoutedEventArgs args) => SetAllDepotsSelected(true);
+    private void ClearDepotSelection_Click(object sender, RoutedEventArgs args) => SetAllDepotsSelected(false);
+    private void SetAllDepotsSelected(bool selected)
+    {
+        _batchDepotSelection = true;
+        try { foreach (var choice in _depotChoices) choice.IsSelected = selected; }
+        finally { _batchDepotSelection = false; }
+        UpdateWizardControls();
+    }
 
     private void WizardBackButton_Click(object sender, RoutedEventArgs args)
-    { if (!_downloadRunning && !_wizardBusy && !_resumingExisting) SetWizardStep(_wizardStep - 1); }
+    {
+        if (_downloadRunning || _wizardBusy || _resumingExisting) return;
+        if (_wizardStep == 0 && _selectedItem is { } item) OpenGameDetails(item);
+        else SetWizardStep(_wizardStep - 1);
+    }
 
     private void ResetPreparedDownload()
     {
@@ -626,14 +696,15 @@ public partial class LibraryPage : Page
         _wizardBusy = false;
     }
 
-    public async Task AdvanceDownloadWizardAsync()
+    public async Task AdvanceDownloadWizardAsync(bool navigateToDownloads = false)
     {
         if (_selectedItem is null || _downloadRunning || _wizardBusy) return;
-        if (_resumingExisting) { await StartDownloadAsync(); return; }
+        if (!_showingDownloadSetup) { OpenDownloadSetup(_selectedItem); return; }
+        if (_resumingExisting) { await StartDownloadAsync(navigateToDownloads); return; }
         if (_wizardStep == 2)
         {
             if (!ValidDepotSelection() || !ValidLocation(_downloadPath)) { OverlayStatus.Text = "Choose at least one depot version and a valid download folder."; return; }
-            await StartDownloadAsync();
+            await StartDownloadAsync(navigateToDownloads);
             return;
         }
         if (_wizardStep == 1)
@@ -682,7 +753,7 @@ public partial class LibraryPage : Page
                 choice.PropertyChanged += DepotChoiceChanged;
                 _depotChoices.Add(choice);
             }
-            DepotSourceText.Text = $"Available from {source} · {plan.Depots.Count} depots";
+            DepotSourceText.Text = $"{source} · {plan.Depots.Count} available depots";
             SetWizardStep(1);
             OverlayStatus.Text = "Select the depots and manifest versions you want to download.";
         }
@@ -706,7 +777,7 @@ public partial class LibraryPage : Page
     {
         try
         {
-            await AdvanceDownloadWizardAsync();
+            await AdvanceDownloadWizardAsync(navigateToDownloads: true);
         }
         catch (Exception exception)
         {
@@ -723,7 +794,7 @@ public partial class LibraryPage : Page
         OverlayStatus.Text = "Pausing…";
     }
 
-    private async Task StartDownloadAsync()
+    private async Task StartDownloadAsync(bool navigateToDownloads)
     {
         if (_selectedItem is null) return;
         // A second click on Start/Resume while the download runs must not spawn a second
@@ -733,7 +804,7 @@ public partial class LibraryPage : Page
         var revision = ++_downloadRevision;
         try
         {
-            await RunDownloadAsync();
+            await RunDownloadAsync(navigateToDownloads);
         }
         finally
         {
@@ -745,7 +816,7 @@ public partial class LibraryPage : Page
         }
     }
 
-    private async Task RunDownloadAsync()
+    private async Task RunDownloadAsync(bool navigateToDownloads)
     {
         if (_selectedItem is null) return;
 
@@ -862,6 +933,14 @@ public partial class LibraryPage : Page
             return;
         }
         if (!store.Downloads.Contains(job)) store.Downloads.Insert(0, job);
+        if (navigateToDownloads && IsCurrentDialog())
+        {
+            // The app-level manager owns the transfer after the initial save succeeds.
+            ResetOverlay();
+            try { App.Services.GetRequiredService<INavigationService>().Navigate<DownloadsPage>(); }
+            catch (Exception exception)
+            { App.Services.GetRequiredService<ILoggingService>().Add(LogLevel.Warning, "Downloads", $"Could not open the queue: {exception.Message}"); }
+        }
 
         if (IsCurrentDialog())
         {
@@ -1048,17 +1127,35 @@ public sealed class DownloadDepotChoice : UiObservableObject
     public int DepotId { get; }
     public string Name { get; }
     public IReadOnlyList<PreparedDepotVersion> Versions { get; }
+    public string MetadataSummary { get; }
+    public string MetadataSource { get; }
     public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
     public PreparedDepotVersion? SelectedVersion
     {
         get => _selectedVersion;
-        set { if (SetProperty(ref _selectedVersion, value)) OnPropertyChanged(nameof(SizeLabel)); }
+        set
+        {
+            if (SetProperty(ref _selectedVersion, value))
+            {
+                OnPropertyChanged(nameof(SizeLabel));
+                OnPropertyChanged(nameof(BranchLabel));
+            }
+        }
     }
-    public string SizeLabel => SelectedVersion?.SizeBytes is > 0 ? DownloadFormat.Bytes(SelectedVersion.SizeBytes.Value) : "";
+    public string SizeLabel => string.Join(" · ", new[]
+    {
+        SelectedVersion?.SizeBytes is > 0 ? DownloadFormat.Bytes(SelectedVersion.SizeBytes.Value) + " installed" : "Installed size unavailable",
+        SelectedVersion?.CompressedSizeBytes is > 0 ? DownloadFormat.Bytes(SelectedVersion.CompressedSizeBytes.Value) + " download" : null
+    }.Where(value => !string.IsNullOrEmpty(value)));
+    public string BranchLabel => string.IsNullOrWhiteSpace(SelectedVersion?.BranchName) ? "" : SelectedVersion.BranchName;
     public DownloadDepotChoice(PreparedDownloadDepot depot)
     {
         DepotId = depot.DepotId;
         Name = depot.Name;
+        MetadataSummary = string.Join(" · ", new[] { depot.ContentType, depot.OperatingSystems, depot.Languages,
+            depot.DlcAppId is > 0 ? $"DLC {depot.DlcAppId}" : null, depot.SharedAppId is > 0 ? $"Shared with app {depot.SharedAppId}" : null }
+            .Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase));
+        MetadataSource = depot.MetadataSource ?? string.Empty;
         Versions = depot.Versions;
         _selectedVersion = Versions.FirstOrDefault(version => version.ManifestId == depot.DefaultManifestId) ?? Versions.FirstOrDefault();
     }

@@ -44,6 +44,9 @@ public sealed partial class PageSmokeTests
             favoriteButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             PumpUntil(() => favoriteButton.Content?.ToString() == "Favorite" && favoriteButton.IsEnabled);
             Assert.DoesNotContain(game.AppId, activity.GetAsync().GetAwaiter().GetResult().FavoriteAppIds);
+            Assert.Equal(-1, page.DownloadWizardStep); // Game information is separate from download setup.
+            AwaitWizardStep(page);
+            CheckWizardStage(page, 0);
             page.SelectDownloadSource(ManifestSource.Zaza);
             var beforePreparation = downloads.PreparationCalls.Count;
             AwaitWizardStep(page);
@@ -52,21 +55,28 @@ public sealed partial class PageSmokeTests
             Assert.Equal((game.AppId, ManifestSource.Zaza), downloads.PreparationCalls.Last());
             var firstPlan = downloads.Plans.Last();
             Assert.Equal(2, page.DownloadDepotChoices.Count);
+            CheckWizardStage(page, 1);
+            CheckDepotPageChoices(page);
             foreach (var choice in page.DownloadDepotChoices) choice.IsSelected = false;
             var beforeDownload = downloads.Downloads.Count;
             AwaitWizardStep(page);
             Assert.Equal(1, page.DownloadWizardStep); // No empty depot selection may reach Location.
             Assert.Equal(beforeDownload, downloads.Downloads.Count);
-            page.DownloadDepotChoices[0].IsSelected = true;
+            var firstCheckbox = Descendants<CheckBox>((FrameworkElement)page.FindName("DepotStepPanel"))
+                .Single(checkbox => ReferenceEquals(checkbox.DataContext, page.DownloadDepotChoices[0]));
+            firstCheckbox.IsChecked = true;
+            Assert.True(page.DownloadDepotChoices[0].IsSelected); // The right-hand control updates the actual selection.
             page.DownloadDepotChoices[0].SelectedVersion = firstPlan.Depots[0].Versions[1];
             AwaitWizardStep(page);
             Assert.Equal(2, page.DownloadWizardStep);
+            CheckWizardStage(page, 2);
             ((Button)page.FindName("BackButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             Assert.Equal(1, page.DownloadWizardStep);
             Assert.Equal("101", page.DownloadDepotChoices[0].SelectedVersion!.ManifestId);
             Assert.False(page.DownloadDepotChoices[1].IsSelected);
             ((Button)page.FindName("BackButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             Assert.Equal(0, page.DownloadWizardStep);
+            CheckWizardStage(page, 0);
             page.SelectDownloadSource(ManifestSource.Sushi);
             Assert.Empty(page.DownloadDepotChoices); // A source switch invalidates the previous snapshot.
             Assert.Contains(firstPlan.Id, downloads.DiscardedPlans);
@@ -141,7 +151,7 @@ public sealed partial class PageSmokeTests
 
             page.CloseOverlay();
             PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
-            page.OpenGameDetails(game);
+            page.OpenDownloadSetup(game);
             Assert.Equal(2, page.DownloadWizardStep);
             Assert.False(((Button)page.FindName("SourceSushi")).IsEnabled);
             page.SelectDownloadSource(ManifestSource.Zaza);
@@ -154,7 +164,7 @@ public sealed partial class PageSmokeTests
             Assert.Equal("Sushi", added.SourceLabel);
             page.CloseOverlay();
             PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
-            page.OpenGameDetails(game);
+            page.OpenDownloadSetup(game);
             Assert.Equal(2, page.DownloadWizardStep);
             var preparingBeforeResume = downloads.PreparationCalls.Count;
             downloads.DownloadOverride = null;
@@ -183,7 +193,7 @@ public sealed partial class PageSmokeTests
 
             var emptyPlan = new PreparedGameDownload(Guid.NewGuid(), game.AppId, ManifestSource.Sushi, []);
             downloads.PrepareOverride = (_, _, _) => Task.FromResult(new GameDownloadPreparation(true, "No downloadable depots in this source snapshot.", emptyPlan));
-            page.OpenGameDetails(game);
+            page.OpenDownloadSetup(game);
             AwaitWizardStep(page);
             Assert.Equal(0, page.DownloadWizardStep);
             Assert.Empty(page.DownloadDepotChoices);
@@ -196,7 +206,7 @@ public sealed partial class PageSmokeTests
             var changedSource = new TaskCompletionSource<GameDownloadPreparation>(TaskCreationOptions.RunContinuationsAsynchronously);
             downloads.PrepareOverride = (appId, source, _) => source == ManifestSource.Sushi
                 ? changedSource.Task : Task.FromResult(downloads.CreatePreparation(appId, source));
-            page.OpenGameDetails(game);
+            page.OpenDownloadSetup(game);
             var beforeChangingSource = downloads.PreparationCalls.Count;
             var superseded = page.AdvanceDownloadWizardAsync();
             PumpUntil(() => downloads.PreparationCalls.Count == beforeChangingSource + 1);
@@ -218,7 +228,7 @@ public sealed partial class PageSmokeTests
             var stale = new TaskCompletionSource<GameDownloadPreparation>(TaskCreationOptions.RunContinuationsAsynchronously);
             downloads.PrepareOverride = (appId, source, token) => source == ManifestSource.Sushi
                 ? stale.Task : Task.FromResult(downloads.CreatePreparation(appId, source));
-            page.OpenGameDetails(game);
+            page.OpenDownloadSetup(game);
             page.SelectDownloadSource(ManifestSource.Sushi);
             var beforeStalePreparation = downloads.PreparationCalls.Count;
             var preparation = page.AdvanceDownloadWizardAsync();
@@ -227,7 +237,7 @@ public sealed partial class PageSmokeTests
             page.CloseOverlay();
             PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
             Assert.True(preparationToken.IsCancellationRequested);
-            page.OpenGameDetails(game);
+            page.OpenDownloadSetup(game);
             page.SelectDownloadSource(ManifestSource.Zaza);
             AwaitWizardStep(page);
             var currentPlan = downloads.Plans.Last();
@@ -246,7 +256,7 @@ public sealed partial class PageSmokeTests
             downloads.PrepareOverride = null;
             var firstCompletion = new TaskCompletionSource<RyuuGameDownloadResult>(TaskCreationOptions.RunContinuationsAsynchronously);
             downloads.DownloadOverride = token => firstCompletion.Task.WaitAsync(token);
-            page.OpenGameDetails(game);
+            page.OpenDownloadSetup(game);
             AwaitWizardStep(page);
             AwaitWizardStep(page);
             page.ConfigureDownloadLocation(directory);
@@ -262,7 +272,7 @@ public sealed partial class PageSmokeTests
             Assert.Equal(1, queue.RegisteredCount);
 
             var secondGame = new SteamCatalogItem { AppId = 20, Name = "A second offline game", AppType = SteamCatalogAppType.Game };
-            page.OpenGameDetails(secondGame);
+            page.OpenDownloadSetup(secondGame);
             page.SelectDownloadSource(ManifestSource.Zaza);
             AwaitWizardStep(page);
             Assert.Equal(1, page.DownloadWizardStep);
@@ -285,7 +295,7 @@ public sealed partial class PageSmokeTests
             PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
             store.Downloads.Remove(detachedJob);
             downloads.DownloadOverride = null;
-            page.OpenGameDetails(game);
+            page.OpenDownloadSetup(game);
             AwaitWizardStep(page);
             var savingPlan = downloads.Plans.Last();
             AwaitWizardStep(page);
@@ -305,7 +315,7 @@ public sealed partial class PageSmokeTests
             page.CloseOverlay();
             PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
             Assert.DoesNotContain(savingPlan.Id, downloads.DiscardedPlans);
-            page.OpenGameDetails(game);
+            page.OpenDownloadSetup(game);
             Assert.Equal(0, page.DownloadWizardStep);
             page.SelectDownloadSource(ManifestSource.Zaza);
             AwaitWizardStep(page);
@@ -336,6 +346,7 @@ public sealed partial class PageSmokeTests
             Assert.Equal(beforePendingDownload + 1, downloads.Downloads.Count); // A failed save releases the target so retry can start.
             Assert.Equal(replacementPlan.Id, downloads.Downloads.Last().Plan.Id);
             Assert.Equal(DownloadJobState.Completed, Assert.Single(store.Downloads, job => !originalIds.Contains(job.Id)).State);
+            CheckDownloadStartHandoff(provider, page, downloads, queue, directory);
         }
         finally
         {
@@ -352,6 +363,96 @@ public sealed partial class PageSmokeTests
             foreach (var job in store.Downloads.Where(job => !originalIds.Contains(job.Id)).ToArray()) store.Downloads.Remove(job);
             if (Directory.Exists(directory)) Directory.Delete(directory, true);
         }
+    }
+
+    private static void CheckDownloadStartHandoff(IServiceProvider provider, LibraryPage page,
+        WizardDownloadFixture downloads, WizardQueueFixture queue, string directory)
+    {
+        var saved = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finished = new TaskCompletionSource<RyuuGameDownloadResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var navigation = Assert.IsType<NavigationService>(provider.GetRequiredService<INavigationService>());
+        Type? destination = null;
+        navigation.Attach(route => destination = route);
+        try
+        {
+            page.CloseOverlay();
+            PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
+            var item = new SteamCatalogItem { AppId = 30, Name = "A click-start fixture", AppType = SteamCatalogAppType.Game };
+            page.OpenDownloadSetup(item);
+            AwaitWizardStep(page);
+            AwaitWizardStep(page);
+            page.ConfigureDownloadLocation(directory);
+            var beforeAttempts = queue.SaveAttempts.Count;
+            var beforeDownloads = downloads.Downloads.Count;
+            queue.SaveOverride = (_, _) => saved.Task;
+            downloads.DownloadOverride = token => finished.Task.WaitAsync(token);
+
+            ((Button)page.FindName("StartButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            PumpUntil(() => queue.SaveAttempts.Count == beforeAttempts + 1);
+            Assert.Null(destination);
+            Assert.Equal(beforeDownloads, downloads.Downloads.Count);
+            Assert.Equal(1, queue.RegisteredCount);
+
+            saved.SetResult();
+            PumpUntil(() => destination == typeof(DownloadsPage) && downloads.Downloads.Count == beforeDownloads + 1);
+            PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
+            Assert.Equal(1, queue.RegisteredCount); // Navigation keeps the registered background operation alive.
+            Assert.False(downloads.DownloadTokens.Last().IsCancellationRequested);
+            var job = Assert.Single(provider.GetRequiredService<IAppDataStore>().Downloads, entry => entry.AppId == item.AppId);
+            finished.SetResult(new(true, "The click-start download completed in the background."));
+            PumpUntil(() => queue.RegisteredCount == 0);
+            Assert.Equal(DownloadJobState.Completed, job.State);
+        }
+        finally
+        {
+            saved.TrySetResult();
+            finished.TrySetResult(new(true, "Clean up click-start fixture"));
+            queue.SaveOverride = null;
+            downloads.DownloadOverride = null;
+            navigation.Detach();
+        }
+    }
+
+    private static void CheckWizardStage(LibraryPage page, int selectedStage)
+    {
+        Assert.Equal(selectedStage, page.DownloadWizardStep);
+        Assert.Equal(Visibility.Visible, ((FrameworkElement)page.FindName("SetupHeader")).Visibility);
+        Assert.Equal(Visibility.Collapsed, ((FrameworkElement)page.FindName("DetailHeader")).Visibility);
+        Assert.Null(((Image)page.FindName("BackdropImage")).Source);
+        Assert.True(double.IsNaN(((FrameworkElement)page.FindName("DialogPanel")).Width));
+        foreach (var (name, stage) in new[] { ("SourceStepPanel", 0), ("DepotStepPanel", 1), ("LocationStepPanel", 2) })
+            Assert.Equal(stage == selectedStage ? Visibility.Visible : Visibility.Collapsed,
+                ((FrameworkElement)page.FindName(name)).Visibility);
+    }
+
+    private static void CheckDepotPageChoices(LibraryPage page)
+    {
+        page.UpdateLayout();
+        var panel = (FrameworkElement)page.FindName("DepotStepPanel");
+        Assert.Equal(page.DownloadDepotChoices.Count, ((ListBox)page.FindName("DepotChoices")).Items.Count);
+        foreach (var choice in page.DownloadDepotChoices)
+        {
+            var checkbox = Assert.Single(Descendants<CheckBox>(panel),
+                control => ReferenceEquals(control.DataContext, choice));
+            Assert.True(checkbox.IsVisible);
+            Assert.True(checkbox.Focusable); // Selecting depots also works without a pointer.
+            var label = Assert.Single(Descendants<TextBlock>(panel),
+                text => ReferenceEquals(text.DataContext, choice) && text.Text == choice.Name);
+            var checkboxStart = checkbox.TranslatePoint(new Point(0, 0), panel).X;
+            var labelEnd = label.TranslatePoint(new Point(label.ActualWidth, 0), panel).X;
+            Assert.True(checkboxStart >= labelEnd,
+                $"Depot {choice.DepotId}: selection control overlaps or precedes the depot description.");
+        }
+        var displayedText = string.Join("\n", Descendants<TextBlock>(panel).Where(text => text.IsVisible).Select(text => text.Text));
+        Assert.Contains("Windows", displayedText);
+        Assert.Contains("English", displayedText);
+        Assert.Contains("Offline sample metadata", displayedText);
+        Assert.Contains("Build 100", displayedText);
+        var withoutMetadata = page.DownloadDepotChoices[1];
+        var unknownDepotText = string.Join("\n", Descendants<TextBlock>(panel)
+            .Where(text => text.IsVisible && ReferenceEquals(text.DataContext, withoutMetadata)).Select(text => text.Text));
+        Assert.DoesNotContain("Windows", unknownDepotText);
+        Assert.DoesNotContain("English", unknownDepotText); // Missing Steam metadata never borrows another depot's details.
     }
 
     private sealed record PreparedDownloadCall(PreparedGameDownload Plan, IReadOnlyList<CachedDepotManifest> Selections, string TargetFolder);
@@ -388,12 +489,22 @@ public sealed partial class PageSmokeTests
 
         public GameDownloadPreparation CreatePreparation(int appId, ManifestSource source)
         {
+            var screenshotSample = appId == 1091500;
             var plan = new PreparedGameDownload(Guid.NewGuid(), appId, source,
             [
-                new PreparedDownloadDepot(appId + 1, $"Depot {appId + 1} · {source}",
-                    [new PreparedDepotVersion("100"), new PreparedDepotVersion("101")], "100"),
-                new PreparedDownloadDepot(appId + 2, $"Depot {appId + 2} · {source}",
-                    [new PreparedDepotVersion("200")], "200")
+                new PreparedDownloadDepot(appId + 1, $"Game content · {source}",
+                    [new PreparedDepotVersion("100", screenshotSample ? 82_892_875_366 : 16 * 1024 * 1024,
+                         "Build 100", BranchName: "public"),
+                     new PreparedDepotVersion("101", screenshotSample ? 80_315_888_435 : 12 * 1024 * 1024,
+                         "Build 99", BranchName: "previous")], "100",
+                    ContentType: "Game content", OperatingSystems: "Windows", Languages: "English",
+                    MetadataSource: "Offline sample metadata", SteamDbUrl: $"https://steamdb.info/depot/{appId + 1}/"),
+                new PreparedDownloadDepot(appId + 2, screenshotSample ? "Language pack" : $"Optional content · {source}",
+                    [new PreparedDepotVersion("200", screenshotSample ? 2_254_857_830 : null)], "200",
+                    ContentType: screenshotSample ? "Language pack" : null,
+                    OperatingSystems: screenshotSample ? "Windows" : null,
+                    Languages: screenshotSample ? "English" : null,
+                    MetadataSource: screenshotSample ? "Offline sample metadata" : null)
             ]);
             _prepared[plan.Id] = plan;
             Plans.Enqueue(plan);

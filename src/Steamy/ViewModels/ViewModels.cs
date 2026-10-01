@@ -34,6 +34,7 @@ public enum LibraryNsfwScope { Hide, Show }
 
 public sealed class LibraryViewModel : ViewModelBase
 {
+    public SteamCatalogItem? RequestedDownload { get; set; }
     private readonly ISteamCatalogService _catalog; private readonly IRyuuCatalogService _ryuu; private readonly IHubcapCatalogService _hubcap; private readonly ILibrarySyncService _librarySync;
     private readonly DispatcherTimer _searchDebounceTimer;
     private CancellationTokenSource? _artworkLoadingCancellation;

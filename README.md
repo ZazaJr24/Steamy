@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">Steamy</h1>
-<p align="center"><strong>One place. More play.</strong><br/>Your Steam library, downloads and tools in a desktop app with a little more colour.</p>
+<p align="center"><strong>Your Steam library, downloads and tools.</strong><br/>A portable Windows app for playing, browsing and managing your games.</p>
 
 <p align="center">
   <a href="https://github.com/ZazaJr24/Steamy/releases/latest/download/Steamy-latest.zip"><img src="https://img.shields.io/badge/Download-Latest-7c83ff?style=for-the-badge&logo=windows&logoColor=white" alt="Download Latest for Windows" /></a>
@@ -27,10 +27,10 @@ Already using Steamy? Open **Settings → Check now** to get the latest release.
 
 | Your next stop | What you'll find |
 | --- | --- |
-| **Dashboard** | Your favorites, games recently opened through Steamy, installed library and a compact queue overview in an original, quieter layout. |
+| **Dashboard** | Large Spotlight artwork, your installed library and favorites, recently opened games and a compact download overview. |
 | **Spotlight** | New and upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
 | **Games** | A cover grid with calmer solid surfaces, typo-tolerant title/App ID search, recent queries, favorites, sorting and source filters. |
-| **Downloads** | A source → depots & version → location assistant, plus a compact queue with priority, reordering, transfer controls, pause, resume and verify & repair. |
+| **Downloads** | Separate source → depots & version → location pages, right-hand depot selection and available Steam details, plus queue priority, pause, resume and repair. |
 | **Settings** | Searchable categories, dark/light themes, reduced effects, Windows backdrop options, download limits, network options and source connections. |
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
 | **Fixes** | Browse your configured fixes repository. **Hypervisor Fixes is Coming soon** and does not install anything yet. |
@@ -45,11 +45,11 @@ The app checks for feed updates in the background, shares concurrent requests an
 
 ### Downloads you can come back to
 
-Open a game and follow three steps:
+Open a game, choose **Download**, and follow three separate pages:
 
 1. **Source** — choose a provider and load its available depot metadata.
-2. **Depots & version** — select only the depots you want. Choose a manifest version from those actually supplied by that source; build labels and sizes appear when the source includes them.
-3. **Location** — review the selected depots, final game folder and available drive space, then download.
+2. **Depots & version** — all depots supplied by your source appear in a scrollable list. Tick the depots on the right and choose a source-provided manifest version. Available Steam names, platforms, languages and DLC/shared content labels appear alongside them. Optional Steam details are read through a bounded, cached SteamCMD app-info mirror request. Sizes and branch/build information are used only for an exact manifest match; missing details stay unknown. Each depot has a SteamDB inspection link.
+3. **Location** — review your selection, game folder and free drive space. **Download** saves the job before opening Downloads, where the transfer continues.
 
 Pausing retains existing files and the exact selected depot manifests. Resume uses that saved selection without asking a provider for newer versions. Missing or corrupt saved data produces a clear error; **New selection** starts an explicit new setup. Duplicate jobs targeting the same folder are rejected.
 
@@ -84,9 +84,9 @@ Screenshots are captured from the actual Windows app using sample library, queue
 
 ![The Games grid](docs/screenshots/games.png)
 
-**Download setup** — choose a source while the game stays sharp over a blurred gallery.
+**Download setup** — begin with a clean source page.
 
-![Source selection over the blurred background](docs/screenshots/game-details.png)
+![Choose the download source](docs/screenshots/game-details.png)
 
 <details>
 <summary>Depot/version selection and download location</summary>
@@ -104,6 +104,10 @@ Screenshots are captured from the actual Windows app using sample library, queue
 **Settings** — find a setting, then make the app yours.
 
 ![Settings with searchable categories](docs/screenshots/settings.png)
+
+**DLC selection** — installed games on the left, DLC checkboxes on the right, with a fixed action bar.
+
+![DLC Unlocker with separate scrolling game and DLC lists](docs/screenshots/dlc-unlocker.png)
 
 <details>
 <summary>Hypervisor Fixes preview</summary>
