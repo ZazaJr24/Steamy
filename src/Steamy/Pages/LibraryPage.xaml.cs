@@ -431,6 +431,12 @@ public partial class LibraryPage : Page
         SetOptionState(SourceSushi, source == ManifestSource.Sushi);
         SetOptionState(SourceLocal, source == ManifestSource.Local);
         LocalPackagePanel.Visibility = source == ManifestSource.Local ? Visibility.Visible : Visibility.Collapsed;
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            if (_selectedSource != source || _wizardStep != 0) return;
+            if (source == ManifestSource.Local) SourceStepPanel.ScrollToEnd();
+            else SourceStepPanel.ScrollToTop();
+        }));
         OverlayStatus.Text = "";
 
         if (source == ManifestSource.Local)
@@ -665,7 +671,7 @@ public partial class LibraryPage : Page
             ? Wpf.Ui.Controls.SymbolRegular.ChevronRight24 : Wpf.Ui.Controls.SymbolRegular.ArrowDownload24 };
         StartButton.Content = !_showingDownloadSetup ? (_resumingExisting ? "Resume download" : "Download") : _downloadCompleted ? "Completed" : _wizardBusy ? "Loading depots…" : _resumingExisting ? "Resume download" : _wizardStep == 2 ? "Download" : "Next";
         StartButton.IsEnabled = !_downloadCompleted && !_downloadRunning && !_wizardBusy && (!_showingDownloadSetup || _resumingExisting
-            || (_wizardStep == 0 ? !_sourceUnavailable : _wizardStep == 1 ? ValidDepotSelection() : ValidDepotSelection() && ValidLocation(_downloadPath)));
+            || (_wizardStep == 0 ? !_sourceUnavailable && (_selectedSource != ManifestSource.Local || !string.IsNullOrWhiteSpace(_localPackagePath)) : _wizardStep == 1 ? ValidDepotSelection() : ValidDepotSelection() && ValidLocation(_downloadPath)));
         var selected = _depotChoices.Where(choice => choice.IsSelected).ToArray();
         var knownBytes = SelectedSizeBytes();
         DepotSelectionSummary.Text = $"{selected.Length} of {_depotChoices.Count} depots selected"

@@ -60,6 +60,12 @@ public partial class DashboardPage : Page
         SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
     }
 
+    private void RecommendationArtwork_SizeChanged(object sender, SizeChangedEventArgs args)
+    {
+        if (sender is FrameworkElement artwork)
+            artwork.Clip = new System.Windows.Media.RectangleGeometry(new Rect(artwork.RenderSize), 12, 12);
+    }
+
     private void MotionChanged(object? sender, EventArgs args)
     {
         if (!IsLoaded || !Controls.MotionPreferences.AnimationsEnabled)
@@ -92,12 +98,13 @@ public partial class DashboardPage : Page
     private void ApplyResponsiveLayout(double width)
     {
         // Artwork owns the width. Stack only the compact controls on narrow windows.
-        var compact = width < 720;
+        var compact = width < 900;
         DashboardSearch.Width = width < 640 ? 220 : width < 900 ? 280 : 340;
         DashboardScroll.Padding = width < 640 ? new Thickness(18, 18, 18, 26) : new Thickness(28, 22, 28, 30);
         DashboardHero.Height = width < 720 ? 400 : width < 1000 ? 420 : 460;
         SpotlightArtworkFrame.Height = DashboardHero.Height - 2;
-        SpotlightTitle.FontSize = compact ? 28 : width < 1000 ? 34 : 40;
+        SpotlightTitle.FontSize = compact ? 32 : width < 1100 ? 40 : 48;
+        SpotlightPreviews.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         SpotlightPaging.SetValue(Grid.RowProperty, compact ? 2 : 1);
         SpotlightPaging.SetValue(Grid.ColumnProperty, compact ? 0 : 1);
         SpotlightPaging.Margin = compact ? new Thickness(0,12,0,0) : new Thickness(18,0,0,0);

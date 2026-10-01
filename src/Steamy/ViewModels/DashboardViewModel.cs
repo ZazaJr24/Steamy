@@ -33,6 +33,8 @@ public sealed record DashboardSearchMatch(SteamCatalogItem Item, Game Game)
 public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObject
 {
     private ImageSource? _heroArtwork;
+    private bool _isSelected;
+    public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
     public SpotlightGame Metadata { get; } = metadata;
     public Game Game { get; } = new()
     {
@@ -236,6 +238,7 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _headerLoads = new();
     private int _featuredIndex;
     public IReadOnlyList<DashboardFeature> DiscoverGames { get; private set; } = Array.Empty<DashboardFeature>();
+    public IReadOnlyList<DashboardFeature> SpotlightPreviews => DiscoverGames.Take(4).ToArray();
     public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames.Take(3).ToArray();
     public bool HasSpotlight => DiscoverGames.Count > 0;
     public DashboardFeature? FeaturedGame => HasSpotlight ? DiscoverGames[_featuredIndex] : null;
@@ -252,6 +255,11 @@ public sealed class DashboardViewModel : ViewModelBase
         if (!ReferenceEquals(previous, DiscoverGames)) _ = LoadVisibleArtworkAsync();
         foreach (var feature in DiscoverGames) feature.RefreshCountdown();
     }
+    public ICommand SelectFeaturedCommand => new RelayCommand<DashboardFeature>(feature =>
+    {
+        var index = Array.IndexOf(DiscoverGames.ToArray(), feature);
+        if (index >= 0) MoveFeatured(index - _featuredIndex);
+    });
     public ICommand NextFeaturedCommand { get; }
     public ICommand PreviousFeaturedCommand { get; }
     public ICommand ViewFeaturedCommand { get; }
@@ -301,6 +309,8 @@ public sealed class DashboardViewModel : ViewModelBase
         _headerLoads.Clear();
         OnPropertyChanged(nameof(DiscoverGames));
         OnPropertyChanged(nameof(NewGames));
+        OnPropertyChanged(nameof(SpotlightPreviews));
+        UpdateSpotlightSelection();
         OnPropertyChanged(nameof(HasSpotlight));
         OnPropertyChanged(nameof(FeaturedGame));
         OnPropertyChanged(nameof(FeaturedPosition));
@@ -314,7 +324,7 @@ public sealed class DashboardViewModel : ViewModelBase
     private async Task LoadDiscoveryHeadersAsync()
     {
         // Only the three visible recommendations need headers; the rest load as selected.
-        foreach (var feature in NewGames)
+        foreach (var feature in SpotlightPreviews)
         {
             try
             {
@@ -359,10 +369,16 @@ public sealed class DashboardViewModel : ViewModelBase
         catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Optional next image unavailable: {exception.GetType().Name}."); }
     }
 
+    private void UpdateSpotlightSelection()
+    {
+        foreach (var feature in DiscoverGames) feature.IsSelected = ReferenceEquals(feature, FeaturedGame);
+    }
+
     private void MoveFeatured(int direction)
     {
         if (!HasSpotlight) return;
         _featuredIndex = (_featuredIndex + direction + DiscoverGames.Count) % DiscoverGames.Count;
+        UpdateSpotlightSelection();
         OnPropertyChanged(nameof(FeaturedGame));
         OnPropertyChanged(nameof(FeaturedPosition));
         OnPropertyChanged(nameof(FeaturedDownloadLabel));
