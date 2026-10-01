@@ -6,10 +6,10 @@
   <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F7F9FD" />
   <SolidColorBrush x:Key="SidebarHoverBrush" Color="#EBEEF4" />
   <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#E1E7F2" />
-  <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#90FFFFFF" />
   <SolidColorBrush x:Key="SolidSurfaceBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#EFF3F9" />
+  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#B0FFFFFF" />
+  <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#50DFEAFB" />
   <SolidColorBrush x:Key="ControlHoverBrush" Color="#E4E8F0" />
   <SolidColorBrush x:Key="BorderSubtleBrush" Color="#D8DFEB" />
   <SolidColorBrush x:Key="BorderStrongBrush" Color="#C5CDDA" />
@@ -34,16 +34,22 @@
   <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
 
   <LinearGradientBrush x:Key="GlassSurfaceBrush" StartPoint="0,0" EndPoint="0.65,1">
-    <GradientStop Color="#FAFFFFFF" Offset="0" /><GradientStop Color="#EBFFFFFF" Offset="0.6" /><GradientStop Color="#F2F5F8FF" Offset="1" />
+    <GradientStop Color="#C0FFFFFF" Offset="0" /><GradientStop Color="#70FFFFFF" Offset="0.6" /><GradientStop Color="#90EEF3FF" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="DialogSurfaceBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#F4FFFFFF" Offset="0" /><GradientStop Color="#EBEDF5FF" Offset="1" />
   </LinearGradientBrush>
   <LinearGradientBrush x:Key="GlassBorderBrush" StartPoint="0,0" EndPoint="0.8,1">
     <GradientStop Color="#FFFFFFFF" Offset="0" /><GradientStop Color="#7091A6CA" Offset="0.55" /><GradientStop Color="#A0AEB9D0" Offset="1" />
   </LinearGradientBrush>
   <RadialGradientBrush x:Key="AmbientBlueBrush" Center="0.87,0.04" GradientOrigin="0.87,0.04" RadiusX="0.85" RadiusY="0.85">
-    <GradientStop Color="#20A3CFFF" Offset="0" /><GradientStop Color="#08A3CFFF" Offset="0.6" /><GradientStop Color="#00A3CFFF" Offset="1" />
+    <GradientStop Color="#70A3CFFF" Offset="0" /><GradientStop Color="#18A3CFFF" Offset="0.6" /><GradientStop Color="#00A3CFFF" Offset="1" />
   </RadialGradientBrush>
   <RadialGradientBrush x:Key="AmbientVioletBrush" Center="0.08,0.94" GradientOrigin="0.08,0.94" RadiusX="0.72" RadiusY="0.9">
-    <GradientStop Color="#18C4B5FD" Offset="0" /><GradientStop Color="#00C4B5FD" Offset="1" />
+    <GradientStop Color="#50C4B5FD" Offset="0" /><GradientStop Color="#00C4B5FD" Offset="1" />
+  </RadialGradientBrush>
+  <RadialGradientBrush x:Key="AmbientTealBrush" Center="0.52,0.48" GradientOrigin="0.52,0.48" RadiusX="0.72" RadiusY="0.65">
+    <GradientStop Color="#30A4E3EA" Offset="0" /><GradientStop Color="#00A4E3EA" Offset="1" />
   </RadialGradientBrush>
 
   <LinearGradientBrush x:Key="BrandGradientBrush" StartPoint="0,0" EndPoint="1,1">

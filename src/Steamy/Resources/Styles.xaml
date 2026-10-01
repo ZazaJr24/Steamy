@@ -19,6 +19,7 @@
       <GeometryDrawing Brush="{DynamicResource AppBackgroundBrush}"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,1,1" /></GeometryDrawing.Geometry></GeometryDrawing>
       <GeometryDrawing Brush="{DynamicResource AmbientBlueBrush}"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,1,1" /></GeometryDrawing.Geometry></GeometryDrawing>
       <GeometryDrawing Brush="{DynamicResource AmbientVioletBrush}"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,1,1" /></GeometryDrawing.Geometry></GeometryDrawing>
+      <GeometryDrawing Brush="{DynamicResource AmbientTealBrush}"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,1,1" /></GeometryDrawing.Geometry></GeometryDrawing>
     </DrawingGroup></DrawingBrush.Drawing>
   </DrawingBrush>
 
@@ -116,7 +117,7 @@
     <Setter Property="Margin" Value="0,0,0,14" />
   </Style>
   <Style x:Key="FilterFlyoutStyle" TargetType="Border">
-    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SolidSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="18" />
@@ -187,7 +188,7 @@
     <GradientStop Color="#EE0A0D14" Offset="1" />
   </LinearGradientBrush>
   <Style x:Key="CoverBadgeStyle" TargetType="Border">
-    <Setter Property="Background" Value="#EE0A0D14" />
+    <Setter Property="Background" Value="#AF193553" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
@@ -323,7 +324,7 @@
 
   <!-- Plain surface card without CardControl's header/icon layout -->
   <Style x:Key="SurfaceCardStyle" TargetType="Border">
-    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="18" />

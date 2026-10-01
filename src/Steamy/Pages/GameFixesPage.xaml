@@ -123,7 +123,7 @@
         <ItemsControl ItemsSource="{Binding PagedGames}" HorizontalAlignment="Stretch">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <controls:AdaptiveGridPanel MinItemWidth="158" Spacing="14" CoverRatio="1.42" FooterHeight="60" MaxColumns="6" />
+              <controls:AdaptiveGridPanel MinItemWidth="224" Spacing="24" CoverRatio="1.38" FooterHeight="70" MaxColumns="5" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
@@ -133,7 +133,7 @@
                 <Grid>
                   <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
-                    <RowDefinition Height="60" />
+                    <RowDefinition Height="70" />
                   </Grid.RowDefinitions>
 
                   <!-- Cover -->
@@ -147,7 +147,7 @@
                       </StackPanel>
                     </Border>
                     <TextBlock Text="{Binding CoverGlyph}"
-                               Foreground="#3A3E47"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                FontSize="32"
                                FontWeight="Bold"
                                HorizontalAlignment="Center"
@@ -162,7 +162,7 @@
                   <StackPanel Grid.Row="1" Margin="3,0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}"
                                Foreground="{DynamicResource TextPrimaryBrush}"
-                               FontSize="12"
+                               FontSize="14"
                                FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="{Binding AppLabel}"
@@ -220,7 +220,7 @@
       <Border x:Name="DialogPanel"
               HorizontalAlignment="Center"
               VerticalAlignment="Center"
-              Background="{DynamicResource SurfaceElevatedBrush}"
+              Background="{DynamicResource DialogSurfaceBrush}"
               BorderBrush="{DynamicResource BorderSubtleBrush}"
               BorderThickness="1"
               CornerRadius="20"
@@ -245,7 +245,7 @@
 
           <!-- Hero banner with game artwork -->
           <Grid Grid.Row="0" Height="140" ClipToBounds="True">
-            <Grid Background="#0B0C0F">
+            <Grid Background="{DynamicResource SolidSurfaceBrush}">
               <Image x:Name="OverlayHeroImage" Stretch="UniformToFill" VerticalAlignment="Center" Opacity="0.85" />
             </Grid>
             <Border Background="{StaticResource HeroBannerFade}" />

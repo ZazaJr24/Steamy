@@ -10,13 +10,13 @@
     <BooleanToVisibilityConverter x:Key="BoolVis" />
 
     <LinearGradientBrush x:Key="HeroSideShade" StartPoint="0,0" EndPoint="1,0">
-      <GradientStop Color="#F40A0D14" Offset="0" />
-      <GradientStop Color="#B80A0D14" Offset="0.45" />
-      <GradientStop Color="#150A0D14" Offset="1" />
+      <GradientStop Color="#E0162C47" Offset="0" />
+      <GradientStop Color="#A6162C47" Offset="0.45" />
+      <GradientStop Color="#15162C47" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="HeroBottomShade" StartPoint="0,0" EndPoint="0,1">
-      <GradientStop Color="#000A0D14" Offset="0.3" />
-      <GradientStop Color="#E80A0D14" Offset="1" />
+      <GradientStop Color="#00162C47" Offset="0.3" />
+      <GradientStop Color="#CC162C47" Offset="1" />
     </LinearGradientBrush>
     <!-- Queue row: a solid card with a quiet hover outline. -->
     <Style x:Key="QueueRow" TargetType="Border" BasedOn="{StaticResource JobCardEntrance}">

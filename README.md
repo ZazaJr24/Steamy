@@ -35,7 +35,7 @@ Already using Steamy? Open **Settings → Check now** to get the latest release.
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
 | **Fixes** | Browse your configured fixes repository. **Hypervisor Fixes is Coming soon** and does not install anything yet. |
 
-Cards respond with short hover and click transitions while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → General → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
+Larger cover grids put the artwork first, with transparent captions and light blue surfaces over an ambient blue/violet background. Cards respond with short hover and click transitions while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → General → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
 
 ### A Spotlight that keeps moving
 

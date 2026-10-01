@@ -220,7 +220,7 @@ public partial class LibraryPage : Page
         DialogPanel.Margin = new Thickness(16);
         DialogPanel.BorderThickness = new Thickness(1);
         DialogPanel.CornerRadius = new CornerRadius(16);
-        DialogPanel.SetResourceReference(Border.BackgroundProperty, "SolidSurfaceBrush");
+        DialogPanel.SetResourceReference(Border.BackgroundProperty, "DialogSurfaceBrush");
         DialogPanel.MaxWidth = Math.Max(0, ActualWidth - 32);
         DialogPanel.MaxHeight = Math.Max(0, ActualHeight - 32);
         DetailHeader.Visibility = Visibility.Visible;
