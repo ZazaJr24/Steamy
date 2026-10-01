@@ -95,5 +95,6 @@ jobs:
         with:
           tag_name: v${{ steps.ver.outputs.v }}
           name: Steamy v${{ steps.ver.outputs.v }}
+          make_latest: true
           files: Steamy-v${{ steps.ver.outputs.v }}.zip
           body_path: release-notes.md
