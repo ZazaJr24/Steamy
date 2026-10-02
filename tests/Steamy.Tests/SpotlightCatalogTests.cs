@@ -41,6 +41,7 @@ public sealed class SpotlightCatalogTests : IDisposable
         Assert.Throws<InvalidDataException>(() => SpotlightCatalogService.Parse(Feed(null, Game(), Game())));
         Assert.Throws<InvalidDataException>(() => SpotlightCatalogService.Parse(Feed(null, Game() with { StoreUrl = "https://example.com/" })));
         Assert.Throws<InvalidDataException>(() => SpotlightCatalogService.Parse(Feed(null, Game() with { HeroUrl = "https://steamstatic.com.example.org/art.jpg" })));
+        Assert.Throws<InvalidDataException>(() => SpotlightCatalogService.Parse(Feed(null, Game() with { PortraitUrl = "https://example.org/cover.jpg" })));
         Assert.Throws<InvalidDataException>(() => SpotlightCatalogService.Parse(Encoding.UTF8.GetBytes("null")));
         Assert.Throws<InvalidDataException>(() => SpotlightCatalogService.Parse(Feed(null, Game() with { Description = null! })));
     }

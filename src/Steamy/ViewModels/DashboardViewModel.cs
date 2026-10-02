@@ -281,6 +281,7 @@ public sealed class DashboardViewModel : ViewModelBase
         ApplySpotlight(_spotlight.Cached);
         if (!ReferenceEquals(previous, DiscoverGames)) _ = LoadVisibleArtworkAsync();
         foreach (var feature in DiscoverGames) feature.RefreshCountdown();
+        SelectedDiscovery?.RefreshCountdown();
     }
     public ICommand SelectFeaturedCommand => new RelayCommand<DashboardFeature>(feature =>
     {

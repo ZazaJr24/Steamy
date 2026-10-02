@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timezone
-from update_spotlight import select_game, plain_text, confirmed_release_time, enrich_releases
+from update_spotlight import select_game, plain_text, confirmed_release_time, enrich_releases, enrich_artwork
 
 
 class SelectionTests(unittest.TestCase):
@@ -56,6 +56,18 @@ class SelectionTests(unittest.TestCase):
 
     def test_store_markup_is_removed(self):
         self.assertEqual(plain_text('<b>A &amp; B</b><br>Adventure'), 'A & B Adventure')
+
+    def test_hashed_portrait_artwork_uses_the_official_asset_format(self):
+        game = {'appId': 123, 'portraitUrl': 'old-header', 'heroUrl': 'old-hero'}
+        response = {'response': {'store_items': [{'appid': 123, 'assets': {
+            'asset_url_format': 'steam/apps/123/${FILENAME}?t=1234',
+            'library_capsule_2x': 'hash/library_capsule_2x.jpg',
+            'library_hero': 'other/library_hero.jpg'}}]}}
+        result = enrich_artwork([game], response)[0]
+        self.assertEqual('https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/123/hash/library_capsule_2x.jpg?t=1234', result['portraitUrl'])
+        self.assertIn('/other/library_hero.jpg', result['heroUrl'])
+        response['response']['store_items'][0]['assets']['asset_url_format'] = 'https://untrusted.example/${FILENAME}'
+        self.assertEqual(game, enrich_artwork([game], response)[0])
 
     def test_official_full_date_schedule_keeps_real_hours_and_seconds(self):
         game = {'appId':123, 'releaseDate':'2026-10-02'}

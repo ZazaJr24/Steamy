@@ -38,7 +38,7 @@ jobs:
           $spotlight = Get-Content src/Steamy/Data/spotlight.json -Raw | ConvertFrom-Json
           foreach ($game in $spotlight.games) {
             foreach ($kind in @('hero', 'header', 'portrait')) {
-              $url = switch ($kind) { 'hero' { $game.heroUrl }; 'portrait' { "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/$($game.appId)/library_600x900.jpg" }; default { $game.headerUrl } }
+              $url = switch ($kind) { 'hero' { $game.heroUrl }; 'portrait' { if ($game.portraitUrl) { $game.portraitUrl } else { "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/$($game.appId)/library_600x900.jpg" } }; default { $game.headerUrl } }
               try { Invoke-WebRequest -Uri $url -OutFile "artifacts/artwork/$($game.appId)_${kind}.jpg" -TimeoutSec 30 }
               catch {
                 if ($kind -ne 'portrait') { throw }
