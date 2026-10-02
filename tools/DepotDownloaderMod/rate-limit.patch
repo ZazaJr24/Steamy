@@ -137,7 +137,7 @@ index 7a622117..29ce3b6b 100644
              catch
              {
 diff --git a/DepotDownloader/Program.cs b/DepotDownloader/Program.cs
-index 7826473f..4dff96ab 100644
+index 7826473f..eab84b92 100644
 --- a/DepotDownloader/Program.cs
 +++ b/DepotDownloader/Program.cs
 @@ -1,10 +1,12 @@
@@ -153,7 +153,7 @@ index 7826473f..4dff96ab 100644
  using System.Linq;
  using System.Reflection;
  using System.Runtime.InteropServices;
-@@ -41,6 +43,13 @@ namespace DepotDownloader
+@@ -41,6 +43,12 @@ namespace DepotDownloader
                  return 0;
              }
  
@@ -163,14 +163,15 @@ index 7826473f..4dff96ab 100644
 +                return 0;
 +            }
 +
-+            SteamyProgress.Enabled = Array.IndexOf(args, "-steamy-progress") >= 0;
              Ansi.Init();
  
              DebugLog.Enabled = false;
-@@ -58,6 +67,19 @@ namespace DepotDownloader
+@@ -57,6 +65,20 @@ namespace DepotDownloader
+             }
  
              consumedArgs = new bool[args.Length];
- 
++            SteamyProgress.Enabled = HasParameter(args, "-steamy-progress");
++
 +            if (HasParameter(args, "-max-download-speed"))
 +            {
 +                var speedText = GetParameter<string>(args, "-max-download-speed");
@@ -183,10 +184,9 @@ index 7826473f..4dff96ab 100644
 +                ContentDownloader.Config.MaxDownloadSpeed = speed;
 +                HttpClientFactory.ConfigureDownloadLimit(speed);
 +            }
-+
+ 
              if (HasParameter(args, "-debug"))
              {
-                 PrintVersion(true);
 @@ -519,6 +541,7 @@ namespace DepotDownloader
  
          static void PrintUsage()
