@@ -41,7 +41,7 @@ public sealed partial class PageSmokeTests
         Assert.InRange(countdownStart.X, 0, 1);
         Assert.InRange(countdownStart.Y, 0, 1);
         Assert.True(countdown.ActualWidth >= 100 && countdown.ActualHeight >= 40);
-        Assert.Empty(Descendants<Button>(actions));
+        Assert.Single(Descendants<Button>(actions));
         Assert.InRange(hero.ActualHeight, 340, 380);
         Assert.Equal(new Thickness(0), Assert.IsType<Border>(hero).BorderThickness);
         Assert.True(artwork.ActualWidth > 0);

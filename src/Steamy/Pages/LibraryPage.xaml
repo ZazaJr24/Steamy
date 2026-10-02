@@ -169,7 +169,7 @@
           <ItemsControl ItemsSource="{Binding PagedCatalogItems}" controls:EntranceMotion.Delay="30">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="174" Spacing="18" CoverRatio="1.32" FooterHeight="56" MaxColumns="6" />
+                <controls:AdaptiveGridPanel MinItemWidth="190" Spacing="20" CoverRatio="1.5" FooterHeight="0" MaxColumns="5" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -177,50 +177,39 @@
                 <Button x:Name="Card" Style="{StaticResource GalleryCardButton}"
                         Click="GameCard_Click" Tag="{Binding}" ToolTip="{Binding Name}"
                         AutomationProperties.Name="{Binding Name}">
-                  <Grid>
-                    <Grid.RowDefinitions>
-                      <RowDefinition Height="*" />
-                      <RowDefinition Height="56" />
-                    </Grid.RowDefinitions>
-
-                    <Border CornerRadius="15" Background="{DynamicResource SurfaceSubtleBrush}">
-                      <Grid>
-                        <Border CornerRadius="15" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
-                          <Border.Background>
-                            <ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" />
-                          </Border.Background>
-                        </Border>
-                        <Border CornerRadius="15" Background="{DynamicResource SurfaceSubtleBrush}"
-                                Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <TextBlock Text="STEAM" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="15" FontWeight="Bold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <Border x:Name="Shine" CornerRadius="15" Background="#FFFFFF" Opacity="0" />
-                        <Border Style="{StaticResource CoverBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
-                          <TextBlock Text="{Binding TypeLabel}" Style="{StaticResource CoverBadgeTextStyle}" />
-                        </Border>
-                        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"
-                                Style="{StaticResource CoverBadgeStyle}" ToolTip="Installed"
-                                Visibility="{Binding IsInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
-                          <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="6" Height="6" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBlock Text="Installed" Style="{StaticResource CoverBadgeTextStyle}" />
-                          </StackPanel>
-                        </Border>
-                      </Grid>
-                    </Border>
-
-                    <!-- Transparent caption, separate from the cover image. -->
-                    <StackPanel Grid.Row="1" Margin="3,0" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding Name}"
-                                 Foreground="{DynamicResource TextPrimaryBrush}"
-                                 FontSize="12.5" FontWeight="SemiBold"
-                                 TextTrimming="CharacterEllipsis" />
-                      <TextBlock Text="{Binding AppLabel}" Margin="0,4,0,0"
-                                 Foreground="{DynamicResource TextTertiaryBrush}"
-                                 FontSize="10.5" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                  </Grid>
+                  <Border CornerRadius="16" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Background="{DynamicResource GameDialogSurfaceBrush}">
+                    <Grid>
+                      <Border CornerRadius="16" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
+                        <Border.Background><ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" /></Border.Background>
+                      </Border>
+                      <TextBlock Text="STEAM" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="15" FontWeight="Bold"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                      <Border CornerRadius="16" IsHitTestVisible="False"><Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                          <GradientStop Color="#000B0E17" Offset="0.45" /><GradientStop Color="#500B0E17" Offset="0.7" />
+                          <GradientStop Color="#F50B0E17" Offset="0.93" /><GradientStop Color="#FF0B0E17" Offset="1" />
+                        </LinearGradientBrush>
+                      </Border.Background></Border>
+                      <Border x:Name="Shine" CornerRadius="16" Background="White" Opacity="0" IsHitTestVisible="False" />
+                      <Border Style="{StaticResource CoverBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10">
+                        <TextBlock Text="{Binding TypeLabel}" Style="{StaticResource CoverBadgeTextStyle}" />
+                      </Border>
+                      <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Style="{StaticResource CoverBadgeStyle}" ToolTip="Installed"
+                              Visibility="{Binding IsInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                          <Ellipse Width="5" Height="5" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                          <TextBlock Text="Installed" Style="{StaticResource CoverBadgeTextStyle}" />
+                        </StackPanel>
+                      </Border>
+                      <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,14">
+                        <TextBlock Text="{Binding Name}" Foreground="#F5F6FD" FontSize="14" FontWeight="SemiBold"
+                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="38" />
+                        <Border Height="1" Background="#354F5C7C" Margin="0,11,0,9" />
+                        <TextBlock Text="{Binding AppLabel}" Foreground="#AFB5C9" FontSize="10" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
                 </Button>
                 <DataTemplate.Triggers>
                   <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
@@ -266,7 +255,7 @@
     <Grid x:Name="OverlayGrid" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle" KeyboardNavigation.ControlTabNavigation="Cycle">
       <Border x:Name="DialogDimmer" Background="#65070B12" MouseLeftButtonUp="Overlay_Close" />
       <Border x:Name="DialogPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
-              Background="{DynamicResource DialogSurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}"
+              Background="{DynamicResource GameDialogSurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}"
               BorderThickness="1" CornerRadius="16" Width="640" Margin="16" RenderTransformOrigin="0.5,0.5">
         <Border.RenderTransform><TransformGroup><ScaleTransform x:Name="DialogScale" /><TranslateTransform x:Name="DialogOffset" /></TransformGroup></Border.RenderTransform>
         <Grid>

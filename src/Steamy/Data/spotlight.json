@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-02T12:35:06.254621+00:00",
+  "updatedAt": "2026-10-02T12:38:11.978191+00:00",
   "games": [
     {
       "appId": 3010850,
@@ -14,6 +14,7 @@
       "storeUrl": "https://store.steampowered.com/app/3010850/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/3ab525f8c362fa205da31db35102a11f05511202/page_bg_raw.jpg?t=1790871278",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header.jpg?t=1790871278",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/d0917fcdbf27faffb3380f6f67e71e90f84b7ed5/capsule_184x69.jpg?t=1790871278",
       "releaseTime": "2026-10-06T16:00:00+00:00"
     },
     {
@@ -28,6 +29,7 @@
       "storeUrl": "https://store.steampowered.com/app/4231820/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/0741481b7e0e4519884d1012dfe285970e078508/page_bg_raw.jpg?t=1788478863",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/6b65aec2c398006aea8b76e1463cc34d0e4ba68b/header.jpg?t=1788478863",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/2ce9921d044de1c749da39763f8c03edd5c91d78/capsule_184x69.jpg?t=1788478863",
       "releaseTime": "2026-10-15T04:00:00+00:00"
     },
     {
@@ -42,6 +44,7 @@
       "storeUrl": "https://store.steampowered.com/app/3259780/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/063703b81c58de555ed405df85a985869a500eba/page_bg_raw.jpg?t=1788534743",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/710da43babb2043f9f6ad0e50023e31167d94708/header.jpg?t=1788534743",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/6861c59eb09396b7370536d494c1c1f33f684f14/capsule_184x69.jpg?t=1788534743",
       "releaseTime": "2026-10-22T16:00:00+00:00"
     },
     {
@@ -56,6 +59,7 @@
       "storeUrl": "https://store.steampowered.com/app/4435490/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/daf5d7dee8c89ae737aaac6b712288b934ee84dc/page_bg_raw.jpg?t=1790698027",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/0c492be3204835d71e8b454b6eb1817f8ff68c0d/header.jpg?t=1790698027",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/50d218e79ead2650bc6b7360995cc8dd3fbe2c29/capsule_184x69.jpg?t=1790698027",
       "releaseTime": "2026-10-23T05:00:00+00:00"
     },
     {
@@ -70,7 +74,93 @@
       "storeUrl": "https://store.steampowered.com/app/4530370/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/58ff694d0b284789666cea9601d774acbcc415ea/page_bg_raw.jpg?t=1790886528",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/32b41d18ffaac3d2e1dc1a9c3915538db0ba3fca/header.jpg?t=1790886528",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/3d06aef381c925bb6c091f13be44dd294b205a72/capsule_184x69.jpg?t=1790886528",
       "releaseTime": "2026-11-10T16:00:00+00:00"
+    },
+    {
+      "appId": 2769570,
+      "name": "Fable",
+      "description": "Become the Hero you want to be in an immersive open-world action-RPG where each choice shapes your journey, reputation is everything, and fairytale endings are never guaranteed.",
+      "genres": "Action · Adventure · RPG",
+      "publisher": "Xbox Game Studios",
+      "comingSoon": true,
+      "releaseLabel": "Feb 23, 2027",
+      "releaseDate": "2027-02-23",
+      "storeUrl": "https://store.steampowered.com/app/2769570/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2769570/1f2699edd4bbb52b29eb30c869c286c0d33bd088/page_bg_raw.jpg?t=1788984944",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2769570/d2ffd7e15a91f3e5485601d3d876988ba3a859d7/header.jpg?t=1788984944",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2769570/24f6ec304555c95bf5c1ee328ffa9caaea50a4f6/capsule_184x69.jpg?t=1788984944",
+      "releaseTime": "2027-02-23T16:00:00+00:00"
+    },
+    {
+      "appId": 1174180,
+      "name": "Red Dead Redemption 2",
+      "description": "Arthur Morgan and the Van der Linde Gang are outlaws on the run. With federal agents and bounty hunters massing on their heels, the gang must rob, steal, and fight their way across the rugged heartland in order to survive.",
+      "genres": "Action · Adventure",
+      "publisher": "Rockstar Games",
+      "comingSoon": false,
+      "releaseLabel": "Dec 5, 2019",
+      "releaseDate": "2019-12-05",
+      "storeUrl": "https://store.steampowered.com/app/1174180/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/page_bg_raw.jpg?t=1759502961",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/header.jpg?t=1759502961",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/capsule_184x69.jpg?t=1759502961"
+    },
+    {
+      "appId": 1091500,
+      "name": "Cyberpunk 2077",
+      "description": "Cyberpunk 2077 is an open-world, action-adventure RPG set in the dark future of Night City — a dangerous megalopolis obsessed with power, glamor, and ceaseless body modification.",
+      "genres": "RPG",
+      "publisher": "CD PROJEKT RED",
+      "comingSoon": false,
+      "releaseLabel": "Dec 9, 2020",
+      "releaseDate": "2020-12-09",
+      "storeUrl": "https://store.steampowered.com/app/1091500/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/644eb087007768417a847e52c38eeaf34b57fd12/page_bg_raw.jpg?t=1784714077",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/e9047d8ec47ae3d94bb8b464fb0fc9e9972b4ac7/header.jpg?t=1784714077",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/590e0988a2fb79f44d3e31e41fd4949eb76abc41/capsule_184x69.jpg?t=1784714077"
+    },
+    {
+      "appId": 1245620,
+      "name": "ELDEN RING",
+      "description": "THE CRITICALLY ACCLAIMED FANTASY ACTION RPG. Rise, Tarnished, and be guided by grace to brandish the power of the Elden Ring and become an Elden Lord in the Lands Between.",
+      "genres": "Action · RPG",
+      "publisher": "FromSoftware, Inc. · Bandai Namco Entertainment",
+      "comingSoon": false,
+      "releaseLabel": "Feb 24, 2022",
+      "releaseDate": "2022-02-24",
+      "storeUrl": "https://store.steampowered.com/app/1245620/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/page_bg_raw.jpg?t=1790290043",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/f0b19c231f86fa0e633ff88a1a63459443017728/header_alt_assets_3.jpg?t=1790290043",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/65b8e40dc6ffab9cf53bf26f05023a199118a6a8/capsule_184x69_alt_assets_3.jpg?t=1790290043"
+    },
+    {
+      "appId": 1086940,
+      "name": "Baldur's Gate 3",
+      "description": "Baldur’s Gate 3 is a story-rich, party-based RPG set in the universe of Dungeons & Dragons, where your choices shape a tale of fellowship and betrayal, survival and sacrifice, and the lure of absolute power.",
+      "genres": "Adventure · RPG · Strategy",
+      "publisher": "Larian Studios",
+      "comingSoon": false,
+      "releaseLabel": "Aug 3, 2023",
+      "releaseDate": "2023-08-03",
+      "storeUrl": "https://store.steampowered.com/app/1086940/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/page_bg_raw.jpg?t=1777363040",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/48a2fcbda8565bb45025e98fd8ebde8a7203f6a0/header.jpg?t=1777363040",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/3dd81008e9c385caf68152450c22353f6a8abec9/capsule_184x69.jpg?t=1777363040"
+    },
+    {
+      "appId": 2322010,
+      "name": "God of War Ragnarök",
+      "description": "Kratos and Atreus embark on a mythic journey for answers before Ragnarök arrives – now on PC.",
+      "genres": "Action · Adventure · RPG",
+      "publisher": "PlayStation Publishing LLC",
+      "comingSoon": false,
+      "releaseLabel": "Sep 19, 2024",
+      "releaseDate": "2024-09-19",
+      "storeUrl": "https://store.steampowered.com/app/2322010/",
+      "heroUrl": "https://store.akamai.steamstatic.com/images/storepagebackground/app/2322010?t=1776465233",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2322010/header.jpg?t=1776465233",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2322010/capsule_184x69.jpg?t=1776465233"
     }
   ]
 }

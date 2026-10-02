@@ -34,8 +34,12 @@ public sealed class BetterSteamToolsViewModel : ObservableObject
         _service = service; _settings = settings; _navigation = navigation;
         _source = Sources[0];
         InstallBackendCommand = new AsyncRelayCommand(() => RunAsync(token => _service.InstallBackendAsync(SteamRoot, OperationProgress(), token)), () => !IsBusy && SteamDetected);
-        AddGameCommand = new AsyncRelayCommand(() => RunAsync(token => _service.AddFromSourceAsync(SteamRoot, ParseAppId(GameInput)!.Value, SelectedSource.Source, OperationProgress(), token)), () => !IsBusy && BackendInstalled && ParseAppId(GameInput) is not null);
-        BrowseFilesCommand = new AsyncRelayCommand(BrowseFilesAsync, () => !IsBusy && BackendInstalled);
+        AddGameCommand = new AsyncRelayCommand(() => RunAsync(async token =>
+        {
+            var setup = await EnsureBackendAsync(token);
+            return setup ?? await _service.AddFromSourceAsync(SteamRoot, ParseAppId(GameInput)!.Value, SelectedSource.Source, OperationProgress(), token);
+        }), () => !IsBusy && SteamDetected && ParseAppId(GameInput) is not null);
+        BrowseFilesCommand = new AsyncRelayCommand(BrowseFilesAsync, () => !IsBusy && SteamDetected);
         CancelCommand = new RelayCommand(() => { _operation?.Cancel(); Status = "Cancelling…"; }, () => IsBusy);
         DetectCommand = new RelayCommand(RefreshDetection, () => !IsBusy);
         BrowseSteamCommand = new AsyncRelayCommand(BrowseSteamAsync, () => !IsBusy);
@@ -56,9 +60,10 @@ public sealed class BetterSteamToolsViewModel : ObservableObject
     public string FilesLabel { get => _filesLabel; private set { if (SetProperty(ref _filesLabel, value)) OnPropertyChanged(nameof(HasSelectedFiles)); } }
     public bool HasSelectedFiles => !string.IsNullOrEmpty(FilesLabel);
     public bool SteamDetected { get => _detected; private set { if (SetProperty(ref _detected, value)) OnPropertyChanged(nameof(ConnectionLabel)); CommandsChanged(); } }
-    public string ConnectionLabel => SteamDetected ? "Steam detected" : "Steam not detected";
-    public bool BackendInstalled { get => _backend; private set { if (SetProperty(ref _backend, value)) { OnPropertyChanged(nameof(BackendLabel)); CommandsChanged(); } } }
-    public string BackendLabel => BackendInstalled ? "Backend files detected" : "BetterSteamTools not installed";
+    public string ConnectionLabel => !SteamDetected ? "Steam not detected" : BackendInstalled ? "BetterSteamTools installed" : "Steam detected · setup required";
+    public bool BackendInstalled { get => _backend; private set { if (SetProperty(ref _backend, value)) { OnPropertyChanged(nameof(BackendLabel)); OnPropertyChanged(nameof(ConnectionLabel)); OnPropertyChanged(nameof(BackendSetupRequired)); CommandsChanged(); } } }
+    public bool BackendSetupRequired => !BackendInstalled;
+    public string BackendLabel => BackendInstalled ? "BetterSteamTools installed · files verified" : "BetterSteamTools not installed or needs repair";
     public bool IsBusy { get => _busy; private set { if (SetProperty(ref _busy, value)) { OnPropertyChanged(nameof(IsIdle)); CommandsChanged(); } } }
     public bool IsIdle => !IsBusy;
     public IAsyncRelayCommand InstallBackendCommand { get; }
@@ -99,10 +104,26 @@ public sealed class BetterSteamToolsViewModel : ObservableObject
     public async Task ImportFilesAsync(IReadOnlyList<string> paths)
     {
         if (IsBusy) return;
-        if (!BackendInstalled) { Status = "Install BetterSteamTools before importing game metadata."; return; }
+        if (!SteamDetected) { Status = "Choose the Steam folder before importing game metadata."; return; }
         FilesLabel = string.Join(", ", paths.Select(Path.GetFileName));
         if (!string.IsNullOrWhiteSpace(GameInput) && ParseAppId(GameInput) is null) { Status = "Enter a valid Steam App ID or clear the game field for automatic detection."; return; }
-        await RunAsync(token => _service.ImportAsync(SteamRoot, paths, ParseAppId(GameInput), token));
+        await RunAsync(async token =>
+        {
+            var setup = await EnsureBackendAsync(token);
+            return setup ?? await _service.ImportAsync(SteamRoot, paths, ParseAppId(GameInput), token);
+        });
+    }
+
+    private async Task<BetterSteamToolsResult?> EnsureBackendAsync(CancellationToken token)
+    {
+        if (_service.Detect(SteamRoot).BackendInstalled) return null;
+        Status = "Installing BetterSteamTools before adding metadata… Close Steam before continuing.";
+        var installed = await _service.InstallBackendAsync(SteamRoot, OperationProgress(), token);
+        if (!installed.Succeeded) return installed;
+        token.ThrowIfCancellationRequested();
+        if (!_service.Detect(SteamRoot).BackendInstalled)
+            return new(false, "BetterSteamTools could not be verified after installation. Metadata was not added.", []);
+        return null;
     }
 
     private IProgress<string> OperationProgress()

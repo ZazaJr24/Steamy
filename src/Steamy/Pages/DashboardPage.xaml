@@ -43,8 +43,38 @@
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
+    <DataTemplate x:Key="DiscoveryCoverTemplate">
+      <Button Style="{StaticResource CoverCardButton}" ToolTip="{Binding Game.Name}" CommandParameter="{Binding}"
+              Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+              AutomationProperties.Name="{Binding Game.Name}">
+        <Border CornerRadius="16" Background="{DynamicResource GameDialogSurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1">
+          <Grid>
+            <Border CornerRadius="16" RenderOptions.BitmapScalingMode="HighQuality">
+              <Border.Background><ImageBrush ImageSource="{Binding Game.ArtworkImage}" Stretch="UniformToFill" /></Border.Background>
+            </Border>
+            <Border CornerRadius="16" IsHitTestVisible="False"><Border.Background>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#000B0E17" Offset="0.35" /><GradientStop Color="#550B0E17" Offset="0.62" />
+                <GradientStop Color="#F50B0E17" Offset="0.9" /><GradientStop Color="#FF0B0E17" Offset="1" />
+              </LinearGradientBrush>
+            </Border.Background></Border>
+            <Border HorizontalAlignment="Right" VerticalAlignment="Top" CornerRadius="7" Padding="8,5" Margin="12" Background="#FFDAE1FF">
+              <TextBlock Text="{Binding ReleaseStatus}" Foreground="#FF242F55" FontWeight="Bold" FontSize="8" />
+            </Border>
+            <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,14">
+              <TextBlock Text="{Binding Game.Name}" FontSize="14" FontWeight="SemiBold" Foreground="#FFF5F6FD" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="38" />
+              <TextBlock Text="{Binding Publisher}" Foreground="#FFAFB5C9" FontSize="10" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
+              <Border Height="1" Background="#354F5C7C" Margin="0,12,0,9" />
+              <TextBlock Text="{Binding ReleaseLabel}" Foreground="#FFDCE2F4" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="{Binding Genres}" Foreground="#FF9DA7BE" FontSize="10" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Grid>
+        </Border>
+      </Button>
+    </DataTemplate>
   </Page.Resources>
 
+  <Grid>
   <ScrollViewer x:Name="DashboardScroll" Style="{StaticResource DashboardScrollHostStyle}" Padding="28,22,28,30">
     <StackPanel MaxWidth="1440" RequestBringIntoView="Dashboard_RequestBringIntoView">
       <Grid Margin="0,0,0,22">
@@ -151,23 +181,24 @@
                          MaxWidth="360" HorizontalAlignment="Left" Height="34" LineHeight="17" LineStackingStrategy="BlockLineHeight" Margin="0,8,0,0" />
             </StackPanel>
             <StackPanel x:Name="SpotlightActions" Grid.Row="1" Orientation="Horizontal" Margin="0,12,0,0" HorizontalAlignment="Left">
-              <Border x:Name="SpotlightCountdown" CornerRadius="10" Padding="12,8" BorderThickness="0" Background="#90070709"
+              <Border x:Name="SpotlightCountdown" CornerRadius="10" Padding="0" BorderThickness="0" Background="Transparent"
                       ToolTip="{Binding CountdownDetail}" MinWidth="100">
                 <StackPanel>
-                  <Grid Width="232" Visibility="{Binding HasTimedCountdown, Converter={StaticResource BoolToVis}}">
-                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
-                    <StackPanel><TextBlock Text="{Binding CountdownDays}" FontSize="24" FontFamily="Consolas" Foreground="#EEEEF2" /><TextBlock Text="DAYS" FontSize="8" Foreground="#92929B" Margin="0,2,0,0" /></StackPanel>
-                    <StackPanel Grid.Column="1"><TextBlock Text="{Binding CountdownHours}" FontSize="24" FontFamily="Consolas" Foreground="#EEEEF2" /><TextBlock Text="HOURS" FontSize="8" Foreground="#92929B" Margin="0,2,0,0" /></StackPanel>
-                    <StackPanel Grid.Column="2"><TextBlock Text="{Binding CountdownMinutes}" FontSize="24" FontFamily="Consolas" Foreground="#EEEEF2" /><TextBlock Text="MIN" FontSize="8" Foreground="#92929B" Margin="0,2,0,0" /></StackPanel>
-                    <StackPanel Grid.Column="3"><TextBlock Text="{Binding CountdownSeconds}" FontSize="24" FontFamily="Consolas" Foreground="#EEEEF2" /><TextBlock Text="SEC" FontSize="8" Foreground="#92929B" Margin="0,2,0,0" /></StackPanel>
-                  </Grid>
-                  <TextBlock Text="{Binding Countdown}" FontSize="21" Foreground="#EEEEF2">
+                  <StackPanel Orientation="Horizontal" Visibility="{Binding HasTimedCountdown, Converter={StaticResource BoolToVis}}">
+                    <controls:CountdownDigit Value="{Binding CountdownDays}" Label="DAYS" Margin="0,0,8,0" />
+                    <controls:CountdownDigit Value="{Binding CountdownHours}" Label="HOURS" Margin="0,0,8,0" />
+                    <controls:CountdownDigit Value="{Binding CountdownMinutes}" Label="MIN" Margin="0,0,8,0" />
+                    <controls:CountdownDigit Value="{Binding CountdownSeconds}" Label="SEC" />
+                  </StackPanel>
+                  <TextBlock Text="{Binding Countdown}" FontSize="21" Foreground="#EEEEF2" Padding="12,8">
                     <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Visible" />
                       <Style.Triggers><DataTrigger Binding="{Binding HasTimedCountdown}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
                     </Style></TextBlock.Style>
                   </TextBlock>
                 </StackPanel>
               </Border>
+              <ui:Button Content="Details" Appearance="Transparent" Foreground="#F0F1F7" BorderBrush="#354F5C7C" BorderThickness="1" Padding="13,9" Margin="12,0,0,0" VerticalAlignment="Center"
+                         Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
             </StackPanel>
             <StackPanel x:Name="SpotlightPaging" Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="12,0,0,0"
                         DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
@@ -180,32 +211,61 @@
         </Grid>
       </Border>
 
-      <StackPanel Margin="0,0,0,26" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
-        <TextBlock Text="Upcoming releases" Style="{StaticResource SectionTitle}" Margin="0,0,0,12" />
-        <ItemsControl ItemsSource="{Binding NewGames}" controls:EntranceMotion.Delay="40">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="210" MaxColumns="3" Spacing="20" CoverRatio="0.4674" FooterHeight="48" MaxRows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate><DataTemplate>
-            <Button Style="{StaticResource CoverCardButton}" ToolTip="{Binding Game.Name}" CommandParameter="{Binding}"
-                    Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}">
-              <Grid>
-                <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="48" /></Grid.RowDefinitions>
-                <Border Grid.Row="0" CornerRadius="12" Background="{Binding Game.CoverColor}" />
-                <Border Grid.Row="0" CornerRadius="12" SizeChanged="RecommendationArtwork_SizeChanged" ClipToBounds="True" RenderOptions.BitmapScalingMode="HighQuality">
-                  <Image Source="{Binding Game.HeaderImage}" Stretch="UniformToFill" StretchDirection="DownOnly" />
-                </Border>
-                <Border Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Bottom" CornerRadius="7" Padding="9,5" Margin="10" Background="#B508080A">
-                  <TextBlock Text="{Binding Countdown}" Foreground="#D4D4DA" FontSize="11" FontWeight="SemiBold" />
-                </Border>
-                <StackPanel Grid.Row="1" Margin="2,9,2,0">
-                  <TextBlock Text="{Binding Game.Name}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Text="{Binding ReleaseLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-              </Grid>
-            </Button>
-          </DataTemplate></ItemsControl.ItemTemplate>
+      <StackPanel Margin="0,0,0,32" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
+        <TextBlock Text="On the horizon" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
+        <TextBlock Text="Upcoming games · click a cover for details" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,16" />
+        <ItemsControl x:Name="UpcomingGameGrid" ItemsSource="{Binding NewGames}" ItemTemplate="{StaticResource DiscoveryCoverTemplate}">
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="190" MaxColumns="5" Spacing="20" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        </ItemsControl>
+      </StackPanel>
+      <StackPanel Margin="0,0,0,24" Visibility="{Binding HasMajorGames, Converter={StaticResource BoolToVis}}">
+        <TextBlock Text="Big worlds. Great games." Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
+        <TextBlock Text="Major releases on Steam" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,16" />
+        <ItemsControl x:Name="MajorGameGrid" ItemsSource="{Binding MajorGames}" ItemTemplate="{StaticResource DiscoveryCoverTemplate}">
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="190" MaxColumns="5" Spacing="20" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         </ItemsControl>
       </StackPanel>
 
     </StackPanel>
   </ScrollViewer>
+
+    <Grid x:Name="DiscoveryOverlay" Visibility="{Binding HasSelectedDiscovery, Converter={StaticResource BoolToVis}}" KeyboardNavigation.TabNavigation="Cycle" KeyDown="Discovery_KeyDown">
+      <Border Background="#B0090C14" MouseLeftButtonUp="Discovery_Close" />
+      <Border x:Name="DiscoveryDetailsPanel" MaxWidth="680" MaxHeight="660" Margin="20" CornerRadius="18" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+              Background="{DynamicResource GameDialogSurfaceBrush}" VerticalAlignment="Center" DataContext="{Binding SelectedDiscovery}">
+        <ScrollViewer Style="{StaticResource PageScrollHostStyle}">
+          <StackPanel>
+            <Border Height="180" CornerRadius="18,18,0,0"><Border.Background><ImageBrush ImageSource="{Binding Game.HeaderImage}" Stretch="UniformToFill" /></Border.Background>
+              <Grid>
+                <Border CornerRadius="18,18,0,0"><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#000A0C14" Offset="0.1" /><GradientStop Color="#E60A0C14" Offset="1" /></LinearGradientBrush></Border.Background></Border>
+                <StackPanel VerticalAlignment="Bottom" Margin="24,0,60,20">
+                  <TextBlock Text="{Binding ReleaseStatus}" Foreground="#D2D9F0" FontSize="9" FontWeight="SemiBold" Margin="0,0,0,8" />
+                  <TextBlock Text="{Binding Game.Name}" Foreground="#F5F6FD" FontSize="25" FontWeight="SemiBold" TextWrapping="Wrap" />
+                </StackPanel>
+                <ui:Button x:Name="CloseDiscoveryButton" Icon="{ui:SymbolIcon Dismiss24}" Appearance="Transparent" Foreground="White" Width="34" Height="34" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="14"
+                           Command="{Binding DataContext.CloseDiscoveryCommand, RelativeSource={RelativeSource AncestorType=Page}}" AutomationProperties.Name="Close game details" />
+              </Grid>
+            </Border>
+            <StackPanel Margin="24,22,24,24">
+              <TextBlock Text="{Binding Description}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" FontSize="13" LineHeight="21" />
+              <TextBlock Text="{Binding Publisher}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,18,0,0" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Genres}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,7,0,0" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding ReleaseLabel}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13" Margin="0,18,0,12" />
+              <StackPanel Orientation="Horizontal" Visibility="{Binding HasTimedCountdown, Converter={StaticResource BoolToVis}}" ToolTip="{Binding CountdownDetail}" Margin="0,0,0,18">
+                <controls:CountdownDigit Value="{Binding CountdownDays}" Label="DAYS" Margin="0,0,8,0" />
+                <controls:CountdownDigit Value="{Binding CountdownHours}" Label="HOURS" Margin="0,0,8,0" />
+                <controls:CountdownDigit Value="{Binding CountdownMinutes}" Label="MIN" Margin="0,0,8,0" />
+                <controls:CountdownDigit Value="{Binding CountdownSeconds}" Label="SEC" />
+              </StackPanel>
+              <TextBlock Text="Release dates are from Steam. They do not confirm metadata or download availability." FontSize="10.5" TextWrapping="Wrap" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,18" />
+              <WrapPanel>
+                <ui:Button Content="View on Steam" Appearance="Primary" Command="{Binding DataContext.OpenDiscoveryStoreCommand, RelativeSource={RelativeSource AncestorType=Page}}" Margin="0,0,10,8" />
+                <ui:Button Content="Browse sources" Appearance="Secondary" Command="{Binding DataContext.BrowseDiscoverySourcesCommand, RelativeSource={RelativeSource AncestorType=Page}}" Margin="0,0,0,8" />
+              </WrapPanel>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+  </Grid>
 </Page>

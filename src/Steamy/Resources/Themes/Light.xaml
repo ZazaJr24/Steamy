@@ -38,6 +38,7 @@
   <LinearGradientBrush x:Key="GlassSurfaceBrush" StartPoint="0,0" EndPoint="0.65,1">
     <GradientStop Color="#C0FFFFFF" Offset="0" /><GradientStop Color="#70FFFFFF" Offset="0.6" /><GradientStop Color="#90EEF3FF" Offset="1" />
   </LinearGradientBrush>
+  <SolidColorBrush x:Key="GameDialogSurfaceBrush" Color="#FFFFFF" />
   <LinearGradientBrush x:Key="DialogSurfaceBrush" StartPoint="0,0" EndPoint="1,1">
     <GradientStop Color="#F4FFFFFF" Offset="0" /><GradientStop Color="#EBEDF5FF" Offset="1" />
   </LinearGradientBrush>

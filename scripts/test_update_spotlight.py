@@ -19,6 +19,12 @@ class SelectionTests(unittest.TestCase):
         self.game['release_date'] = {'coming_soon': False, 'date': '25 Feb, 2022'}
         self.assertIsNone(select_game(self.game, self.now))
 
+    def test_curated_major_releases_keep_their_actual_released_status(self):
+        self.game['release_date'] = {'coming_soon': False, 'date': '25 Feb, 2022'}
+        game = select_game(self.game, self.now, allow_released=True)
+        self.assertFalse(game['comingSoon'])
+        self.assertEqual('2022-02-25', game['releaseDate'])
+
     def test_released_game_is_excluded(self):
         self.game['release_date'] = {'coming_soon': False, 'date': 'Sep 18, 2026'}
         self.assertIsNone(select_game(self.game, self.now))

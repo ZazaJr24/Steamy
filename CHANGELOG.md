@@ -3,6 +3,16 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.11 — 2026-10-02
+
+- Discovery now shows full portrait-cover grids for upcoming major-studio games and large released titles. Click a cover or Spotlight Details to read its description, publisher, genres and actual Steam release information, then open Steam or explicitly browse sources.
+- Expanded the verified public Steam feed, retaining named upcoming productions and a separate collection of released AAA games. Portrait artwork is cached and loaded with bounded concurrency; release dates never imply source availability.
+- Separate day/hour/minute/second countdown tiles animate changed digits briefly and respect reduced effects. Date-only and unknown release schedules keep honest labels.
+- The Games grid uses larger rounded cover cards with an integrated caption and hover feedback. Game selection and source/depot/location dialogs have a fully opaque surface in both themes.
+- Fixed BetterSteamTools detection: filenames alone no longer mean installed. Recognize the verified official payload or check every installed DLL against its installation receipt; missing, corrupt and unrelated files require installation or repair.
+- Adding an App ID, choosing files or dropping metadata installs a missing backend first, verifies it again, then imports. Installation failures and cancellation stop the import; running Steam is reported clearly. GitHub API rate limits can use the official LuaTools-style update manifest with a pinned, verified full-archive checksum.
+- Native Windows evidence covers actual official backend files in temporary test installations, checksum failures, running Steam, automatic setup, cancellation, opaque dialogs and responsive layouts. README images are captured from the Windows app.
+
 ## 0.4.10 — 2026-10-02
 
 - Minimal SteamTools workspace: one large, quiet drag-and-drop target for ZIP, Lua and manifest files, a simple title, a subtle background wash and a file picker. Removed the large game card, boxed status panels, decorative badges and explanatory paragraphs from the initial view.

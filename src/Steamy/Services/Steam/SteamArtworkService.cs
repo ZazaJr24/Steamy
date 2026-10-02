@@ -15,6 +15,12 @@ public interface IArtworkService
         await LoadHeadersAsync(new[] { game }, cancellationToken).ConfigureAwait(false);
         return game.HeaderImage as BitmapImage;
     }
+    async Task<BitmapImage?> LoadSpotlightPortraitAsync(SpotlightGame metadata, CancellationToken cancellationToken = default)
+    {
+        var game = new Game { AppId = metadata.AppId, Name = metadata.Name };
+        await LoadAsync(game, cancellationToken).ConfigureAwait(false);
+        return game.ArtworkImage as BitmapImage;
+    }
     Task LoadAsync(Game game, CancellationToken cancellationToken = default);
     Task LoadHeadersAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default);
     Task LoadManyAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default);
@@ -66,6 +72,13 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
         var fingerprint = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url)))[..12];
         return Path.Combine(_cacheDirectory, $"{appId}_spotlight_{kind}_{fingerprint}.jpg");
     }
+
+    public Task<BitmapImage?> LoadSpotlightPortraitAsync(SpotlightGame game, CancellationToken cancellationToken = default) =>
+        LoadFirstAvailableAsync(new[]
+        {
+            $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{game.AppId}/library_600x900.jpg",
+            game.PortraitUrl, game.HeaderUrl
+        }.Where(SpotlightCatalogService.IsArtworkUrl).ToArray(), SpotlightCachePath(game.AppId, "portrait", game.HeaderUrl), cancellationToken);
 
     public async Task LoadHeadersAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default)
     {

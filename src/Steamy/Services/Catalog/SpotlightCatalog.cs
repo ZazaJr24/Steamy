@@ -18,6 +18,7 @@ public sealed record SpotlightGame
     public string StoreUrl { get; init; } = string.Empty;
     public string HeroUrl { get; init; } = string.Empty;
     public string HeaderUrl { get; init; } = string.Empty;
+    public string PortraitUrl { get; init; } = string.Empty;
 }
 
 public sealed record SpotlightSnapshot(DateTimeOffset UpdatedAt, IReadOnlyList<SpotlightGame> Games)
@@ -156,7 +157,8 @@ public sealed class SpotlightCatalogService : ISpotlightService, IDisposable
                 || game.Description is null || game.Description.Length > 1000 || game.Publisher is null || game.Publisher.Length > 250
                 || game.Genres is null || game.Genres.Length > 250 || game.ReleaseLabel is null || game.ReleaseLabel.Length > 100
                 || game.StoreUrl != $"https://store.steampowered.com/app/{game.AppId}/"
-                || !IsArtworkUrl(game.HeroUrl) || !IsArtworkUrl(game.HeaderUrl))
+                || !IsArtworkUrl(game.HeroUrl) || !IsArtworkUrl(game.HeaderUrl)
+                || (!string.IsNullOrEmpty(game.PortraitUrl) && !IsArtworkUrl(game.PortraitUrl)))
                 throw new InvalidDataException("Invalid spotlight game metadata.");
             games.Add(game);
         }

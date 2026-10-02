@@ -18,6 +18,7 @@ public partial class DashboardPage : Page
     private long _lastSlideTick;
     private Window? _carouselWindow;
     private bool _loaderRunning;
+    private System.Windows.IInputElement? _discoveryFocus;
     public DashboardPage()
     {
         InitializeComponent();
@@ -64,7 +65,11 @@ public partial class DashboardPage : Page
         _countdownTimer.Tick += (_, _) => ((DashboardViewModel)DataContext).RefreshCountdowns();
         _spotlightTimer.Tick += CarouselTick;
         DashboardHero.SizeChanged += (_, _) => DashboardHero.Clip = new System.Windows.Media.RectangleGeometry(new Rect(DashboardHero.RenderSize), 16, 16);
-        SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
+        SizeChanged += (_, e) =>
+        {
+            ApplyResponsiveLayout(e.NewSize.Width);
+            DiscoveryDetailsPanel.MaxHeight = Math.Max(0, e.NewSize.Height - 40);
+        };
     }
 
     private void CarouselActivated(object? sender, EventArgs args)
@@ -84,7 +89,7 @@ public partial class DashboardPage : Page
         var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(_lastSlideTick);
         _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
         var model = (DashboardViewModel)DataContext;
-        if (!IsVisible || _carouselWindow?.IsActive != true || model.SpotlightPaused || model.HasSearchQuery)
+        if (!IsVisible || _carouselWindow?.IsActive != true || model.SpotlightPaused || model.HasSearchQuery || model.HasSelectedDiscovery)
         {
             HideSpotlightLoader();
             return;
@@ -136,6 +141,18 @@ public partial class DashboardPage : Page
 
     private void SpotlightChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
+        if (args.PropertyName == nameof(DashboardViewModel.SelectedDiscovery))
+        {
+            var open = ((DashboardViewModel)DataContext).HasSelectedDiscovery;
+            DashboardScroll.IsEnabled = !open;
+            if (open)
+            {
+                _discoveryFocus = System.Windows.Input.Keyboard.FocusedElement;
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() => CloseDiscoveryButton.Focus()));
+            }
+            else { _discoveryFocus?.Focus(); _discoveryFocus = null; }
+            HideSpotlightLoader();
+        }
         if (args.PropertyName == nameof(DashboardViewModel.SpotlightPaused)) HideSpotlightLoader();
         if (args.PropertyName != nameof(DashboardViewModel.FeaturedGame)) return;
         _slideElapsed = TimeSpan.Zero;
@@ -157,6 +174,16 @@ public partial class DashboardPage : Page
         var zoom = new System.Windows.Media.Animation.DoubleAnimation(1, 1.015, TimeSpan.FromSeconds(5));
         ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, zoom);
         ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, zoom);
+    }
+
+    private void Discovery_Close(object sender, System.Windows.Input.MouseButtonEventArgs args) => ((DashboardViewModel)DataContext).CloseDiscoveryCommand.Execute(null);
+    private void Discovery_KeyDown(object sender, System.Windows.Input.KeyEventArgs args)
+    {
+        if (args.Key == System.Windows.Input.Key.Escape)
+        {
+            ((DashboardViewModel)DataContext).CloseDiscoveryCommand.Execute(null);
+            args.Handled = true;
+        }
     }
 
     private void Dashboard_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs args)

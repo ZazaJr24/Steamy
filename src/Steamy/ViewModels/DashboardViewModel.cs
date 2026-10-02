@@ -43,8 +43,8 @@ public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObjec
     public string Description => Metadata.Description;
     public string Genres => Metadata.Genres;
     public string ReleaseLabel => Metadata.ReleaseLabel;
-    public string ReleaseStatus => "UPCOMING";
-    public string Countdown => ReleaseCountdown.Label(Metadata, DateTimeOffset.Now);
+    public string ReleaseStatus => Metadata.ComingSoon ? "UPCOMING" : "RELEASED";
+    public string Countdown => Metadata.ComingSoon ? ReleaseCountdown.Label(Metadata, DateTimeOffset.Now) : "Released";
     private ReleaseCountdownParts? _countdownParts = ReleaseCountdown.Parts(metadata, DateTimeOffset.Now);
     public bool HasTimedCountdown => _countdownParts is not null;
     public string CountdownDays => _countdownParts?.Days.ToString("00") ?? "–";
@@ -250,10 +250,23 @@ public sealed class DashboardViewModel : ViewModelBase
     private Task? _discoveryArtworkTask;
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _heroLoads = new();
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _headerLoads = new();
+    private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _portraitLoads = new();
+    private readonly SemaphoreSlim _discoveryArtworkGate = new(3, 3);
     private int _featuredIndex;
     public IReadOnlyList<DashboardFeature> DiscoverGames { get; private set; } = Array.Empty<DashboardFeature>();
     public IReadOnlyList<DashboardFeature> SpotlightPreviews => DiscoverGames.Take(8).ToArray();
-    public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames.Take(3).ToArray();
+    public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames;
+    public IReadOnlyList<DashboardFeature> MajorGames { get; private set; } = Array.Empty<DashboardFeature>();
+    public bool HasMajorGames => MajorGames.Count > 0;
+    private DashboardFeature? _selectedDiscovery;
+    public DashboardFeature? SelectedDiscovery { get => _selectedDiscovery; private set { if (SetProperty(ref _selectedDiscovery, value)) OnPropertyChanged(nameof(HasSelectedDiscovery)); } }
+    public bool HasSelectedDiscovery => SelectedDiscovery is not null;
+    public ICommand CloseDiscoveryCommand => new RelayCommand(() => SelectedDiscovery = null);
+    public ICommand OpenDiscoveryStoreCommand => new RelayCommand(() =>
+    {
+        if (SelectedDiscovery is { } feature) StartShell(feature.Metadata.StoreUrl);
+    });
+    public ICommand BrowseDiscoverySourcesCommand => new RelayCommand(() => OpenSpotlight(SelectedDiscovery));
     public bool HasSpotlight => DiscoverGames.Count > 0;
     public DashboardFeature? FeaturedGame => HasSpotlight ? DiscoverGames[_featuredIndex] : null;
     public string FeaturedPosition => HasSpotlight ? $"{_featuredIndex + 1:00} / {DiscoverGames.Count:00}" : string.Empty;
@@ -292,6 +305,8 @@ public sealed class DashboardViewModel : ViewModelBase
                 (!pair.Value.IsCompletedSuccessfully || pair.Value.Result is null)).Select(pair => pair.Key).ToArray()) _heroLoads.Remove(key);
             foreach (var key in _headerLoads.Where(pair => pair.Value.IsCompleted &&
                 (!pair.Value.IsCompletedSuccessfully || pair.Value.Result is null)).Select(pair => pair.Key).ToArray()) _headerLoads.Remove(key);
+            foreach (var key in _portraitLoads.Where(pair => pair.Value.IsCompleted &&
+                (!pair.Value.IsCompletedSuccessfully || pair.Value.Result is null)).Select(pair => pair.Key).ToArray()) _portraitLoads.Remove(key);
         }
         // Show cached artwork immediately; checking the feed must not delay the first paint.
         var savedArtwork = LoadVisibleArtworkAsync();
@@ -315,14 +330,20 @@ public sealed class DashboardViewModel : ViewModelBase
     private void ApplySpotlight(SpotlightSnapshot snapshot)
     {
         var upcoming = ReleaseCountdown.UpcomingAt(snapshot.Games, DateTimeOffset.Now);
-        if (DiscoverGames.Select(feature => feature.Metadata).SequenceEqual(upcoming)) return;
+        var released = snapshot.Games.Where(game => !game.ComingSoon).ToArray();
+        if (DiscoverGames.Select(feature => feature.Metadata).SequenceEqual(upcoming)
+            && MajorGames.Select(feature => feature.Metadata).SequenceEqual(released)) return;
         var previousId = FeaturedGame?.Game.AppId;
         DiscoverGames = upcoming.Select(game => new DashboardFeature(game)).ToArray();
+        MajorGames = released.Select(game => new DashboardFeature(game)).ToArray();
         _featuredIndex = Math.Max(0, Array.FindIndex(DiscoverGames.ToArray(), feature => feature.Game.AppId == previousId));
         _heroLoads.Clear();
         _headerLoads.Clear();
+        _portraitLoads.Clear();
         OnPropertyChanged(nameof(DiscoverGames));
         OnPropertyChanged(nameof(NewGames));
+        OnPropertyChanged(nameof(MajorGames));
+        OnPropertyChanged(nameof(HasMajorGames));
         OnPropertyChanged(nameof(SpotlightPreviews));
         UpdateSpotlightSelection();
         OnPropertyChanged(nameof(HasSpotlight));
@@ -335,19 +356,22 @@ public sealed class DashboardViewModel : ViewModelBase
         (DownloadFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
     }
 
-    private async Task LoadDiscoveryHeadersAsync()
+    private Task LoadDiscoveryHeadersAsync() => Task.WhenAll(DiscoverGames.Concat(MajorGames).Select(LoadDiscoveryCoverAsync));
+
+    private async Task LoadDiscoveryCoverAsync(DashboardFeature feature)
     {
-        // Preload the recommendations and the right-hand upcoming selector.
-        foreach (var feature in SpotlightPreviews)
+        await _discoveryArtworkGate.WaitAsync();
+        try
         {
-            try
-            {
-                if (!_headerLoads.TryGetValue(feature.Metadata, out var task))
-                    _headerLoads[feature.Metadata] = task = Task.Run(() => _artwork.LoadSpotlightHeaderAsync(feature.Metadata));
-                feature.Game.HeaderImage = await task;
-            }
-            catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Optional card artwork unavailable: {exception.GetType().Name}."); }
+            if (!_headerLoads.TryGetValue(feature.Metadata, out var header))
+                _headerLoads[feature.Metadata] = header = Task.Run(() => _artwork.LoadSpotlightHeaderAsync(feature.Metadata));
+            if (!_portraitLoads.TryGetValue(feature.Metadata, out var portrait))
+                _portraitLoads[feature.Metadata] = portrait = Task.Run(() => _artwork.LoadSpotlightPortraitAsync(feature.Metadata));
+            feature.Game.HeaderImage = await header;
+            feature.Game.ArtworkImage = await portrait;
         }
+        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Optional card artwork unavailable: {exception.GetType().Name}."); }
+        finally { _discoveryArtworkGate.Release(); }
     }
 
     private async Task LoadFeaturedArtworkAsync()
@@ -415,6 +439,7 @@ public sealed class DashboardViewModel : ViewModelBase
     {
         featured ??= FeaturedGame;
         if (featured is null) return;
+        SelectedDiscovery = null;
         var library = App.Services.GetRequiredService<LibraryViewModel>();
         library.SelectedSourceFilter = "All sources";
         library.RequestedDownload = new SteamCatalogItem
@@ -499,7 +524,7 @@ public sealed class DashboardViewModel : ViewModelBase
         PreviousFeaturedCommand = new RelayCommand(() => MoveFeatured(-1), () => DiscoverGames.Count > 1);
         ViewFeaturedCommand = new RelayCommand(ViewFeatured, () => HasSpotlight);
         DownloadFeaturedCommand = new RelayCommand(DownloadFeatured, () => HasSpotlight);
-        OpenSpotlightCommand = new RelayCommand<DashboardFeature>(OpenSpotlight);
+        OpenSpotlightCommand = new RelayCommand<DashboardFeature>(feature => SelectedDiscovery = feature ?? FeaturedGame);
         ApplySpotlight(spotlight.Cached);
         _librarySync = librarySync;
         _settings = settings;
