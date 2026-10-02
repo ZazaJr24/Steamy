@@ -170,7 +170,7 @@
           <ItemsControl ItemsSource="{Binding PagedCatalogItems}" controls:EntranceMotion.Delay="30">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="124" MaxItemWidth="170" Spacing="12" CoverRatio="1.5" FooterHeight="0" MaxColumns="5" />
+                <controls:AdaptiveGridPanel MinItemWidth="160" MaxItemWidth="260" Spacing="16" CoverRatio="1.5" FooterHeight="0" MaxColumns="5" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -204,7 +204,7 @@
                         </StackPanel>
                       </Border>
                       <StackPanel VerticalAlignment="Bottom" Margin="10,0,10,10">
-                        <TextBlock Text="{Binding Name}" Foreground="#F5F6FD" FontSize="12" FontWeight="SemiBold"
+                        <TextBlock Text="{Binding Name}" Foreground="#F5F6FD" FontSize="13" FontWeight="SemiBold"
                                    TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="38" />
                         <Border Height="1" Background="#354F5C7C" Margin="0,7,0,6" />
                         <TextBlock Text="{Binding AppLabel}" Foreground="#AFB5C9" FontSize="10" TextTrimming="CharacterEllipsis" />

@@ -62,7 +62,7 @@
               <TextBlock Text="{Binding ReleaseStatus}" Foreground="#FF242F55" FontWeight="Bold" FontSize="8" />
             </Border>
             <StackPanel VerticalAlignment="Bottom" Margin="10,0,10,10">
-              <TextBlock Text="{Binding Game.Name}" FontSize="12" FontWeight="SemiBold" Foreground="#FFF5F6FD" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="38" />
+              <TextBlock Text="{Binding Game.Name}" FontSize="14" FontWeight="SemiBold" Foreground="#FFF5F6FD" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="44" />
               <TextBlock Text="{Binding Publisher}" Foreground="#FFAFB5C9" FontSize="10" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
               <Border Height="1" Background="#354F5C7C" Margin="0,7,0,6" />
               <TextBlock Text="{Binding ReleaseLabel}" Foreground="#FFDCE2F4" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
@@ -195,7 +195,7 @@
         <TextBlock Text="On the horizon" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
         <TextBlock Text="Upcoming games · click a cover for details" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,16" />
         <ItemsControl x:Name="UpcomingGameGrid" ItemsSource="{Binding NewGames}" ItemTemplate="{StaticResource DiscoveryCoverTemplate}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="124" MaxItemWidth="170" MaxColumns="5" Spacing="12" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="210" MaxItemWidth="320" MaxColumns="3" Spacing="20" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         </ItemsControl>
       </StackPanel>
 

@@ -388,8 +388,9 @@ public sealed partial class PageSmokeTests
         {
             var firstFive = galleryPanel.Children.Cast<FrameworkElement>().Take(5).ToArray();
             var positions = firstFive.Select(child => child.TranslatePoint(new Point(0, 0), galleryPanel)).ToArray();
-            Assert.All(positions, point => Assert.Equal(positions[0].Y, point.Y));
-            Assert.True(firstFive[0].ActualWidth < 180, "The native Games window should fit five compact covers per row.");
+            Assert.Equal(4, positions.Count(point => point.Y == positions[0].Y));
+            Assert.InRange(firstFive[0].ActualWidth, 175, 260); // Four larger covers in the native 1044px window.
+            Assert.Equal(5, galleryPanel.MaxColumns); // Five covers remain available in a wider window.
         }
         SaveVisual(window, "games.png");
         _phase = "Hover a gallery card";

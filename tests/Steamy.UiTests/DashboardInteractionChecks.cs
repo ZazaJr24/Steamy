@@ -24,7 +24,7 @@ public sealed partial class PageSmokeTests
         Assert.Null(page.FindName("MajorGameGrid"));
         Assert.NotNull(page.FindName("UpcomingGameGrid"));
         foreach (var panel in Descendants<Steamy.Controls.AdaptiveGridPanel>(page))
-            Assert.All(panel.Children.Cast<FrameworkElement>(), child => Assert.InRange(child.ActualWidth, 1, 170));
+            Assert.All(panel.Children.Cast<FrameworkElement>(), child => Assert.InRange(child.ActualWidth, 210, 320));
         Assert.All(((DashboardViewModel)page.DataContext).NewGames, feature => Assert.True(feature.Metadata.ComingSoon));
         Assert.Null(page.FindName("SpotlightPreviews")); // The countdown has no right-hand artwork rail.
         if (Grid.GetRow(paging) == Grid.GetRow(actions))
