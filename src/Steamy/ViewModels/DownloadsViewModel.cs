@@ -41,11 +41,8 @@ public sealed class DownloadsViewModel : ViewModelBase
         RefreshFilter();
     }
 
-    private const double SparklineWidth = 200;
-    private const double SparklineHeight = 40;
-    private readonly NetworkThroughputSampler _network = new();
+
     private readonly DispatcherTimer _liveTimer;
-    private int _liveTick;
     private readonly HashSet<DownloadJob> _watchedJobs = new();
     private bool _refreshQueued;
     private DownloadJob? _selectedJob;
@@ -54,10 +51,6 @@ public sealed class DownloadsViewModel : ViewModelBase
     public string ResultLabel => $"{FilteredJobs.Count:N0} of {Jobs.Count:N0} downloads";
     public ICommand ClearFiltersCommand => new RelayCommand(() => { SearchText = string.Empty; SelectedFilter = "All downloads"; SelectedSourceFilter = "All sources"; });
 
-    public string InternetSpeedLabel { get; private set; } = "—";
-    public string InternetPeakLabel { get; private set; } = string.Empty;
-    public System.Windows.Media.PointCollection InternetSparkline { get; private set; } = new();
-    public System.Windows.Media.PointCollection InternetSparklineArea { get; private set; } = new();
     public string JobsSpeedLabel { get; private set; } = "—";
     public string OverallEtaLabel { get; private set; } = "—";
     public string OverallEtaHint { get; private set; } = string.Empty;
@@ -78,19 +71,8 @@ public sealed class DownloadsViewModel : ViewModelBase
     // every tick doubled the render cost for a curve that crawls anyway.
     private void UpdateLiveStats()
     {
-        _network.Sample();
+        foreach (var job in Jobs.Where(job => job.IsActive)) job.RefreshElapsed();
         var active = Jobs.Where(job => job.IsActive).ToList();
-        _liveTick++;
-
-        InternetSpeedLabel = _network.IsAvailable ? DownloadFormat.Speed(_network.BytesPerSecond) : "—";
-        InternetPeakLabel = !_network.IsAvailable ? "Not measurable on this system"
-            : _network.PeakBytesPerSecond > 0 ? $"Peak {DownloadFormat.Speed(_network.PeakBytesPerSecond)}" : "Measuring…";
-        if (_liveTick % 2 == 1)
-        {
-            (InternetSparkline, InternetSparklineArea) = BuildSparkline(_network.History, _network.HistoryLength);
-            OnPropertyChanged(nameof(InternetSparkline));
-            OnPropertyChanged(nameof(InternetSparklineArea));
-        }
 
         var jobRate = active.Sum(job => job.BytesPerSecond);
         JobsSpeedLabel = active.Count == 0 ? "Idle" : DownloadFormat.Speed(jobRate);
@@ -100,43 +82,19 @@ public sealed class DownloadsViewModel : ViewModelBase
         OverallEtaHint = active.Count == 0 ? "No active downloads"
             : longestEta is not null ? "Active jobs · queued jobs excluded" : "Waiting for estimates from every active job";
 
-        ActiveProgress = active.Count == 0 ? 0 : active.Average(job => job.Progress);
-        ActiveProgressLabel = active.Count == 0 ? "—" : $"{ActiveProgress:0.0}%";
+        var known = active.Count > 0 && active.All(job => job.HasMeasuredProgress && job.InstallationBytes > 0);
+        var total = active.Sum(job => (double)job.InstallationBytes);
+        ActiveProgress = known && total > 0 ? active.Sum(job => job.ContentBytes) * 100.0 / total : 0;
+        ActiveProgressLabel = known ? $"{ActiveProgress:0.0}%" : "—";
 
         foreach (var name in LiveStatNames) OnPropertyChanged(name);
     }
 
     private static readonly string[] LiveStatNames =
     {
-        nameof(InternetSpeedLabel), nameof(InternetPeakLabel),
         nameof(JobsSpeedLabel), nameof(OverallEtaLabel), nameof(OverallEtaHint), nameof(ActiveProgress), nameof(ActiveProgressLabel)
     };
 
-    private static (System.Windows.Media.PointCollection Line, System.Windows.Media.PointCollection Area) BuildSparkline(IReadOnlyCollection<double> values, int capacity)
-    {
-        var line = new System.Windows.Media.PointCollection();
-        var area = new System.Windows.Media.PointCollection();
-        if (values.Count >= 2)
-        {
-            // A floor keeps an idle connection flat instead of amplifying noise to full height.
-            var max = Math.Max(values.Max() * 1.15, 256 * 1024);
-            var step = SparklineWidth / Math.Max(capacity - 1, 1);
-            var x = SparklineWidth - (values.Count - 1) * step;
-            area.Add(new Point(x, SparklineHeight));
-            foreach (var value in values)
-            {
-                var point = new Point(x, SparklineHeight - value / max * (SparklineHeight - 2) - 1);
-                line.Add(point);
-                area.Add(point);
-                x += step;
-            }
-            area.Add(new Point(SparklineWidth, SparklineHeight));
-        }
-
-        line.Freeze();
-        area.Freeze();
-        return (line, area);
-    }
     private void Watch(DownloadJob job)
     {
         if (_watchedJobs.Add(job)) job.PropertyChanged += OnJobPropertyChanged;

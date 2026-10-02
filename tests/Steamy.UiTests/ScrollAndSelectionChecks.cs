@@ -258,7 +258,7 @@ public sealed partial class PageSmokeTests
             PumpDispatcher(TimeSpan.FromMilliseconds(150));
             window.UpdateLayout();
             var toolsPage = Descendants<BetterSteamToolsPage>(window).Single();
-            Assert.False(((Expander)toolsPage.FindName("GameExpander")).IsExpanded);
+            Assert.True(((Expander)toolsPage.FindName("GameExpander")).IsExpanded);
             Assert.False(((Expander)toolsPage.FindName("SteamSetupExpander")).IsExpanded);
             ((Expander)toolsPage.FindName("GameExpander")).IsExpanded = true;
             ((Expander)toolsPage.FindName("SteamSetupExpander")).IsExpanded = true;

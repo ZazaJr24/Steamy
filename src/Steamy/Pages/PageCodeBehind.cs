@@ -272,7 +272,8 @@ public partial class DownloadsPage : Page
         Unloaded += (_, _) => viewModel.StopLiveStats();
         SizeChanged += (_, e) =>
         {
-            FeaturedPanel.Height = e.NewSize.Height < 620 ? 190 : 236;
+            // Let content determine the height; fixed hero sizes clipped live metrics.
+            FocusedMetrics.Columns = e.NewSize.Width < 520 ? 2 : 4;
         };
     }
 

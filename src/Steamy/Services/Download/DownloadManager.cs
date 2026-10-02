@@ -334,8 +334,7 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
             job.Status = result.Message;
             if (result.HasContent && previousState == DownloadJobState.Completed)
             {
-                job.Downloaded = DownloadFormat.Bytes(result.TotalBytes);
-                job.TotalSize = job.Downloaded;
+                job.InstallationBytes = result.TotalBytes;
             }
             _logging.Add(result.HasContent ? LogLevel.Info : LogLevel.Warning, "Verification", result.Message, job.AppId, job.Id);
             return result.HasContent;
@@ -374,8 +373,7 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
                 SetFailure(job, result.Message);
                 return false;
             }
-            job.Downloaded = DownloadFormat.Bytes(result.TotalBytes);
-            job.TotalSize = job.Downloaded;
+            job.InstallationBytes = result.TotalBytes;
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -429,10 +427,17 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
         if (!string.IsNullOrWhiteSpace(update.CurrentFile)) job.CurrentFile = update.CurrentFile;
         if (!string.IsNullOrWhiteSpace(update.RawLine)) job.AppendLog(update.RawLine);
         if (update.Percent is not null) job.Progress = update.Percent.Value;
+        job.HasMeasuredProgress = update.Percent is not null;
+        job.Phase = update.Phase;
+        job.TransferredBytes = update.DownloadedBytes;
+        job.TransferTotalBytes = update.TransferTotalBytes;
+        job.ContentBytes = update.ContentBytes;
+        job.InstallationBytes = update.TotalBytes;
+        job.ReusedBytes = update.ReusedBytes;
         if (!string.IsNullOrWhiteSpace(update.Downloaded)) job.Downloaded = update.Downloaded;
         if (!string.IsNullOrWhiteSpace(update.Total)) job.TotalSize = update.Total;
-        if (!string.IsNullOrWhiteSpace(update.Speed)) job.Speed = update.Speed;
-        if (!string.IsNullOrWhiteSpace(update.Eta)) job.Eta = update.Eta;
+        job.Speed = update.Speed;
+        job.Eta = update.Eta;
         job.BytesPerSecond = update.BytesPerSecond;
         job.EtaSeconds = update.EtaSeconds;
         if (update.DepotCount > 1) job.Status = $"Downloading depot {update.DepotIndex} of {update.DepotCount}";

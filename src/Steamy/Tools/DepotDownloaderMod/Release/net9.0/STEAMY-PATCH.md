@@ -33,6 +33,15 @@ network access. `Steamy-rate-limit.json` records the exact executable's SHA-256;
 the app passes the new flag only while the marker matches the selected binary.
 Replacing the tool with an upstream/custom binary safely disables this flag.
 
+`-steamy-progress` reports a bounded, versioned `STEAMY_PROGRESS|1|…` line at
+most ten times per second, plus phase transitions. It counts validated existing
+content separately from successfully fetched compressed CDN chunks and installed
+content. It never uses preallocated file lengths. The transfer total becomes
+known after existing files have been checked and the missing chunks are selected.
+Completion remains the caller's decision after the process exits successfully.
+The capability response and checksum marker explicitly report `progressTelemetry`;
+custom or replaced executables do not receive this option.
+
 ## Rebuild and test
 
 Install Git, Python 3.11+ and the .NET SDK selected by Steamy's `global.json`, then
@@ -43,7 +52,7 @@ python tools/DepotDownloaderMod/build.py
 ```
 
 The script fetches the exact pinned source, checks and applies `rate-limit.patch`,
-adds `RateLimitedReadStream.cs`, tests the limiter and actual patched HTTP factory
+adds `RateLimitedReadStream.cs` and `SteamyProgress.cs`, tests the limiter and actual patched HTTP factory
 against a local TCP server, and publishes a self-contained
 Windows x64 executable. It replaces the old bundle only after successful build
 and checks. The Windows CI also checks the published executable's capability

@@ -64,7 +64,7 @@
             <ui:Button Content="Install BetterSteamTools" Command="{Binding InstallBackendCommand}" Appearance="Primary" HorizontalAlignment="Left" />
           </StackPanel>
         </Border>
-        <Border x:Name="MetadataDropZone" Margin="0,28,0,20" CornerRadius="18" Padding="28" MinHeight="320"
+        <Border x:Name="MetadataDropZone" Margin="0,22,0,16" CornerRadius="18" Padding="28" MinHeight="260"
                 AllowDrop="True" DragOver="Metadata_DragOver" DragLeave="Metadata_DragLeave" Drop="Metadata_Drop" IsEnabled="{Binding IsIdle}"
                 ToolTip="Drop to install. Leave App ID empty to detect games; manifest-only files are cached."
                 AutomationProperties.Name="Drop ZIP, 7z or RAR metadata archives">
@@ -76,14 +76,14 @@
             </Trigger></Style.Triggers>
           </Style></Border.Style>
           <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-            <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="32" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,20" />
+            <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="30" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,16" />
             <TextBlock Text="Drag &amp; drop" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" />
             <TextBlock Text="ZIP · 7z · RAR  —  Lua + manifests inside" Style="{StaticResource ToolHint}" TextAlignment="Center" Margin="0,8,0,18" />
             <ui:Button x:Name="BrowseMetadataButton" Content="Browse files" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding BrowseFilesCommand}" Appearance="Transparent" HorizontalAlignment="Center" Padding="14,8" MinWidth="120" />
           </StackPanel>
         </Border>
 
-        <Expander x:Name="GameExpander" Header="Add by App ID or Steam link" Style="{StaticResource ToolOptions}">
+        <Expander x:Name="GameExpander" Header="Add by App ID or Steam link" Style="{StaticResource ToolOptions}" IsExpanded="True">
           <StackPanel Margin="0,12,0,20">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>

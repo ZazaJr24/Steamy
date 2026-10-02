@@ -1,3 +1,87 @@
+diff --git a/DepotDownloader/ContentDownloader.cs b/DepotDownloader/ContentDownloader.cs
+index d79f2f38..77404090 100644
+--- a/DepotDownloader/ContentDownloader.cs
++++ b/DepotDownloader/ContentDownloader.cs
+@@ -660,6 +660,7 @@ namespace DepotDownloader
+             public ulong sizeDownloaded;
+             public ulong depotBytesCompressed;
+             public ulong depotBytesUncompressed;
++            public long transferTotal = -1;
+         }
+ 
+         private static async Task DownloadSteam3Async(List<DepotDownloadInfo> depots)
+@@ -701,6 +702,13 @@ namespace DepotDownloader
+                 }
+             }
+ 
++            foreach (var prepared in depotsToDownload)
++            {
++                // Totals refer to the final filtered/de-duplicated file selection.
++                prepared.depotCounter.completeDownloadSize = (ulong)prepared.filteredFiles.Sum(file => (long)file.TotalSize);
++                SteamyProgress.Report(prepared.depotDownloadInfo.DepotId, "checking", 0,
++                    prepared.depotCounter.completeDownloadSize, 0, -1, 0, true);
++            }
+             foreach (var depotFileData in depotsToDownload)
+             {
+                 await DownloadSteam3AsyncDepotFiles(cts, downloadCounter, depotFileData, allFileNamesAllDepots);
+@@ -937,6 +945,8 @@ namespace DepotDownloader
+ 
+             Console.WriteLine("Downloading depot {0}", depot.DepotId);
+ 
++            SteamyProgress.Report(depot.DepotId, "checking", depotCounter.sizeDownloaded,
++                depotCounter.completeDownloadSize, 0, -1, 0, true);
+             var files = depotFilesData.filteredFiles.Where(f => !f.Flags.HasFlag(EDepotFileFlag.Directory)).ToArray();
+             var networkChunkQueue = new ConcurrentQueue<(FileStreamData fileStreamData, DepotManifest.FileData fileData, DepotManifest.ChunkData chunk)>();
+ 
+@@ -952,6 +962,10 @@ namespace DepotDownloader
+                 DownloadSteam3AsyncDepotFile(cts, downloadCounter, depotFilesData, file, networkChunkQueue);
+             });
+ 
++            depotCounter.transferTotal = networkChunkQueue.Sum(item => (long)item.chunk.CompressedLength);
++            SteamyProgress.Report(depot.DepotId, "downloading", depotCounter.sizeDownloaded,
++                depotCounter.completeDownloadSize, depotCounter.depotBytesCompressed,
++                depotCounter.transferTotal, depotCounter.depotBytesUncompressed, true);
+             await Parallel.ForEachAsync(networkChunkQueue, parallelOptions, async (q, cancellationToken) =>
+             {
+                 await DownloadSteam3AsyncDepotFileChunk(
+@@ -992,6 +1006,9 @@ namespace DepotDownloader
+             DepotConfigStore.Instance.InstalledManifestIDs[depot.DepotId] = depot.ManifestId;
+             DepotConfigStore.Save();
+ 
++            SteamyProgress.Report(depot.DepotId, "finalizing", depotCounter.sizeDownloaded,
++                depotCounter.completeDownloadSize, depotCounter.depotBytesCompressed,
++                depotCounter.transferTotal, depotCounter.depotBytesUncompressed, true);
+             Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed)", depot.DepotId, depotCounter.depotBytesCompressed, depotCounter.depotBytesUncompressed);
+         }
+ 
+@@ -1154,6 +1171,8 @@ namespace DepotDownloader
+                     lock (depotDownloadCounter)
+                     {
+                         depotDownloadCounter.sizeDownloaded += file.TotalSize;
++                        SteamyProgress.Report(depot.DepotId, "checking", depotDownloadCounter.sizeDownloaded,
++                            depotDownloadCounter.completeDownloadSize, 0, -1, 0);
+                         Console.WriteLine("{0,6:#00.00}% {1}", (depotDownloadCounter.sizeDownloaded / (float)depotDownloadCounter.completeDownloadSize) * 100.0f, fileFinalPath);
+                     }
+ 
+@@ -1169,6 +1188,8 @@ namespace DepotDownloader
+                 lock (depotDownloadCounter)
+                 {
+                     depotDownloadCounter.sizeDownloaded += sizeOnDisk;
++                    SteamyProgress.Report(depot.DepotId, "checking", depotDownloadCounter.sizeDownloaded,
++                        depotDownloadCounter.completeDownloadSize, 0, -1, 0);
+                 }
+ 
+                 lock (downloadCounter)
+@@ -1337,6 +1358,9 @@ namespace DepotDownloader
+                 depotDownloadCounter.sizeDownloaded = sizeDownloaded;
+                 depotDownloadCounter.depotBytesCompressed += chunk.CompressedLength;
+                 depotDownloadCounter.depotBytesUncompressed += chunk.UncompressedLength;
++                SteamyProgress.Report(depot.DepotId, "downloading", sizeDownloaded,
++                    depotDownloadCounter.completeDownloadSize, depotDownloadCounter.depotBytesCompressed,
++                    depotDownloadCounter.transferTotal, depotDownloadCounter.depotBytesUncompressed);
+             }
+ 
+             lock (downloadCounter)
 diff --git a/DepotDownloader/DownloadConfig.cs b/DepotDownloader/DownloadConfig.cs
 index 9d63614f..c82fa3e5 100644
 --- a/DepotDownloader/DownloadConfig.cs
@@ -53,7 +137,7 @@ index 7a622117..29ce3b6b 100644
              catch
              {
 diff --git a/DepotDownloader/Program.cs b/DepotDownloader/Program.cs
-index 7826473f..637e3ac7 100644
+index 7826473f..4dff96ab 100644
 --- a/DepotDownloader/Program.cs
 +++ b/DepotDownloader/Program.cs
 @@ -1,10 +1,12 @@
@@ -69,20 +153,21 @@ index 7826473f..637e3ac7 100644
  using System.Linq;
  using System.Reflection;
  using System.Runtime.InteropServices;
-@@ -41,6 +43,12 @@ namespace DepotDownloader
+@@ -41,6 +43,13 @@ namespace DepotDownloader
                  return 0;
              }
  
 +            if (args.Length == 1 && args[0] == "--steamy-rate-limit-info")
 +            {
-+                Console.WriteLine("{\"schemaVersion\":1,\"maxDownloadSpeed\":true}");
++                Console.WriteLine("{\"schemaVersion\":1,\"maxDownloadSpeed\":true,\"progressTelemetry\":true}");
 +                return 0;
 +            }
 +
++            SteamyProgress.Enabled = Array.IndexOf(args, "-steamy-progress") >= 0;
              Ansi.Init();
  
              DebugLog.Enabled = false;
-@@ -58,6 +66,19 @@ namespace DepotDownloader
+@@ -58,6 +67,19 @@ namespace DepotDownloader
  
              consumedArgs = new bool[args.Length];
  
@@ -102,7 +187,7 @@ index 7826473f..637e3ac7 100644
              if (HasParameter(args, "-debug"))
              {
                  PrintVersion(true);
-@@ -519,6 +540,7 @@ namespace DepotDownloader
+@@ -519,6 +541,7 @@ namespace DepotDownloader
  
          static void PrintUsage()
          {

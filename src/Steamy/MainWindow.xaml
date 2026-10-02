@@ -45,7 +45,7 @@
                         CompactPaneLength="52"
                         IsBackButtonVisible="Collapsed"
                         IsPaneToggleVisible="True"
-                        IsFooterSeparatorVisible="True"
+                        IsFooterSeparatorVisible="False"
                         PaneTitle=""
                         Transition="None"
                         IsPaneOpen="True"

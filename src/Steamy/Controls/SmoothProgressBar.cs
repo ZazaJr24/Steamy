@@ -51,7 +51,7 @@ public class SmoothProgressBar : ProgressBar
         bar._target = Math.Clamp((double)e.NewValue, bar.Minimum, bar.Maximum);
 
         // A reset (retry, new job in a recycled container) should not crawl backwards.
-        if (!bar.IsLoaded || !bar.IsVisible || !SystemParameters.ClientAreaAnimation || bar._target < bar.Value - 1)
+        if (!bar.IsLoaded || !bar.IsVisible || !MotionPreferences.AnimationsEnabled || bar._target < bar.Value - 1)
         {
             bar.StopAnimation();
             bar.Value = bar._target;
@@ -87,7 +87,7 @@ public class SmoothProgressBar : ProgressBar
 
     private void OnRendering(object? sender, EventArgs e)
     {
-        if (!IsVisible || !SystemParameters.ClientAreaAnimation)
+        if (!IsVisible || !MotionPreferences.AnimationsEnabled)
         {
             StopAnimation();
             Value = _target;

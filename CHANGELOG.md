@@ -3,6 +3,16 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.0 — 2026-10-02
+
+- Rebuild Downloads around a compact live progress workspace: transferred bytes, download size, speed, remaining time, active time and verified reused content. Keep a virtualized queue, filters, priorities, pause/resume, retry, cancellation and recovery details.
+- Replace disk-write, folder-growth and time-based download estimates with versioned telemetry from the pinned bundled DepotDownloaderMod. Count only successfully fetched CDN chunks; distinguish compressed transfers, verified content and installed content. Unknown whole-game totals and multi-depot weights stay unknown.
+- Keep old/custom download tools compatible using their actual reported progress. Never report completion before the process and final checks succeed; binary units use MiB/GiB and paused jobs freeze their active timer.
+- Simplify DepotDownloader setup into one responsive form with compact version fields and direct access to Downloads. Respect reduced motion for progress animation.
+- Validate Hubcap and DepotBox packages before publishing them: strict UTF-8, safe canonical Lua, matching app/depot manifests, isolated concurrent workspaces and cleanup after failure/cancellation. A Hubcap HTML or invalid standalone response can no longer shadow valid archive metadata.
+- Preserve DepotBox ZIP, octet-stream Lua and Lua fallback support; reject damaged and mismatched packages. Keep API keys off cross-host automatic redirects.
+- Make BetterSteamTools' game input immediately available beneath a more compact drop area. Remove the visible navigation footer divider and retain the Dashboard's three landscape upcoming cards.
+
 ## 0.5.0 — 2026-10-02
 
 - Fix BetterSteamTools provider imports: accept balanced `if addappid then` / `if setManifestid then` compatibility guards and quoted or numeric manifest IDs. Write only validated canonical metadata; never execute provider Lua or import arbitrary conditions, variables or commands.

@@ -37,7 +37,7 @@ def add_sources(source: Path, destination: Path) -> None:
             relative = item.relative_to(source)
             if item.is_file() and not {".git", "bin", "obj"}.intersection(relative.parts):
                 archive.write(item, Path("DepotDownloaderMod") / relative)
-        for name in ("build.py", "rate-limit.patch", "RateLimitedReadStream.cs", "README.md", "LICENSE"):
+        for name in ("build.py", "rate-limit.patch", "RateLimitedReadStream.cs", "SteamyProgress.cs", "README.md", "LICENSE"):
             archive.write(HERE / name, Path("Steamy-patch") / name)
         for item in sorted((HERE / "Tests").rglob("*")):
             if item.is_file() and not {"bin", "obj"}.intersection(item.relative_to(HERE).parts):
@@ -67,6 +67,8 @@ def main() -> None:
         run("git", "apply", HERE / "rate-limit.patch", cwd=source)
         shutil.copy2(HERE / "RateLimitedReadStream.cs", source / "DepotDownloader/RateLimitedReadStream.cs")
 
+        shutil.copy2(HERE / "SteamyProgress.cs", source / "DepotDownloader/SteamyProgress.cs")
+
         # Use the SDK chosen for Steamy rather than upstream's exact patch-level SDK.
         # This replacement also goes into the corresponding source archive.
         shutil.copy2(ROOT / "global.json", source / "global.json")
@@ -87,7 +89,7 @@ def main() -> None:
         executable = publish / "DepotDownloaderMod.exe"
         if not executable.is_file():
             raise RuntimeError("The Windows executable was not published.")
-        marker = {"schemaVersion": 1, "maxDownloadSpeed": True, "singleFile": True,
+        marker = {"schemaVersion": 1, "maxDownloadSpeed": True, "progressTelemetry": True, "singleFile": True,
                   "exeSha256": sha256(executable), "upstreamRevision": REVISION}
         (publish / "Steamy-rate-limit.json").write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8")
         shutil.copy2(HERE / "README.md", publish / "STEAMY-PATCH.md")
@@ -96,7 +98,7 @@ def main() -> None:
         if os.name == "nt":
             result = subprocess.run([str(executable), "--steamy-rate-limit-info"],
                                     capture_output=True, text=True, check=True, timeout=30)
-            if json.loads(result.stdout) != {"schemaVersion": 1, "maxDownloadSpeed": True}:
+            if json.loads(result.stdout) != {"schemaVersion": 1, "maxDownloadSpeed": True, "progressTelemetry": True}:
                 raise RuntimeError("The published tool does not report rate-limit support.")
             for invalid in ("-1", "not-a-rate", "9223372036854775808"):
                 result = subprocess.run([str(executable), "-max-download-speed", invalid],

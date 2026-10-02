@@ -67,7 +67,11 @@ public sealed record DepotDownloaderProgress(
     double BytesPerSecond = 0,
     double? EtaSeconds = null,
     long DownloadedBytes = 0,
-    long TotalBytes = 0);
+    long TotalBytes = 0,
+    long? TransferTotalBytes = null,
+    long ContentBytes = 0,
+    long ReusedBytes = 0,
+    string Phase = "");
 
 public sealed record DepotDownloaderRunResult(
     int? ExitCode,
@@ -187,6 +191,7 @@ public static class DepotDownloaderArgumentBuilder
         }
 
         AddTransferOptions(arguments, request.MaxDownloads, request.UseLancache);
+        if (BundledModCapabilities.SupportsProgress(request.ExecutablePath)) arguments.Add("-steamy-progress");
 
         // Validate existing chunks against the requested manifest before reusing partial files.
         // This also repairs interrupted writes when a paused process is started again.
@@ -654,7 +659,7 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
             while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
                 var snapshot = tracker.Snapshot();
-                if (snapshot.Percent is not null || snapshot.RawLine.Length > 0) progress.Report(snapshot);
+                if (snapshot.Percent is not null || snapshot.RawLine.Length > 0 || snapshot.Phase.Length > 0) progress.Report(snapshot);
             }
         }
         catch (OperationCanceledException)

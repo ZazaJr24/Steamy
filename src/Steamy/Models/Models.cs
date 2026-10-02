@@ -191,7 +191,7 @@ public sealed class DownloadJob : UiObservableObject
         get => _downloaded;
         set
         {
-            if (SetProperty(ref _downloaded, value)) OnPropertyChanged(nameof(SizeSummary));
+            if (SetProperty(ref _downloaded, value)) { OnPropertyChanged(nameof(SizeSummary)); OnPropertyChanged(nameof(DownloadedDisplay)); }
         }
     }
 
@@ -216,7 +216,7 @@ public sealed class DownloadJob : UiObservableObject
     public string Speed
     {
         get => _speed;
-        set { if (SetProperty(ref _speed, value)) OnPropertyChanged(nameof(SpeedDisplay)); }
+        set { if (SetProperty(ref _speed, value)) { OnPropertyChanged(nameof(SpeedDisplay)); OnPropertyChanged(nameof(TransferSpeedDisplay)); } }
     }
 
     public string SpeedDisplay => !IsActive ? StateLabel : string.IsNullOrWhiteSpace(Speed) ? "Measuring speed…" : Speed;
@@ -231,7 +231,7 @@ public sealed class DownloadJob : UiObservableObject
     public string Eta
     {
         get => _eta;
-        set { if (SetProperty(ref _eta, value)) OnPropertyChanged(nameof(EtaDisplay)); }
+        set { if (SetProperty(ref _eta, value)) { OnPropertyChanged(nameof(EtaDisplay)); OnPropertyChanged(nameof(RemainingDisplay)); } }
     }
 
     public string CurrentFile
@@ -261,6 +261,32 @@ public sealed class DownloadJob : UiObservableObject
         BytesPerSecond = 0;
         EtaSeconds = null;
     }
+
+    private bool _hasMeasuredProgress;
+    private string _phase = "";
+    private string _currentDepotDetail = "";
+    public string CurrentDepotDetail { get => _currentDepotDetail; set => SetProperty(ref _currentDepotDetail, value); }
+    private long _transferredBytes, _contentBytes, _reusedBytes, _installationBytes;
+    private long? _transferTotalBytes;
+    private long? _activeStarted;
+    private double _activeSeconds;
+    public bool HasMeasuredProgress { get => _hasMeasuredProgress; set { if (SetProperty(ref _hasMeasuredProgress, value)) { OnPropertyChanged(nameof(IsProgressIndeterminate)); OnPropertyChanged(nameof(ProgressCaption)); } } }
+    public bool IsProgressIndeterminate => IsActive && (!HasMeasuredProgress || State is DownloadJobState.Preparing or DownloadJobState.Verifying || Phase is "checking" or "finalizing");
+    public string Phase { get => _phase; set { if (SetProperty(ref _phase, value)) { OnPropertyChanged(nameof(PhaseLabel)); OnPropertyChanged(nameof(IsProgressIndeterminate)); OnPropertyChanged(nameof(ProgressCaption)); } } }
+    public string PhaseLabel => !IsActive ? StateLabel : Phase switch { "checking" => "Checking existing files", "downloading" => "Downloading", "finalizing" => "Finishing files", _ => StateLabel };
+    public long TransferredBytes { get => _transferredBytes; set { if (SetProperty(ref _transferredBytes, Math.Max(0,value))) OnPropertyChanged(nameof(DownloadedDisplay)); } }
+    public long? TransferTotalBytes { get => _transferTotalBytes; set { if (SetProperty(ref _transferTotalBytes, value >= 0 ? value : null)) OnPropertyChanged(nameof(TotalDisplay)); } }
+    public long ContentBytes { get => _contentBytes; set => SetProperty(ref _contentBytes, Math.Max(0,value)); }
+    public long InstallationBytes { get => _installationBytes; set { if (SetProperty(ref _installationBytes, Math.Max(0,value))) OnPropertyChanged(nameof(InstallationDisplay)); } }
+    public long ReusedBytes { get => _reusedBytes; set { if (SetProperty(ref _reusedBytes, Math.Max(0,value))) OnPropertyChanged(nameof(ReusedDisplay)); } }
+    public string DownloadedDisplay => TransferredBytes > 0 ? Steamy.Services.DownloadFormat.Bytes(TransferredBytes) : string.IsNullOrWhiteSpace(Downloaded) ? "—" : Downloaded;
+    public string TotalDisplay => TransferTotalBytes is { } size ? Steamy.Services.DownloadFormat.Bytes(size) : "Unknown";
+    public string InstallationDisplay => InstallationBytes > 0 ? Steamy.Services.DownloadFormat.Bytes(InstallationBytes) : "Unknown";
+    public string ReusedDisplay => Steamy.Services.DownloadFormat.Bytes(ReusedBytes);
+    public string RemainingDisplay => State == DownloadJobState.Paused ? "Paused" : !IsActive ? "—" : string.IsNullOrWhiteSpace(Eta) ? "Estimating…" : Eta;
+    public string TransferSpeedDisplay => State == DownloadJobState.Paused ? "Paused" : !IsActive ? "—" : string.IsNullOrWhiteSpace(Speed) ? "Measuring…" : Speed;
+    public string ElapsedDisplay => Steamy.Services.DownloadFormat.Duration(_activeSeconds + (_activeStarted is { } start ? System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalSeconds : 0));
+    public void RefreshElapsed() => OnPropertyChanged(nameof(ElapsedDisplay));
 
     public string ProcessLog
     {
@@ -301,6 +327,15 @@ public sealed class DownloadJob : UiObservableObject
         {
             if (SetProperty(ref _state, value))
             {
+                if (IsActive && _activeStarted is null) _activeStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+                if (!IsActive && _activeStarted is { } start) { _activeSeconds += System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalSeconds; _activeStarted = null; }
+                if (value == DownloadJobState.Preparing) { HasMeasuredProgress = false; Phase = ""; }
+                if (value == DownloadJobState.Completed) { _progress = 100; HasMeasuredProgress = true; OnPropertyChanged(nameof(Progress)); OnPropertyChanged(nameof(ProgressLabel)); }
+                OnPropertyChanged(nameof(IsProgressIndeterminate));
+                OnPropertyChanged(nameof(PhaseLabel));
+                OnPropertyChanged(nameof(RemainingDisplay));
+                OnPropertyChanged(nameof(TransferSpeedDisplay));
+                OnPropertyChanged(nameof(ElapsedDisplay));
                 OnPropertyChanged(nameof(StateLabel));
                 OnPropertyChanged(nameof(IsActive));
                 OnPropertyChanged(nameof(IsPaused));
@@ -319,7 +354,8 @@ public sealed class DownloadJob : UiObservableObject
         get => _progress;
         set
         {
-            if (SetProperty(ref _progress, Math.Clamp(value, 0, 100)))
+            HasMeasuredProgress = double.IsFinite(value);
+            if (SetProperty(ref _progress, double.IsFinite(value) ? Math.Clamp(value, 0, State == DownloadJobState.Completed ? 100 : 99.9) : 0))
             {
                 OnPropertyChanged(nameof(ProgressLabel));
                 OnPropertyChanged(nameof(ProgressCaption));
@@ -333,7 +369,7 @@ public sealed class DownloadJob : UiObservableObject
         DownloadJobState.Preparing => "Preparing…",
         DownloadJobState.Verifying => "Checking…",
         DownloadJobState.Completed => "Complete",
-        _ => ProgressLabel
+        _ => Phase is "checking" or "finalizing" ? PhaseLabel : HasMeasuredProgress ? ProgressLabel : State == DownloadJobState.Downloading ? "Measuring…" : StateLabel
     };
     public bool CanRepair => State is DownloadJobState.Completed or DownloadJobState.Paused or DownloadJobState.Failed;
     public bool CanCheckLocalFiles => CanRepair || State == DownloadJobState.Cancelled;
