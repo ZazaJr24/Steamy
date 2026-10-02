@@ -12,6 +12,7 @@ public sealed record SpotlightGame
     public string Genres { get; init; } = string.Empty;
     public string Publisher { get; init; } = string.Empty;
     public bool ComingSoon { get; init; }
+    public bool Featured { get; init; }
     public string ReleaseLabel { get; init; } = string.Empty;
     public DateOnly? ReleaseDate { get; init; }
     public DateTimeOffset? ReleaseTime { get; init; }

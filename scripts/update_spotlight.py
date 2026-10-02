@@ -30,6 +30,7 @@ REQUESTED = ('Modern Warfare 4', 'Phantom Blade Zero', 'Star Wars Galactic Racer
              'Resident Evil Requiem', 'Grand Theft Auto VI', 'Marvel Wolverine',
              'Crimson Desert', 'Assassin Creed Hexe', 'Intergalactic', 'Silent Hill Townfall',
              'Metro 2039', 'Judas', 'Kingdom Hearts', 'Marvel Blade', 'Control Resonant')
+FEATURED = REQUESTED[:3]
 MAJOR_RELEASES = (1245620, 1091500, 1174180, 2358720, 1086940, 2322010, 2050650, 1593500,
                   990080, 1716740, 1817070, 553850, 2054970, 292030, 3159330, 1979720,
                   2842040, 1903340, 2246340, 2677660, 1496790, 1328670, 1151640)
@@ -109,7 +110,8 @@ def select_game(data, now, allow_released=False):
         'description': plain_text(data.get('short_description'))[:350],
         'genres': ' · '.join(plain_text(g.get('description')) for g in data.get('genres', [])[:3]),
         'publisher': ' · '.join(data.get('publishers', [])),
-        'comingSoon': coming, 'releaseLabel': date_label or ('Coming soon' if coming else 'New release'),
+        'comingSoon': coming,
+        'featured': coming and any(re.sub(r'[^a-z0-9]', '', term.casefold()) in re.sub(r'[^a-z0-9]', '', title) for term in FEATURED), 'releaseLabel': date_label or ('Coming soon' if coming else 'New release'),
         'releaseDate': date.date().isoformat() if date else None,
         'storeUrl': f'{STORE}app/{app_id}/',
         'heroUrl': data.get('background_raw') or data.get('background') or data.get('header_image', ''),

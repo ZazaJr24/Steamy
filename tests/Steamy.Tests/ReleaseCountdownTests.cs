@@ -52,4 +52,16 @@ public class ReleaseCountdownTests
         Assert.Equal(1, Assert.Single(ReleaseCountdown.UpcomingAt(games, Now)).AppId);
     }
 
+    [Fact]
+    public void HeadlineGamesLeadTheGalleryButReleasedAndExpiredFlagsStillExcludeThem()
+    {
+        SpotlightGame[] games = [
+            new() { AppId = 1, ComingSoon = true, ReleaseTime = Now.AddHours(1) },
+            new() { AppId = 2, ComingSoon = true, Featured = true, ReleaseTime = Now.AddDays(4) },
+            new() { AppId = 3, ComingSoon = true, Featured = true, ReleaseTime = Now.AddDays(2) },
+            new() { AppId = 4, ComingSoon = false, Featured = true, ReleaseTime = Now.AddDays(1) },
+            new() { AppId = 5, ComingSoon = true, Featured = true, ReleaseTime = Now.AddSeconds(-1) }];
+        Assert.Equal([3, 2, 1], ReleaseCountdown.UpcomingAt(games, Now).Select(game => game.AppId));
+    }
+
 }

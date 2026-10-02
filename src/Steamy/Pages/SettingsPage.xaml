@@ -895,17 +895,18 @@
       <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="16,14" Margin="0,0,0,8">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+          <Grid VerticalAlignment="Center" Margin="0,0,12,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <Border Style="{StaticResource RowIcon}">
               <ui:SymbolIcon Symbol="Key24" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
-            <StackPanel VerticalAlignment="Center">
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
               <TextBlock Text="Stored credentials" Style="{StaticResource CardTitleStyle}" />
               <TextBlock Text="Deletes the encrypted Steam API key, Ryuu auth key, Hubcap API key, DepotBox API key and fixes source token from this machine."
                          Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
             </StackPanel>
-          </StackPanel>
+          </Grid>
           <ui:Button Grid.Column="1" Content="Clear credentials" Command="{Binding ClearCredentialsCommand}"
                      Appearance="Danger" CornerRadius="9" VerticalAlignment="Center" />
         </Grid>
