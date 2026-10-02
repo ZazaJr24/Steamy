@@ -1,6 +1,7 @@
 using SharpCompress.Archives;
 using SharpCompress.Common;
 using System.Globalization;
+using System.Buffers.Binary;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -83,6 +84,7 @@ public static class SteamToolsMetadata
         }
         void Depot(string name, byte[] data)
         {
+            name = CanonicalManifestName(name, data);
             var match = Regex.Match(name, @"^(\d+)_(\d+)\.manifest$", RegexOptions.IgnoreCase, Timeout);
             if (!match.Success || !int.TryParse(match.Groups[1].Value, out var depot) || depot <= 0 || !DownloadPreparationReader.IsManifestId(match.Groups[2].Value) || data.Length == 0)
                 throw new InvalidDataException("A manifest must be named depot_manifest.manifest and contain data.");
@@ -162,8 +164,10 @@ public static class SteamToolsMetadata
                     var selectedDepots = chosen.SelectMany(lua => DownloadPreparationReader.Read(lua).Depots.Select(depot => depot.DepotId)).ToHashSet();
                     foreach (var entry in zip.Entries.Where(entry => entry.Name.EndsWith(".manifest", StringComparison.OrdinalIgnoreCase)))
                     {
-                        if (appId is not null && entries.Length > 0 && (!int.TryParse(entry.Name.Split('_')[0], out var depot) || !selectedDepots.Contains(depot))) continue;
-                        Depot(entry.Name, await ReadEntryAsync(entry, LocalManifestPackage.MaximumBytes, token));
+                        var data = await ReadEntryAsync(entry, LocalManifestPackage.MaximumBytes, token);
+                        var name = CanonicalManifestName(entry.Name, data);
+                        if (appId is not null && entries.Length > 0 && (!int.TryParse(name.Split('_')[0], out var depot) || !selectedDepots.Contains(depot))) continue;
+                        Depot(name, data);
                     }
                 }
             }
@@ -171,6 +175,67 @@ public static class SteamToolsMetadata
         }
         if (files.Count == 0) throw new InvalidDataException("No usable Lua or manifest files were found.");
         return new(files, ids.Order().ToArray(), files.Keys.Count(name => name.StartsWith("depotcache/", StringComparison.Ordinal)));
+    }
+
+    // Some providers name a real Steam depot manifest after the game. Its binary metadata,
+    // rather than an invented ID or the archive name, supplies the canonical cache filename.
+    private static string CanonicalManifestName(string name, byte[] data)
+    {
+        if (!Regex.IsMatch(name, @"^\d+\.manifest$", RegexOptions.IgnoreCase, Timeout)) return name;
+        if (data.Length < 16 || BinaryPrimitives.ReadUInt32LittleEndian(data) != 0x71F617D0)
+            throw new InvalidDataException("The manifest has no valid Steam depot identity.");
+        var payloadLength = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(4));
+        if (payloadLength > data.Length - 16) throw new InvalidDataException("The manifest is truncated.");
+        var offset = checked(8 + (int)payloadLength);
+        if (BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(offset)) != 0x1F4812BE)
+            throw new InvalidDataException("The manifest has no Steam metadata section.");
+        var length = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(offset + 4));
+        if (length > 65536 || length > data.Length - offset - 8)
+            throw new InvalidDataException("The manifest metadata is invalid or truncated.");
+        var metadata = data.AsSpan(offset + 8, (int)length);
+        ulong depot = 0, gid = 0;
+        var position = 0;
+        while (position < metadata.Length)
+        {
+            var tag = ReadManifestVarint(metadata, ref position);
+            var field = tag >> 3;
+            if (field == 0) throw new InvalidDataException("Invalid manifest metadata field.");
+            if ((tag & 7) == 0)
+            {
+                var value = ReadManifestVarint(metadata, ref position);
+                if (field == 1) { if (depot != 0 && depot != value) throw new InvalidDataException("Ambiguous depot ID."); depot = value; }
+                if (field == 2) { if (gid != 0 && gid != value) throw new InvalidDataException("Ambiguous manifest ID."); gid = value; }
+            }
+            else
+            {
+                if (field is 1 or 2) throw new InvalidDataException("Invalid manifest identity field.");
+                var skip = (tag & 7) switch
+                {
+                    1 => 8UL,
+                    2 => ReadManifestVarint(metadata, ref position),
+                    5 => 4UL,
+                    _ => throw new InvalidDataException("Unsupported manifest metadata field.")
+                };
+                if (skip > (ulong)(metadata.Length - position)) throw new InvalidDataException("Truncated manifest metadata field.");
+                position += (int)skip;
+            }
+        }
+        if (depot is 0 or > int.MaxValue || gid == 0) throw new InvalidDataException("Missing manifest depot or version ID.");
+        return $"{depot}_{gid}.manifest";
+    }
+
+    private static ulong ReadManifestVarint(ReadOnlySpan<byte> data, ref int position)
+    {
+        ulong value = 0;
+        for (var shift = 0; shift < 70; shift += 7)
+        {
+            if (position >= data.Length) throw new InvalidDataException("Truncated manifest metadata.");
+            var next = data[position++];
+            if (shift == 63 && next > 1) throw new InvalidDataException("Manifest metadata number overflows.");
+            value |= (ulong)(next & 127) << shift;
+            if (next < 128) return value;
+        }
+        throw new InvalidDataException("Invalid manifest metadata number.");
     }
 
     private static void NormalizeArchive(string path, string target, CancellationToken token)

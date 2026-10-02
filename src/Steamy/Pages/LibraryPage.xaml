@@ -170,7 +170,7 @@
           <ItemsControl ItemsSource="{Binding PagedCatalogItems}" controls:EntranceMotion.Delay="30">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="160" MaxItemWidth="260" Spacing="16" CoverRatio="1.5" FooterHeight="0" MaxColumns="5" />
+                <controls:AdaptiveGridPanel MinItemWidth="160" MaxItemWidth="210" Spacing="16" CoverRatio="1.5" FooterHeight="0" MaxColumns="5" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>

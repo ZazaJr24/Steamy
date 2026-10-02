@@ -1,13 +1,15 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Reflection;
 using System.Text.Json;
 
 namespace Steamy.Services;
 
-public sealed record UpdateInfo(Version Version, string Tag, Uri AssetUrl, long AssetSize);
+public sealed record UpdateInfo(Version Version, string Tag, Uri AssetUrl, long AssetSize, string? Sha256 = null);
 
 public enum UpdateStage { Downloading, Installing }
 
@@ -52,6 +54,7 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
     private readonly string _installDirectory;
     private readonly string _workDirectory;
     private readonly Uri _latestReleaseUri;
+    public static readonly Uri PublishedManifestUri = new($"https://raw.githubusercontent.com/{Repository}/main/updates/latest.json");
 
     public GitHubUpdateService(
         HttpClient? http = null,
@@ -73,36 +76,83 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
 
     public async Task<UpdateInfo?> CheckAsync(CancellationToken cancellationToken = default)
     {
-        JsonDocument document;
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, _latestReleaseUri);
             request.Headers.Accept.ParseAdd("application/vnd.github+json");
             request.Headers.UserAgent.ParseAdd($"Steamy/{CurrentVersion}");
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(20));
-            using var response = await _http.SendAsync(request, timeout.Token).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-                throw new UpdateException($"GitHub answered with HTTP {(int)response.StatusCode}.");
-            document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false));
-        }
-        catch (Exception exception) when (exception is HttpRequestException or JsonException
-                                          || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
-        {
-            throw new UpdateException("GitHub could not be reached.", exception);
-        }
-
-        using (document)
-        {
-            try
+            timeout.CancelAfter(TimeSpan.FromSeconds(8));
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
             {
+                using var document = await ReadDescriptionAsync(response.Content, timeout.Token).ConfigureAwait(false);
                 return ParseRelease(document.RootElement, CurrentVersion);
             }
-            catch (Exception exception) when (exception is KeyNotFoundException or InvalidOperationException or UriFormatException)
-            {
-                throw new UpdateException("GitHub returned an unexpected release description.", exception);
-            }
+            if (response.StatusCode is not (HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
+                && (int)response.StatusCode < 500)
+                throw new UpdateException($"GitHub answered with HTTP {(int)response.StatusCode}. Download the latest version from github.com/{Repository}/releases/latest.");
         }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidDataException
+            or KeyNotFoundException or InvalidOperationException or FormatException
+            || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            // API outages, invalid responses and timeouts can still use the published release manifest.
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(10));
+            using var request = new HttpRequestMessage(HttpMethod.Get, PublishedManifestUri);
+            request.Headers.UserAgent.ParseAdd($"Steamy/{CurrentVersion}");
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            using var document = await ReadDescriptionAsync(response.Content, timeout.Token).ConfigureAwait(false);
+            return ParsePublishedManifest(document.RootElement, CurrentVersion);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidDataException
+            or KeyNotFoundException or InvalidOperationException or FormatException
+            || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            throw new UpdateException($"Both update sources are unavailable. Try again or download the latest version from github.com/{Repository}/releases/latest.", exception);
+        }
+    }
+
+    private static async Task<JsonDocument> ReadDescriptionAsync(HttpContent content, CancellationToken cancellationToken)
+    {
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var buffer = new MemoryStream();
+        var block = new byte[8192];
+        int count;
+        while ((count = await stream.ReadAsync(block, cancellationToken).ConfigureAwait(false)) > 0)
+        {
+            if (buffer.Length + count > 256 * 1024) throw new InvalidDataException("Update description is too large.");
+            buffer.Write(block, 0, count);
+        }
+        return JsonDocument.Parse(buffer.ToArray());
+    }
+
+    public static UpdateInfo? ParsePublishedManifest(JsonElement manifest, Version currentVersion)
+    {
+        if (manifest.GetProperty("draft").ValueKind != JsonValueKind.False
+            || manifest.GetProperty("prerelease").ValueKind != JsonValueKind.False
+            || !manifest.TryGetProperty("published_at", out var published) || !published.TryGetDateTimeOffset(out _))
+            throw new InvalidDataException("The update manifest is not a published regular release.");
+        var tag = manifest.GetProperty("tag_name").GetString() ?? "";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(tag, @"^v[0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?$")
+            || !Version.TryParse(tag[1..], out var version))
+            throw new InvalidDataException("The update manifest has an invalid version.");
+        var assets = manifest.GetProperty("assets");
+        if (assets.GetArrayLength() != 1) throw new InvalidDataException("The update manifest must identify one app ZIP.");
+        var asset = assets[0];
+        if (asset.GetProperty("name").GetString() != $"Steamy-{tag}.zip")
+            throw new InvalidDataException("The app ZIP does not match the release.");
+        var update = ReadAsset(asset, Normalize(version), tag);
+        if (update.AssetUrl.AbsoluteUri != $"https://github.com/{Repository}/releases/download/{tag}/Steamy-{tag}.zip"
+            || update.AssetSize <= 0 || update.Sha256 is null)
+            throw new InvalidDataException("The update manifest has no verified official app ZIP.");
+        return update.Version > Normalize(currentVersion) ? update : null;
     }
 
     public static UpdateInfo? ParseRelease(JsonElement release, Version currentVersion)
@@ -126,9 +176,19 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
         return legacyAsset is { } fallback ? ReadAsset(fallback, version, tag) : null;
     }
 
-    private static UpdateInfo ReadAsset(JsonElement asset, Version version, string tag) => new(
-        version, tag, new Uri(asset.GetProperty("browser_download_url").GetString()!),
-        asset.GetProperty("size").GetInt64());
+    private static UpdateInfo ReadAsset(JsonElement asset, Version version, string tag)
+    {
+        string? sha256 = null;
+        if (asset.TryGetProperty("digest", out var digest) && digest.ValueKind == JsonValueKind.String)
+        {
+            var value = digest.GetString() ?? "";
+            if (!System.Text.RegularExpressions.Regex.IsMatch(value, "^sha256:[a-fA-F0-9]{64}$"))
+                throw new InvalidDataException("The update checksum is invalid.");
+            sha256 = value[7..];
+        }
+        return new(version, tag, new Uri(asset.GetProperty("browser_download_url").GetString()!),
+            asset.GetProperty("size").GetInt64(), sha256);
+    }
 
     public async Task InstallAsync(UpdateInfo update, IProgress<UpdateProgress>? progress = null, CancellationToken cancellationToken = default)
     {
@@ -141,6 +201,13 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
         {
             await DownloadAsync(update, archive, progress, cancellationToken).ConfigureAwait(false);
 
+            if (update.Sha256 is { } expected)
+            {
+                await using var stream = File.OpenRead(archive);
+                var digest = Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
+                if (!digest.Equals(expected, StringComparison.OrdinalIgnoreCase))
+                    throw new UpdateException("The update checksum does not match. Nothing was installed; please try again.");
+            }
             progress?.Report(new UpdateProgress(UpdateStage.Installing, 0, 0, 0, 0));
             if (Directory.Exists(staging)) Directory.Delete(staging, recursive: true);
             try

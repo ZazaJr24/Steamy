@@ -145,7 +145,7 @@ public sealed class SpotlightCatalogService : ISpotlightService, IDisposable
             || schema.ValueKind != JsonValueKind.Number || !schema.TryGetInt32(out var version) || version != 1
             || !root.TryGetProperty("updatedAt", out var timestamp) || timestamp.ValueKind != JsonValueKind.String || !timestamp.TryGetDateTimeOffset(out var updated)
             || !root.TryGetProperty("games", out var list) || list.ValueKind != JsonValueKind.Array
-            || list.GetArrayLength() is < 1 or > 48)
+            || list.GetArrayLength() is < 1 or > 80)
             throw new InvalidDataException("Invalid spotlight feed.");
         var games = new List<SpotlightGame>();
         var ids = new HashSet<int>();

@@ -1,0 +1,14 @@
+{
+  "tag_name": "v0.4.15",
+  "draft": false,
+  "prerelease": false,
+  "published_at": "2026-10-02T15:02:00Z",
+  "assets": [
+    {
+      "name": "Steamy-v0.4.15.zip",
+      "browser_download_url": "https://github.com/ZazaJr24/Steamy/releases/download/v0.4.15/Steamy-v0.4.15.zip",
+      "size": 104965150,
+      "digest": "sha256:bde3cb0b43da82daa608123ce5ab155e572a295c9ce7febceb552c65d66ad2be"
+    }
+  ]
+}

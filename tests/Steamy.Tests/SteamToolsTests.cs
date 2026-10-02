@@ -16,6 +16,63 @@ public sealed class SteamToolsTests
         return bytes.ToArray();
     }
 
+    private static byte[] BinaryDepotManifest()
+    {
+        using var bytes = new MemoryStream();
+        using var writer = new BinaryWriter(bytes, Encoding.UTF8, true);
+        writer.Write(0x71F617D0u); writer.Write(0u); // Empty file payload; identity is in the metadata section.
+        writer.Write(0x1F4812BEu); writer.Write(5u);
+        writer.Write(new byte[] { 8, 0xE1, 3, 16, 123 }); // Depot 481; manifest 123.
+        return bytes.ToArray();
+    }
+
+    [Fact]
+    public async Task GameNamedBinaryManifestUsesItsActualDepotIdentityWithoutInventingAnAppId()
+    {
+        using var temp = new TempFolder();
+        var bare = Path.Combine(temp.Path, "480.manifest");
+        File.WriteAllBytes(bare, BinaryDepotManifest());
+        var plan = await SteamToolsMetadata.ReadAsync([bare]);
+        Assert.Empty(plan.AppIds);
+        Assert.Equal("depotcache/481_123.manifest", Assert.Single(plan.Files).Key);
+        var canonical = Path.Combine(temp.Path, "481_123.manifest");
+        File.WriteAllBytes(canonical, BinaryDepotManifest());
+        Assert.Single((await SteamToolsMetadata.ReadAsync([bare, canonical])).Files); // Identical copies are harmless.
+    }
+
+    [Fact]
+    public async Task SourceArchiveSelectsAnAppNamedManifestByItsBinaryDepotInsteadOfItsWrongFilename()
+    {
+        using var temp = new TempFolder();
+        var path = Path.Combine(temp.Path, "480.zip");
+        using (var zip = ZipFile.Open(path, ZipArchiveMode.Create))
+        {
+            using (var writer = new StreamWriter(zip.CreateEntry("480.lua").Open())) writer.Write("addappid(480)\nsetManifestid(481,\"123\")");
+            using var entry = zip.CreateEntry("480.manifest").Open();
+            entry.Write(BinaryDepotManifest());
+        }
+        var plan = await SteamToolsMetadata.ReadAsync([path], 480);
+        Assert.Equal(480, Assert.Single(plan.AppIds));
+        Assert.Equal(1, plan.ManifestCount);
+        Assert.Contains("depotcache/481_123.manifest", plan.Files.Keys);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task InvalidOrTruncatedBinaryManifestCannotInventAFileIdentity(int mutation)
+    {
+        using var temp = new TempFolder();
+        var path = Path.Combine(temp.Path, "480.manifest");
+        var bytes = BinaryDepotManifest();
+        if (mutation == 0) bytes[0] = 0;
+        if (mutation == 1) bytes[4] = 255;
+        if (mutation == 2) bytes = bytes[..^1];
+        File.WriteAllBytes(path, bytes);
+        await Assert.ThrowsAsync<InvalidDataException>(() => SteamToolsMetadata.ReadAsync([path]));
+    }
+
     [Theory]
     [InlineData("480.7z")]
     [InlineData("480.rar")]

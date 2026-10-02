@@ -24,6 +24,13 @@ public sealed class BetterSteamToolsViewModel : ObservableObject
     private string _steamRoot = "";
     private string _gameInput = "";
     private string _status = "Detecting Steam…";
+    private string _sourceDetails = "";
+    public string SourceDetails
+    {
+        get => _sourceDetails;
+        private set { if (SetProperty(ref _sourceDetails, value)) OnPropertyChanged(nameof(HasSourceDetails)); }
+    }
+    public bool HasSourceDetails => !string.IsNullOrWhiteSpace(SourceDetails);
     private string _filesLabel = "";
     private bool _detected;
     private bool _backend;
@@ -137,12 +144,18 @@ public sealed class BetterSteamToolsViewModel : ObservableObject
         if (IsBusy) return;
         _operation = new CancellationTokenSource();
         IsBusy = true;
+        SourceDetails = "";
         Status = "Preparing…";
         string message;
         try
         {
             var result = await operation(_operation.Token);
             message = result.Message;
+            if (!result.Succeeded && message.StartsWith("No source supplied usable metadata.", StringComparison.Ordinal))
+            {
+                SourceDetails = message.Replace(" · ", "\n");
+                message = "No source returned usable metadata. Open Source details, or import a ZIP archive.";
+            }
         }
         catch (OperationCanceledException) { message = "Operation cancelled."; }
         catch (Exception exception) { message = "Operation failed: " + exception.Message; }
