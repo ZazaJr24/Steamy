@@ -131,6 +131,13 @@ public sealed partial class PageSmokeTests
                         Assert.Equal(size.Width, page.ActualWidth);
                         Assert.Equal(size.Height, page.ActualHeight);
                         Assert.NotNull(page.DataContext);
+                        if (page is DashboardPage or LibraryPage or BetterSteamToolsPage)
+                        {
+                            var background = Assert.IsType<SolidColorBrush>(page.Background).Color;
+                            Assert.True(theme == "Light" ? background.R > 220 && background.G > 220 && background.B > 220
+                                : background.R < 40 && background.G < 40 && background.B < 40,
+                                "Discovery, Games and SteamTools must use a legible background after a theme switch.");
+                        }
                         if (page is DashboardPage dashboard) CheckDashboardLayout(dashboard);
                         if (page is BetterSteamToolsPage steamTools) CheckSteamToolsLayout(steamTools);
                         SaveScreenshot(page, theme, size);
