@@ -38,6 +38,9 @@ public sealed partial class PageSmokeTests
             Assert.True(control.ActualWidth >= 120, name + " must retain a usable width.");
         }
         var scroll = (ScrollViewer)page.FindName("ToolScrollHost");
+        var footer = (Grid)page.FindName("OperationFooter");
+        var footerBounds = footer.TransformToAncestor(page).TransformBounds(new Rect(footer.RenderSize));
+        Assert.True(footerBounds.Bottom <= page.ActualHeight, "Operation feedback must stay visible.");
         if (!wide)
         {
             Assert.True(scroll.ScrollableHeight > 0);
@@ -90,6 +93,18 @@ public sealed partial class PageSmokeTests
         PumpUntil(() => model.IsBusy);
         Assert.False(model.BrowseFilesCommand.CanExecute(null));
         Assert.True(model.CancelCommand.CanExecute(null));
+        var operationPage = new BetterSteamToolsPage { Width = 780, Height = 560 };
+        operationPage.Measure(new Size(780, 560));
+        operationPage.Arrange(new Rect(0, 0, 780, 560));
+        operationPage.UpdateLayout();
+        var operationScroll = (ScrollViewer)operationPage.FindName("ToolScrollHost");
+        operationScroll.ScrollToBottom(); operationPage.UpdateLayout();
+        var cancel = (Button)operationPage.FindName("CancelOperationButton");
+        Assert.Equal(Visibility.Visible, cancel.Visibility);
+        Assert.True(cancel.IsEnabled);
+        var cancelBounds = cancel.TransformToAncestor(operationPage).TransformBounds(new Rect(cancel.RenderSize));
+        Assert.True(cancelBounds.Top >= 0 && cancelBounds.Bottom <= operationPage.ActualHeight);
+        SaveScreenshot(operationPage, "Light-Busy", new Size(780, 560));
         model.CancelCommand.Execute(null);
         PumpUntil(() => add.IsCompleted); add.GetAwaiter().GetResult();
         Assert.False(model.IsBusy);

@@ -8,7 +8,7 @@ Add a new `## x.y.z` section at the top before tagging.
 - Redesigned only Tools → BetterSteamTools, using the actual LuaTools Windows interface as the layout reference. Large transparent surfaces sit over a restrained blue/violet/teal light gradient; the rest of Steamy keeps its existing appearance.
 - Prominent App ID / Steam link input, keyboard Enter action, source selection and Add game to Steam button. A larger ZIP/Lua/manifest drop target gives feedback for supported file drops, with a separate file picker.
 - Game and file import panels sit side by side on wider windows and flow vertically with native scrolling on smaller windows. Compact Steam detection, folder selection, backend install/update and Start Steam controls remain below.
-- Existing automatic sources, configured API providers, checksum verification, safe metadata imports, progress and cancellation remain intact. Steam/backend labels reflect actual detection; disabled controls do not imply availability or successful installation.
+- Existing automatic sources, configured API providers, checksum verification, safe metadata imports, progress and cancellation remain intact. Operation status and Cancel stay visible while scrolling. Steam/backend labels reflect actual detection; disabled controls do not imply availability or successful installation.
 - Includes the BetterSteamTools installation and metadata import features introduced in 0.4.8. Windows layout checks cover both themes, responsive panel placement and reachable controls; the README uses a real Windows screenshot.
 
 ## 0.4.8 — 2026-10-01
