@@ -28,7 +28,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts/artwork | Out-Null
-          foreach ($appId in @(2322010, 1245620, 1091500, 1174180, 2358720)) {
+          foreach ($appId in @(2322010, 1245620, 1091500, 1174180, 2358720, 1086940)) {
             foreach ($kind in @('hero', 'header', 'portrait')) {
               $file = switch ($kind) { 'hero' { 'library_hero.jpg' }; 'portrait' { 'library_600x900.jpg' }; default { 'header.jpg' } }
               $url = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/$appId/$file"
@@ -37,15 +37,25 @@ jobs:
           }
           $spotlight = Get-Content src/Steamy/Data/spotlight.json -Raw | ConvertFrom-Json
           foreach ($game in $spotlight.games) {
-            foreach ($kind in @('hero', 'header')) {
-              $url = if ($kind -eq 'hero') { $game.heroUrl } else { $game.headerUrl }
-              Invoke-WebRequest -Uri $url -OutFile "artifacts/artwork/$($game.appId)_${kind}.jpg" -TimeoutSec 30
+            foreach ($kind in @('hero', 'header', 'portrait')) {
+              $url = switch ($kind) { 'hero' { $game.heroUrl }; 'portrait' { "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/$($game.appId)/library_600x900.jpg" }; default { $game.headerUrl } }
+              try { Invoke-WebRequest -Uri $url -OutFile "artifacts/artwork/$($game.appId)_${kind}.jpg" -TimeoutSec 30 }
+              catch {
+                if ($kind -ne 'portrait') { throw }
+                Copy-Item "artifacts/artwork/$($game.appId)_header.jpg" "artifacts/artwork/$($game.appId)_portrait.jpg"
+              }
             }
           }
+      - name: Fetch the official backend for native installation tests
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://github.com/madoiscool/BetterSteamTools/releases/download/v1.0.4/OpenSteamTool-v1.0.4-Release.zip' -OutFile artifacts/bst-test.zip -TimeoutSec 60
+          if ((Get-FileHash artifacts/bst-test.zip -Algorithm SHA256).Hash -ne '06a32ffbf86dbb281eefb143dc4d90a7710889aed550cc923c4ccdc5a8455e34') { throw 'Official backend checksum mismatch' }
       - name: Render real Windows pages with offline sample services
         env:
           STEAMY_SCREENSHOT_ARTWORK: ${{ github.workspace }}/artifacts/artwork
           STEAMY_UI_ARTIFACTS: ${{ github.workspace }}/artifacts/ui
+          STEAMY_BST_TEST_ARCHIVE: ${{ github.workspace }}/artifacts/bst-test.zip
         run: dotnet test tests/Steamy.UiTests/Steamy.UiTests.csproj -c Release --logger trx --results-directory artifacts/test-results
       - name: Report test failures
         if: failure()

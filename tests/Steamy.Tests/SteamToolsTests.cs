@@ -93,6 +93,24 @@ public sealed class SteamToolsTests
     }
 
     [Fact]
+    public void BackendDetectionRequiresMatchingPayloadHashesAndDetectsDamage()
+    {
+        using var temp = new TempFolder();
+        var files = SteamToolsBackend.Official104.Keys.ToDictionary(name => name, _ => Encoding.UTF8.GetBytes("MZoffline fixture"));
+        foreach (var file in files) temp.Write(file.Key, Encoding.UTF8.GetString(file.Value));
+        Assert.False(SteamToolsBackend.IsInstalled(temp.Path));
+        var receipt = temp.Write(SteamToolsBackend.ReceiptPath, Encoding.UTF8.GetString(SteamToolsBackend.CreateReceipt("test", files)));
+        Assert.True(SteamToolsBackend.IsInstalled(temp.Path));
+        temp.Write("OpenSteamTool.dll", "MZdifferent backend");
+        Assert.False(SteamToolsBackend.IsInstalled(temp.Path));
+        File.WriteAllBytes(Path.Combine(temp.Path, "OpenSteamTool.dll"), files["OpenSteamTool.dll"]);
+        File.Delete(Path.Combine(temp.Path, "xinput1_4.dll"));
+        Assert.False(SteamToolsBackend.IsInstalled(temp.Path));
+        File.WriteAllText(receipt, "{invalid receipt");
+        Assert.False(SteamToolsBackend.IsInstalled(temp.Path));
+    }
+
+    [Fact]
     public void BackendPayloadRequiresItsOfficialDigestAndAllThreeDlls()
     {
         var path = Environment.GetEnvironmentVariable("STEAMY_BST_TEST_ARCHIVE");

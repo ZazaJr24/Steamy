@@ -247,7 +247,11 @@ public sealed partial class PageSmokeTests
         Assert.Equal(firstId, library.RequestedDownload!.AppId);
         library.RequestedDownload = null;
         model.OpenSpotlightCommand.Execute(model.DiscoverGames[1]);
+        Assert.Same(model.DiscoverGames[1], model.SelectedDiscovery);
+        Assert.Null(library.RequestedDownload);
+        model.BrowseDiscoverySourcesCommand.Execute(null);
         Assert.Equal(model.DiscoverGames[1].Game.AppId, library.RequestedDownload!.AppId);
+        Assert.False(model.HasSelectedDiscovery);
         library.RequestedDownload = null;
         library.SearchText = string.Empty;
         navigation.Detach();
@@ -290,6 +294,20 @@ public sealed partial class PageSmokeTests
         PumpDispatcher(TimeSpan.FromMilliseconds(500));
         window.UpdateLayout();
         SaveVisual(window, "dashboard.png");
+        var dashboardPage = Descendants<DashboardPage>(window).Single();
+        var discoveryScroll = (ScrollViewer)dashboardPage.FindName("DashboardScroll");
+        discoveryScroll.ScrollToVerticalOffset(((Border)dashboardPage.FindName("DashboardHero")).ActualHeight + 80);
+        window.UpdateLayout();
+        SaveVisual(window, "discover-games.png");
+        dashboard.OpenSpotlightCommand.Execute(dashboard.DiscoverGames[0]);
+        PumpDispatcher(TimeSpan.FromMilliseconds(150));
+        window.UpdateLayout();
+        var discoveryPanel = (Border)dashboardPage.FindName("DiscoveryDetailsPanel");
+        Assert.Equal(255, Assert.IsType<System.Windows.Media.SolidColorBrush>(discoveryPanel.Background).Color.A);
+        Assert.False(discoveryScroll.IsEnabled);
+        SaveVisual(window, "upcoming-details.png");
+        dashboard.CloseDiscoveryCommand.Execute(null);
+        discoveryScroll.ScrollToTop();
         foreach (var (route, filename) in new[] { (typeof(DownloadsPage), "downloads.png"), (typeof(SettingsPage), "settings.png") })
         {
             _phase = "Navigate " + route.Name;
@@ -311,7 +329,7 @@ public sealed partial class PageSmokeTests
         window.UpdateLayout();
         SaveVisual(window, "dlc-unlocker.png");
         OfflineServiceProxy.ScreenshotCatalog = new[] { (2322010, "God of War Ragnarök"), (1245620, "ELDEN RING"),
-            (1091500, "Cyberpunk 2077"), (1174180, "Red Dead Redemption 2"), (2358720, "Black Myth: Wukong") }
+            (1091500, "Cyberpunk 2077"), (1174180, "Red Dead Redemption 2"), (2358720, "Black Myth: Wukong"), (1086940, "Baldur’s Gate 3") }
             .Select(entry => new SteamCatalogItem { AppId = entry.Item1, Name = entry.Item2, AppType = SteamCatalogAppType.Game,
                 ArtworkImage = FixtureArtwork.Read(entry.Item1, "portrait") ?? FixtureArtwork.Read(entry.Item1, "header"),
                 HeaderImage = FixtureArtwork.Read(entry.Item1, "header") }).ToArray();
@@ -322,7 +340,7 @@ public sealed partial class PageSmokeTests
         var refresh = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
         PumpUntil(() => refresh.IsCompleted);
         refresh.GetAwaiter().GetResult();
-        PumpUntil(() => library.PagedCatalogItems.Count == 5 && !library.IsCatalogLoading);
+        PumpUntil(() => library.PagedCatalogItems.Count == 6 && !library.IsCatalogLoading);
         PumpDispatcher(TimeSpan.FromMilliseconds(400));
         window.UpdateLayout();
         var page = Descendants<LibraryPage>(window).Single();
@@ -357,6 +375,7 @@ public sealed partial class PageSmokeTests
         PumpDispatcher(TimeSpan.FromMilliseconds(350));
         window.UpdateLayout();
         SaveVisual(window, "game-details.png");
+        Assert.Equal(255, Assert.IsType<System.Windows.Media.SolidColorBrush>(((Border)page.FindName("DialogPanel")).Background).Color.A);
         page.SelectDownloadSource(ManifestSource.Local);
         PumpDispatcher(TimeSpan.FromMilliseconds(150));
         window.UpdateLayout();

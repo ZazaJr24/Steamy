@@ -55,6 +55,15 @@
           <TextBlock Text="SteamTools" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
           <TextBlock Grid.Column="1" Text="{Binding ConnectionLabel}" Style="{StaticResource ToolHint}" FontSize="11" VerticalAlignment="Center" />
         </Grid>
+        <Border x:Name="BackendSetupNotice" Margin="0,18,0,0" Padding="16" CornerRadius="12" Background="{DynamicResource SurfaceBrush}"
+                Visibility="{Binding BackendSetupRequired, Converter={StaticResource BoolToVis}}">
+          <StackPanel>
+            <TextBlock Text="Install BetterSteamTools" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock Text="Close Steam first. Adding a game or dropping files will install the verified backend before importing metadata."
+                       Style="{StaticResource ToolHint}" FontSize="11" Margin="0,6,0,12" />
+            <ui:Button Content="Install BetterSteamTools" Command="{Binding InstallBackendCommand}" Appearance="Primary" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
         <Border x:Name="MetadataDropZone" Margin="0,28,0,20" CornerRadius="18" Padding="28" MinHeight="320"
                 AllowDrop="True" DragOver="Metadata_DragOver" DragLeave="Metadata_DragLeave" Drop="Metadata_Drop" IsEnabled="{Binding IsIdle}"
                 ToolTip="Drop to install. Leave App ID empty to detect games; manifest-only files are cached."

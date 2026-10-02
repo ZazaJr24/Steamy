@@ -50,14 +50,14 @@ public sealed partial class PageSmokeTests
         var model = provider.GetRequiredService<BetterSteamToolsViewModel>();
         fixture.Installed = false;
         model.RefreshDetection();
-        Assert.Equal("Steam detected", model.ConnectionLabel);
-        Assert.Equal("BetterSteamTools not installed", model.BackendLabel);
+        Assert.Equal("Steam detected · setup required", model.ConnectionLabel);
+        Assert.Equal("BetterSteamTools not installed or needs repair", model.BackendLabel);
         Assert.True(model.InstallBackendCommand.CanExecute(null));
         var missingBackendPage = new BetterSteamToolsPage();
         Assert.True(((Expander)missingBackendPage.FindName("SteamSetupExpander")).IsExpanded);
         model.GameInput = "https://store.steampowered.com/app/480/Spacewar/";
-        Assert.False(model.AddGameCommand.CanExecute(null));
-        var install = model.InstallBackendCommand.ExecuteAsync(null);
+        Assert.True(model.AddGameCommand.CanExecute(null));
+        var install = model.AddGameCommand.ExecuteAsync(null);
         PumpUntil(() => install.IsCompleted); install.GetAwaiter().GetResult();
         Assert.True(model.BackendInstalled);
         Assert.Equal(1, fixture.InstallCalls);
@@ -82,6 +82,37 @@ public sealed partial class PageSmokeTests
         import = model.ImportFilesAsync(["480.lua"]);
         PumpUntil(() => import.IsCompleted); import.GetAwaiter().GetResult();
         Assert.Equal(previousCalls, fixture.ImportCalls);
+        model.GameInput = "999";
+        fixture.Installed = false;
+        fixture.InstallFails = true;
+        model.RefreshDetection();
+        var lastSource = fixture.LastSource;
+        add = model.AddGameCommand.ExecuteAsync(null);
+        PumpUntil(() => add.IsCompleted); add.GetAwaiter().GetResult();
+        Assert.False(model.BackendInstalled);
+        Assert.Contains("failed", model.Status, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(lastSource, fixture.LastSource);
+        fixture.InstallFails = false;
+        fixture.PretendInstall = true;
+        add = model.AddGameCommand.ExecuteAsync(null);
+        PumpUntil(() => add.IsCompleted); add.GetAwaiter().GetResult();
+        Assert.Contains("could not be verified", model.Status);
+        Assert.Equal(lastSource, fixture.LastSource);
+        fixture.PretendInstall = false;
+        fixture.HoldInstallation = true;
+        add = model.AddGameCommand.ExecuteAsync(null);
+        PumpUntil(() => model.IsBusy);
+        model.CancelCommand.Execute(null);
+        PumpUntil(() => add.IsCompleted); add.GetAwaiter().GetResult();
+        Assert.False(model.BackendInstalled);
+        Assert.Contains("cancelled", model.Status, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(lastSource, fixture.LastSource);
+        fixture.HoldInstallation = false;
+        model.GameInput = "";
+        import = model.ImportFilesAsync(["480.lua"]);
+        PumpUntil(() => import.IsCompleted); import.GetAwaiter().GetResult();
+        Assert.True(model.BackendInstalled);
+        model.RefreshDetection();
         model.GameInput = "480";
         fixture.HoldOperation = true;
         add = model.AddGameCommand.ExecuteAsync(null);
@@ -136,6 +167,9 @@ public sealed partial class PageSmokeTests
         public bool Installed { get; set; } = true;
         public bool Detected { get; set; } = true;
         public bool HoldOperation { get; set; }
+        public bool InstallFails { get; set; }
+        public bool PretendInstall { get; set; }
+        public bool HoldInstallation { get; set; }
         public int InstallCalls { get; private set; }
         public int ImportCalls { get; private set; }
         public (int, ManifestSource?) LastSource { get; private set; }
@@ -143,8 +177,14 @@ public sealed partial class PageSmokeTests
         public int? ImportAppId { get; private set; }
         public BetterSteamToolsState Detect(string? root = null) => new(@"C:\Program Files (x86)\Steam", Detected, Installed, Detected ? [480] : [],
             Detected ? "Steam detected · sample backend and game configuration." : "Steam not found.");
-        public Task<BetterSteamToolsResult> InstallBackendAsync(string root, IProgress<string>? progress = null, CancellationToken token = default)
-        { InstallCalls++; Installed = true; return Task.FromResult(new BetterSteamToolsResult(true,"Backend ready.",[])); }
+        public async Task<BetterSteamToolsResult> InstallBackendAsync(string root, IProgress<string>? progress = null, CancellationToken token = default)
+        {
+            InstallCalls++;
+            if (HoldInstallation) await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            if (InstallFails) return new(false, "Installation failed.", []);
+            Installed = !PretendInstall;
+            return new(true, "Backend ready.", []);
+        }
         public Task<BetterSteamToolsResult> ImportAsync(string root, IReadOnlyList<string> paths, int? appId = null, CancellationToken token = default)
         { ImportCalls++; ImportPaths = paths; ImportAppId = appId; return Task.FromResult(new BetterSteamToolsResult(true,"Metadata added.",[480],1)); }
         public async Task<BetterSteamToolsResult> AddFromSourceAsync(string root, int appId, ManifestSource? source, IProgress<string>? progress = null, CancellationToken token = default)
