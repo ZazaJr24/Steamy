@@ -31,6 +31,8 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
     private string _toolVersion = "—";
     private string _lastMessage = "Select a game, configure the tool in Settings and add an authorized job.";
 
+    public ICommand OpenDownloadsCommand => new RelayCommand(() => Navigation.Navigate<DownloadsPage>());
+
     public ObservableCollection<Game> Games { get; }
     public ObservableCollection<Depot> Depots { get; } = new();
     public ObservableCollection<Branch> Branches { get; }

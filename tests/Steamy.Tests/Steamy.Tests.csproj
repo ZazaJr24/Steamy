@@ -19,6 +19,7 @@
     <Compile Include="..\..\src\Steamy\Services\Catalog\GitHubManifestIndex.cs" Link="Linked\GitHubManifestIndex.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\ManifestArchiveReader.cs" Link="Linked\ManifestArchiveReader.cs" />
     <Compile Include="..\..\src\Steamy\Models\DownloadJobState.cs" Link="Linked\DownloadJobState.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Download\DownloadTelemetry.cs" Link="Linked\DownloadTelemetry.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadPresentation.cs" Link="Linked\DownloadPresentation.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadJobPolicy.cs" Link="Linked\DownloadJobPolicy.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\LocalDownloadInspector.cs" Link="Linked\LocalDownloadInspector.cs" />

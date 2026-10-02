@@ -123,7 +123,9 @@ public sealed partial class PageSmokeTests
                 {
                     _phase = theme + " " + page.GetType().Name;
                     PumpDispatcher(TimeSpan.FromMilliseconds(100));
-                    foreach (var size in new[] { new Size(780, 560), new Size(1280, 800) })
+                    foreach (var size in page is DownloadsPage or DepotDownloaderPage
+                        ? new[] { new Size(520, 560), new Size(780, 560), new Size(1280, 800) }
+                        : new[] { new Size(780, 560), new Size(1280, 800) })
                     {
                         page.Width = size.Width;
                         page.Height = size.Height;
@@ -141,8 +143,11 @@ public sealed partial class PageSmokeTests
                                 "Discovery, Games and SteamTools must use a legible background after a theme switch.");
                         }
                         if (page is DashboardPage dashboard) CheckDashboardLayout(dashboard);
+                        if (page is DownloadsPage downloads) CheckDownloadsLayout(downloads);
                         if (page is BetterSteamToolsPage steamTools) CheckSteamToolsLayout(steamTools);
                         SaveScreenshot(page, theme, size);
+                        if (page is DownloadsPage)
+                            foreach (var scale in new[] { 1.25, 1.5 }) SaveScreenshot(page, theme, size, scale);
                     }
                     if (page is LibraryPage)
                     {
@@ -288,13 +293,14 @@ public sealed partial class PageSmokeTests
         var jobs = provider.GetRequiredService<IAppDataStore>().Downloads;
         jobs.Clear();
         jobs.Add(new DownloadJob { AppId = 1091500, GameName = "Cyberpunk 2077", State = DownloadJobState.Downloading,
-            Progress = 42.5, Downloaded = "36.7 GB", TotalSize = "86.3 GB", Speed = "12.4 MB/s", BytesPerSecond = 12.4 * 1024 * 1024,
+            Progress = 42.5, Phase = "downloading", TransferredBytes = 36700000000, TransferTotalBytes = 86300000000, InstallationBytes = 120000000000, ContentBytes = 51000000000, ReusedBytes = 9000000000, Downloaded = "34.18 GiB", TotalSize = "80.37 GiB", Speed = "12.4 MiB/s", BytesPerSecond = 12.4 * 1024 * 1024,
             Eta = "1h 08m", EtaSeconds = 4080, Status = "Downloading depot 1 of 2", DownloadMode = "DepotDownloaderMod (Sushi)", TargetFolder = @"C:\Games\Cyberpunk 2077" });
         jobs.Add(new DownloadJob { AppId = 1245620, GameName = "ELDEN RING", State = DownloadJobState.Paused,
             Progress = 61, Downloaded = "37.3 GB", TotalSize = "61.1 GB", Status = "Paused — existing files and manifests are retained", DownloadMode = "DepotDownloaderMod (Zaza)", TargetFolder = @"C:\Games\ELDEN RING" });
         jobs.Add(new DownloadJob { AppId = 2358720, GameName = "Black Myth: Wukong", State = DownloadJobState.Queued,
             TotalSize = "128 GB", Status = "Ready when you are", DownloadMode = "DepotDownloader", TargetFolder = @"C:\Games\Wukong" });
         var window = new MainWindow { WindowState = WindowState.Normal, Width = 1600, Height = 1050 };
+        Assert.False(window.RootNavigationView.IsFooterSeparatorVisible);
         var dashboard = provider.GetRequiredService<DashboardViewModel>();
         if (dashboard.DiscoverGames.Count > 0) dashboard.SelectFeaturedCommand.Execute(dashboard.DiscoverGames[0]);
         _phase = "Show main window";
@@ -317,7 +323,7 @@ public sealed partial class PageSmokeTests
         SaveVisual(window, "upcoming-details.png");
         dashboard.CloseDiscoveryCommand.Execute(null);
         discoveryScroll.ScrollToTop();
-        foreach (var (route, filename) in new[] { (typeof(DownloadsPage), "downloads.png"), (typeof(SettingsPage), "settings.png") })
+        foreach (var (route, filename) in new[] { (typeof(DownloadsPage), "downloads.png"), (typeof(DepotDownloaderPage), "depot-downloader.png"), (typeof(SettingsPage), "settings.png") })
         {
             _phase = "Navigate " + route.Name;
             Assert.True(window.RootNavigationView.Navigate(route));
@@ -838,16 +844,16 @@ public sealed partial class PageSmokeTests
         }
     }
 
-    private static void SaveScreenshot(Page page, string theme, Size size)
+    private static void SaveScreenshot(Page page, string theme, Size size, double scale = 1)
     {
         var folder = Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS");
         if (string.IsNullOrWhiteSpace(folder)) return;
         Directory.CreateDirectory(folder);
-        var bitmap = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+        var bitmap = new RenderTargetBitmap((int)Math.Ceiling(size.Width * scale), (int)Math.Ceiling(size.Height * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
         bitmap.Render(page);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        using var output = File.Create(Path.Combine(folder, $"{theme}-{page.GetType().Name}-{size.Width}.png"));
+        using var output = File.Create(Path.Combine(folder, $"{theme}-{page.GetType().Name}-{size.Width}{(scale == 1 ? "" : "-scale" + scale.ToString(System.Globalization.CultureInfo.InvariantCulture))}.png"));
         encoder.Save(output);
     }
 

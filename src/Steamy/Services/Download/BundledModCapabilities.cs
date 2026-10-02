@@ -10,7 +10,11 @@ public static class BundledModCapabilities
 {
     public const string MarkerFileName = "Steamy-rate-limit.json";
 
-    public static bool SupportsRateLimit(string executablePath)
+    public static bool SupportsRateLimit(string executablePath) => Supports(executablePath, "maxDownloadSpeed");
+
+    public static bool SupportsProgress(string executablePath) => Supports(executablePath, "progressTelemetry");
+
+    private static bool Supports(string executablePath, string capability)
     {
         try
         {
@@ -21,7 +25,7 @@ public static class BundledModCapabilities
             using var json = JsonDocument.Parse(File.ReadAllText(marker));
             var root = json.RootElement;
             if (!root.TryGetProperty("schemaVersion", out var schema) || schema.GetInt32() != 1
-                || !root.TryGetProperty("maxDownloadSpeed", out var speed) || speed.ValueKind != JsonValueKind.True)
+                || !root.TryGetProperty(capability, out var speed) || speed.ValueKind != JsonValueKind.True)
                 return false;
             // The marker is valid only for the binary shipped with it. Selecting or replacing
             // an upstream tool in the same folder cannot silently enable an unsupported flag.

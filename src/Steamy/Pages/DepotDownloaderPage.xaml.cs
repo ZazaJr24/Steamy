@@ -12,6 +12,7 @@ public partial class DepotDownloaderPage : Page
     {
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<DepotDownloaderViewModel>();
+        SizeChanged += (_, args) => VersionFields.Columns = args.NewSize.Width < 600 ? 1 : 3;
     }
 
     private DepotDownloaderViewModel ViewModel => (DepotDownloaderViewModel)DataContext;

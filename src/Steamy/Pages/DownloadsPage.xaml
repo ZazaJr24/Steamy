@@ -9,22 +9,13 @@
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolVis" />
 
-    <LinearGradientBrush x:Key="HeroSideShade" StartPoint="0,0" EndPoint="1,0">
-      <GradientStop Color="#E0162C47" Offset="0" />
-      <GradientStop Color="#A6162C47" Offset="0.45" />
-      <GradientStop Color="#15162C47" Offset="1" />
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="HeroBottomShade" StartPoint="0,0" EndPoint="0,1">
-      <GradientStop Color="#00162C47" Offset="0.3" />
-      <GradientStop Color="#CC162C47" Offset="1" />
-    </LinearGradientBrush>
     <!-- Queue row: a solid card with a quiet hover outline. -->
     <Style x:Key="QueueRow" TargetType="Border" BasedOn="{StaticResource JobCardEntrance}">
       <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="14" />
-      <Setter Property="Padding" Value="12" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="10" />
       <Setter Property="Margin" Value="0" />
       <Style.Triggers>
         <Trigger Property="IsMouseOver" Value="True">
@@ -56,7 +47,7 @@
           </Grid.ColumnDefinitions>
 
           <!-- Game art -->
-          <Grid Width="84" Height="58">
+          <Grid Width="64" Height="48">
             <Border CornerRadius="12" Background="{Binding CoverColor}">
               <TextBlock Text="{Binding CoverGlyph}" FontSize="20" Foreground="#44FFFFFF"
                          HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -69,7 +60,7 @@
           </Grid>
 
           <!-- Title, progress, details -->
-          <StackPanel Grid.Column="1" Margin="14,0,14,0" VerticalAlignment="Center">
+          <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
             <TextBlock Text="{Binding GameName}" FontSize="14" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"
                        ToolTip="{Binding GameName}" />
@@ -88,7 +79,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
-              <controls:SmoothProgressBar SmoothValue="{Binding Progress}" Maximum="100" Height="5"
+              <controls:SmoothProgressBar SmoothValue="{Binding Progress}" IsIndeterminate="{Binding IsProgressIndeterminate}" Maximum="100" Height="5"
                                           Style="{StaticResource JobProgressBar}" VerticalAlignment="Center" />
               <TextBlock Grid.Column="1" Text="{Binding ProgressCaption}" Style="{StaticResource JobNumberText}"
                          Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"
@@ -164,10 +155,10 @@
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
-    <Grid Margin="0,0,0,18" controls:EntranceMotion.Delay="0">
+    <Grid Margin="0,0,0,14" controls:EntranceMotion.Delay="0">
       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
       <StackPanel>
-        <TextBlock Text="Downloads" Style="{StaticResource PageTitleStyle}" Margin="0" />
+        <TextBlock Text="Downloads" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0" />
         <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0">
           <Run Text="{Binding ActiveCount, Mode=OneWay}" /><Run Text=" active   ·   " />
           <Run Text="{Binding QueuedJobCount, Mode=OneWay}" /><Run Text=" queued   ·   " />
@@ -178,81 +169,61 @@
         <ui:Button Content="Start queue" Icon="{ui:SymbolIcon Play24}" Appearance="Primary" Command="{Binding StartQueuedCommand}" Margin="0,0,8,0" />
         <ui:Button Content="Stop queue" Command="{Binding StopQueueCommand}" Margin="0,0,8,0" Visibility="{Binding IsQueueRunning, Converter={StaticResource BoolVis}}"
                    ToolTip="Stop starting waiting jobs. Running downloads keep their own Pause and Cancel controls." />
-        <ui:Button Content="Browse games" Icon="{ui:SymbolIcon Apps24}" Command="{Binding NavigateLibraryCommand}" />
+        <ui:Button Icon="{ui:SymbolIcon Apps24}" ToolTip="Browse games" AutomationProperties.Name="Browse games" Command="{Binding NavigateLibraryCommand}" />
       </StackPanel>
     </Grid>
 
-    <Grid Grid.Row="1" x:Name="FeaturedPanel" Height="236" Margin="0,0,0,18" controls:EntranceMotion.Delay="20">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*" />
-
-      </Grid.ColumnDefinitions>
-      <Grid>
-        <Border DataContext="{Binding HeroJob}" CornerRadius="20" Background="{DynamicResource SurfaceElevatedBrush}"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderSubtleBrush}"
-                Visibility="{Binding DataContext.HasHeroJob, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolVis}}">
+    <Grid Grid.Row="1" x:Name="FeaturedPanel" Margin="0,0,0,16" controls:EntranceMotion.Delay="20">
+      <Border DataContext="{Binding HeroJob}" CornerRadius="16" Background="{DynamicResource SurfaceElevatedBrush}" BorderThickness="1" BorderBrush="{DynamicResource BorderSubtleBrush}" Padding="18,14"
+              Visibility="{Binding DataContext.HasHeroJob, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolVis}}">
+        <StackPanel>
           <Grid>
-            <Border CornerRadius="19" Background="{Binding CoverColor}" />
-            <Border CornerRadius="19" RenderOptions.BitmapScalingMode="HighQuality"><Border.Background>
-              <ImageBrush ImageSource="{Binding HeaderArtUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=1280}" Stretch="UniformToFill" />
-            </Border.Background></Border>
-            <Border CornerRadius="19" RenderOptions.BitmapScalingMode="HighQuality"><Border.Background>
-              <ImageBrush ImageSource="{Binding HeroArtUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=1280}" Stretch="UniformToFill" />
-            </Border.Background></Border>
-            <Border CornerRadius="19" Background="{StaticResource HeroSideShade}" />
-            <Border CornerRadius="19" Background="{StaticResource HeroBottomShade}" />
-          <Grid Margin="22,18">
-            <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-            <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
-                <TextBlock Text="{Binding GameName}" FontSize="28" FontWeight="SemiBold" Foreground="#F6F8FC" TextTrimming="CharacterEllipsis" ToolTip="{Binding GameName}" />
-                <WrapPanel Margin="0,6,0,0">
-                  <Border Style="{StaticResource StatePill}" Padding="7,2"><TextBlock Text="{Binding StateLabel}" Style="{StaticResource StatePillText}" /></Border>
-                  <TextBlock Text="{Binding SourceLabel}" Foreground="#C2CDDD" Style="{StaticResource CaptionStyle}" Margin="8,0,0,0" VerticalAlignment="Center" />
-                </WrapPanel>
-                <TextBlock Text="{Binding Status}" Foreground="#C2CDDD" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,8,0,0" ToolTip="{Binding Status}" />
-              </StackPanel>
-              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:Button Icon="{ui:SymbolIcon Pause24}" ToolTip="Pause download" AutomationProperties.Name="Pause download" Appearance="Secondary" Style="{StaticResource PauseButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
-                           Command="{Binding DataContext.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
-                <ui:Button Icon="{ui:SymbolIcon Play24}" ToolTip="Resume download" AutomationProperties.Name="Resume download" Appearance="Primary" Style="{StaticResource ResumeButton}" Width="34" Height="34" Padding="0" CornerRadius="17"
-                           Command="{Binding DataContext.ResumeCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
-              </StackPanel>
-            </Grid>
-            <Grid Grid.Row="1" Margin="0,14,0,10">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <controls:SmoothProgressBar SmoothValue="{Binding Progress}" Maximum="100" Height="5" Style="{StaticResource JobProgressBar}" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Text="{Binding ProgressCaption}" Style="{StaticResource JobNumberText}" Foreground="#F6F8FC" FontWeight="SemiBold" FontSize="16" Margin="12,0,0,0" />
-            </Grid>
-            <Grid Grid.Row="2">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{Binding SizeSummary}" Foreground="#C2CDDD" Style="{StaticResource CaptionStyle}" TextTrimming="CharacterEllipsis" Margin="0,0,10,0" ToolTip="{Binding SizeSummary}" />
-              <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <TextBlock Text="{Binding SpeedDisplay}" Style="{StaticResource JobNumberText}" FontSize="11" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" />
-                <TextBlock Text="{Binding EtaDisplay}" Style="{StaticResource JobNumberText}" FontSize="11" Foreground="#C2CDDD" />
-              </StackPanel>
-            </Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <Border Width="66" Height="46" CornerRadius="9">
+              <Border.Background><ImageBrush ImageSource="{Binding HeaderArtUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=256}" Stretch="UniformToFill" /></Border.Background>
+            </Border>
+            <StackPanel Grid.Column="1" Margin="12,0,10,0" VerticalAlignment="Center">
+              <TextBlock Text="{Binding GameName}" FontSize="21" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding GameName}" />
+              <WrapPanel Margin="0,4,0,0">
+                <TextBlock Text="{Binding PhaseLabel}" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="SemiBold" Margin="0,0,10,0" />
+                <TextBlock Text="{Binding SourceLabel}" Style="{StaticResource CaptionStyle}" />
+              </WrapPanel>
+            </StackPanel>
+            <TextBlock Grid.Column="2" Text="{Binding ProgressCaption}" Style="{StaticResource JobNumberText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" />
           </Grid>
-          </Grid>
-        </Border>
-
-        <Border CornerRadius="22" Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
-                Visibility="{Binding ShowIdleHero, Converter={StaticResource BoolVis}}">
+          <controls:SmoothProgressBar x:Name="FocusedProgress" SmoothValue="{Binding Progress}" IsIndeterminate="{Binding IsProgressIndeterminate}" Maximum="100" Height="7" Style="{StaticResource JobProgressBar}" Margin="0,14,0,13" />
+          <TextBlock Text="{Binding CurrentDepotDetail}" Style="{StaticResource HideWhenEmpty}" Foreground="{DynamicResource AccentBrush}" FontSize="11" Margin="0,0,0,10" />
+          <UniformGrid x:Name="FocusedMetrics" Columns="4">
+            <StackPanel Margin="0,0,8,0"><TextBlock Text="TRANSFERRED" FontSize="9.5" Foreground="{DynamicResource TextTertiaryBrush}" /><TextBlock Text="{Binding DownloadedDisplay}" FontSize="18" Style="{StaticResource JobNumberText}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,5,0,0" /></StackPanel>
+            <StackPanel Margin="0,0,8,0"><TextBlock Text="DOWNLOAD SIZE" FontSize="9.5" Foreground="{DynamicResource TextTertiaryBrush}" /><TextBlock Text="{Binding TotalDisplay}" FontSize="18" Style="{StaticResource JobNumberText}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,5,0,0" /></StackPanel>
+            <StackPanel Margin="0,0,8,0"><TextBlock Text="SPEED" FontSize="9.5" Foreground="{DynamicResource TextTertiaryBrush}" /><TextBlock Text="{Binding TransferSpeedDisplay}" FontSize="18" Style="{StaticResource JobNumberText}" Foreground="{DynamicResource AccentBrush}" Margin="0,5,0,0" /></StackPanel>
+            <StackPanel><TextBlock Text="TIME LEFT" FontSize="9.5" Foreground="{DynamicResource TextTertiaryBrush}" /><TextBlock Text="{Binding RemainingDisplay}" FontSize="16" Style="{StaticResource JobNumberText}" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding RemainingDisplay}" Margin="0,7,0,0" /></StackPanel>
+          </UniformGrid>
+          <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}" Margin="0,9,0,0" />
+          <WrapPanel Margin="0,8,0,10">
+            <TextBlock Text="{Binding ElapsedDisplay, StringFormat='Active time: {0}'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,18,0" />
+            <TextBlock Text="{Binding ReusedDisplay, StringFormat='Reused: {0}'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,18,0" />
+            <TextBlock Text="{Binding InstallationDisplay, StringFormat='Content size: {0}'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" ToolTip="For a source download with multiple depots this is the current depot's content size." />
+          </WrapPanel>
           <Grid>
-            <Border Background="{DynamicResource BrandWashBrush}" CornerRadius="22" />
-            <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="90" Opacity="0.04" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Right" Margin="0,0,24,0" />
-            <StackPanel Margin="28,18" VerticalAlignment="Center">
-              <TextBlock Text="{Binding IdleHeadline}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding IdleDetail}" Style="{StaticResource BodyTextStyle}" Margin="0,6,0,14" />
-              <ui:Button Content="Start next download" Icon="{ui:SymbolIcon Play24}" Appearance="Primary" HorizontalAlignment="Left"
-                         Visibility="{Binding HasNextQueuedJob, Converter={StaticResource BoolVis}}"
-                         Command="{Binding StartCommand}" CommandParameter="{Binding NextQueuedJob}" />
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding TargetFolder}" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding TargetFolder}" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+              <ui:Button Content="Pause" Icon="{ui:SymbolIcon Pause24}" Style="{StaticResource PauseButton}" Padding="10,6" Margin="0,0,6,0" Command="{Binding DataContext.PauseCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
+              <ui:Button Content="Resume" Icon="{ui:SymbolIcon Play24}" Style="{StaticResource ResumeButton}" Appearance="Primary" Padding="10,6" Margin="0,0,6,0" Command="{Binding DataContext.ResumeCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
+              <ui:Button Content="Cancel" Icon="{ui:SymbolIcon Dismiss24}" Style="{StaticResource CancelButton}" Padding="10,6" Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
             </StackPanel>
           </Grid>
-        </Border>
-      </Grid>
-
+        </StackPanel>
+      </Border>
+      <Border CornerRadius="16" Background="{DynamicResource SurfaceElevatedBrush}" Padding="20,18" Visibility="{Binding ShowIdleHero, Converter={StaticResource BoolVis}}">
+        <StackPanel>
+          <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="24" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Left" />
+          <TextBlock Text="{Binding IdleHeadline}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,0" />
+          <TextBlock Text="{Binding IdleDetail}" Style="{StaticResource BodyTextStyle}" Margin="0,6,0,12" TextWrapping="Wrap" />
+          <ui:Button Content="Start next download" Icon="{ui:SymbolIcon Play24}" Appearance="Primary" HorizontalAlignment="Left" Visibility="{Binding HasNextQueuedJob, Converter={StaticResource BoolVis}}" Command="{Binding StartCommand}" CommandParameter="{Binding NextQueuedJob}" />
+        </StackPanel>
+      </Border>
     </Grid>
 
     <Grid Grid.Row="2" Margin="0,0,0,12">
@@ -315,6 +286,8 @@
               <Border Style="{StaticResource StatusPillStyle}" Margin="0,0,8,4"><TextBlock Text="{Binding DepotLabel}" Style="{StaticResource CaptionStyle}" /></Border>
               <Border Style="{StaticResource StatusPillStyle}" Margin="0,0,8,4"><TextBlock Text="{Binding Branch, StringFormat='Branch: {0}'}" Style="{StaticResource CaptionStyle}" /></Border>
             </WrapPanel>
+            <TextBlock Text="{Binding InstallationDisplay, StringFormat='Content size (current depot): {0}'}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5" />
+            <TextBlock Text="{Binding ReusedDisplay, StringFormat='Verified existing content: {0}'}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5" />
             <TextBlock Text="{Binding CurrentFile, StringFormat='Current file: {0}'}" TextTrimming="CharacterEllipsis" ToolTip="{Binding CurrentFile}" Foreground="{DynamicResource TextSecondaryBrush}" />
             <TextBlock Text="{Binding TargetFolder, StringFormat='Folder: {0}'}" TextTrimming="CharacterEllipsis" ToolTip="{Binding TargetFolder}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,5,0,0" />
             <WrapPanel Margin="-6,12,0,0">
@@ -325,6 +298,7 @@
                          ToolTip="Inspect local files without changing them. This is not a manifest or checksum verification."
                          Command="{Binding DataContext.VerifyCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
             </WrapPanel>
+            <Expander Header="Tool output" Margin="0,8,0,0"><TextBox Text="{Binding ProcessLog, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="120" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="11" /></Expander>
           </StackPanel>
         </ScrollViewer>
       </Expander>

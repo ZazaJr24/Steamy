@@ -29,7 +29,7 @@ The release is portable and includes the Windows runtime. Use Windows 10 or 11 o
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. If an older build (including 0.4.12) reports GitHub HTTP 403, download and extract the latest ZIP once; 0.5.0 includes a public release-manifest fallback and checks the published SHA-256 before installing. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
-Normal releases use three version numbers, such as **0.5.0**. Optional hotfixes use four, such as **0.5.0.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
+Normal releases use three version numbers, such as **0.6.0**. Optional hotfixes use four, such as **0.6.0.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
 
 ## Inside Steamy
 
@@ -38,7 +38,7 @@ Normal releases use three version numbers, such as **0.5.0**. Optional hotfixes 
 | **Dashboard** | Spotlight artwork, a flat animated countdown and wide upcoming covers, and clickable game details. |
 | **Spotlight** | Upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
 | **Games** | Larger portrait covers, up to five per row, released games only, typo-tolerant title/App ID search, favorites, sorting and source filters. |
-| **Downloads** | Compact source → depots & version → location steps, right-hand depot selection and available Steam details, plus queue priority, pause, resume and repair. |
+| **Downloads** | Clear transfer size, speed, remaining and active time; separate reused content and installation size. Compact queue with priority, pause, resume, retry and repair. Unknown measurements stay unknown. |
 | **Settings** | Searchable categories, dark/light themes, reduced effects, Windows backdrop options, download limits, network options and source connections. |
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
 | **Fixes** | Browse your configured fixes repository. **Hypervisor Fixes is Coming soon** and does not install anything yet. |
@@ -144,7 +144,9 @@ Screenshots are captured from the actual Windows app using sample library, queue
 
 **Downloads** — see what's running, what's next and what's ready to resume.
 
-![Downloads with progress and queue controls](docs/screenshots/downloads.png)
+![Downloads with measured progress and queue controls](docs/screenshots/downloads.png)
+
+![Compact DepotDownloader setup](docs/screenshots/depot-downloader.png)
 
 **Settings** — find a setting, then make the app yours.
 

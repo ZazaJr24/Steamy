@@ -17,13 +17,13 @@ public sealed partial class PageSmokeTests
         var setupOptions = (Expander)page.FindName("SteamSetupExpander");
         var scroll = (ScrollViewer)page.FindName("ToolScrollHost");
         var footer = (Grid)page.FindName("OperationFooter");
-        Assert.False(gameOptions.IsExpanded, "The initial page must keep game options out of the drop workspace.");
+        Assert.True(gameOptions.IsExpanded, "The game input must be available without an extra click.");
         Assert.False(setupOptions.IsExpanded, "An installed backend must keep setup collapsed initially.");
         var dropBounds = drop.TransformToAncestor(page).TransformBounds(new Rect(drop.RenderSize));
         var footerBounds = footer.TransformToAncestor(page).TransformBounds(new Rect(footer.RenderSize));
         Assert.True(dropBounds.Left >= 0 && dropBounds.Right <= page.ActualWidth);
         Assert.True(dropBounds.Bottom <= footerBounds.Top, "The entire drop target must be visible on the initial page.");
-        Assert.True(drop.ActualHeight >= 320);
+        Assert.True(drop.ActualHeight >= 260);
         Assert.True(footerBounds.Bottom <= page.ActualHeight, "Operation feedback must stay visible.");
         gameOptions.IsExpanded = true; setupOptions.IsExpanded = true;
         PumpDispatcher(TimeSpan.FromMilliseconds(40));
@@ -41,7 +41,7 @@ public sealed partial class PageSmokeTests
         var setupBounds = setup.TransformToAncestor(page).TransformBounds(new Rect(setup.RenderSize));
         Assert.True(setupBounds.Bottom <= footerBounds.Top, "Expanded setup must remain reachable by native scrolling.");
         Assert.Equal(footerBounds, footer.TransformToAncestor(page).TransformBounds(new Rect(footer.RenderSize)));
-        gameOptions.IsExpanded = false; setupOptions.IsExpanded = false;
+        gameOptions.IsExpanded = true; setupOptions.IsExpanded = false;
         scroll.ScrollToTop(); page.UpdateLayout();
     }
 

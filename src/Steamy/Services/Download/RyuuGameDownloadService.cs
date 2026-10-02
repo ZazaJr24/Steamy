@@ -511,6 +511,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             }
             DepotDownloaderArgumentBuilder.AddTransferOptions(args, settings.DownloadConnections, settings.UseLancache);
             args.AddRange(rateArguments);
+            if (BundledModCapabilities.SupportsProgress(ddPath)) args.Add("-steamy-progress");
             // Reuse only chunks that match the saved manifest; repair interrupted writes and
             // fetch missing chunks without changing the version selected for this download.
             args.Add("-verify-all");
@@ -696,9 +697,9 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 {
                     var snapshot = tracker.Snapshot();
                     if (snapshot.DownloadedBytes > 0) lastDepotBytes = snapshot.DownloadedBytes;
-                    if (snapshot.Percent is { } percent && !cancellationToken.IsCancellationRequested)
+                    if ((snapshot.Percent is not null || snapshot.Phase.Length > 0) && !cancellationToken.IsCancellationRequested)
                         progress?.Report(GameDownloadProgressMessage.Format(depotId, depotIndex, totalDepots,
-                            percent, snapshot, completedDepotsBytes + lastDepotBytes));
+                            snapshot.Percent ?? -1, snapshot, completedDepotsBytes + lastDepotBytes));
 
                     // Manifest/chunk verification may read and hash a large file without writing
                     // or printing. CPU activity means the verifier is still working.
@@ -924,7 +925,11 @@ public static class GameDownloadProgressMessage
             Clean(snapshot?.CurrentFile),
             (snapshot?.BytesPerSecond ?? 0).ToString("0", CultureInfo.InvariantCulture),
             snapshot?.EtaSeconds is { } eta ? eta.ToString("0", CultureInfo.InvariantCulture) : string.Empty,
-            cumulativeDownloadedBytes.ToString(CultureInfo.InvariantCulture));
+            cumulativeDownloadedBytes.ToString(CultureInfo.InvariantCulture),
+            snapshot?.Phase ?? "finalizing", (snapshot?.TotalBytes ?? 0).ToString(CultureInfo.InvariantCulture),
+            (snapshot?.ContentBytes ?? 0).ToString(CultureInfo.InvariantCulture),
+            snapshot?.TransferTotalBytes?.ToString(CultureInfo.InvariantCulture) ?? "",
+            (snapshot?.ReusedBytes ?? 0).ToString(CultureInfo.InvariantCulture));
 
     /// <summary>Applies a progress message to the job. Returns false for plain status text.</summary>
     public static bool TryApply(Models.DownloadJob job, string message)
@@ -948,71 +953,30 @@ public static class GameDownloadProgressMessage
             cumulativeBytes = parsedCumulative;
         }
 
-        if (hasDepots && count > 1)
-        {
-            // Every depot reports its own size, so the job can show the real amount of data the whole
-            // download covers. Finished depots are added up, the running one is added on top.
-            var depotBytes = DownloadFormat.TryParseSize(depotTotal);
-            if (job.DepotsSeen != index)
-            {
-                if (job.DepotTotalBytes > 0) job.DepotBytesCompleted += job.DepotTotalBytes;
-                job.DepotsSeen = index;
-            }
-            if (depotBytes > 0) job.DepotTotalBytes = depotBytes;
-
-            if (cumulativeBytes > 0)
-                job.Downloaded = DownloadFormat.Bytes(cumulativeBytes);
-            else if (depotDownloaded.Length > 0)
-                job.Downloaded = depotDownloaded;
-
-            var exactTotal = job.DepotBytesCompleted + job.DepotTotalBytes;
-            job.TotalSize = exactTotal > 0
-                ? $"{DownloadFormat.Bytes(exactTotal)} in {count} depots"
-                : $"{count} depots";
-
-            if (depotDownloaded.Length > 0 && depotTotal.Length > 0)
-                job.Status = $"Downloading depot {index} of {count}  ·  {depotDownloaded} / {depotTotal}";
-            else
-                job.Status = $"Downloading depot {index} of {count}";
-        }
-        else
-        {
-            if (depotDownloaded.Length > 0) job.Downloaded = depotDownloaded;
-            if (depotTotal.Length > 0) job.TotalSize = depotTotal;
-            job.Status = "Downloading";
-        }
-
-        // Prefer the measured, smoothed rate so the speed readout and the graph glide.
-        var measuredRate = parts.Length >= 11
-            && double.TryParse(parts[10], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedRate)
-                ? parsedRate
-                : 0;
-        if (measuredRate > 4096) job.Speed = DownloadFormat.Speed(measuredRate);
-        else if (parts[7].Length > 0) job.Speed = parts[7];
-
-        if (parts[8].Length > 0)
-        {
-            job.Eta = hasDepots && count > 1 ? $"{parts[8]} (depot {index}/{count})" : parts[8];
-        }
+        var phase = parts.Length >= 18 ? parts[13] : "";
+        job.Phase = phase;
+        job.CurrentDepotDetail = count > 1 ? $"Depot {index}/{count} · {(double.IsFinite(percent) && percent >= 0 && phase == "downloading" ? percent.ToString("0.0", CultureInfo.InvariantCulture) + "%" : job.PhaseLabel)}"
+            + (depotDownloaded.Length > 0 && depotTotal.Length > 0 ? $" · {depotDownloaded} / {depotTotal}" : "") : "";
+        job.Status = hasDepots ? $"{job.PhaseLabel} · depot {index} of {count}" : job.PhaseLabel;
+        job.Downloaded = cumulativeBytes > 0 ? DownloadFormat.Bytes(cumulativeBytes) : string.IsNullOrEmpty(depotDownloaded) ? "0 B" : depotDownloaded;
+        // A runner starts one process per depot. Transfer totals and ETA therefore describe
+        // the current depot; do not claim the unknown remainder of the whole game is known.
+        job.TotalSize = count > 1 ? "Unknown · multiple depots" : depotTotal;
+        job.TransferredBytes = cumulativeBytes;
+        job.TransferTotalBytes = count <= 1 && parts.Length >= 18 && long.TryParse(parts[16], out var total) ? total : null;
+        if (parts.Length >= 18 && long.TryParse(parts[14], out var install) && install > 0) job.InstallationBytes = install;
+        job.ContentBytes = parts.Length >= 18 && long.TryParse(parts[15], out var content) ? content : 0;
+        job.ReusedBytes = parts.Length >= 18 && long.TryParse(parts[17], out var reused) ? reused : 0;
+        var rate = parts.Length >= 11 && double.TryParse(parts[10], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedRate)
+            && double.IsFinite(parsedRate) && parsedRate >= 0 ? parsedRate : 0;
+        job.BytesPerSecond = rate;
+        job.Speed = parts[7];
+        job.Eta = parts[8].Length > 0 && count > 1 ? $"{parts[8]} · this depot" : parts[8];
+        job.EtaSeconds = count <= 1 && parts.Length >= 12 && double.TryParse(parts[11], NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)
+            && double.IsFinite(seconds) && seconds >= 0 ? seconds : null;
         if (parts[9].Length > 0) job.CurrentFile = parts[9];
-        if (parts.Length >= 12)
-        {
-            job.BytesPerSecond = double.TryParse(parts[10], NumberStyles.Float, CultureInfo.InvariantCulture, out var rate) ? rate : 0;
-            job.EtaSeconds = double.TryParse(parts[11], NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) ? seconds : null;
-        }
-
-        // The percentage uses the very same two numbers the size readout shows (downloaded / total),
-        // so the bar, the GB text and the % can never disagree. A byte-based value is preferred; the
-        // depot-averaged one is only a fallback while no total size is known yet.
-        var downloadedBytes = cumulativeBytes > 0 ? cumulativeBytes : DownloadFormat.TryParseSize(job.Downloaded);
-        var totalBytes = hasDepots && count > 1
-            ? job.DepotBytesCompleted + job.DepotTotalBytes
-            : DownloadFormat.TryParseSize(job.TotalSize);
-        double overall = downloadedBytes > 0 && totalBytes > 0
-            ? downloadedBytes * 100.0 / totalBytes
-            : hasDepots && count > 0 ? ((index - 1) * 100.0 + percent) / count
-            : percent;
-        job.Progress = Math.Max(job.Progress, Math.Clamp(overall, 0, 100));
+        if (count <= 1 && double.IsFinite(percent) && percent >= 0) job.Progress = Math.Min(99.9, percent);
+        job.HasMeasuredProgress = count <= 1 && double.IsFinite(percent) && percent >= 0;
         return true;
     }
 

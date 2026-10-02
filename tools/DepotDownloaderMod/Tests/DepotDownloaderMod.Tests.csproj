@@ -11,6 +11,7 @@
     <DefineConstants>$(DefineConstants);HAVE_PATCHED_FACTORY</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../SteamyProgress.cs" Link="SteamyProgress.cs" />
     <Compile Include="../RateLimitedReadStream.cs" Link="RateLimitedReadStream.cs" />
     <Compile Condition="'$(DepotDownloaderSource)' != ''" Include="$(DepotDownloaderSource)/DepotDownloader/HttpClientFactory.cs" Link="PatchedHttpClientFactory.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

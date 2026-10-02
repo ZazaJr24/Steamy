@@ -65,6 +65,13 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     private readonly string _workFolder;
 
     public IReadOnlyList<ManifestSourceInfo> Sources => AllSources;
+    private static HttpClient CreateSourceClient()
+    {
+        var handler = StableDnsHandler.Create();
+        // Automatic cross-host redirects can forward custom API-key headers.
+        if (handler is SocketsHttpHandler sockets) sockets.AllowAutoRedirect = false;
+        return new HttpClient(handler) { Timeout = TimeSpan.FromMinutes(15) };
+    }
 
     public ManifestSourceService(
         ISettingsService settings,
@@ -77,7 +84,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         _ryuuDownload = ryuuDownload;
         _logging = logging;
         _ownsHttpClient = httpClient is null;
-        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(15) };
+        _httpClient = httpClient ?? CreateSourceClient();
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
 
         _workFolder = workFolder ?? Path.Combine(
@@ -420,112 +427,122 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
     }
 
-    private async Task<ManifestDownloadResult> DownloadFromHubcapAsync(
-        int appId, IProgress<string>? progress, CancellationToken ct)
+    private Task<ManifestDownloadResult> DownloadFromHubcapAsync(
+        int appId, IProgress<string>? progress, CancellationToken ct) =>
+        WithProviderPackageAsync("Hubcap", appId, ct, async appWorkDir =>
     {
         var key = await ResolveHubcapKeyAsync();
         if (string.IsNullOrWhiteSpace(key))
-            return new ManifestDownloadResult(false, "No Hubcap API key configured. Set it in Settings → Hubcap API Key.");
-
+            return new(false, "No Hubcap API key configured. Set it in Settings → Hubcap API Key.");
         var baseUrl = _settings.Load().HubcapBaseUrl?.TrimEnd('/') ?? "https://hubcapmanifest.com";
-        var appWorkDir = NewPackageDirectory("hubcap", appId);
-        Directory.CreateDirectory(appWorkDir);
-
-        // The Lua script (depot ids, manifest ids, decryption keys) lives on its own endpoint —
-        // the manifest zip carries the .manifest files. Both are pulled, and either one alone is
-        // enough to continue: the zip often contains the Lua too, and DepotDownloaderMod can fetch
-        // a manifest from Steam when we only have the Lua.
         string? luaContent = null;
         string? luaError = null;
-
-        progress?.Report("Fetching Lua manifest from Hubcap...");
+        progress?.Report("Fetching Lua metadata from Hubcap...");
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v1/lua/{appId}");
             AddHubcapAuth(req, key);
             using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+            var bytes = await ReadPayloadAsync(resp.Content, DownloadPreparationReader.MaximumLuaCharacters, ct);
             if (resp.IsSuccessStatusCode)
-            {
-                var text = System.Text.Encoding.UTF8.GetString(await ReadPayloadAsync(resp.Content, 4L * 1024 * 1024, ct)).TrimStart('\uFEFF');
-                if (!string.IsNullOrWhiteSpace(text) && !text.StartsWith('{') && !text.StartsWith('['))
-                {
-                    luaContent = text;
-                    await File.WriteAllTextAsync(Path.Combine(appWorkDir, $"{appId}.lua"), luaContent, ct);
-                }
-                else
-                {
-                    luaError = $"Hubcap returned no Lua script for App {appId}.";
-                }
-            }
-            else
-            {
-                luaError = ExtractApiErrorMessage(
-                    await resp.Content.ReadAsStringAsync(ct),
-                    $"Hubcap returned HTTP {(int)resp.StatusCode} for the Lua of App {appId}.");
-            }
+                luaContent = ReadProviderLua("Hubcap", appId, bytes, resp.Content.Headers.ContentType?.MediaType ?? "");
+            else luaError = $"Hubcap returned HTTP {(int)resp.StatusCode} for the Lua of App {appId}.";
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
-        {
-            luaError = $"Hubcap Lua download failed: {ex.Message}";
-        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or HttpRequestException or System.Text.DecoderFallbackException)
+        { luaError = exception.Message; }
 
         progress?.Report("Downloading manifest files from Hubcap...");
+        using var manifestRequest = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v1/manifest/{appId}");
+        AddHubcapAuth(manifestRequest, key);
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v1/manifest/{appId}");
-            AddHubcapAuth(req, key);
-            using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
-            if (resp.IsSuccessStatusCode)
+            using var response = await _httpClient.SendAsync(manifestRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (response.IsSuccessStatusCode)
             {
-                var bytes = await ReadPayloadAsync(resp.Content, 128L * 1024 * 1024, ct);
+                var bytes = await ReadPayloadAsync(response.Content, 128L * 1024 * 1024, ct);
                 if (IsZipArchive(bytes))
                 {
-                    var zipPath = Path.Combine(appWorkDir, $"{appId}_hubcap.zip");
-                    await File.WriteAllBytesAsync(zipPath, bytes, ct);
-
-                    var (zipLua, fileCount) = await ExtractManifestArchiveAsync(zipPath, appWorkDir, ct);
-                    zipLua = FindLuaInWorkDir(appWorkDir, appId) ?? zipLua;
-                    luaContent ??= zipLua;
-                    _logging.Add(Models.LogLevel.Info, "ManifestSource",
-                        $"Hubcap archive for App {appId} unpacked: {fileCount} file(s).", appId);
+                    var archive = Path.Combine(appWorkDir, $"{appId}_hubcap.zip");
+                    await File.WriteAllBytesAsync(archive, bytes, ct);
+                    await ExtractManifestArchiveAsync(archive, appWorkDir, ct);
+                    // An invalid standalone response was never saved, so it cannot shadow ZIP Lua.
+                    var zipLua = FindLuaInWorkDir(appWorkDir, appId);
+                    if (zipLua is not null)
+                        luaContent = SteamToolsMetadata.ReadLua(zipLua, $"{appId}.lua", appId).Lua;
+                    File.Delete(archive);
                 }
-                else
-                {
-                    _logging.Add(Models.LogLevel.Warning, "ManifestSource",
-                        $"Hubcap sent no archive for App {appId} ({(int)resp.StatusCode}). Continuing with the Lua only.", appId);
-                }
+                else if (luaContent is null)
+                    return new(false, luaError ?? "Hubcap returned no ZIP package or valid Lua metadata.");
             }
-            else
-            {
-                _logging.Add(Models.LogLevel.Warning, "ManifestSource",
-                    $"Hubcap manifest zip for App {appId}: HTTP {(int)resp.StatusCode}. Continuing with the Lua only.", appId);
-            }
+            else if (luaContent is null)
+                return new(false, luaError ?? $"Hubcap returned HTTP {(int)response.StatusCode}.");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
-        {
-            _logging.Add(Models.LogLevel.Warning, "ManifestSource",
-                $"Hubcap manifest zip for App {appId} failed: {ex.Message}. Continuing with the Lua only.", appId);
-        }
+        catch (HttpRequestException) when (luaContent is not null) { }
+        // Damaged archives fail closed: no partially extracted package is published.
+        if (luaContent is null) return new(false, luaError ?? $"No valid Lua metadata found for App {appId} on Hubcap.");
+        await File.WriteAllTextAsync(Path.Combine(appWorkDir, $"{appId}.lua"), luaContent, ct);
+        return new(true, "Hubcap metadata downloaded and checked.", luaContent, appWorkDir);
+    });
 
-        if (luaContent is null)
-            return new ManifestDownloadResult(false, luaError ?? $"No Lua script found for App {appId} on Hubcap.");
-
-        _logging.Add(Models.LogLevel.Info, "ManifestSource",
-            $"Downloaded manifest from Hubcap for App {appId}.", appId);
-        return new ManifestDownloadResult(true, "Downloaded from Hubcap.", luaContent, appWorkDir);
+    private static string ReadProviderLua(string provider, int appId, byte[] bytes, string contentType)
+    {
+        if (bytes.Length is 0 or > DownloadPreparationReader.MaximumLuaCharacters)
+            throw new InvalidDataException($"{provider} returned empty or oversized Lua metadata.");
+        var text = new System.Text.UTF8Encoding(false, true).GetString(bytes).TrimStart('\uFEFF').Trim();
+        if (text.StartsWith('<') || contentType.Contains("html", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException($"{provider} returned a web page instead of metadata. Check the API key and retry; browser verification may be required.");
+        if (text.StartsWith('{') || text.StartsWith('['))
+            throw new InvalidDataException($"{provider} returned an API response instead of Lua metadata.");
+        return SteamToolsMetadata.ReadLua(text, $"{appId}.lua", appId).Lua;
     }
 
-    private async Task<ManifestDownloadResult> DownloadFromDepotBoxAsync(
-        int appId, IProgress<string>? progress, CancellationToken ct)
+    private async Task<ManifestDownloadResult> WithProviderPackageAsync(string provider, int appId,
+        CancellationToken ct, Func<string, Task<ManifestDownloadResult>> download)
+    {
+        var directory = NewPackageDirectory(provider.ToLowerInvariant(), appId);
+        var keep = false;
+        try
+        {
+            ct.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(directory);
+            var result = await download(directory);
+            if (!result.Succeeded) return result;
+            var lua = SteamToolsMetadata.ReadLua(result.LuaContent ?? "", $"{appId}.lua", appId).Lua;
+            var files = Directory.EnumerateFiles(directory).Where(path => Path.GetExtension(path).Equals(".manifest", StringComparison.OrdinalIgnoreCase)).ToArray();
+            var luaPath = Path.Combine(directory, $"{appId}.lua");
+            await File.WriteAllTextAsync(luaPath, lua, ct);
+            var plan = await SteamToolsMetadata.ReadAsync(files.Append(luaPath).ToArray(), appId, ct);
+            var catalog = DownloadPreparationReader.Read(lua);
+            foreach (var manifest in plan.Files.Keys.Where(name => name.StartsWith("depotcache/", StringComparison.Ordinal)))
+                if (!catalog.Depots.Any(depot => depot.Versions.Any(version => manifest.EndsWith($"/{depot.DepotId}_{version.ManifestId}.manifest", StringComparison.OrdinalIgnoreCase))))
+                    throw new InvalidDataException("The archive contains a manifest that does not match its Lua metadata.");
+            ct.ThrowIfCancellationRequested();
+            keep = true;
+            return result with { LuaContent = lua, WorkDirectory = directory };
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (OperationCanceledException) { return new(false, $"{provider} timed out. Retry later; no metadata was installed."); }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or HttpRequestException or System.Text.DecoderFallbackException or System.Text.RegularExpressions.RegexMatchTimeoutException)
+        { return new(false, $"{provider}: {exception.Message}"); }
+        finally
+        {
+            if (!keep)
+                try { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    private Task<ManifestDownloadResult> DownloadFromDepotBoxAsync(
+        int appId, IProgress<string>? progress, CancellationToken ct) =>
+        WithProviderPackageAsync("DepotBox", appId, ct, async appWorkDir =>
     {
         var key = await ResolveDepotBoxKeyAsync();
         if (string.IsNullOrWhiteSpace(key))
             return new ManifestDownloadResult(false, "No DepotBox API key configured. Set it in Settings → DepotBox API Key.");
 
-        var appWorkDir = NewPackageDirectory("depotbox", appId);
-        Directory.CreateDirectory(appWorkDir);
 
         // /api/direct-download is DepotBox's documented "one request, one file" flow: the ZIP
         // carries the Lua *and* every depot .manifest for the app, which is exactly what
@@ -550,7 +567,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             else
             {
                 packageError = ExtractApiErrorMessage(
-                    await resp.Content.ReadAsStringAsync(ct),
+                    "",
                     $"DepotBox returned HTTP {(int)resp.StatusCode} for App {appId}.");
             }
         }
@@ -562,6 +579,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
 
         // Fallback: the Lua-only endpoint. DepotDownloaderMod can pull the manifests from Steam
         // itself with just the depot ids, manifest ids and keys.
+        foreach (var file in Directory.EnumerateFiles(appWorkDir)) File.Delete(file);
         progress?.Report("Trying the DepotBox Lua endpoint instead...");
         try
         {
@@ -571,7 +589,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode)
                 return new ManifestDownloadResult(false, packageError ?? ExtractApiErrorMessage(
-                    await resp.Content.ReadAsStringAsync(ct),
+                    "",
                     $"DepotBox returned HTTP {(int)resp.StatusCode} for App {appId}."));
 
             var contentType = resp.Content.Headers.ContentType?.MediaType ?? string.Empty;
@@ -584,7 +602,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         {
             return new ManifestDownloadResult(false, packageError ?? $"DepotBox download failed: {ex.Message}");
         }
-    }
+    });
 
     private static bool IsZipArchive(byte[] bytes)
         => bytes.Length > 3 && bytes[0] == (byte)'P' && bytes[1] == (byte)'K';
@@ -621,14 +639,14 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         var direct = Path.Combine(appWorkDir, $"{appId}.lua");
         if (File.Exists(direct) && new FileInfo(direct).Length <= DownloadPreparationReader.MaximumLuaCharacters)
         {
-            var text = File.ReadAllText(direct);
+            var text = new System.Text.UTF8Encoding(false, true).GetString(File.ReadAllBytes(direct));
             if (!string.IsNullOrWhiteSpace(text)) return text;
         }
 
         foreach (var path in Directory.EnumerateFiles(appWorkDir, "*.lua").Take(DownloadPreparationReader.MaximumEntries))
         {
             if (new FileInfo(path).Length > DownloadPreparationReader.MaximumLuaCharacters) continue;
-            var text = File.ReadAllText(path);
+            var text = new System.Text.UTF8Encoding(false, true).GetString(File.ReadAllBytes(path));
             if (!string.IsNullOrWhiteSpace(text)) return text;
         }
 
@@ -693,6 +711,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         if (string.IsNullOrWhiteSpace(luaText))
             return new ManifestDownloadResult(false, "DepotBox returned empty content.");
 
+        luaText = SteamToolsMetadata.ReadLua(luaText, $"{appId}.lua", appId).Lua;
         var luaPath = Path.Combine(appWorkDir, $"{appId}.lua");
         await File.WriteAllTextAsync(luaPath, luaText, ct);
         _logging.Add(Models.LogLevel.Info, "ManifestSource",

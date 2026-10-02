@@ -40,356 +40,115 @@ public static class ProcessWriteCounter
     };
 }
 
-/// <summary>
-/// Supplies "bytes written so far" for a download. The process' own write counter is preferred;
-/// where the OS does not report it (Wine/Proton report zero), the growth of the target folder is
-/// used instead, rescanned every 250 ms or less often for large folders.
-/// </summary>
+/// <summary>Disk writes are used only to detect activity, never as transferred bytes.</summary>
 public static class DownloadByteSource
 {
-    public static Func<long?> For(Process process, string targetFolder)
-    {
-        var writeCounter = ProcessWriteCounter.For(process);
-        var folderGrowth = FolderGrowth(targetFolder);
-        var counterWorks = false;
-        return () =>
-        {
-            var written = writeCounter();
-            if (written is > 0) counterWorks = true;
-            return counterWorks ? written : folderGrowth();
-        };
-    }
-
-    private static Func<long?> FolderGrowth(string folder)
-    {
-        long? baseline = null;
-        long growth = 0;
-        var lastScan = long.MinValue;
-        var interval = 250L;
-        return () =>
-        {
-            var now = Environment.TickCount64;
-            if (baseline is not null && now - lastScan < interval) return growth;
-            lastScan = now;
-
-            // Small folders are rescanned often for accuracy; big ones back off so a scan never
-            // costs more than a tenth of the time between scans.
-            var size = FolderSize(folder);
-            interval = Math.Clamp((Environment.TickCount64 - now) * 10, 250, 5000);
-            if (size is null) return baseline is null ? null : growth;
-            baseline ??= size.Value;
-            growth = Math.Max(0, size.Value - baseline.Value);
-            return growth;
-        };
-    }
-
-    private static long? FolderSize(string folder)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return 0;
-            var total = 0L;
-            foreach (var file in new DirectoryInfo(folder).EnumerateFiles("*", SearchOption.AllDirectories))
-                total += file.Length;
-            return total;
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            return null;
-        }
-    }
+    public static Func<long?> For(Process process, string targetFolder) => ProcessWriteCounter.For(process);
 }
 
-/// <summary>
-/// Turns DepotDownloader's coarse output into a continuous progress value. The tool prints a
-/// percentage only when a whole file is finished and restarts at 0 % for every depot, so a single
-/// large file shows as one big jump. Between those lines the tracker interpolates from the bytes
-/// the process has actually written, and it folds the per-depot percentages into one overall value
-/// that never moves backwards.
-/// </summary>
+/// <summary>Tracks actual tool telemetry. Older tools retain their reported per-depot percentage.</summary>
 public sealed class DownloadProgressTracker
 {
-    private const double MaxInterpolatedPercent = 99.9;
-    private const long MinimumSampleBytes = 1L << 20;
-    // Long enough that the readout glides instead of dancing around the real rate.
-    private const double SpeedSmoothingSeconds = 3.0;
-
-    private static readonly Regex ProcessingDepotPattern = new(@"^\s*Processing depot (?<id>\d+)", RegexOptions.CultureInvariant | RegexOptions.Compiled);
-    private static readonly Regex DownloadingDepotPattern = new(@"^\s*Downloading depot (?<id>\d+)\b(?!\s+manifest)", RegexOptions.CultureInvariant | RegexOptions.Compiled);
-
     private readonly object _gate = new();
-    private readonly Func<long?> _bytesWritten;
+    private readonly Func<long?> _activityBytes;
     private readonly Func<double> _clock;
-
     private readonly HashSet<string> _depots = new(StringComparer.Ordinal);
+    private DownloadTelemetry? _telemetry;
+    private readonly Dictionary<int, DownloadTelemetry> _depotTelemetry = new();
+    private DepotDownloaderProgress? _legacy;
+    private double _lastActivity, _lastSample, _rate;
+    private long _lastTransferred, _lastWrites;
     private int _depotIndex;
-
-    private double _anchorPercent;
-    private long _anchorBytes;
-    private double _anchorTime;
-    private bool _hasPercent;
-    private double? _bytesPerPercent;
-    private double? _percentPerSecond;
-    private double _lastStep;
-    private double _displayed;
-
-    private long _lastBytes;
-    private double _speedSampleTime;
-    private long _speedSampleBytes;
-    private double _bytesPerSecond;
-    private double _lastActivity;
-
-    private string _currentFile = string.Empty;
-    private string _toolDownloaded = string.Empty;
-    private string _toolTotal = string.Empty;
-    private string _toolSpeed = string.Empty;
-    private string _toolEta = string.Empty;
-    private string _pendingLine = string.Empty;
-    private string _steadySpeedText = string.Empty;
-    private double _steadySpeedValue;
-
+    private string _pending = "";
     public DownloadProgressTracker(Func<long?> bytesWritten, Func<double>? clockSeconds = null)
     {
-        _bytesWritten = bytesWritten;
-        if (clockSeconds is null)
-        {
-            var stopwatch = Stopwatch.StartNew();
-            _clock = () => stopwatch.Elapsed.TotalSeconds;
-        }
-        else
-        {
-            _clock = clockSeconds;
-        }
+        _activityBytes = bytesWritten;
+        var stopwatch = Stopwatch.StartNew();
+        _clock = clockSeconds ?? (() => stopwatch.Elapsed.TotalSeconds);
     }
-
-    /// <summary>Seconds since the last output line or the last byte written.</summary>
     public double SecondsSinceActivity
     {
-        get
-        {
-            lock (_gate)
-            {
-                ReadBytes(_clock());
-                return _clock() - _lastActivity;
-            }
-        }
+        get { lock (_gate) { var written = _activityBytes(); if (written > _lastWrites) { _lastWrites = written.Value; _lastActivity = _clock(); } return _clock() - _lastActivity; } }
     }
-
-    /// <summary>Feeds one line of tool output. Returns the parsed progress line, or null for other output.</summary>
     public DepotDownloaderProgress? ObserveLine(string line)
     {
-        var parsed = DepotDownloaderOutputParser.Parse(line);
-
         lock (_gate)
         {
             var now = _clock();
-            var bytes = ReadBytes(now);
-            _lastActivity = now;
-            if (string.IsNullOrWhiteSpace(line)) return parsed;
-
-            var processing = ProcessingDepotPattern.Match(line);
-            if (processing.Success) _depots.Add(processing.Groups["id"].Value);
-
-            var downloading = DownloadingDepotPattern.Match(line);
-            if (downloading.Success)
+            if (!string.IsNullOrWhiteSpace(line)) _lastActivity = now;
+            if (line.StartsWith(DownloadTelemetry.Prefix, StringComparison.Ordinal))
             {
-                _depots.Add(downloading.Groups["id"].Value);
-                StartSegment(now, bytes);
+                var value = DownloadTelemetry.Parse(line);
+                if (value is null) return null;
+                if (_telemetry?.DepotId != value.DepotId) { _rate = 0; _lastTransferred = 0; _lastSample = now; }
+                var elapsed = now - _lastSample;
+                if (elapsed >= 0.25)
+                {
+                    var instant = Math.Max(0, value.TransferredBytes - _lastTransferred) / elapsed;
+                    _rate += (instant - _rate) * (1 - Math.Exp(-elapsed / 3));
+                    _lastSample = now; _lastTransferred = value.TransferredBytes;
+                }
+                _telemetry = value;
+                _depotTelemetry[value.DepotId] = value;
+                return Snapshot();
             }
-
-            if (parsed is null) return null;
-
-            _pendingLine = line;
-            if (!string.IsNullOrWhiteSpace(parsed.CurrentFile)) _currentFile = parsed.CurrentFile;
-            if (!string.IsNullOrWhiteSpace(parsed.Downloaded)) _toolDownloaded = parsed.Downloaded;
-            if (!string.IsNullOrWhiteSpace(parsed.Total)) _toolTotal = parsed.Total;
-            if (!string.IsNullOrWhiteSpace(parsed.Speed)) _toolSpeed = parsed.Speed;
-            if (!string.IsNullOrWhiteSpace(parsed.Eta)) _toolEta = parsed.Eta;
-            if (parsed.Percent is { } percent) ObservePercent(percent, now, bytes);
-
+            var processing = Regex.Match(line, @"^\s*Processing depot (?<id>\d+)");
+            if (processing.Success) _depots.Add(processing.Groups["id"].Value);
+            if (Regex.IsMatch(line, @"^\s*Downloading depot \d+\s*$")) { _depotIndex++; _legacy = null; }
+            var parsed = DepotDownloaderOutputParser.Parse(line);
+            if (parsed is not null) { _legacy = parsed; _pending = line; }
             return parsed;
         }
     }
-
-    /// <summary>The current, interpolated state. Percent is null until anything measurable happened.</summary>
     public DepotDownloaderProgress Snapshot()
     {
         lock (_gate)
         {
-            var now = _clock();
-            var bytes = ReadBytes(now);
-            UpdateSpeed(now, bytes);
-
-            var depotCount = Math.Max(Math.Max(_depots.Count, _depotIndex), 1);
-            var depotIndex = Math.Clamp(Math.Max(_depotIndex, 1), 1, depotCount);
-            var segment = SegmentPercent(now, bytes);
-            var overall = ((depotIndex - 1) * 100.0 + segment) / depotCount;
-            _displayed = Math.Max(_displayed, Math.Round(overall, 2));
-
-            var started = _hasPercent || _depotIndex > 0;
-            // The measured rate is smoothed over several seconds and is preferred over the tool's
-            // own instantaneous text, which jumps around by megabytes from line to line.
-            var speed = _bytesPerSecond > 4096 ? SteadySpeed(DownloadFormat.Speed(_bytesPerSecond))
-                : _toolSpeed.Length > 0 ? _toolSpeed
-                : string.Empty;
-
-            var downloaded = _toolDownloaded.Length > 0 ? _toolDownloaded
-                : bytes > 0 ? DownloadFormat.Bytes(bytes) : string.Empty;
-
-            var total = _toolTotal;
-            var eta = _toolEta;
-            double? etaSeconds = null;
-            if (_bytesPerPercent is { } bytesPerPercent && bytesPerPercent > 0)
+            var raw = _pending; _pending = "";
+            if (_telemetry is { } value)
             {
-                if (total.Length == 0 && depotCount == 1) total = "~" + DownloadFormat.Bytes((long)(bytesPerPercent * 100));
-                if (_bytesPerSecond > 1)
-                {
-                    etaSeconds = (100 - segment) * bytesPerPercent / _bytesPerSecond;
-                    if (eta.Length == 0)
-                    {
-                        eta = depotCount > 1
-                            ? $"{DownloadFormat.Duration(etaSeconds.Value)} for depot {depotIndex} of {depotCount}"
-                            : $"{DownloadFormat.Duration(etaSeconds.Value)} left";
-                    }
-                }
+                var rate = _clock() - _lastSample > 5 ? 0 : _rate;
+                double? eta = value.Phase == "downloading" && value.TransferTotalBytes is { } total && rate > 0
+                    && _clock() >= 2 ? Math.Max(0, total - value.TransferredBytes) / rate : null;
+                var allKnown = _depotTelemetry.Count >= Math.Max(_depots.Count, 1);
+                var totalContent = _depotTelemetry.Values.Sum(depot => (double)depot.TotalBytes);
+                var content = _depotTelemetry.Values.Sum(depot => (double)depot.ContentBytes);
+                var transferred = _depotTelemetry.Values.Sum(depot => (double)depot.TransferredBytes);
+                var reused = _depotTelemetry.Values.Sum(depot => (double)depot.ReusedBytes);
+                long? transferTotal = allKnown && _depotTelemetry.Values.All(depot => depot.TransferTotalBytes is not null)
+                    ? (long?)Math.Min(long.MaxValue - 1.0, _depotTelemetry.Values.Sum(depot => (double)depot.TransferTotalBytes!.Value)) : null;
+                if (!allKnown || _depotTelemetry.Count > 1) eta = null;
+                return new(value.Phase == "downloading" && allKnown && totalContent > 0 ? Math.Min(99.9, content * 100.0 / totalContent) : null,
+                    _legacy?.CurrentFile ?? "", DownloadFormat.Bytes((long)Math.Min(transferred, long.MaxValue - 1.0)),
+                    transferTotal is { } size ? DownloadFormat.Bytes(size) : "Unknown",
+                    value.Phase == "downloading" ? DownloadFormat.Speed(rate) : "", eta is { } seconds ? "~" + DownloadFormat.Duration(seconds) : "", raw,
+                    Math.Max(_depotIndex, 1), Math.Max(_depots.Count, 1), rate, eta, (long)Math.Min(transferred, long.MaxValue - 1.0),
+                    (long)Math.Min(totalContent, long.MaxValue - 1.0), transferTotal,
+                    (long)Math.Min(content, long.MaxValue - 1.0), (long)Math.Min(reused, long.MaxValue - 1.0), value.Phase);
             }
-
-            var rawLine = _pendingLine;
-            _pendingLine = string.Empty;
-
-            return new DepotDownloaderProgress(
-                started ? _displayed : null,
-                _currentFile,
-                downloaded,
-                total,
-                speed,
-                eta,
-                rawLine,
-                depotIndex,
-                depotCount,
-                _bytesPerSecond,
-                etaSeconds,
-                _lastBytes,
-                (long)((_bytesPerPercent ?? 0) * 100));
+            // No interpolation from time, folder growth or process writes. Multi-depot totals
+            // are unknown until actual weights are available.
+            return new(_depots.Count <= 1 ? _legacy?.Percent is { } percent && double.IsFinite(percent) ? Math.Clamp(percent, 0, 99.9) : null : null,
+                _legacy?.CurrentFile ?? "", _legacy?.Downloaded ?? "", _legacy?.Total ?? "",
+                _legacy?.Speed ?? "", _legacy?.Eta ?? "", raw, _depotIndex, _depots.Count);
         }
     }
-
-    private void StartSegment(double now, long bytes)
-    {
-        _depotIndex++;
-        _anchorPercent = 0;
-        _anchorBytes = bytes;
-        _anchorTime = now;
-        _hasPercent = false;
-        _bytesPerPercent = null;
-        _percentPerSecond = null;
-        _lastStep = 0;
-        _currentFile = string.Empty;
-    }
-
-    private void ObservePercent(double percent, double now, long bytes)
-    {
-        if (_depotIndex == 0) StartSegment(now, 0);
-
-        var step = percent - _anchorPercent;
-        if (step > 0)
-        {
-            _lastStep = step;
-
-            var elapsed = now - _anchorTime;
-            if (elapsed > 0.05)
-                _percentPerSecond = Blend(_percentPerSecond, step / elapsed, 0.3);
-
-            // A step that wrote almost nothing belongs to a file that was already on disk
-            // (resume / validation). Such samples would make the estimate race ahead.
-            var deltaBytes = bytes - _anchorBytes;
-            if (deltaBytes >= MinimumSampleBytes)
-            {
-                var sample = deltaBytes / step;
-                if (_bytesPerPercent is not { } current || sample >= current * 0.25)
-                    _bytesPerPercent = Blend(_bytesPerPercent, sample, 0.35);
-            }
-        }
-
-        _anchorPercent = percent;
-        _anchorBytes = bytes;
-        _anchorTime = now;
-        _hasPercent = true;
-    }
-
-    private double SegmentPercent(double now, long bytes)
-    {
-        if (!_hasPercent && _depotIndex == 0) return 0;
-
-        var estimate = _anchorPercent;
-        if (_bytesPerPercent is { } bytesPerPercent && bytesPerPercent > 0 && bytes > _anchorBytes)
-        {
-            estimate += (bytes - _anchorBytes) / bytesPerPercent;
-        }
-        else if (_percentPerSecond is { } rate && rate > 0)
-        {
-            // Without byte counters, advance by time but never further than the last observed step.
-            var lead = Math.Min(rate * (now - _anchorTime), Math.Max(_lastStep, 0.5));
-            estimate += lead;
-        }
-
-        return Math.Clamp(estimate, _anchorPercent, Math.Max(_anchorPercent, MaxInterpolatedPercent));
-    }
-
-    private long ReadBytes(double now)
-    {
-        var bytes = _bytesWritten();
-        if (bytes is { } value && value > _lastBytes)
-        {
-            _lastBytes = value;
-            _lastActivity = now;
-        }
-
-        return _lastBytes;
-    }
-
-    /// <summary>Keeps the readout steady: a change below four percent reuses the previous text.</summary>
-    private string SteadySpeed(string text)
-    {
-        if (_steadySpeedText.Length > 0 && _steadySpeedValue > 0
-            && Math.Abs(_bytesPerSecond - _steadySpeedValue) / _steadySpeedValue < 0.04)
-            return _steadySpeedText;
-
-        _steadySpeedValue = _bytesPerSecond;
-        _steadySpeedText = text;
-        return text;
-    }
-
-    private void UpdateSpeed(double now, long bytes)
-    {
-        var elapsed = now - _speedSampleTime;
-        if (elapsed < 0.25) return;
-
-        var instant = Math.Max(0, bytes - _speedSampleBytes) / elapsed;
-        var weight = 1 - Math.Exp(-elapsed / SpeedSmoothingSeconds);
-        _bytesPerSecond = _speedSampleTime == 0 ? instant : _bytesPerSecond + (instant - _bytesPerSecond) * weight;
-        _speedSampleTime = now;
-        _speedSampleBytes = bytes;
-    }
-
-    private static double Blend(double? current, double sample, double weight) =>
-        current is { } value ? value + (sample - value) * weight : sample;
 }
 
 public static class DownloadFormat
 {
     public static string Bytes(long bytes) => bytes switch
     {
-        >= 1L << 40 => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 40):0.00} TB"),
-        >= 1L << 30 => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 30):0.00} GB"),
-        >= 1L << 20 => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 20):0.0} MB"),
-        >= 1L << 10 => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 10):0} KB"),
+        >= 1L << 40 => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 40):0.00} TiB"),
+        >= 1L << 30 => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 30):0.00} GiB"),
+        >= 1L << 20 => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 20):0.0} MiB"),
+        >= 1L << 10 => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 10):0} KiB"),
         _ => string.Create(CultureInfo.InvariantCulture, $"{bytes} B")
     };
 
-    public static string Speed(double bytesPerSecond) => Bytes((long)bytesPerSecond) + "/s";
+    public static string Speed(double bytesPerSecond) => double.IsFinite(bytesPerSecond) && bytesPerSecond >= 0 && bytesPerSecond < long.MaxValue ? Bytes((long)bytesPerSecond) + "/s" : "—";
 
-    /// <summary>Reads a formatted size such as "473.4 MB" back into bytes; 0 when it cannot.</summary>
+    /// <summary>Reads a formatted size such as "473.4 MiB" back into bytes; 0 when it cannot.</summary>
     public static long TryParseSize(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return 0;
@@ -401,17 +160,17 @@ public static class DownloadFormat
         if (!double.TryParse(value[..digits].Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var number)) return 0;
 
         var unit = value[digits..].Trim().ToUpperInvariant();
-        var factor = unit.StartsWith("TB", StringComparison.Ordinal) ? 1L << 40
-            : unit.StartsWith("GB", StringComparison.Ordinal) ? 1L << 30
-            : unit.StartsWith("MB", StringComparison.Ordinal) ? 1L << 20
-            : unit.StartsWith("KB", StringComparison.Ordinal) ? 1L << 10
+        var factor = (unit.StartsWith("TB", StringComparison.Ordinal) || unit.StartsWith("TIB", StringComparison.Ordinal)) ? 1L << 40
+            : (unit.StartsWith("GB", StringComparison.Ordinal) || unit.StartsWith("GIB", StringComparison.Ordinal)) ? 1L << 30
+            : (unit.StartsWith("MB", StringComparison.Ordinal) || unit.StartsWith("MIB", StringComparison.Ordinal)) ? 1L << 20
+            : (unit.StartsWith("KB", StringComparison.Ordinal) || unit.StartsWith("KIB", StringComparison.Ordinal)) ? 1L << 10
             : 1L;
-        return (long)(number * factor);
+        return double.IsFinite(number) && number >= 0 && number * factor < long.MaxValue ? (long)(number * factor) : 0;
     }
 
     public static string Duration(double seconds)
     {
-        if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0) return string.Empty;
+        if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0 || seconds > TimeSpan.MaxValue.TotalSeconds - 1) return string.Empty;
         var time = TimeSpan.FromSeconds(Math.Ceiling(seconds));
         if (time.TotalHours >= 1) return $"{(int)time.TotalHours}h {time.Minutes:00}m";
         if (time.TotalMinutes >= 1) return $"{time.Minutes}m {time.Seconds:00}s";
