@@ -370,11 +370,15 @@ public sealed partial class PageSmokeTests
         System.Windows.Input.Mouse.Synchronize();
         PumpUntil(() => !hoveredCard.IsMouseOver);
         PumpDispatcher(TimeSpan.FromMilliseconds(200));
-        var galleryPanel = Descendants<Steamy.Controls.AdaptiveGridPanel>(page).First(panel => panel.IsVisible && panel.Children.Count >= 5);
-        var firstFive = galleryPanel.Children.Cast<FrameworkElement>().Take(5).ToArray();
-        var positions = firstFive.Select(child => child.TranslatePoint(new Point(0, 0), galleryPanel)).ToArray();
-        Assert.All(positions, point => Assert.Equal(positions[0].Y, point.Y));
-        Assert.True(firstFive[0].ActualWidth < 180, "The native Games window should fit five compact covers per row.");
+        var galleryPanels = Descendants<Steamy.Controls.AdaptiveGridPanel>(page).Where(panel => panel.IsVisible && panel.Children.Count >= 5).ToArray();
+        Assert.Equal(2, galleryPanels.Length); // Upcoming and the regular AAA catalog.
+        foreach (var galleryPanel in galleryPanels)
+        {
+            var firstFive = galleryPanel.Children.Cast<FrameworkElement>().Take(5).ToArray();
+            var positions = firstFive.Select(child => child.TranslatePoint(new Point(0, 0), galleryPanel)).ToArray();
+            Assert.All(positions, point => Assert.Equal(positions[0].Y, point.Y));
+            Assert.True(firstFive[0].ActualWidth < 180, "The native Games window should fit five compact covers per row.");
+        }
         SaveVisual(window, "games.png");
         Assert.True(library.UpcomingGames.Count >= 5);
         var upcomingId = library.UpcomingPageItems[0].AppId;

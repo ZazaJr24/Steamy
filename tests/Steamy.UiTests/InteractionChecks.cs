@@ -98,7 +98,7 @@ public sealed partial class PageSmokeTests
         model.SearchText = string.Empty;
         PumpUntil(() => model.PagedCatalogItems.Count == 1);
         window.UpdateLayout();
-        var card = Descendants<Button>(page).Single(button => button.Tag is SteamCatalogItem);
+        var card = Descendants<Button>(page).Single(button => button.Tag is SteamCatalogItem item && item.AppId == model.PagedCatalogItems[0].AppId);
         Assert.True(CardMotion.GetIsEnabled(card));
         var motionSurface = Assert.IsAssignableFrom<FrameworkElement>(card.Template.FindName("MotionSurface", card));
         var animatedTransforms = Assert.IsType<TransformGroup>(motionSurface.RenderTransform).Children.ToArray();
