@@ -29,7 +29,7 @@ The release is portable and includes the Windows runtime. Use Windows 10 or 11 o
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
-Normal releases use three version numbers, such as **0.4.8**. Optional hotfixes use four, such as **0.4.8.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
+Normal releases use three version numbers, such as **0.4.9**. Optional hotfixes use four, such as **0.4.9.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
 
 ## Inside Steamy
 
@@ -79,7 +79,7 @@ Preparation creates an independent copy. Moving, editing or deleting the origina
 
 ### Add game metadata to Steam
 
-Open **Tools → BetterSteamTools**. Steam is detected from your existing settings or Windows installation; **Browse** selects a different Steam folder.
+Open **Tools → BetterSteamTools**. This page has its own soft blue/violet backdrop, transparent import surfaces and a large file drop target. The game and file panels sit side by side on wider windows and stack with native scrolling on smaller ones. Steam setup stays in a compact connection area. Steam is detected from your existing settings or Windows installation; **Browse** selects a different Steam folder.
 
 1. Close Steam and click **Install / update BetterSteamTools**. Steamy downloads the official [BetterSteamTools](https://github.com/madoiscool/BetterSteamTools) Windows release, verifies its SHA-256 checksum and installs the required backend files. Start Steam afterwards.
 2. Enter an App ID or Steam store link and click **Add to Steam**. **Automatic** tries available Sushi, Zaza and configured API sources; Hubcap, Ryuu and DepotBox use their existing Settings credentials. Availability depends on the selected provider.
@@ -164,7 +164,7 @@ Screenshots are captured from the actual Windows app using sample library, queue
 
 ### BetterSteamTools
 
-![BetterSteamTools: Steam detection, one-click backend installation and metadata import](docs/screenshots/better-steamtools.png)
+![BetterSteamTools with transparent game and file import surfaces, a blue-violet backdrop and compact Steam setup](docs/screenshots/better-steamtools.png)
 
 ## Build it yourself
 

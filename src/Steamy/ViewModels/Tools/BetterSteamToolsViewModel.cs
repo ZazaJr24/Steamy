@@ -54,7 +54,8 @@ public sealed class BetterSteamToolsViewModel : ObservableObject
     public SteamToolsSourceChoice SelectedSource { get => _source; set => SetProperty(ref _source, value); }
     public string Status { get => _status; private set => SetProperty(ref _status, value); }
     public string FilesLabel { get => _filesLabel; private set => SetProperty(ref _filesLabel, value); }
-    public bool SteamDetected { get => _detected; private set { SetProperty(ref _detected, value); CommandsChanged(); } }
+    public bool SteamDetected { get => _detected; private set { if (SetProperty(ref _detected, value)) OnPropertyChanged(nameof(ConnectionLabel)); CommandsChanged(); } }
+    public string ConnectionLabel => SteamDetected ? "Steam detected" : "Steam not detected";
     public bool BackendInstalled { get => _backend; private set { if (SetProperty(ref _backend, value)) { OnPropertyChanged(nameof(BackendLabel)); CommandsChanged(); } } }
     public string BackendLabel => BackendInstalled ? "Backend files detected" : "BetterSteamTools not installed";
     public bool IsBusy { get => _busy; private set { if (SetProperty(ref _busy, value)) { OnPropertyChanged(nameof(IsIdle)); CommandsChanged(); } } }
