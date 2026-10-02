@@ -17,24 +17,26 @@ public static class SteamToolsMetadata
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromMilliseconds(250);
     private static readonly Regex Comments = new(@"--\[(=*)\[.*?\]\1\]|--[^\r\n]*", RegexOptions.Singleline, Timeout);
-    private static readonly Regex Calls = new("\\b(addappid|setManifestid)\\s*\\(([^)]*)\\)", RegexOptions.IgnoreCase, Timeout);
-    private static readonly Regex Add = new("^\\s*(\\d+)\\s*(?:,\\s*(\\d+)\\s*(?:,\\s*[\"']([a-fA-F0-9]{8,128})[\"']\\s*)?)?$", RegexOptions.None, Timeout);
-    private static readonly Regex Manifest = new("^\\s*(\\d+)\\s*,\\s*[\"'](\\d+)[\"']\\s*(?:,\\s*(\\d+)\\s*)?$", RegexOptions.None, Timeout);
+    private static readonly Regex Statements = new(
+        @"\G\s*(?:(?<call>(?<name>addappid|setManifestid)\s*\((?<args>[^)]*)\))|if\s+(?<guard>addappid|setManifestid)\s+then\b|(?<end>end\b)|(?<separator>;))",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, Timeout);
+    private static readonly Regex Add = new("^\\s*(\\d+)\\s*(?:,\\s*(\\d+)\\s*(?:,\\s*(?<quote>[\"'])([a-fA-F0-9]{8,128})\\k<quote>\\s*)?)?$", RegexOptions.None, Timeout);
+    private static readonly Regex Manifest = new(
+        "^\\s*(\\d+)\\s*,\\s*(?:(?<quote>[\"'])(?<manifest>\\d+)\\k<quote>|(?<manifest>\\d+))\\s*(?:,\\s*(?<size>\\d+)\\s*)?$",
+        RegexOptions.None, Timeout);
     private static readonly UTF8Encoding Utf8 = new(false, true);
 
     public static (int AppId, string Lua) ReadLua(string content, string fileName, int? requestedAppId = null)
     {
         if (content.Length > DownloadPreparationReader.MaximumLuaCharacters) throw new InvalidDataException("Lua metadata is too large.");
         var active = Comments.Replace(content.TrimStart('\uFEFF'), "");
-        var calls = Calls.Matches(active);
-        if (calls.Count is 0 or > DownloadPreparationReader.MaximumEntries || Calls.Replace(active, "").Any(ch => !char.IsWhiteSpace(ch) && ch != ';'))
-            throw new InvalidDataException("The file contains unsupported Lua code. Select addappid/setManifestid metadata.");
+        var calls = ReadMetadataStatements(active);
         var ids = new HashSet<int>();
         var output = new StringBuilder();
         foreach (Match call in calls)
         {
-            var isAdd = call.Groups[1].Value.Equals("addappid", StringComparison.OrdinalIgnoreCase);
-            var args = (isAdd ? Add : Manifest).Match(call.Groups[2].Value);
+            var isAdd = call.Groups["name"].Value.Equals("addappid", StringComparison.OrdinalIgnoreCase);
+            var args = (isAdd ? Add : Manifest).Match(call.Groups["args"].Value);
             if (!args.Success || !int.TryParse(args.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var id) || id <= 0)
                 throw new InvalidDataException("The Lua metadata has an invalid app or depot ID.");
             if (isAdd)
@@ -47,9 +49,9 @@ public static class SteamToolsMetadata
             }
             else
             {
-                if (!DownloadPreparationReader.IsManifestId(args.Groups[2].Value)) throw new InvalidDataException("Invalid manifest ID.");
-                if (args.Groups[3].Success && !ulong.TryParse(args.Groups[3].Value, out _)) throw new InvalidDataException("Invalid manifest size.");
-                output.AppendLine($"setManifestid({id},\"{args.Groups[2].Value}\"{(args.Groups[3].Success ? "," + args.Groups[3].Value : "")})");
+                if (!DownloadPreparationReader.IsManifestId(args.Groups["manifest"].Value)) throw new InvalidDataException("Invalid manifest ID.");
+                if (args.Groups["size"].Success && !ulong.TryParse(args.Groups["size"].Value, out _)) throw new InvalidDataException("Invalid manifest size.");
+                output.AppendLine($"setManifestid({id},\"{args.Groups["manifest"].Value}\"{(args.Groups["size"].Success ? "," + args.Groups["size"].Value : "")})");
             }
         }
         var named = Regex.Match(Path.GetFileNameWithoutExtension(fileName), @"^(\d+)(?:\D|$)", RegexOptions.None, Timeout);
@@ -57,6 +59,38 @@ public static class SteamToolsMetadata
         var appId = requestedAppId ?? fromName ?? (ids.Count == 1 ? ids.Single() : (int?)null);
         if (appId is null || !ids.Contains(appId.Value)) throw new InvalidDataException("The game ID is missing or ambiguous. Enter its Steam App ID.");
         return (appId.Value, output.ToString());
+    }
+
+    private static IReadOnlyList<Match> ReadMetadataStatements(string active)
+    {
+        var calls = new List<Match>();
+        int position = 0, depth = 0, statements = 0;
+        while (position < active.Length)
+        {
+            var statement = Statements.Match(active, position);
+            if (!statement.Success && active.AsSpan(position).Trim().IsEmpty) break;
+            if (!statement.Success || statement.Index != position || ++statements > DownloadPreparationReader.MaximumEntries * 4)
+                throw new InvalidDataException("The file contains unsupported Lua code. Select addappid/setManifestid metadata.");
+            position += statement.Length;
+            if (statement.Groups["guard"].Success)
+            {
+                // Only positive function-existence guards are accepted. No Lua is evaluated,
+                // and only validated calls are written to the installed backend script.
+                if (++depth > 32) throw new InvalidDataException("Lua metadata guards are nested too deeply.");
+            }
+            else if (statement.Groups["end"].Success)
+            {
+                if (--depth < 0) throw new InvalidDataException("Lua metadata contains an unmatched end.");
+            }
+            else if (statement.Groups["call"].Success)
+            {
+                if (calls.Count >= DownloadPreparationReader.MaximumEntries) throw new InvalidDataException("Lua metadata has too many entries.");
+                calls.Add(statement);
+            }
+        }
+        if (depth != 0) throw new InvalidDataException("Lua metadata has an unclosed compatibility guard.");
+        if (calls.Count == 0) throw new InvalidDataException("The file contains no addappid/setManifestid metadata.");
+        return calls;
     }
 
     public static async Task<SteamToolsMetadataPlan> ReadAsync(IReadOnlyList<string> paths, int? appId = null, CancellationToken token = default)

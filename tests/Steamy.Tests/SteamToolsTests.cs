@@ -26,6 +26,35 @@ public sealed class SteamToolsTests
         return bytes.ToArray();
     }
 
+    [Theory]
+    [InlineData("if setManifestid then\nsetManifestid(481,\"18446744073709551615\",1024)\nend")]
+    [InlineData("if addappid then if setManifestid then setManifestid(481,'18446744073709551615',1024); end; end")]
+    [InlineData("setManifestid(481,18446744073709551615,1024)")]
+    public void ProviderCompatibilityGuardsAndNumericIdsProduceOnlyCanonicalMetadata(string manifests)
+    {
+        var result = SteamToolsMetadata.ReadLua("addappid(480)\naddappid(481,0,'aabbccddeeff0011')\n" + manifests, "480.lua");
+        Assert.Equal(480, result.AppId);
+        Assert.Contains("addappid(481,0,\"aabbccddeeff0011\")", result.Lua);
+        Assert.Contains("setManifestid(481,\"18446744073709551615\",1024)", result.Lua);
+        Assert.DoesNotContain("if ", result.Lua);
+        Assert.DoesNotContain("end", result.Lua);
+    }
+
+    [Theory]
+    [InlineData("if setManifestid then setManifestid(481,\"123\")")]
+    [InlineData("end; setManifestid(481,\"123\")")]
+    [InlineData("if setManifestid then setManifestid(481,\"123\") else setManifestid(481,\"456\") end")]
+    [InlineData("if false then setManifestid(481,\"123\") end")]
+    [InlineData("if os.execute('bad') then setManifestid(481,\"123\") end")]
+    [InlineData("if setManifestid then os.execute('bad') end")]
+    [InlineData("if setManifestid then local x=123; setManifestid(481,x) end")]
+    [InlineData("setManifestid(481,18446744073709551616)")]
+    [InlineData("setManifestid(481,1.23456789e18)")]
+    [InlineData("setManifestid(481,\"123')")]
+    [InlineData("addappid(481,0,\"aabbccddeeff0011')")]
+    public void ArbitraryConditionsUnbalancedGuardsAndImpreciseIdsStayRejected(string unsupported)
+        => Assert.Throws<InvalidDataException>(() => SteamToolsMetadata.ReadLua("addappid(480)\n" + unsupported, "480.lua"));
+
     [Fact]
     public async Task GameNamedBinaryManifestUsesItsActualDepotIdentityWithoutInventingAnAppId()
     {
