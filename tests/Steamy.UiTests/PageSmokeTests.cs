@@ -354,6 +354,8 @@ public sealed partial class PageSmokeTests
         SaveVisual(window, "dlc-unlocker.png");
         OfflineServiceProxy.ScreenshotCatalog = new[] { (2322010, "God of War Ragnarök"), (1245620, "ELDEN RING"),
             (1091500, "Cyberpunk 2077"), (1174180, "Red Dead Redemption 2"), (2358720, "Black Myth: Wukong"), (1086940, "Baldur’s Gate 3") }
+            .Concat(SpotlightCatalogService.LoadBundled().Games.Where(game => !game.ComingSoon).Select(game => (game.AppId, game.Name)))
+            .DistinctBy(entry => entry.Item1)
             .Select(entry => new SteamCatalogItem { AppId = entry.Item1, Name = entry.Item2, AppType = SteamCatalogAppType.Game,
                 ArtworkImage = FixtureArtwork.Read(entry.Item1, "portrait") ?? FixtureArtwork.Read(entry.Item1, "header"),
                 HeaderImage = FixtureArtwork.Read(entry.Item1, "header") }).ToArray();
@@ -364,7 +366,7 @@ public sealed partial class PageSmokeTests
         var refresh = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
         PumpUntil(() => refresh.IsCompleted);
         refresh.GetAwaiter().GetResult();
-        PumpUntil(() => library.PagedCatalogItems.Count == 6 && !library.IsCatalogLoading);
+        PumpUntil(() => library.PagedCatalogItems.Count == Math.Min(library.PageSize, OfflineServiceProxy.ScreenshotCatalog.Length) && !library.IsCatalogLoading);
         PumpDispatcher(TimeSpan.FromMilliseconds(400));
         window.UpdateLayout();
         var page = Descendants<LibraryPage>(window).Single();
@@ -389,7 +391,8 @@ public sealed partial class PageSmokeTests
         Assert.True(library.UpcomingGames.Count >= 5);
         var upcomingId = library.UpcomingPageItems[0].AppId;
         library.NextUpcomingCommand.Execute(null);
-        Assert.NotEqual(upcomingId, library.UpcomingPageItems[0].AppId);
+        if (library.HasMoreUpcoming) Assert.NotEqual(upcomingId, library.UpcomingPageItems[0].AppId);
+        else Assert.Equal(upcomingId, library.UpcomingPageItems[0].AppId);
         library.NextUpcomingCommand.Execute(null);
         page.OpenUpcomingDetails(library.UpcomingPageItems[0]);
         PumpDispatcher(TimeSpan.FromMilliseconds(150));

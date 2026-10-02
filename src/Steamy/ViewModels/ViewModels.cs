@@ -46,6 +46,7 @@ public sealed class LibraryViewModel : ViewModelBase
     public RangeObservableCollection<SteamCatalogItem> UpcomingGames { get; } = new();
     private int _upcomingPage;
     public IReadOnlyList<SteamCatalogItem> UpcomingPageItems => UpcomingGames.Skip(_upcomingPage * 5).Take(5).ToArray();
+    public bool HasMoreUpcoming => UpcomingGames.Count > 5;
     public string UpcomingPageLabel => $"{_upcomingPage + 1:00} / {Math.Max(1, (UpcomingGames.Count + 4) / 5):00}";
     public ICommand NextUpcomingCommand => new RelayCommand(() =>
     {
@@ -67,6 +68,7 @@ public sealed class LibraryViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowUpcomingGames));
         OnPropertyChanged(nameof(UpcomingPageItems));
         OnPropertyChanged(nameof(UpcomingPageLabel));
+        OnPropertyChanged(nameof(HasMoreUpcoming));
         _ = LoadUpcomingArtworkAsync();
     }
     private async Task LoadUpcomingArtworkAsync()
