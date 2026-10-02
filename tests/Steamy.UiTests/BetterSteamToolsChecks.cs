@@ -12,24 +12,21 @@ public sealed partial class PageSmokeTests
 {
     private static void CheckSteamToolsLayout(BetterSteamToolsPage page)
     {
-        var workspace = (Grid)page.FindName("ImportWorkspace");
-        var game = (Border)page.FindName("GamePanel");
         var drop = (Border)page.FindName("MetadataDropZone");
-        var wide = workspace.ActualWidth >= 740;
-        var gameBounds = game.TransformToAncestor(workspace).TransformBounds(new Rect(game.RenderSize));
-        var dropBounds = drop.TransformToAncestor(workspace).TransformBounds(new Rect(drop.RenderSize));
-        if (wide)
-        {
-            Assert.True(dropBounds.Left >= gameBounds.Right + 16, "The game and drop panels must not overlap.");
-            Assert.Equal(gameBounds.Top, dropBounds.Top);
-        }
-        else
-        {
-            Assert.True(dropBounds.Top >= gameBounds.Bottom + 14, "The drop target must flow below the game panel.");
-            Assert.Equal(gameBounds.Left, dropBounds.Left);
-        }
-        Assert.True(dropBounds.Right <= workspace.ActualWidth + 1);
-        Assert.True(drop.ActualHeight >= 290);
+        var gameOptions = (Expander)page.FindName("GameExpander");
+        var setupOptions = (Expander)page.FindName("SteamSetupExpander");
+        var scroll = (ScrollViewer)page.FindName("ToolScrollHost");
+        var footer = (Grid)page.FindName("OperationFooter");
+        Assert.False(gameOptions.IsExpanded, "The initial page must keep game options out of the drop workspace.");
+        Assert.False(setupOptions.IsExpanded, "An installed backend must keep setup collapsed initially.");
+        var dropBounds = drop.TransformToAncestor(page).TransformBounds(new Rect(drop.RenderSize));
+        var footerBounds = footer.TransformToAncestor(page).TransformBounds(new Rect(footer.RenderSize));
+        Assert.True(dropBounds.Left >= 0 && dropBounds.Right <= page.ActualWidth);
+        Assert.True(dropBounds.Bottom <= footerBounds.Top, "The entire drop target must be visible on the initial page.");
+        Assert.True(drop.ActualHeight >= 320);
+        Assert.True(footerBounds.Bottom <= page.ActualHeight, "Operation feedback must stay visible.");
+        gameOptions.IsExpanded = true; setupOptions.IsExpanded = true;
+        page.UpdateLayout();
         foreach (var name in new[] { "GameInputBox", "SourcePicker", "AddGameButton", "BrowseMetadataButton", "SteamFolderBox", "InstallBackendButton" })
         {
             var control = (FrameworkElement)page.FindName(name);
@@ -37,19 +34,14 @@ public sealed partial class PageSmokeTests
             Assert.True(bounds.Left >= 0 && bounds.Right <= page.ActualWidth, name + " must remain inside the page horizontally.");
             Assert.True(control.ActualWidth >= 120, name + " must retain a usable width.");
         }
-        var scroll = (ScrollViewer)page.FindName("ToolScrollHost");
-        var footer = (Grid)page.FindName("OperationFooter");
-        var footerBounds = footer.TransformToAncestor(page).TransformBounds(new Rect(footer.RenderSize));
-        Assert.True(footerBounds.Bottom <= page.ActualHeight, "Operation feedback must stay visible.");
-        if (!wide)
-        {
-            Assert.True(scroll.ScrollableHeight > 0);
-            scroll.ScrollToBottom(); page.UpdateLayout();
-            var setup = (Border)page.FindName("SteamConnectionPanel");
-            var bounds = setup.TransformToAncestor(page).TransformBounds(new Rect(setup.RenderSize));
-            Assert.True(bounds.Bottom <= page.ActualHeight, "Steam setup must remain reachable by native scrolling.");
-            scroll.ScrollToTop(); page.UpdateLayout();
-        }
+        Assert.True(scroll.ScrollableHeight > 0);
+        scroll.ScrollToBottom(); page.UpdateLayout();
+        var setup = (Border)page.FindName("SteamConnectionPanel");
+        var setupBounds = setup.TransformToAncestor(page).TransformBounds(new Rect(setup.RenderSize));
+        Assert.True(setupBounds.Bottom <= footerBounds.Top, "Expanded setup must remain reachable by native scrolling.");
+        Assert.Equal(footerBounds, footer.TransformToAncestor(page).TransformBounds(new Rect(footer.RenderSize)));
+        gameOptions.IsExpanded = false; setupOptions.IsExpanded = false;
+        scroll.ScrollToTop(); page.UpdateLayout();
     }
 
     private static void CheckBetterSteamTools(IServiceProvider provider, BetterSteamToolsFixture fixture)
@@ -60,6 +52,8 @@ public sealed partial class PageSmokeTests
         Assert.Equal("Steam detected", model.ConnectionLabel);
         Assert.Equal("BetterSteamTools not installed", model.BackendLabel);
         Assert.True(model.InstallBackendCommand.CanExecute(null));
+        var missingBackendPage = new BetterSteamToolsPage();
+        Assert.True(((Expander)missingBackendPage.FindName("SteamSetupExpander")).IsExpanded);
         model.GameInput = "https://store.steampowered.com/app/480/Spacewar/";
         Assert.False(model.AddGameCommand.CanExecute(null));
         var install = model.InstallBackendCommand.ExecuteAsync(null);
@@ -97,6 +91,7 @@ public sealed partial class PageSmokeTests
         operationPage.Measure(new Size(780, 560));
         operationPage.Arrange(new Rect(0, 0, 780, 560));
         operationPage.UpdateLayout();
+        Assert.True(((Expander)operationPage.FindName("GameExpander")).IsExpanded, "A prefilled App ID must reveal the matching controls.");
         var operationScroll = (ScrollViewer)operationPage.FindName("ToolScrollHost");
         operationScroll.ScrollToBottom(); operationPage.UpdateLayout();
         var cancel = (Button)operationPage.FindName("CancelOperationButton");
