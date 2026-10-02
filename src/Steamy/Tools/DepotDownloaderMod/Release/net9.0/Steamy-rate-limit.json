@@ -3,6 +3,6 @@
   "maxDownloadSpeed": true,
   "progressTelemetry": true,
   "singleFile": true,
-  "exeSha256": "fc1738eabc3fe78550ed0b6bfc3c64a827d6828a7384f9d4cba55143c5269d23",
+  "exeSha256": "98eafc9e7a320cdbce8c5671658ebba97ffdb1a02ce8d260a620a87a07505cce",
   "upstreamRevision": "c0f62fb7f020087f36ae76adfc51fde1446af344"
 }

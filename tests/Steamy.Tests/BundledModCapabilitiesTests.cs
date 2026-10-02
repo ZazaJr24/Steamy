@@ -50,9 +50,17 @@ public sealed class BundledModCapabilitiesTests : IDisposable
         Assert.False(BundledModCapabilities.SupportsRateLimit(Executable));
     }
 
-    private void WriteMarker(bool singleFile = true, string? dllSha256 = null) =>
+    [Fact]
+    public void TelemetryRequiresItsOwnCapabilityAndMatchingBinary()
+    {
+        File.WriteAllText(Executable, "original");
+        WriteMarker(); Assert.False(BundledModCapabilities.SupportsProgress(Executable));
+        WriteMarker(progressTelemetry: true); Assert.True(BundledModCapabilities.SupportsProgress(Executable));
+        File.WriteAllText(Executable, "replacement"); Assert.False(BundledModCapabilities.SupportsProgress(Executable));
+    }
+    private void WriteMarker(bool singleFile = true, string? dllSha256 = null, bool progressTelemetry = false) =>
         File.WriteAllText(Path.Combine(_directory, BundledModCapabilities.MarkerFileName), JsonSerializer.Serialize(new
-        { schemaVersion = 1, maxDownloadSpeed = true, singleFile, exeSha256 = Hash(Executable), dllSha256 }));
+        { schemaVersion = 1, maxDownloadSpeed = true, progressTelemetry, singleFile, exeSha256 = Hash(Executable), dllSha256 }));
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
     public void Dispose() => Directory.Delete(_directory, true);
 }
