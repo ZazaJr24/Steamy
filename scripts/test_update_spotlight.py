@@ -33,6 +33,14 @@ class SelectionTests(unittest.TestCase):
             self.assertIsNone(select_game(self.game, self.now))
             self.game['release_date'] = {'coming_soon': True, 'date': 'To be announced'}
 
+    def test_headline_franchises_are_prioritized_only_while_upcoming(self):
+        for title in ('Call of Duty®: Modern Warfare® 4', 'Phantom Blade Zero', 'STAR WARS: Galactic Racer™'):
+            self.game['name'] = title
+            self.assertTrue(select_game(self.game, self.now)['featured'])
+            self.game['release_date'] = {'coming_soon': False, 'date': '27 Aug, 2026'}
+            self.assertFalse(select_game(self.game, self.now, allow_released=True)['featured'])
+            self.game['release_date'] = {'coming_soon': True, 'date': 'To be announced'}
+
     def test_released_game_is_excluded(self):
         self.game['release_date'] = {'coming_soon': False, 'date': 'Sep 18, 2026'}
         self.assertIsNone(select_game(self.game, self.now))

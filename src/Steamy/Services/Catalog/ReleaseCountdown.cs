@@ -28,14 +28,16 @@ public static class ReleaseCountdown
 
     public static IReadOnlyList<SpotlightGame> Upcoming(IEnumerable<SpotlightGame> games, DateOnly today) => games
         .Where(game => game.ComingSoon && !Expired(game, today))
-        .OrderBy(game => game.ReleaseDate is null)
+        .OrderByDescending(game => game.Featured)
+        .ThenBy(game => game.ReleaseDate is null)
         .ThenBy(game => game.ReleaseDate)
         .ToArray();
 
     public static IReadOnlyList<SpotlightGame> UpcomingAt(IEnumerable<SpotlightGame> games, DateTimeOffset now) => games
         .Where(game => game.ComingSoon && (game.ReleaseTime is { } time ? time > now
             : !Expired(game, DateOnly.FromDateTime(now.DateTime))))
-        .OrderBy(game => game.ReleaseTime is null && game.ReleaseDate is null)
+        .OrderByDescending(game => game.Featured)
+        .ThenBy(game => game.ReleaseTime is null && game.ReleaseDate is null)
         .ThenBy(game => game.ReleaseTime ?? (game.ReleaseDate is { } day
             ? new DateTimeOffset(day.ToDateTime(TimeOnly.MinValue), now.Offset) : DateTimeOffset.MaxValue))
         .ToArray();
