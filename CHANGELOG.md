@@ -3,6 +3,14 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.13 — 2026-10-02
+
+- Games displays released titles only: remove the upcoming section and its dialog; exclude Steam's coming-soon metadata from search, source filters and visible pages.
+- Dashboard contains only upcoming discoveries, including its portrait grid and clickable details. Released games remain in Games.
+- Limit both galleries to five narrower covers per row, capped at 170 pixels, with fewer columns in small windows.
+- Cache release status alongside official artwork in the same batched Steam request. Unconfirmed titles stay hidden when metadata is unavailable.
+- Preserve BetterSteamTools installation and ZIP/7z/RAR imports, compact source selection, Settings transfer controls and the horizontal animated countdown.
+
 ## 0.4.12 — 2026-10-02
 
 - Five smaller portrait covers per row in Games, AAA series first, and paged upcoming discoveries with an opaque information dialog.

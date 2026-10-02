@@ -82,51 +82,6 @@
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
-              <DataTemplate x:Key="UpcomingCoverTemplate">
-                <Button x:Name="Card" Style="{StaticResource GalleryCardButton}"
-                        Click="GameCard_Click" Tag="{Binding}" ToolTip="{Binding Name}"
-                        AutomationProperties.Name="{Binding Name}">
-                  <Border CornerRadius="16" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Background="{DynamicResource GameDialogSurfaceBrush}">
-                    <Grid>
-                      <Border CornerRadius="16" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
-                        <Border.Background><ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" /></Border.Background>
-                      </Border>
-                      <TextBlock Text="STEAM" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="15" FontWeight="Bold"
-                                 HorizontalAlignment="Center" VerticalAlignment="Center"
-                                 Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                      <Border CornerRadius="16" IsHitTestVisible="False"><Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                          <GradientStop Color="#000B0E17" Offset="0.45" /><GradientStop Color="#500B0E17" Offset="0.7" />
-                          <GradientStop Color="#F50B0E17" Offset="0.93" /><GradientStop Color="#FF0B0E17" Offset="1" />
-                        </LinearGradientBrush>
-                      </Border.Background></Border>
-                      <Border x:Name="Shine" CornerRadius="16" Background="White" Opacity="0" IsHitTestVisible="False" />
-                      <Border Style="{StaticResource CoverBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10">
-                        <TextBlock Text="{Binding CardLabel}" Style="{StaticResource CoverBadgeTextStyle}" />
-                      </Border>
-                      <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Style="{StaticResource CoverBadgeStyle}" ToolTip="Installed"
-                              Visibility="{Binding IsInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <StackPanel Orientation="Horizontal">
-                          <Ellipse Width="5" Height="5" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                          <TextBlock Text="Installed" Style="{StaticResource CoverBadgeTextStyle}" />
-                        </StackPanel>
-                      </Border>
-                      <StackPanel VerticalAlignment="Bottom" Margin="10,0,10,10">
-                        <TextBlock Text="{Binding Name}" Foreground="#F5F6FD" FontSize="12" FontWeight="SemiBold"
-                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="38" />
-                        <Border Height="1" Background="#354F5C7C" Margin="0,7,0,6" />
-                        <TextBlock Text="{Binding ReleaseDate}" Foreground="#AFB5C9" FontSize="10" TextTrimming="CharacterEllipsis" />
-                      </StackPanel>
-                    </Grid>
-                  </Border>
-                </Button>
-                <DataTemplate.Triggers>
-                  <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Shine" Property="Opacity" Value="0.035" />
-                  </Trigger>
-                </DataTemplate.Triggers>
-              </DataTemplate>
-
   </Page.Resources>
 
   <Grid>
@@ -212,22 +167,10 @@
         <StackPanel RequestBringIntoView="Gallery_RequestBringIntoView">
           <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource GalleryEmptyStateStyle}" />
 
-          <StackPanel x:Name="UpcomingSection" Margin="0,0,0,22" Visibility="{Binding ShowUpcomingGames, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <TextBlock Text="On the horizon" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-              <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="{Binding HasMoreUpcoming, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <TextBlock Text="{Binding UpcomingPageLabel}" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                <ui:Button Command="{Binding NextUpcomingCommand}" Icon="{ui:SymbolIcon ChevronRight24}" Appearance="Transparent" Width="28" Height="28" Padding="4" ToolTip="Next upcoming games" AutomationProperties.Name="Next upcoming games" />
-              </StackPanel>
-            </Grid>
-            <ItemsControl x:Name="UpcomingGamesGrid" ItemsSource="{Binding UpcomingPageItems}" ItemTemplate="{StaticResource UpcomingCoverTemplate}">
-              <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="124" MaxColumns="5" Spacing="12" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-            </ItemsControl>
-          </StackPanel>
           <ItemsControl ItemsSource="{Binding PagedCatalogItems}" controls:EntranceMotion.Delay="30">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="124" Spacing="12" CoverRatio="1.5" FooterHeight="0" MaxColumns="5" />
+                <controls:AdaptiveGridPanel MinItemWidth="124" MaxItemWidth="170" Spacing="12" CoverRatio="1.5" FooterHeight="0" MaxColumns="5" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -345,20 +288,6 @@
             </Grid>
           </Grid>
 
-          <ScrollViewer x:Name="UpcomingDetailsPanel" Grid.Row="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="20,18,20,22">
-            <StackPanel>
-              <TextBlock Text="UPCOMING" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
-              <TextBlock Text="{Binding ShortDescription}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,18" />
-              <TextBlock Text="{Binding PublishersDisplay}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" />
-              <TextBlock Text="{Binding GenresDisplay}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,6,0,16" />
-              <TextBlock Text="{Binding ReleaseDate}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="14" />
-              <TextBlock Text="Release information from Steam. Source availability is checked separately." Foreground="{DynamicResource TextTertiaryBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,12,0,20" />
-              <WrapPanel>
-                <ui:Button Content="View on Steam" Icon="{ui:SymbolIcon Open24}" Appearance="Secondary" Click="UpcomingStore_Click" Margin="0,0,8,0" />
-                <ui:Button Content="Browse sources" Appearance="Primary" Click="UpcomingSources_Click" />
-              </WrapPanel>
-            </StackPanel>
-          </ScrollViewer>
           <Grid Grid.Row="1" x:Name="DownloadBody" Margin="20,8,20,12" MaxWidth="1040">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <StackPanel x:Name="WizardHeader" Margin="0,0,0,14">

@@ -3,13 +3,18 @@ using System.Windows.Controls;
 
 namespace Steamy.Controls;
 
-// Grid that fits as many columns as MinItemWidth allows and stretches them to fill the row,
-// so the gallery has no ragged gap on the right at any window width.
+// Responsive gallery with optional column and cover-width limits.
 public sealed class AdaptiveGridPanel : Panel
 {
     public static readonly DependencyProperty MinItemWidthProperty = DependencyProperty.Register(
         nameof(MinItemWidth), typeof(double), typeof(AdaptiveGridPanel),
         new FrameworkPropertyMetadata(180.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
+    public static readonly DependencyProperty MaxItemWidthProperty = DependencyProperty.Register(
+        nameof(MaxItemWidth), typeof(double), typeof(AdaptiveGridPanel),
+        new FrameworkPropertyMetadata(double.PositiveInfinity, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
+    public double MaxItemWidth { get => (double)GetValue(MaxItemWidthProperty); set => SetValue(MaxItemWidthProperty, value); }
 
     public static readonly DependencyProperty SpacingProperty = DependencyProperty.Register(
         nameof(Spacing), typeof(double), typeof(AdaptiveGridPanel),
@@ -45,7 +50,7 @@ public sealed class AdaptiveGridPanel : Panel
         if (double.IsInfinity(width) || width <= 0) width = MinItemWidth * 4 + Spacing * 3;
         var columns = Math.Max(1, (int)((width + Spacing) / (MinItemWidth + Spacing)));
         if (MaxColumns > 0) columns = Math.Min(columns, MaxColumns);
-        var itemWidth = Math.Floor((width - Spacing * (columns - 1)) / columns);
+        var itemWidth = Math.Max(1, Math.Min(MaxItemWidth, Math.Floor((width - Spacing * (columns - 1)) / columns)));
         return (columns, itemWidth, Math.Round(itemWidth * CoverRatio + FooterHeight));
     }
 

@@ -379,7 +379,9 @@ public sealed partial class PageSmokeTests
         PumpUntil(() => !hoveredCard.IsMouseOver);
         PumpDispatcher(TimeSpan.FromMilliseconds(200));
         var galleryPanels = Descendants<Steamy.Controls.AdaptiveGridPanel>(page).Where(panel => panel.IsVisible && panel.Children.Count >= 5).ToArray();
-        Assert.Equal(2, galleryPanels.Length); // Upcoming and the regular AAA catalog.
+        Assert.Single(galleryPanels);
+        Assert.Null(page.FindName("UpcomingSection"));
+        Assert.All(library.PagedCatalogItems, item => Assert.False(item.IsUpcoming));
         foreach (var galleryPanel in galleryPanels)
         {
             var firstFive = galleryPanel.Children.Cast<FrameworkElement>().Take(5).ToArray();
@@ -388,21 +390,6 @@ public sealed partial class PageSmokeTests
             Assert.True(firstFive[0].ActualWidth < 180, "The native Games window should fit five compact covers per row.");
         }
         SaveVisual(window, "games.png");
-        Assert.True(library.UpcomingGames.Count >= 5);
-        var upcomingId = library.UpcomingPageItems[0].AppId;
-        library.NextUpcomingCommand.Execute(null);
-        if (library.HasMoreUpcoming) Assert.NotEqual(upcomingId, library.UpcomingPageItems[0].AppId);
-        else Assert.Equal(upcomingId, library.UpcomingPageItems[0].AppId);
-        library.NextUpcomingCommand.Execute(null);
-        page.OpenUpcomingDetails(library.UpcomingPageItems[0]);
-        PumpDispatcher(TimeSpan.FromMilliseconds(150));
-        window.UpdateLayout();
-        Assert.True(((ScrollViewer)page.FindName("UpcomingDetailsPanel")).IsVisible);
-        Assert.False(((Grid)page.FindName("DownloadBody")).IsVisible);
-        SaveVisual(window, "games-upcoming-details.png");
-        page.CloseOverlay();
-        PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
-
         _phase = "Hover a gallery card";
         var cardSize = new Size(hoveredCard.ActualWidth, hoveredCard.ActualHeight);
         var cardPosition = hoveredCard.TranslatePoint(new Point(0,0), page);
@@ -854,6 +841,11 @@ public class OfflineServiceProxy : DispatchProxy
         {
             Interlocked.Increment(ref CatalogRequests);
             return Task.FromResult(new SteamCatalogSnapshot(true, ScreenshotCatalog ?? new[] { new SteamCatalogItem { AppId = 10, Name = "An offline library game", AppType = SteamCatalogAppType.Game } }, DateTimeOffset.UtcNow, true, "Offline fixture"));
+        }
+        if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.PrepareReleaseStatusAsync))
+        {
+            foreach (var item in (IReadOnlyList<SteamCatalogItem>)args![0]!) item.IsReleaseVerified = true;
+            return Task.CompletedTask;
         }
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.PrepareArtworkAsync)) return Task.CompletedTask;
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.EnsureArtworkAsync))

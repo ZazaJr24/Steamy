@@ -48,7 +48,8 @@ public sealed class SteamCatalogItem : UiObservableObject
     private SteamCatalogAppType _appType;
     private bool _isInstalled;
 
-    public bool IsUpcoming { get; init; }
+    public bool IsUpcoming { get; set; }
+    public bool IsReleaseVerified { get; set; }
     public string CardLabel => IsUpcoming ? "UPCOMING" : TypeLabel;
     public int AppId { get; init; }
     public string Name { get; init; } = string.Empty;
@@ -273,7 +274,8 @@ public sealed record SteamCatalogDetails(
     string GenresDisplay,
     IReadOnlyList<SteamCatalogScreenshotInfo> Screenshots,
     string SystemRequirements,
-    string StoreUrl);
+    string StoreUrl,
+    bool? ComingSoon = null);
 
 public static class SteamCatalogQuery
 {
@@ -292,7 +294,7 @@ public static class SteamCatalogQuery
         IEnumerable<SteamCatalogItem> query = items.Where(item =>
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return search.Length == 0 || MatchesSearch(item.Name, item.AppId, search, words);
+            return !item.IsUpcoming && (search.Length == 0 || MatchesSearch(item.Name, item.AppId, search, words));
         });
 
         if (nsfwScope == LibraryNsfwScope.Hide)

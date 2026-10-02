@@ -15,6 +15,7 @@ public interface ISteamCatalogService : IDisposable
     Task<SteamCatalogSnapshot> GetCatalogAsync(bool forceRefresh = false, CancellationToken cancellationToken = default);
     Task<SteamCatalogDetails?> GetDetailsAsync(int appId, CancellationToken cancellationToken = default);
     Task<bool> EnsureDetailsAsync(SteamCatalogItem item, CancellationToken cancellationToken = default);
+    Task PrepareReleaseStatusAsync(IReadOnlyList<SteamCatalogItem> items, CancellationToken cancellationToken = default);
     Task PrepareArtworkAsync(IReadOnlyList<SteamCatalogItem> items, CancellationToken cancellationToken = default) => Task.CompletedTask;
     Task<bool> EnsureArtworkAsync(SteamCatalogItem item, bool includeHeader = false, CancellationToken cancellationToken = default);
     Task<bool> EnsureScreenshotsAsync(SteamCatalogItem item, CancellationToken cancellationToken = default);
@@ -446,25 +447,34 @@ public sealed class SteamCatalogService : ISteamCatalogService
         }
     }
 
-    private sealed record ArtworkAssets(string Portrait, string Header, DateTimeOffset FetchedAt);
+    private sealed record ArtworkAssets(string Portrait, string Header, DateTimeOffset FetchedAt, bool? ComingSoon = null);
     private readonly SemaphoreSlim _assetLookupGate = new(1, 1);
     private Dictionary<int, ArtworkAssets>? _artworkAssets;
-    public async Task PrepareArtworkAsync(IReadOnlyList<SteamCatalogItem> items, CancellationToken cancellationToken = default)
+    public Task PrepareArtworkAsync(IReadOnlyList<SteamCatalogItem> items, CancellationToken cancellationToken = default)
+        => PrepareStoreMetadataAsync(items, false, cancellationToken);
+    public Task PrepareReleaseStatusAsync(IReadOnlyList<SteamCatalogItem> items, CancellationToken cancellationToken = default)
+        => PrepareStoreMetadataAsync(items, true, cancellationToken);
+
+    private async Task PrepareStoreMetadataAsync(IReadOnlyList<SteamCatalogItem> items, bool requireRelease, CancellationToken cancellationToken)
     {
         await _assetLookupGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var path = Path.Combine(_cacheDirectory, "artwork-assets.json");
             _artworkAssets ??= await ReadJsonAsync<Dictionary<int, ArtworkAssets>>(path, cancellationToken).ConfigureAwait(false) ?? new();
-            var missing = items.Where(item => item.ArtworkImage is null && (item.PortraitImageUrl.Contains("library_600x900", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(item.PortraitImageUrl))
-                && (!_artworkAssets.TryGetValue(item.AppId, out var saved) || DateTimeOffset.UtcNow - saved.FetchedAt > DetailsLifetime)).Select(item => item.AppId).Distinct().Take(100).ToArray();
+            var missing = items.Where(item =>
+                (!_artworkAssets.TryGetValue(item.AppId, out var saved) || DateTimeOffset.UtcNow - saved.FetchedAt > DetailsLifetime
+                    || (requireRelease && saved.ComingSoon is null))
+                && ((requireRelease && !item.IsReleaseVerified) || (item.ArtworkImage is null
+                    && (item.PortraitImageUrl.Contains("library_600x900", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(item.PortraitImageUrl)))))
+                .Select(item => item.AppId).Distinct().Take(100).ToArray();
             if (missing.Length > 0)
             {
                 try
                 {
                     var query = JsonSerializer.Serialize(new { ids = missing.Select(id => new { appid = id }),
                         context = new { language = "english", country_code = "US", steam_realm = 1 },
-                        data_request = new { include_assets = true } });
+                        data_request = new { include_assets = true, include_release = true } });
                     using var response = await _httpClient.GetAsync("https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json="
                         + Uri.EscapeDataString(query), cancellationToken).ConfigureAwait(false);
                     response.EnsureSuccessStatusCode();
@@ -475,7 +485,17 @@ public sealed class SteamCatalogService : ISteamCatalogService
                     foreach (var row in rows.EnumerateArray())
                     {
                         if (!row.TryGetProperty("appid", out var idValue) || !idValue.TryGetInt32(out var id) || !missing.Contains(id)
-                            || !row.TryGetProperty("assets", out var assets)) continue;
+                            || (row.TryGetProperty("success", out var success) && success.GetInt32() != 1)) continue;
+                        bool? comingSoon = null;
+                        if (row.TryGetProperty("release", out var release))
+                        {
+                            if (release.TryGetProperty("is_coming_soon", out var soon) && soon.ValueKind == JsonValueKind.True) comingSoon = true;
+                            else if (release.TryGetProperty("steam_release_date", out var date) && date.TryGetInt64(out var timestamp) && timestamp > 0)
+                                comingSoon = timestamp > DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                        }
+                        _artworkAssets.TryGetValue(id, out var previous);
+                        _artworkAssets[id] = new(previous?.Portrait ?? "", previous?.Header ?? "", DateTimeOffset.UtcNow, comingSoon);
+                        if (!row.TryGetProperty("assets", out var assets)) continue;
                         var template = assets.TryGetProperty("asset_url_format", out var format) ? format.GetString() : null;
                         if (template is null || !template.StartsWith($"steam/apps/{id}/", StringComparison.Ordinal)
                             || !template.Contains("${FILENAME}", StringComparison.Ordinal)) continue;
@@ -492,7 +512,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
                         }
                         var portrait = Resolve("library_capsule_2x", "library_capsule");
                         var header = Resolve("header_2x", "header");
-                        if (portrait.Length > 0) _artworkAssets[id] = new(portrait, header, DateTimeOffset.UtcNow);
+                        if (portrait.Length > 0) _artworkAssets[id] = new(portrait, header, DateTimeOffset.UtcNow, comingSoon);
                     }
                     await WriteJsonAsync(path, _artworkAssets, cancellationToken).ConfigureAwait(false);
                 }
@@ -500,10 +520,14 @@ public sealed class SteamCatalogService : ISteamCatalogService
                 { /* Previously saved art and the normal fallback remain usable. */ }
             }
             foreach (var item in items)
-                if (_artworkAssets.TryGetValue(item.AppId, out var saved)
-                    && SpotlightCatalogService.IsArtworkUrl(saved.Portrait))
+                if (_artworkAssets.TryGetValue(item.AppId, out var saved))
                 {
-                    item.PortraitImageUrl = saved.Portrait;
+                    if (saved.ComingSoon is { } comingSoon)
+                    {
+                        item.IsUpcoming = comingSoon;
+                        item.IsReleaseVerified = true;
+                    }
+                    if (SpotlightCatalogService.IsArtworkUrl(saved.Portrait)) item.PortraitImageUrl = saved.Portrait;
                     if (SpotlightCatalogService.IsArtworkUrl(saved.Header)) item.HeaderImageUrl = saved.Header;
                 }
         }
@@ -737,7 +761,9 @@ public sealed class SteamCatalogService : ISteamCatalogService
         var screenshots = GetScreenshots(data);
         var requirements = GetSystemRequirements(data);
         var storeUrl = $"https://store.steampowered.com/app/{appId.ToString(CultureInfo.InvariantCulture)}/";
-        return new SteamCatalogDetails(type, header, capsule, portrait, portrait, description, developers, publishers, releaseDate, price, free, genres, screenshots, requirements, storeUrl);
+        return new SteamCatalogDetails(type, header, capsule, portrait, portrait, description, developers, publishers, releaseDate, price, free, genres, screenshots, requirements, storeUrl,
+            data.TryGetProperty("release_date", out var releaseInfo) && releaseInfo.TryGetProperty("coming_soon", out var soon)
+                && soon.ValueKind is JsonValueKind.True or JsonValueKind.False ? soon.GetBoolean() : null);
     }
 
     private static SteamCatalogAppType ParseType(string? type) => type?.ToLowerInvariant() switch
@@ -821,6 +847,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
                 item.PublishersDisplay = game.Publisher;
                 item.GenresDisplay = game.Genres;
                 item.ReleaseDate = game.ReleaseLabel;
+                item.IsReleaseVerified = !game.ComingSoon;
             }
         return items;
     }
@@ -1083,6 +1110,11 @@ internal static class SteamCatalogItemExtensions
     public static void Apply(this SteamCatalogItem item, SteamCatalogDetails details)
     {
         item.AppType = details.AppType;
+        if (details.ComingSoon is { } comingSoon)
+        {
+            item.IsUpcoming = comingSoon;
+            item.IsReleaseVerified = true;
+        }
         item.ShortDescription = details.ShortDescription;
         item.DevelopersDisplay = string.Join(", ", details.Developers);
         item.PublishersDisplay = string.Join(", ", details.Publishers);
