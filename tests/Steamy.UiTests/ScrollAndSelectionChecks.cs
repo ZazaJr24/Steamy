@@ -247,6 +247,49 @@ public sealed partial class PageSmokeTests
             Assert.Equal(Visibility.Collapsed, ((Grid)fixesPage.FindName("OverlayGrid")).Visibility);
             Assert.True(((Grid)fixesPage.FindName("MainContentGrid")).IsEnabled);
 
+            _phase = "SteamTools operation controls in the native shell";
+            window.WindowState = WindowState.Normal;
+            window.Width = 980; window.Height = 620;
+            Assert.True(window.RootNavigationView.Navigate(typeof(BetterSteamToolsPage)));
+            PumpDispatcher(TimeSpan.FromMilliseconds(150));
+            window.UpdateLayout();
+            var toolsPage = Descendants<BetterSteamToolsPage>(window).Single();
+            var toolsScroll = (ScrollViewer)toolsPage.FindName("ToolScrollHost");
+            var footer = (Grid)toolsPage.FindName("OperationFooter");
+            Assert.False(ScrollViewer.GetCanContentScroll(toolsPage));
+            Assert.Same(toolsScroll, Assert.Single(Descendants<ScrollViewer>(toolsPage), viewer => viewer.ScrollableHeight > 0));
+            Assert.True(toolsPage.ActualHeight < window.ActualHeight, "The navigation host must constrain the page to the window.");
+            var footerBounds = footer.TransformToAncestor(window).TransformBounds(new Rect(footer.RenderSize));
+            Assert.True(footerBounds.Top >= 0 && footerBounds.Bottom <= window.ActualHeight, "Operation status must be inside the native window.");
+            WheelOver((UIElement)toolsPage.FindName("GameInputBox"), -120);
+            PumpDispatcher(TimeSpan.FromMilliseconds(120));
+            Assert.True(toolsScroll.VerticalOffset > 0, "The real SteamTools viewport must handle mouse-wheel input.");
+            toolsScroll.ScrollToBottom();
+            PumpDispatcher(TimeSpan.FromMilliseconds(60));
+            Assert.Equal(footerBounds, footer.TransformToAncestor(window).TransformBounds(new Rect(footer.RenderSize)));
+            var toolsFixture = (BetterSteamToolsFixture)provider.GetRequiredService<IBetterSteamToolsService>();
+            var toolsModel = provider.GetRequiredService<BetterSteamToolsViewModel>();
+            toolsFixture.HoldOperation = true;
+            toolsModel.GameInput = "480";
+            var add = toolsModel.AddGameCommand.ExecuteAsync(null);
+            try
+            {
+                PumpUntil(() => toolsModel.IsBusy);
+                window.UpdateLayout();
+                var cancel = (Button)toolsPage.FindName("CancelOperationButton");
+                Assert.True(cancel.IsVisible && cancel.IsEnabled);
+                var cancelBounds = cancel.TransformToAncestor(window).TransformBounds(new Rect(cancel.RenderSize));
+                Assert.True(cancelBounds.Top >= 0 && cancelBounds.Bottom <= window.ActualHeight, "Cancel must stay inside the native window while scrolled.");
+                SaveScreenshot(toolsPage, "Light-Native-Busy", new Size(toolsPage.ActualWidth, toolsPage.ActualHeight));
+            }
+            finally
+            {
+                toolsModel.CancelCommand.Execute(null);
+                PumpUntil(() => add.IsCompleted); add.GetAwaiter().GetResult();
+                toolsFixture.HoldOperation = false;
+                toolsModel.GameInput = "";
+            }
+
         }
         finally
         {
