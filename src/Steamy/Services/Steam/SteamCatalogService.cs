@@ -829,7 +829,6 @@ public sealed class SteamCatalogService : ISteamCatalogService
         var items = entries.Select(entry => new SteamCatalogItem
     {
         AppId = entry.AppId,
-        IsUpcoming = discovered.TryGetValue(entry.AppId, out var metadata) && metadata.ComingSoon,
         Name = entry.Name,
         AppType = SteamCatalogAppType.Unknown,
         HeaderImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/header.jpg",

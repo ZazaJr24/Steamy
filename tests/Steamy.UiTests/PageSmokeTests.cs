@@ -99,6 +99,8 @@ public sealed partial class PageSmokeTests
             CheckDashboardSearch(provider);
             _phase = "CheckPersonalDashboard(provider)";
             CheckPersonalDashboard(provider, activity);
+            _phase = "CheckReleaseTransition(provider)";
+            CheckReleaseTransition(provider);
             _phase = "CheckDepotQueue(provider)";
             CheckDepotQueue(provider);
             _phase = "CheckDownloadsControls(provider)";
@@ -488,9 +490,53 @@ public sealed partial class PageSmokeTests
         encoder.Save(output);
     }
 
+    private static void CheckReleaseTransition(IServiceProvider provider)
+    {
+        var library = provider.GetRequiredService<LibraryViewModel>();
+        var spotlight = Assert.IsType<FixtureSpotlight>(provider.GetRequiredService<ISpotlightService>());
+        var original = spotlight.Cached;
+        var previousSource = library.SelectedSourceFilter;
+        var previousSearch = library.SearchText;
+        var upcoming = original.Games.First(game => game.ComingSoon);
+        try
+        {
+            library.SearchText = string.Empty;
+            library.SelectedSourceFilter = "All sources";
+            OfflineServiceProxy.ScreenshotCatalog = new[] {
+                new SteamCatalogItem { AppId = upcoming.AppId, Name = upcoming.Name, IsUpcoming = true }
+            };
+            var refresh = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
+            PumpUntil(() => refresh.IsCompleted);
+            refresh.GetAwaiter().GetResult();
+            PumpDispatcher(TimeSpan.FromMilliseconds(200));
+            Assert.Empty(library.PagedCatalogItems);
+
+            // Steam's refreshed feed now confirms the same title released. An old item flag must not hide it.
+            spotlight.Cached = new SpotlightSnapshot(DateTimeOffset.UtcNow,
+                original.Games.Select(game => game.AppId == upcoming.AppId ? game with { ComingSoon = false } : game).ToArray());
+            refresh = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
+            PumpUntil(() => refresh.IsCompleted);
+            refresh.GetAwaiter().GetResult();
+            PumpUntil(() => library.PagedCatalogItems.Count == 1);
+            Assert.Equal(upcoming.AppId, Assert.Single(library.PagedCatalogItems).AppId);
+            Assert.False(library.PagedCatalogItems[0].IsUpcoming);
+        }
+        finally
+        {
+            spotlight.Cached = original;
+            OfflineServiceProxy.ScreenshotCatalog = null;
+            library.SelectedSourceFilter = previousSource;
+            library.SearchText = previousSearch;
+            var refresh = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
+            PumpUntil(() => refresh.IsCompleted);
+            refresh.GetAwaiter().GetResult();
+            PumpUntil(() => library.PagedCatalogItems.Count == 1 && library.PagedCatalogItems[0].AppId == 10);
+        }
+    }
+
     private sealed class FixtureSpotlight : ISpotlightService
     {
-        public SpotlightSnapshot Cached { get; } = SpotlightCatalogService.LoadBundled();
+        public SpotlightSnapshot Cached { get; set; } = SpotlightCatalogService.LoadBundled();
         public Task<SpotlightSnapshot> GetAsync(bool force = false, CancellationToken cancellationToken = default) => Task.FromResult(Cached);
     }
 
