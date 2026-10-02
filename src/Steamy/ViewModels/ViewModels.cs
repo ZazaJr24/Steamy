@@ -192,6 +192,7 @@ public sealed class LibraryViewModel : ViewModelBase
         _navigating = true;
         try
         {
+            var catalogTask = LoadAsync(false);
             if (DateTimeOffset.UtcNow - _lastLibraryScan >= TimeSpan.FromSeconds(30))
             {
                 _lastLibraryScan = DateTimeOffset.UtcNow;
@@ -199,7 +200,7 @@ public sealed class LibraryViewModel : ViewModelBase
             }
             RefreshLocalPage();
             await RefreshFavoriteFilterAsync();
-            await LoadAsync(false);
+            await catalogTask;
             OnPropertyChanged(nameof(InstalledCount));
             OnPropertyChanged(nameof(LocalCount));
             OnPropertyChanged(nameof(ActiveDownloadCount));

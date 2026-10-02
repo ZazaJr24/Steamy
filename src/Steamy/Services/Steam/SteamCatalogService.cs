@@ -54,7 +54,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
     {
         _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
         _ownsHttpClient = httpClient is null;
-        _httpClient.Timeout = TimeSpan.FromSeconds(12);
+        if (_ownsHttpClient) _httpClient.Timeout = TimeSpan.FromSeconds(12);
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
         {
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
@@ -560,17 +560,21 @@ public sealed class SteamCatalogService : ISteamCatalogService
             $"https://cdn.akamai.steamstatic.com/steam/apps/{item.AppId}/header.jpg"
         }.Where(url => !string.IsNullOrWhiteSpace(url)).Distinct(StringComparer.OrdinalIgnoreCase);
 
-        var cachePath = Path.Combine(_cacheDirectory, "artwork", $"{item.AppId}_portrait_v2.jpg");
+        string CacheFor(string url)
+        {
+            var fingerprint = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url)))[..16];
+            return Path.Combine(_cacheDirectory, "artwork", $"{item.AppId}_portrait_v3_{fingerprint}.jpg");
+        }
         foreach (var url in urls)
         {
-            var image = await LoadImageAsync(url, cachePath, cancellationToken, decodeWidth: 400).ConfigureAwait(false);
+            var image = await LoadImageAsync(url, CacheFor(url), cancellationToken, decodeWidth: 400).ConfigureAwait(false);
             if (image is not null) return image;
         }
 
         var storeImageUrl = await FetchStoreImageUrlAsync(item.AppId, cancellationToken).ConfigureAwait(false);
         if (!string.IsNullOrWhiteSpace(storeImageUrl))
         {
-            var image = await LoadImageAsync(storeImageUrl, cachePath, cancellationToken, decodeWidth: 400).ConfigureAwait(false);
+            var image = await LoadImageAsync(storeImageUrl, CacheFor(storeImageUrl), cancellationToken, decodeWidth: 400).ConfigureAwait(false);
             if (image is not null) return image;
         }
         return null;
