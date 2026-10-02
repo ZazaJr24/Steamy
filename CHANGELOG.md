@@ -6,7 +6,7 @@ Add a new `## x.y.z` section at the top before tagging.
 ## 0.4.16 — 2026-10-02
 
 - Expand verified upcoming discoveries to 16 titles, including Modern Warfare 4, Phantom Blade Zero and Star Wars: Galactic Racer. Refresh the daily feed from public Steam metadata; keep Dashboard upcoming-only and Games released-only.
-- Slightly narrow cover cards while retaining three broad Dashboard columns and up to five Games columns. Bring the requested headline games to the first Dashboard row; keep the horizontal animated countdown and clickable game information.
+- Restore the three-column landscape format in Dashboard, with a small day badge on the image and title/date below. Slightly narrow Games cards while retaining up to five columns. Bring the requested headline games to the first Dashboard row; keep the horizontal animated countdown and clickable game information.
 - Simplify Settings with flat sections, quiet icons, underlined categories and a compact version label; preserve transfer controls and all existing options.
 - When the GitHub release API answers HTTP 403, 429 or a server error, check the public release manifest instead. Validate the official versioned ZIP, size and published SHA-256 before replacing any application files.
 - Publish update metadata only after a regular release and its actual packaged ZIP have been verified. Older workflows cannot replace newer release metadata.
