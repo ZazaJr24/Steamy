@@ -642,9 +642,9 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         if (bytes.Length == 0)
             return new ManifestDownloadResult(false, "DepotBox returned empty content.");
 
-        var looksLikeZip = IsZipArchive(bytes)
-            || contentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
-            || contentType.Contains("octet-stream", StringComparison.OrdinalIgnoreCase);
+        // Lua attachments are also served as application/octet-stream. The actual bytes,
+        // rather than the generic MIME type, identify a ZIP package.
+        var looksLikeZip = IsZipArchive(bytes) || contentType.Contains("zip", StringComparison.OrdinalIgnoreCase);
 
         if (looksLikeZip)
         {
@@ -672,7 +672,14 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             return new ManifestDownloadResult(true, "Downloaded from DepotBox.", luaContent, appWorkDir);
         }
 
-        var luaText = System.Text.Encoding.UTF8.GetString(bytes).TrimStart('\uFEFF');
+        if (bytes.Length > DownloadPreparationReader.MaximumLuaCharacters)
+            return new(false, "DepotBox Lua content exceeds the size limit.");
+        string luaText;
+        try { luaText = new System.Text.UTF8Encoding(false, true).GetString(bytes).TrimStart('\uFEFF').Trim(); }
+        catch (System.Text.DecoderFallbackException)
+        { return new(false, "DepotBox returned a binary file instead of a ZIP package or Lua metadata."); }
+        if (luaText.StartsWith('<') || contentType.Contains("html", StringComparison.OrdinalIgnoreCase))
+            return new(false, "DepotBox returned a web page instead of metadata. Check the API key and retry; the provider may require browser verification.");
         if (luaText.StartsWith('{') || luaText.StartsWith('['))
             return new ManifestDownloadResult(false,
                 ExtractApiErrorMessage(luaText, $"DepotBox returned unexpected content for App {appId}."));

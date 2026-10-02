@@ -3,6 +3,14 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.5.0 — 2026-10-02
+
+- Fix BetterSteamTools provider imports: accept balanced `if addappid then` / `if setManifestid then` compatibility guards and quoted or numeric manifest IDs. Write only validated canonical metadata; never execute provider Lua or import arbitrary conditions, variables or commands.
+- Keep full 64-bit manifest IDs exact, including optional manifest sizes, and reject malformed quotes, unbalanced guards, overflowing IDs and executable Lua before any Steam changes.
+- Recognize actual ZIP bytes in DepotBox downloads. Plain Lua served as `application/octet-stream` now imports correctly instead of being incorrectly extracted as a ZIP.
+- Reject DepotBox HTML/browser-verification pages and unexpected binary content with actionable errors. Preserve API-key checks, ZIP-to-Lua fallback, verified backend detection, progress and cancellation.
+- Add native end-to-end DepotBox source-to-backend tests for ZIP, Lua, fallback, missing credentials, provider errors and unsafe scripts. Retain the three-column landscape Dashboard and all existing UI improvements.
+
 ## 0.4.16 — 2026-10-02
 
 - Expand verified upcoming discoveries to 16 titles, including Modern Warfare 4, Phantom Blade Zero and Star Wars: Galactic Racer. Refresh the daily feed from public Steam metadata; keep Dashboard upcoming-only and Games released-only.
