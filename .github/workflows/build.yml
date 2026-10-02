@@ -6,7 +6,7 @@ on:
       version:
         description: 'Version tag (e.g. 0.2.2)'
         required: true
-        default: '0.4.15'
+        default: '0.4.16'
   push:
     tags:
       - 'v*'
@@ -98,3 +98,8 @@ jobs:
           make_latest: true
           files: Steamy-v${{ steps.ver.outputs.v }}.zip
           body_path: release-notes.md
+
+      - name: Publish verified update metadata after the release exists
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/publish_update_manifest.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip'

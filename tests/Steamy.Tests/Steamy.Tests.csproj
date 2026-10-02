@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\src\Steamy\Services\Update\UpdateService.cs" Link="Linked\UpdateService.cs" />
     <Compile Include="..\..\src\Steamy\Services\Storage\GameActivityStore.cs" Link="Linked\GameActivityStore.cs" />
     <Compile Include="..\..\src\Steamy\Services\Catalog\GameSearchIndex.cs" Link="Linked\GameSearchIndex.cs" />
     <Compile Include="..\..\src\Steamy\Services\Catalog\SearchHistoryStore.cs" Link="Linked\SearchHistoryStore.cs" />

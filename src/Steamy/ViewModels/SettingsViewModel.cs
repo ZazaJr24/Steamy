@@ -485,7 +485,7 @@ public sealed class SettingsViewModel : ViewModelBase
     public IAsyncRelayCommand CheckForUpdatesCommand { get; }
 
     public string AppVersionLabel =>
-        $"You're on version {App.Services.GetRequiredService<IUpdateService>().CurrentVersion}. Updates come from github.com/{GitHubUpdateService.Repository}.";
+        $"Version {App.Services.GetRequiredService<IUpdateService>().CurrentVersion}";
 
     private string _updateStatus = string.Empty;
     public string UpdateStatus

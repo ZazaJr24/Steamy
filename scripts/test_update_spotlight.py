@@ -25,6 +25,14 @@ class SelectionTests(unittest.TestCase):
         self.assertFalse(game['comingSoon'])
         self.assertEqual('2022-02-25', game['releaseDate'])
 
+    def test_requested_studios_are_discovered_only_with_confirmed_upcoming_status(self):
+        for publisher in ('S-GAME Publishing', 'Secret Mode', 'Activision', 'Amazon Game Studios'):
+            self.game['publishers'] = [publisher]
+            self.assertTrue(select_game(self.game, self.now)['comingSoon'])
+            self.game['release_date'] = {'coming_soon': False, 'date': '27 Aug, 2026'}
+            self.assertIsNone(select_game(self.game, self.now))
+            self.game['release_date'] = {'coming_soon': True, 'date': 'To be announced'}
+
     def test_released_game_is_excluded(self):
         self.game['release_date'] = {'coming_soon': False, 'date': 'Sep 18, 2026'}
         self.assertIsNone(select_game(self.game, self.now))

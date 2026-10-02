@@ -16,8 +16,16 @@ PUBLISHERS = (
     '2k', 'sega', 'konami', 'warner bros', 'cd projekt', 'thq nordic', 'deep silver',
     'focus entertainment', 'krafton', 'net ease', 'netease', 'io interactive', 'techland',
     'pearl abyss', 'nacon', 'dreamhaven', 'embark', 'bungie', 'fromsoftware', 'larian',
+    's-game', 'secret mode', 'amazon game studios', 'remedy', '505 games', 'rebellion',
+    'saber interactive', 'mundfish', 'nexon', '11 bit studios', 'coffee stain', 'ci games',
+    'astrum entertainment', 'tencent', 'level infinite', 'keen games', 'annapurna',
 )
-REQUESTED = ('ACE COMBAT 8', 'Black Flag Resynced', 'Gears of War E-Day', '007 First Light',
+REQUESTED = ('Modern Warfare 4', 'Phantom Blade Zero', 'Star Wars Galactic Racer',
+             'Star Wars Zero Company', 'Tomb Raider Legacy of Atlantis', 'The Duskbloods',
+             'Atomic Heart 2', 'Warhammer 40000 Dawn of War IV', 'Lords of the Fallen II',
+             'Monster Hunter', 'Gothic 1 Remake', 'Clockwork Revolution', 'Light No Fire',
+             'The Expanse Osiris Reborn', 'Lost Soul Aside', 'Dying Light', 'Subnautica 2',
+             'Divinity', 'Kingdom Come', 'ACE COMBAT 8', 'Black Flag Resynced', 'Gears of War E-Day', '007 First Light',
              'Fable', 'The Blood of Dawnwalker', 'The Witcher 4', 'PRAGMATA',
              'Resident Evil Requiem', 'Grand Theft Auto VI', 'Marvel Wolverine',
              'Crimson Desert', 'Assassin Creed Hexe', 'Intergalactic', 'Silent Hill Townfall',
@@ -137,7 +145,7 @@ def collect_candidates():
             ids[int(app_id)] = None
     for app_id in MAJOR_RELEASES:
         ids[app_id] = None
-    return list(ids)[:150], requested_ids, released_ids
+    return list(ids)[:240], requested_ids, released_ids
 
 
 def confirmed_release_time(game, release, now):
@@ -209,7 +217,7 @@ def refresh(output):
     # Keep named large productions even when they have not published an exact launch day.
     priority = [game for game in upcoming if game['appId'] in requested_ids]
     other = [game for game in upcoming if game['appId'] not in requested_ids]
-    upcoming = (priority[:14] + other)[:28]
+    upcoming = (priority[:28] + other)[:48]
     released = sorted((game for game in games if not game['comingSoon']), key=lambda game: game['releaseDate'] or '', reverse=True)[:20]
     if upcoming:
         query = {'ids': [{'appid': game['appId']} for game in upcoming + released],

@@ -339,6 +339,16 @@ public sealed partial class PageSmokeTests
                 window.UpdateLayout();
                 PumpDispatcher(TimeSpan.FromMilliseconds(100));
                 SaveVisual(window, "settings-transfers.png");
+                ((Wpf.Ui.Controls.TextBox)settingsPage.FindName("SettingsSearch")).Text = "update";
+                PumpUntil(() => Descendants<TextBlock>(settingsPage).Any(text => text.IsVisible && text.Text == "Automatic updates"));
+                settingsScroll.ScrollToTop();
+                window.UpdateLayout();
+                var updateHeading = Descendants<TextBlock>(settingsPage).Single(text => text.IsVisible && text.Text == "Automatic updates");
+                position = updateHeading.TranslatePoint(new Point(0, 0), settingsScroll);
+                settingsScroll.ScrollToVerticalOffset(settingsScroll.VerticalOffset + position.Y - 32);
+                window.UpdateLayout();
+                Assert.Contains(Descendants<TextBlock>(settingsPage), text => text.IsVisible && text.Text == $"Version {GitHubUpdateService.Normalize(typeof(App).Assembly.GetName().Version!)}");
+                SaveVisual(window, "settings-updates.png");
                 ((Wpf.Ui.Controls.TextBox)settingsPage.FindName("SettingsSearch")).Text = "";
             }
         }
@@ -389,7 +399,7 @@ public sealed partial class PageSmokeTests
             var firstFive = galleryPanel.Children.Cast<FrameworkElement>().Take(5).ToArray();
             var positions = firstFive.Select(child => child.TranslatePoint(new Point(0, 0), galleryPanel)).ToArray();
             Assert.Equal(4, positions.Count(point => point.Y == positions[0].Y));
-            Assert.InRange(firstFive[0].ActualWidth, 175, 260); // Four larger covers in the native 1044px window.
+            Assert.InRange(firstFive[0].ActualWidth, 175, 210); // Four larger covers in the native 1044px window.
             Assert.Equal(5, galleryPanel.MaxColumns); // Five covers remain available in a wider window.
         }
         SaveVisual(window, "games.png");
@@ -868,6 +878,8 @@ public class OfflineServiceProxy : DispatchProxy
         var method = targetMethod ?? throw new InvalidOperationException();
         if (method.Name.StartsWith("add_", StringComparison.Ordinal) || method.Name.StartsWith("remove_", StringComparison.Ordinal)) return null;
         if (method.DeclaringType == typeof(ISecureCredentialService) && method.Name == nameof(ISecureCredentialService.ReadAsync)) return Task.FromResult<string?>(null);
+        if (method.DeclaringType == typeof(IUpdateService) && method.Name == "get_CurrentVersion")
+            return GitHubUpdateService.Normalize(typeof(App).Assembly.GetName().Version!);
         if (method.DeclaringType == typeof(ILoggingService)) return null;
         if (method.DeclaringType == typeof(IGameLocatorService) && method.Name == nameof(IGameLocatorService.ListInstalledGames)) return Array.Empty<InstalledGameEntry>();
         if (method.DeclaringType == typeof(ICreamApiService) && method.Name == nameof(ICreamApiService.HasCachedDlls)) return true;

@@ -3,6 +3,16 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.16 — 2026-10-02
+
+- Expand verified upcoming discoveries to 16 titles, including Modern Warfare 4, Phantom Blade Zero and Star Wars: Galactic Racer. Refresh the daily feed from public Steam metadata; keep Dashboard upcoming-only and Games released-only.
+- Slightly narrow cover cards while retaining three broad Dashboard columns and up to five Games columns. Keep the horizontal animated countdown and clickable game information.
+- Simplify Settings with flat sections, quiet icons, underlined categories and a compact version label; preserve transfer controls and all existing options.
+- When the GitHub release API answers HTTP 403, 429 or a server error, check the public release manifest instead. Validate the official versioned ZIP, size and published SHA-256 before replacing any application files.
+- Publish update metadata only after a regular release and its actual packaged ZIP have been verified. Older workflows cannot replace newer release metadata.
+- Fix App 292030 Sushi metadata imports: read the real depot and version IDs from game-named binary Steam manifests, canonicalize their filenames and retain duplicate/conflict checks. ZIP, 7z and RAR import and verified backend installation remain intact.
+- Keep failed provider diagnostics in expandable Source details, with a short actionable message in the operation footer; do not imply a successful installation or available download.
+
 ## 0.4.15 — 2026-10-02
 
 - Games displays released titles only: remove the upcoming section and its dialog; exclude Steam's coming-soon metadata from search, source filters and visible pages.
