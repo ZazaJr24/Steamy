@@ -215,7 +215,7 @@
           <StackPanel x:Name="UpcomingSection" Margin="0,0,0,22" Visibility="{Binding ShowUpcomingGames, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
               <TextBlock Text="On the horizon" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-              <StackPanel Grid.Column="1" Orientation="Horizontal">
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="{Binding HasMoreUpcoming, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="{Binding UpcomingPageLabel}" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
                 <ui:Button Command="{Binding NextUpcomingCommand}" Icon="{ui:SymbolIcon ChevronRight24}" Appearance="Transparent" Width="28" Height="28" Padding="4" ToolTip="Next upcoming games" AutomationProperties.Name="Next upcoming games" />
               </StackPanel>
