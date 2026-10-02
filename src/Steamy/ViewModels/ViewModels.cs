@@ -43,45 +43,6 @@ public sealed class LibraryViewModel : ViewModelBase
     private SteamCatalogItem[]? _indexedCatalog;
     private Task<GameSearchIndex<SteamCatalogItem>>? _searchIndexTask;
     private readonly ISpotlightService? _spotlight;
-    public RangeObservableCollection<SteamCatalogItem> UpcomingGames { get; } = new();
-    private int _upcomingPage;
-    public IReadOnlyList<SteamCatalogItem> UpcomingPageItems => UpcomingGames.Skip(_upcomingPage * 5).Take(5).ToArray();
-    public bool HasMoreUpcoming => UpcomingGames.Count > 5;
-    public string UpcomingPageLabel => $"{_upcomingPage + 1:00} / {Math.Max(1, (UpcomingGames.Count + 4) / 5):00}";
-    public ICommand NextUpcomingCommand => new RelayCommand(() =>
-    {
-        _upcomingPage = (_upcomingPage + 1) % Math.Max(1, (UpcomingGames.Count + 4) / 5);
-        OnPropertyChanged(nameof(UpcomingPageItems)); OnPropertyChanged(nameof(UpcomingPageLabel));
-    });
-    public bool ShowUpcomingGames => UpcomingGames.Count > 0 && string.IsNullOrWhiteSpace(SearchText)
-        && SelectedSourceFilter == "All sources" && SelectedTypeFilter == "All games";
-    private void UpdateUpcoming(SpotlightSnapshot snapshot)
-    {
-        UpcomingGames.ReplaceWith(ReleaseCountdown.UpcomingAt(snapshot.Games, DateTimeOffset.Now).Select(game => new SteamCatalogItem
-        {
-            AppId = game.AppId, Name = game.Name, AppType = SteamCatalogAppType.Game,
-            PortraitImageUrl = game.PortraitUrl, HeaderImageUrl = game.HeaderUrl,
-            IsUpcoming = true, ReleaseDate = game.ReleaseLabel, ShortDescription = game.Description,
-            PublishersDisplay = game.Publisher, GenresDisplay = game.Genres, StoreUrl = game.StoreUrl
-        }).ToArray());
-        _upcomingPage = 0;
-        OnPropertyChanged(nameof(ShowUpcomingGames));
-        OnPropertyChanged(nameof(UpcomingPageItems));
-        OnPropertyChanged(nameof(UpcomingPageLabel));
-        OnPropertyChanged(nameof(HasMoreUpcoming));
-        _ = LoadUpcomingArtworkAsync();
-    }
-    private async Task LoadUpcomingArtworkAsync()
-    {
-        try { await Task.WhenAll(UpcomingGames.Select(item => _catalog.EnsureArtworkAsync(item))); }
-        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Library", $"Upcoming artwork unavailable: {exception.GetType().Name}."); }
-    }
-    private async Task RefreshUpcomingAsync(bool force)
-    {
-        if (_spotlight is null) return;
-        try { UpdateUpcoming(await _spotlight.GetAsync(force)); }
-        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Library", $"Keeping upcoming games: {exception.GetType().Name}."); }
-    }
     private readonly IGameActivityService? _activity;
     private IReadOnlySet<int> _favoriteApps = new HashSet<int>();
     private bool _isSearchBusy;
@@ -121,7 +82,7 @@ public sealed class LibraryViewModel : ViewModelBase
         _catalog=c; _ryuu=ryuu; _hubcap=hubcap; _librarySync=sync; _freeSources=freeSources;
         _activity = activity;
         _spotlight = spotlight;
-        UpdateUpcoming(spotlight?.Cached ?? SpotlightSnapshot.Empty);
+        UpdateReleaseFilter(spotlight?.Cached ?? SpotlightSnapshot.Empty);
         if (_activity is not null) _activity.Changed += OnFavoriteActivityChanged;
         _searchDebounceTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(180) };
         _searchDebounceTimer.Tick += OnSearchDebounceElapsed;
@@ -226,7 +187,7 @@ public sealed class LibraryViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsCatalogLoading));
         try
         {
-            _ = RefreshUpcomingAsync(force);
+            _ = RefreshReleaseFilterAsync(force);
             var fail = SteamCatalogSnapshot.Failure("Timed out");
             var sushiTask = _freeSources.GetAsync("Sushi", force);
             var zazaTask = _freeSources.GetAsync("Zaza", force);
@@ -346,6 +307,8 @@ public sealed class LibraryViewModel : ViewModelBase
     {
         _searchDebounceTimer.Stop();
         var generation = Interlocked.Increment(ref _filterGeneration);
+        ++_renderGeneration;
+        _artworkLoadingCancellation?.Cancel();
         _filterCancellation?.Cancel();
         _filterCancellation?.Dispose();
         _filterCancellation = new CancellationTokenSource();
@@ -356,7 +319,6 @@ public sealed class LibraryViewModel : ViewModelBase
             _indexedCatalog = items;
             _searchIndexTask = Task.Run(() => new GameSearchIndex<SteamCatalogItem>(items, item => item.AppId, item => item.Name));
         }
-        OnPropertyChanged(nameof(ShowUpcomingGames));
         var search = _search;
         var typeFilter = _typeFilter;
         var sort = _sort;
@@ -380,6 +342,7 @@ public sealed class LibraryViewModel : ViewModelBase
         try
         {
             bool typoMatch = false;
+            var upcomingIds = _upcomingIds;
             var list = await Task.Run(async () =>
             {
                 IEnumerable<SteamCatalogItem> candidates = _catalogSnapshot;
@@ -390,7 +353,7 @@ public sealed class LibraryViewModel : ViewModelBase
                     candidates = matches.Items;
                     typoMatch = matches.IsTypoMatch;
                 }
-                candidates = candidates.Where(item => source == "All sources" || sourceIds?.Contains(item.AppId) == true);
+                candidates = candidates.Where(item => !upcomingIds.Contains(item.AppId) && (source == "All sources" || sourceIds?.Contains(item.AppId) == true));
                 return SteamCatalogQuery.FilterAndSort(candidates, null, typeFilter, sort, nsfwScope, cancellationToken);
             }, cancellationToken);
             if (generation != Volatile.Read(ref _filterGeneration)) return;
@@ -399,10 +362,10 @@ public sealed class LibraryViewModel : ViewModelBase
             SearchHint = string.IsNullOrWhiteSpace(search) ? string.Empty : typoMatch
                 ? "Similar titles shown — no exact matches."
                 : list.Count == 0 ? "No matches. Try a shorter title or an App ID." : string.Empty;
-            SearchSuggestions.ReplaceWith(string.IsNullOrWhiteSpace(search) ? Array.Empty<SteamCatalogItem>() : list.Take(6).ToArray());
+            SearchSuggestions.ReplaceWith(string.IsNullOrWhiteSpace(search) ? Array.Empty<SteamCatalogItem>() : list.Where(item => item.IsReleaseVerified && !item.IsUpcoming).Take(6).ToArray());
             OnPropertyChanged(nameof(HasSearchSuggestions));
             _filteredCatalog = list;
-            RenderCatalogPage();
+            await RenderCatalogPageAsync();
             RefreshLocalPage();
             foreach (var property in new[] { nameof(VisibleCountLabel), nameof(PageLabel), nameof(TotalPages), nameof(CanGoPrevious), nameof(CanGoNext), nameof(HasCatalogItems), nameof(FilteredCatalogCount) })
                 OnPropertyChanged(property);
@@ -428,19 +391,64 @@ public sealed class LibraryViewModel : ViewModelBase
         _ => true
     };
 
-    private void RenderCatalogPage()
+    private IReadOnlySet<int> _upcomingIds = new HashSet<int>();
+    private void UpdateReleaseFilter(SpotlightSnapshot snapshot)
     {
-        FilteredCatalogCount = _filteredCatalog.Count;
-        _page = Math.Clamp(_page, 1, TotalPages);
-        var start = (_page - 1) * PageSize;
-        var end = Math.Min(start + PageSize, _filteredCatalog.Count);
-        var visible = Enumerable.Range(start, end - start).Select(index => _filteredCatalog[index]).ToArray();
-        if (!PagedCatalogItems.ReplaceWith(visible)) return;
+        _upcomingIds = snapshot.Games.Where(game => game.ComingSoon).Select(game => game.AppId).ToHashSet();
+        foreach (var item in _catalogSnapshot)
+            if (_upcomingIds.Contains(item.AppId)) item.IsUpcoming = true;
+    }
+    private async Task RefreshReleaseFilterAsync(bool force)
+    {
+        if (_spotlight is null) return;
+        try { UpdateReleaseFilter(await _spotlight.GetAsync(force)); RefreshPage(); }
+        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Library", $"Keeping release metadata: {exception.GetType().Name}."); }
+    }
 
+    private int _renderGeneration;
+    private async Task RenderCatalogPageAsync()
+    {
+        var renderGeneration = ++_renderGeneration;
         _artworkLoadingCancellation?.Cancel();
         var cancellation = new CancellationTokenSource();
         _artworkLoadingCancellation = cancellation;
-        _ = LoadVisibleArtworkAsync(PagedCatalogItems.ToArray(), cancellation);
+        try
+        {
+            FilteredCatalogCount = _filteredCatalog.Count;
+            _page = Math.Clamp(_page, 1, TotalPages);
+            var start = (_page - 1) * PageSize;
+            var visible = _filteredCatalog.Skip(start).Take(PageSize).ToArray();
+            // Cached, verified releases can paint immediately. Unknown apps stay hidden until Steam confirms them.
+            PagedCatalogItems.ReplaceWith(visible.Where(item => item.IsReleaseVerified && !item.IsUpcoming).ToArray());
+            var unconfirmed = false;
+            for (var attempt = 0; attempt < 3 && visible.Length > 0; attempt++)
+            {
+                await _catalog.PrepareReleaseStatusAsync(visible, cancellation.Token);
+                cancellation.Token.ThrowIfCancellationRequested();
+                if (renderGeneration != _renderGeneration) return;
+                unconfirmed |= visible.Any(item => !item.IsReleaseVerified);
+                if (unconfirmed) break;
+                var excluded = visible.Where(item => item.IsUpcoming || !item.IsReleaseVerified).Select(item => item.AppId).ToHashSet();
+                if (excluded.Count == 0) break;
+                _filteredCatalog = _filteredCatalog.Where(item => !excluded.Contains(item.AppId)).ToArray();
+                visible = _filteredCatalog.Skip(start).Take(PageSize).ToArray();
+            }
+            var released = visible.Where(item => item.IsReleaseVerified && !item.IsUpcoming && !_upcomingIds.Contains(item.AppId)).ToArray();
+            PagedCatalogItems.ReplaceWith(released);
+            SearchSuggestions.ReplaceWith(string.IsNullOrWhiteSpace(_search) ? Array.Empty<SteamCatalogItem>() : released.Take(6).ToArray());
+            FilteredCatalogCount = _filteredCatalog.Count;
+            OnPropertyChanged(string.Empty);
+            if (unconfirmed)
+                CatalogStatus = "Release status unavailable. Refresh to check Steam again.";
+            await LoadVisibleArtworkAsync(released, cancellation);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Library", $"Release metadata unavailable: {exception.GetType().Name}."); }
+        finally
+        {
+            if (ReferenceEquals(_artworkLoadingCancellation, cancellation)) _artworkLoadingCancellation = null;
+            cancellation.Dispose();
+        }
     }
 
     private async Task LoadVisibleArtworkAsync(SteamCatalogItem[] visible, CancellationTokenSource cancellation)
@@ -452,11 +460,6 @@ public sealed class LibraryViewModel : ViewModelBase
         }
         catch (OperationCanceledException) { }
         catch { }
-        finally
-        {
-            if (ReferenceEquals(_artworkLoadingCancellation, cancellation)) _artworkLoadingCancellation = null;
-            cancellation.Dispose();
-        }
     }
 
     private void RefreshLocalPage()
@@ -499,7 +502,7 @@ public sealed class LibraryViewModel : ViewModelBase
         }
 
         _page = Math.Clamp(p, 1, TotalPages);
-        RenderCatalogPage();
+        _ = RenderCatalogPageAsync();
         RefreshLocalPage();
         OnPropertyChanged(string.Empty);
     }

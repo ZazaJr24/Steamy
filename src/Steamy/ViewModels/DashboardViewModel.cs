@@ -256,8 +256,6 @@ public sealed class DashboardViewModel : ViewModelBase
     public IReadOnlyList<DashboardFeature> DiscoverGames { get; private set; } = Array.Empty<DashboardFeature>();
     public IReadOnlyList<DashboardFeature> SpotlightPreviews => DiscoverGames.Take(8).ToArray();
     public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames;
-    public IReadOnlyList<DashboardFeature> MajorGames { get; private set; } = Array.Empty<DashboardFeature>();
-    public bool HasMajorGames => MajorGames.Count > 0;
     private DashboardFeature? _selectedDiscovery;
     public DashboardFeature? SelectedDiscovery { get => _selectedDiscovery; private set { if (SetProperty(ref _selectedDiscovery, value)) OnPropertyChanged(nameof(HasSelectedDiscovery)); } }
     public bool HasSelectedDiscovery => SelectedDiscovery is not null;
@@ -331,20 +329,15 @@ public sealed class DashboardViewModel : ViewModelBase
     private void ApplySpotlight(SpotlightSnapshot snapshot)
     {
         var upcoming = ReleaseCountdown.UpcomingAt(snapshot.Games, DateTimeOffset.Now);
-        var released = snapshot.Games.Where(game => !game.ComingSoon).ToArray();
-        if (DiscoverGames.Select(feature => feature.Metadata).SequenceEqual(upcoming)
-            && MajorGames.Select(feature => feature.Metadata).SequenceEqual(released)) return;
+        if (DiscoverGames.Select(feature => feature.Metadata).SequenceEqual(upcoming)) return;
         var previousId = FeaturedGame?.Game.AppId;
         DiscoverGames = upcoming.Select(game => new DashboardFeature(game)).ToArray();
-        MajorGames = released.Select(game => new DashboardFeature(game)).ToArray();
         _featuredIndex = Math.Max(0, Array.FindIndex(DiscoverGames.ToArray(), feature => feature.Game.AppId == previousId));
         _heroLoads.Clear();
         _headerLoads.Clear();
         _portraitLoads.Clear();
         OnPropertyChanged(nameof(DiscoverGames));
         OnPropertyChanged(nameof(NewGames));
-        OnPropertyChanged(nameof(MajorGames));
-        OnPropertyChanged(nameof(HasMajorGames));
         OnPropertyChanged(nameof(SpotlightPreviews));
         UpdateSpotlightSelection();
         OnPropertyChanged(nameof(HasSpotlight));
@@ -357,7 +350,7 @@ public sealed class DashboardViewModel : ViewModelBase
         (DownloadFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
     }
 
-    private Task LoadDiscoveryHeadersAsync() => Task.WhenAll(DiscoverGames.Concat(MajorGames).Select(LoadDiscoveryCoverAsync));
+    private Task LoadDiscoveryHeadersAsync() => Task.WhenAll(DiscoverGames.Select(LoadDiscoveryCoverAsync));
 
     private async Task LoadDiscoveryCoverAsync(DashboardFeature feature)
     {

@@ -76,7 +76,7 @@
 
   <Grid>
   <ScrollViewer x:Name="DashboardScroll" Style="{StaticResource DashboardScrollHostStyle}" Padding="28,22,28,30">
-    <StackPanel MaxWidth="1440" RequestBringIntoView="Dashboard_RequestBringIntoView">
+    <StackPanel MaxWidth="1120" RequestBringIntoView="Dashboard_RequestBringIntoView">
       <Grid Margin="0,0,0,22">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
         <TextBlock Text="Discover" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
@@ -191,11 +191,11 @@
         </Grid>
       </Border>
 
-      <StackPanel Margin="0,0,0,24" Visibility="{Binding HasMajorGames, Converter={StaticResource BoolToVis}}">
-        <TextBlock Text="Big worlds. Great games." Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
-        <TextBlock Text="Major releases on Steam" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,16" />
-        <ItemsControl x:Name="MajorGameGrid" ItemsSource="{Binding MajorGames}" ItemTemplate="{StaticResource DiscoveryCoverTemplate}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="124" MaxColumns="5" Spacing="12" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+      <StackPanel Margin="0,0,0,24" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
+        <TextBlock Text="On the horizon" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
+        <TextBlock Text="Upcoming games · click a cover for details" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,16" />
+        <ItemsControl x:Name="UpcomingGameGrid" ItemsSource="{Binding NewGames}" ItemTemplate="{StaticResource DiscoveryCoverTemplate}">
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="124" MaxItemWidth="170" MaxColumns="5" Spacing="12" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         </ItemsControl>
       </StackPanel>
 

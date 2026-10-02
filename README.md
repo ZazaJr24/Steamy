@@ -29,25 +29,25 @@ The release is portable and includes the Windows runtime. Use Windows 10 or 11 o
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
-Normal releases use three version numbers, such as **0.4.12**. Optional hotfixes use four, such as **0.4.12.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
+Normal releases use three version numbers, such as **0.4.13**. Optional hotfixes use four, such as **0.4.13.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
 
 ## Inside Steamy
 
 | Your next stop | What you'll find |
 | --- | --- |
-| **Dashboard** | Spotlight artwork, a flat animated countdown and compact major-release covers, and clickable game details. |
+| **Dashboard** | Spotlight artwork, a flat animated countdown and compact upcoming covers, and clickable game details. |
 | **Spotlight** | Upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
-| **Games** | Five compact portrait covers per row, upcoming game infos, typo-tolerant title/App ID search, favorites, sorting and source filters. |
+| **Games** | Five compact portrait covers per row, released games only, typo-tolerant title/App ID search, favorites, sorting and source filters. |
 | **Downloads** | Compact source → depots & version → location steps, right-hand depot selection and available Steam details, plus queue priority, pause, resume and repair. |
 | **Settings** | Searchable categories, dark/light themes, reduced effects, Windows backdrop options, download limits, network options and source connections. |
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
 | **Fixes** | Browse your configured fixes repository. **Hypervisor Fixes is Coming soon** and does not install anything yet. |
 
-Games fits five compact portrait covers per row at normal desktop sizes, with fewer columns in narrow windows. Established AAA series appear before the long tail in the default sort. The first catalog view skips the fuzzy-search index, public artwork paths are resolved in one cached Steam request per visible page, and optional providers load after the cached catalog is displayed. “On the horizon” lives in Games, with five upcoming covers at a time and a next-page arrow. Click a coming game for its publisher, description, genres and release information. Galleries appear with a calm fade; cards lift gently on hover while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → General → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
+Games fits five compact portrait covers per row at normal desktop sizes, with fewer columns in narrow windows. Established AAA series appear before the long tail in the default sort. The first catalog view skips the fuzzy-search index, public artwork paths are resolved in one cached Steam request per visible page, and optional providers load after the cached catalog is displayed. “On the horizon” lives exclusively in Dashboard. Games shows released titles only; coming-soon titles are excluded from search and source filters. Unknown release status is checked in the cached Steam metadata batch before showing a cover. Click a coming game for its publisher, description, genres and release information. Galleries appear with a calm fade; cards lift gently on hover while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → General → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
 
 ### A Spotlight that keeps moving
 
-The feed checks public Steam data daily for upcoming releases from established publishers and studios. DLC, demos, soundtracks, old editions and expired upcoming dates are excluded. A separate curated section keeps large released games, with their original release dates and released status. Confirmed near dates come first; vague dates follow. The app checks for updates every six hours and retains its last valid feed when a request fails.
+The feed checks public Steam data daily for upcoming releases from established publishers and studios. DLC, demos, soundtracks, old editions and expired upcoming dates are excluded. Released AAA games appear in Games; Dashboard contains upcoming releases only. Confirmed near dates come first; vague dates follow. The app checks for updates every six hours and retains its last valid feed when a request fails.
 
 Official artwork is preloaded. Slides change about every five seconds while the app is active; **Pause / Resume**, manual arrows give you control. A small rotating indicator precedes each slide change when motion is enabled. The Spotlight countdown sits at the bottom left beside **Details**. Click any discovery cover for description, publisher, genres and release information; **View on Steam** opens the official store and **Browse sources** explicitly opens the source picker. Countdown and image updates retain your scroll position. Exact release dates show remaining days and **Today** on the date; month/year or unknown dates show **TBA**. Steam’s published full-date schedules show days, hours, minutes and seconds in a single flat horizontal strip, updated every second. Changed digits slide gently into place when animation is enabled; reduced effects disable that movement. Missing schedules retain honest date-only labels. A date reaching zero never proves that a game has released or is downloadable.
 
@@ -111,17 +111,15 @@ Additional tools are fetched when needed. Credentials are kept in a Windows DPAP
 
 Screenshots are captured from the actual Windows app using sample library, queue, depot and SteamTools status metadata. The Spotlight uses verified public Steam data. Game artwork belongs to the respective rights holders.
 
-**Discovery** — a wide upcoming spotlight and compact major-release covers.
+**Discovery** — a wide upcoming spotlight and compact upcoming covers.
 
-![Compact major-release portrait covers](docs/screenshots/discover-games.png)
+![Compact upcoming portrait covers](docs/screenshots/discover-games.png)
 
 ![Upcoming game details with the actual Steam release countdown](docs/screenshots/upcoming-details.png)
 
-**Games** — five smaller portrait covers per row, with upcoming discoveries on the same page.
+**Games** — released titles only, with five narrower portrait covers per row (at most 170 pixels each).
 
 ![The Games grid](docs/screenshots/games.png)
-
-![Upcoming game information in Games](docs/screenshots/games-upcoming-details.png)
 
 **Card hover** — a subtle highlight and motion add depth while the card's layout and clickable area stay fixed.
 
