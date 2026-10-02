@@ -328,9 +328,8 @@ public sealed partial class PageSmokeTests
             {
                 var settingsPage = Descendants<SettingsPage>(window).Single();
                 ((Wpf.Ui.Controls.TextBox)settingsPage.FindName("SettingsSearch")).Text = "transfer";
-                PumpDispatcher(TimeSpan.FromMilliseconds(150));
+                PumpUntil(() => Descendants<TextBlock>(settingsPage).Any(text => text.IsVisible && text.Text == "TRANSFER CONTROLS"));
                 window.UpdateLayout();
-                Assert.Contains(Descendants<TextBlock>(settingsPage), text => text.IsVisible && text.Text == "TRANSFER CONTROLS");
                 SaveVisual(window, "settings-transfers.png");
                 ((Wpf.Ui.Controls.TextBox)settingsPage.FindName("SettingsSearch")).Text = "";
             }

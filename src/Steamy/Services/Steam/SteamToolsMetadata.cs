@@ -184,8 +184,8 @@ public static class SteamToolsMetadata
         foreach (var entry in entries)
         {
             token.ThrowIfCancellationRequested();
-            var name = entry.Key ?? "";
-            if (name.Length > 1024 || name.Contains('\\') || !names.Add(name)
+            var name = (entry.Key ?? "").Replace('\\', '/');
+            if (name.Length > 1024 || !names.Add(name)
                 || name.TrimEnd('/').Split('/').Any(part => !LocalManifestPackage.SafeSegment(part))
                 || !string.IsNullOrEmpty(entry.LinkTarget))
                 throw new InvalidDataException("The archive contains an unsafe, duplicate or linked path.");
@@ -200,7 +200,7 @@ public static class SteamToolsMetadata
         {
             token.ThrowIfCancellationRequested();
             if (entry.IsDirectory) return;
-            var key = entry.Key ?? throw new InvalidDataException("Missing archive path.");
+            var key = (entry.Key ?? throw new InvalidDataException("Missing archive path.")).Replace('\\', '/');
             var extension = Path.GetExtension(key).ToLowerInvariant();
             var metadata = extension is ".lua" or ".manifest" || Path.GetFileName(key).Equals("steamy.json", StringComparison.OrdinalIgnoreCase);
             var limit = extension is ".lua" or ".json" ? DownloadPreparationReader.MaximumLuaCharacters : LocalManifestPackage.MaximumBytes;

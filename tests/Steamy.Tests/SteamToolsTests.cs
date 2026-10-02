@@ -32,6 +32,13 @@ public sealed class SteamToolsTests
     }
 
     [Fact]
+    public async Task WindowsArchiveTraversalIsRejectedBeforeImport()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "unsafe-metadata.rar");
+        await Assert.ThrowsAsync<InvalidDataException>(() => SteamToolsMetadata.ReadAsync([path]));
+    }
+
+    [Fact]
     public async Task EncryptedMetadataArchiveReportsExtractionRequirement()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "fix-password.7z");
