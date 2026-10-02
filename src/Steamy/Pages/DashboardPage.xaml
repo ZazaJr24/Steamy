@@ -242,7 +242,7 @@
                   <TextBlock Text="{Binding ReleaseStatus}" Foreground="#D2D9F0" FontSize="9" FontWeight="SemiBold" Margin="0,0,0,8" />
                   <TextBlock Text="{Binding Game.Name}" Foreground="#F5F6FD" FontSize="25" FontWeight="SemiBold" TextWrapping="Wrap" />
                 </StackPanel>
-                <ui:Button x:Name="CloseDiscoveryButton" Icon="{ui:SymbolIcon Dismiss24}" Appearance="Transparent" Foreground="White" Width="34" Height="34" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="14"
+                <ui:Button x:Name="CloseDiscoveryButton" Content="×" FontSize="22" Padding="0" Appearance="Transparent" Foreground="White" Width="34" Height="34" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="14"
                            Command="{Binding DataContext.CloseDiscoveryCommand, RelativeSource={RelativeSource AncestorType=Page}}" AutomationProperties.Name="Close game details" />
               </Grid>
             </Border>

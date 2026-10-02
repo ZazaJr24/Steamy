@@ -76,9 +76,10 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
     public Task<BitmapImage?> LoadSpotlightPortraitAsync(SpotlightGame game, CancellationToken cancellationToken = default) =>
         LoadFirstAvailableAsync(new[]
         {
+            game.PortraitUrl,
             $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{game.AppId}/library_600x900.jpg",
-            game.PortraitUrl, game.HeaderUrl
-        }.Where(SpotlightCatalogService.IsArtworkUrl).ToArray(), SpotlightCachePath(game.AppId, "portrait", game.HeaderUrl), cancellationToken);
+            game.HeaderUrl
+        }.Where(SpotlightCatalogService.IsArtworkUrl).ToArray(), SpotlightCachePath(game.AppId, "portrait", string.IsNullOrEmpty(game.PortraitUrl) ? game.HeaderUrl : game.PortraitUrl), cancellationToken);
 
     public async Task LoadHeadersAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default)
     {

@@ -165,6 +165,24 @@ def enrich_releases(games, response, now):
     return result
 
 
+def enrich_artwork(games, response):
+    items = {item.get('appid'): item.get('assets', {}) for item in response.get('response', {}).get('store_items', [])}
+    result = []
+    for game in games:
+        assets = items.get(game['appId'], {})
+        template = assets.get('asset_url_format', '')
+        changes = {}
+        if template.startswith(f"steam/apps/{game['appId']}/") and '${FILENAME}' in template:
+            for target, keys in {'portraitUrl': ('library_capsule_2x', 'library_capsule'),
+                                 'heroUrl': ('library_hero_2x', 'library_hero'),
+                                 'headerUrl': ('header_2x', 'header')}.items():
+                filename = next((assets.get(key) for key in keys if assets.get(key)), None)
+                if isinstance(filename, str) and re.fullmatch(r'[A-Za-z0-9_./-]+\.(jpg|png|webp)', filename) and '..' not in filename:
+                    changes[target] = 'https://shared.akamai.steamstatic.com/store_item_assets/' + template.replace('${FILENAME}', filename)
+        result.append({**game, **changes})
+    return result
+
+
 def refresh(output):
     now = datetime.now(timezone.utc)
     candidates, requested_ids = collect_candidates()
@@ -187,12 +205,14 @@ def refresh(output):
     upcoming = (priority[:10] + other)[:18]
     released = [game for game in games if not game['comingSoon']][:6]
     if upcoming:
-        query = {'ids': [{'appid': game['appId']} for game in upcoming],
+        query = {'ids': [{'appid': game['appId']} for game in upcoming + released],
                  'context': {'language': 'english', 'country_code': 'US', 'steam_realm': 1},
-                 'data_request': {'include_release': True}}
+                 'data_request': {'include_release': True, 'include_assets': True}}
         url = 'https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json=' + urllib.parse.quote(json.dumps(query))
         try:
-            upcoming = enrich_releases(upcoming, fetch_json(url), now)
+            response = fetch_json(url)
+            upcoming = enrich_releases(enrich_artwork(upcoming, response), response, now)
+            released = enrich_artwork(released, response)
         except Exception as error:
             print(f'Exact Steam schedule unavailable: {type(error).__name__}; retaining date-only countdowns')
     games = sorted(upcoming, key=lambda game: (game['releaseDate'] is None, game['releaseDate'] or '9999-12-31')) + released
