@@ -79,7 +79,7 @@ public sealed class BetterSteamToolsService(ISettingsService settings, IManifest
             if (!SteamToolsBackend.IsInstalled(steamRoot)) throw new IOException("Backend verification after installation failed. Install or repair BetterSteamTools again.");
             return new(true, $"BetterSteamTools {tag} installed. Start Steam to load it; Lua changes can then reload automatically.", []);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or HttpRequestException or JsonException or InvalidOperationException or KeyNotFoundException or OperationCanceledException)
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or HttpRequestException or JsonException or InvalidOperationException or KeyNotFoundException or OperationCanceledException)
         { return new(false, exception is OperationCanceledException ? "Installation cancelled." : exception.Message, []); }
         finally { _gate.Release(); }
     }
@@ -128,7 +128,7 @@ public sealed class BetterSteamToolsService(ISettingsService settings, IManifest
                 : $"Added {plan.AppIds.Count} game configuration(s) and {plan.ManifestCount} manifest(s). Steam reloads the configured Lua folder.";
             return new(true, message, plan.AppIds, plan.ManifestCount);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or KeyNotFoundException or OperationCanceledException)
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or InvalidOperationException or KeyNotFoundException or OperationCanceledException)
         { return new(false, exception is OperationCanceledException ? "Import cancelled." : exception.Message, []); }
         finally { _gate.Release(); }
     }

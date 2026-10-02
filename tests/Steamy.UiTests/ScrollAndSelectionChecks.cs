@@ -86,7 +86,8 @@ public sealed partial class PageSmokeTests
             var dashboard = Descendants<DashboardPage>(window).Single();
             var homeScroll = (ScrollViewer)dashboard.FindName("DashboardScroll");
             Assert.False(SmoothScroll.GetEnabled(homeScroll));
-            Assert.Same(homeScroll, Assert.Single(Descendants<ScrollViewer>(dashboard), viewer => viewer.ScrollableHeight > 0));
+            Assert.Same(homeScroll, Assert.Single(Descendants<ScrollViewer>(dashboard), viewer => viewer.IsVisible && viewer.ScrollableHeight > 0
+                && !ReferenceEquals(viewer, dashboard.FindName("SpotlightPreviewScroll"))));
             Assert.NotNull(homeScroll.Template.FindName("PART_ScrollContentPresenter", homeScroll));
             Assert.False(ScrollViewer.GetCanContentScroll(dashboard));
             Assert.True(homeScroll.ViewportHeight > 0 && homeScroll.ScrollableHeight > 0,
