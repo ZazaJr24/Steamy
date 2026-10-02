@@ -10,12 +10,34 @@
     <SolidColorBrush x:Key="DropOutline" Color="#307F8ACB" />
     <Style x:Key="ToolHint" TargetType="TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+
       <Setter Property="FontSize" Value="12" /><Setter Property="TextWrapping" Value="Wrap" />
     </Style>
     <Style x:Key="ToolOptions" TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
       <Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" /><Setter Property="FontSize" Value="12" />
       <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Expander">
+        <StackPanel>
+          <ToggleButton Content="{TemplateBinding Header}" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                        Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}" Cursor="Hand"
+                        FocusVisualStyle="{StaticResource GalleryKeyboardFocus}" HorizontalContentAlignment="Left">
+            <ToggleButton.Template><ControlTemplate TargetType="ToggleButton">
+              <Border Background="Transparent" Padding="0,10">
+                <StackPanel Orientation="Horizontal">
+                  <Path x:Name="Arrow" Data="M 1,1 L 5,5 L 1,9" Width="10" Height="10" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.2" Margin="0,0,8,0" VerticalAlignment="Center" />
+                  <ContentPresenter VerticalAlignment="Center" />
+                </StackPanel>
+              </Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsChecked" Value="True"><Setter TargetName="Arrow" Property="Data" Value="M 1,1 L 5,5 L 9,1" /></Trigger>
+                <Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.8" /></Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate></ToggleButton.Template>
+          </ToggleButton>
+          <ContentPresenter ContentSource="Content" Visibility="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}" />
+        </StackPanel>
+      </ControlTemplate></Setter.Value></Setter>
     </Style>
   </Page.Resources>
   <Grid>
