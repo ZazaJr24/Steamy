@@ -24,7 +24,7 @@ public sealed class BetterSteamToolsViewModel : ObservableObject
     private string _steamRoot = "";
     private string _gameInput = "";
     private string _status = "Detecting Steam…";
-    private string _filesLabel = "Drop ZIP, Lua or manifest files here";
+    private string _filesLabel = "";
     private bool _detected;
     private bool _backend;
     private SteamToolsSourceChoice _source;
@@ -53,7 +53,8 @@ public sealed class BetterSteamToolsViewModel : ObservableObject
     public string GameInput { get => _gameInput; set { if (SetProperty(ref _gameInput, value)) CommandsChanged(); } }
     public SteamToolsSourceChoice SelectedSource { get => _source; set => SetProperty(ref _source, value); }
     public string Status { get => _status; private set => SetProperty(ref _status, value); }
-    public string FilesLabel { get => _filesLabel; private set => SetProperty(ref _filesLabel, value); }
+    public string FilesLabel { get => _filesLabel; private set { if (SetProperty(ref _filesLabel, value)) OnPropertyChanged(nameof(HasSelectedFiles)); } }
+    public bool HasSelectedFiles => !string.IsNullOrEmpty(FilesLabel);
     public bool SteamDetected { get => _detected; private set { if (SetProperty(ref _detected, value)) OnPropertyChanged(nameof(ConnectionLabel)); CommandsChanged(); } }
     public string ConnectionLabel => SteamDetected ? "Steam detected" : "Steam not detected";
     public bool BackendInstalled { get => _backend; private set { if (SetProperty(ref _backend, value)) { OnPropertyChanged(nameof(BackendLabel)); CommandsChanged(); } } }
