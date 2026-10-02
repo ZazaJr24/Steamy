@@ -47,29 +47,19 @@
       <Button Style="{StaticResource CoverCardButton}" ToolTip="{Binding Game.Name}" CommandParameter="{Binding}"
               Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}"
               AutomationProperties.Name="{Binding Game.Name}">
-        <Border CornerRadius="16" Background="{DynamicResource GameDialogSurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1">
-          <Grid>
-            <Border CornerRadius="16" RenderOptions.BitmapScalingMode="HighQuality">
-              <Border.Background><ImageBrush ImageSource="{Binding Game.ArtworkImage}" Stretch="UniformToFill" /></Border.Background>
+        <Grid>
+          <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="52" /></Grid.RowDefinitions>
+          <Border CornerRadius="12" RenderOptions.BitmapScalingMode="HighQuality">
+            <Border.Background><ImageBrush ImageSource="{Binding Game.HeaderImage}" Stretch="UniformToFill" /></Border.Background>
+            <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" CornerRadius="6" Padding="8,5" Margin="10" Background="#E51B2534" ToolTip="{Binding CountdownDetail}">
+              <TextBlock Text="{Binding ReleaseBadge}" Foreground="#FFDCE2F4" FontWeight="SemiBold" FontSize="10" />
             </Border>
-            <Border CornerRadius="16" IsHitTestVisible="False"><Border.Background>
-              <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#000B0E17" Offset="0.35" /><GradientStop Color="#550B0E17" Offset="0.62" />
-                <GradientStop Color="#F50B0E17" Offset="0.9" /><GradientStop Color="#FF0B0E17" Offset="1" />
-              </LinearGradientBrush>
-            </Border.Background></Border>
-            <Border HorizontalAlignment="Right" VerticalAlignment="Top" CornerRadius="7" Padding="8,5" Margin="12" Background="#FFDAE1FF">
-              <TextBlock Text="{Binding ReleaseStatus}" Foreground="#FF242F55" FontWeight="Bold" FontSize="8" />
-            </Border>
-            <StackPanel VerticalAlignment="Bottom" Margin="10,0,10,10">
-              <TextBlock Text="{Binding Game.Name}" FontSize="14" FontWeight="SemiBold" Foreground="#FFF5F6FD" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="44" />
-              <TextBlock Text="{Binding Publisher}" Foreground="#FFAFB5C9" FontSize="10" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
-              <Border Height="1" Background="#354F5C7C" Margin="0,7,0,6" />
-              <TextBlock Text="{Binding ReleaseLabel}" Foreground="#FFDCE2F4" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-              <TextBlock Text="{Binding Genres}" Foreground="#FF9DA7BE" FontSize="10" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-          </Grid>
-        </Border>
+          </Border>
+          <StackPanel Grid.Row="1" Margin="2,9,2,0">
+            <TextBlock Text="{Binding Game.Name}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding ReleaseLabel}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="10.5" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Grid>
       </Button>
     </DataTemplate>
   </Page.Resources>
@@ -192,10 +182,9 @@
       </Border>
 
       <StackPanel Margin="0,0,0,24" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
-        <TextBlock Text="On the horizon" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
-        <TextBlock Text="Upcoming games · click a cover for details" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,16" />
+        <TextBlock Text="Upcoming releases" Style="{StaticResource SectionTitle}" Margin="0,0,0,14" />
         <ItemsControl x:Name="UpcomingGameGrid" ItemsSource="{Binding NewGames}" ItemTemplate="{StaticResource DiscoveryCoverTemplate}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="210" MaxItemWidth="280" MaxColumns="3" Spacing="20" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="210" MaxItemWidth="400" MaxColumns="3" Spacing="22" CoverRatio="0.5" FooterHeight="52" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         </ItemsControl>
       </StackPanel>
 

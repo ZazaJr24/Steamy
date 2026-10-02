@@ -32,6 +32,8 @@ public sealed record DashboardSearchMatch(SteamCatalogItem Item, Game Game)
 
 public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObject
 {
+    private readonly SpotlightGame _dateOnly = metadata with { ReleaseTime = null };
+    public string ReleaseBadge => ReleaseCountdown.Label(_dateOnly, DateTimeOffset.Now);
     private ImageSource? _heroArtwork;
     private bool _isSelected;
     public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
@@ -57,7 +59,7 @@ public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObjec
     public void RefreshCountdown()
     {
         _countdownParts = ReleaseCountdown.Parts(Metadata, DateTimeOffset.Now);
-        foreach (var name in new[] { nameof(Countdown), nameof(HasTimedCountdown), nameof(CountdownDays),
+        foreach (var name in new[] { nameof(Countdown), nameof(ReleaseBadge), nameof(HasTimedCountdown), nameof(CountdownDays),
             nameof(CountdownHours), nameof(CountdownMinutes), nameof(CountdownSeconds) }) OnPropertyChanged(name);
     }
     public string Publisher => Metadata.Publisher;
