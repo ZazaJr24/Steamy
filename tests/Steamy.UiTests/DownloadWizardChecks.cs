@@ -438,7 +438,7 @@ public sealed partial class PageSmokeTests
         var backdrop = (Image)page.FindName("BackdropImage");
         Assert.Equal(Steamy.Controls.MotionPreferences.BackdropBlurEnabled ? Visibility.Visible : Visibility.Collapsed, backdrop.Visibility);
         var dialog = (FrameworkElement)page.FindName("DialogPanel");
-        Assert.Equal(680, dialog.Width);
+        Assert.Equal(580, dialog.Width);
         Assert.True(dialog.ActualWidth < page.ActualWidth);
         Assert.True(dialog.ActualHeight <= page.ActualHeight - 30);
         foreach (var (name, stage) in new[] { ("SourceStepPanel", 0), ("DepotStepPanel", 1), ("LocationStepPanel", 2) })
