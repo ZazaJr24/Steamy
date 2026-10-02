@@ -23,6 +23,8 @@ public sealed partial class PageSmokeTests
         window.Show();
         try
         {
+            window.UpdateLayout();
+            PumpDispatcher(TimeSpan.FromMilliseconds(100));
             // Exercise a real animation clock even when CI disables Windows motion.
             // Invoking the tween directly leaves the user's OS preference untouched.
             var stateProperty = (DependencyProperty)typeof(SmoothScroll)
@@ -30,14 +32,15 @@ public sealed partial class PageSmokeTests
             var state = viewer.GetValue(stateProperty);
             var animate = state.GetType().GetMethod("AnimateTo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
             viewer.ScrollToVerticalOffset(300);
-            PumpDispatcher(TimeSpan.FromMilliseconds(40));
+            window.UpdateLayout();
+            PumpUntil(() => Math.Abs(viewer.VerticalOffset - 300) < 1);
             animate.Invoke(state, new object[] { 354d });
-            PumpDispatcher(TimeSpan.FromMilliseconds(320));
+            PumpUntil(() => Math.Abs(viewer.VerticalOffset - 354) < 1);
             Assert.InRange(viewer.VerticalOffset, 353, 355);
             PumpDispatcher(TimeSpan.FromMilliseconds(240));
             Assert.InRange(viewer.VerticalOffset, 353, 355);
             animate.Invoke(state, new object[] { 408d });
-            PumpDispatcher(TimeSpan.FromMilliseconds(320));
+            PumpUntil(() => Math.Abs(viewer.VerticalOffset - 408) < 1);
             Assert.InRange(viewer.VerticalOffset, 407, 409);
             var reduceEffects = MotionPreferences.ReduceEffects;
             try
