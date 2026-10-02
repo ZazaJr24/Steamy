@@ -5,7 +5,7 @@
       xmlns:controls="clr-namespace:Steamy.Controls"
       ScrollViewer.CanContentScroll="False"
       UseLayoutRounding="True" SnapsToDevicePixels="True"
-      Background="{DynamicResource WorkspaceBackgroundBrush}">
+      Background="{DynamicResource AppBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
     <Style x:Key="CoverCardButton" TargetType="Button">
