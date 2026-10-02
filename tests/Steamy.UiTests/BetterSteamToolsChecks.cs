@@ -26,6 +26,7 @@ public sealed partial class PageSmokeTests
         Assert.True(drop.ActualHeight >= 320);
         Assert.True(footerBounds.Bottom <= page.ActualHeight, "Operation feedback must stay visible.");
         gameOptions.IsExpanded = true; setupOptions.IsExpanded = true;
+        PumpDispatcher(TimeSpan.FromMilliseconds(40));
         page.UpdateLayout();
         foreach (var name in new[] { "GameInputBox", "SourcePicker", "AddGameButton", "BrowseMetadataButton", "SteamFolderBox", "InstallBackendButton" })
         {
