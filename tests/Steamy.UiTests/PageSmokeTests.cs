@@ -322,6 +322,18 @@ public sealed partial class PageSmokeTests
             PumpDispatcher(TimeSpan.FromMilliseconds(500));
             window.UpdateLayout();
             SaveVisual(window, filename);
+            if (route == typeof(DownloadsPage))
+                Assert.DoesNotContain(Descendants<TextBlock>(window), text => text.Text == "NETWORK ACTIVITY");
+            if (route == typeof(SettingsPage))
+            {
+                var settingsPage = Descendants<SettingsPage>(window).Single();
+                ((Wpf.Ui.Controls.TextBox)settingsPage.FindName("SettingsSearch")).Text = "transfer";
+                PumpDispatcher(TimeSpan.FromMilliseconds(150));
+                window.UpdateLayout();
+                Assert.Contains(Descendants<TextBlock>(settingsPage), text => text.IsVisible && text.Text == "TRANSFER CONTROLS");
+                SaveVisual(window, "settings-transfers.png");
+                ((Wpf.Ui.Controls.TextBox)settingsPage.FindName("SettingsSearch")).Text = "";
+            }
         }
         Assert.True(window.RootNavigationView.Navigate(typeof(CreamApiPage)));
         PumpDispatcher(TimeSpan.FromMilliseconds(150));
@@ -359,7 +371,26 @@ public sealed partial class PageSmokeTests
         System.Windows.Input.Mouse.Synchronize();
         PumpUntil(() => !hoveredCard.IsMouseOver);
         PumpDispatcher(TimeSpan.FromMilliseconds(200));
+        var galleryPanel = Descendants<Steamy.Controls.AdaptiveGridPanel>(page).First(panel => panel.IsVisible && panel.Children.Count >= 5);
+        var firstFive = galleryPanel.Children.Cast<FrameworkElement>().Take(5).ToArray();
+        var positions = firstFive.Select(child => child.TranslatePoint(new Point(0, 0), galleryPanel)).ToArray();
+        Assert.All(positions, point => Assert.Equal(positions[0].Y, point.Y));
+        Assert.True(firstFive[0].ActualWidth < 180, "The native Games window should fit five compact covers per row.");
         SaveVisual(window, "games.png");
+        Assert.True(library.UpcomingGames.Count >= 5);
+        var upcomingId = library.UpcomingPageItems[0].AppId;
+        library.NextUpcomingCommand.Execute(null);
+        Assert.NotEqual(upcomingId, library.UpcomingPageItems[0].AppId);
+        library.NextUpcomingCommand.Execute(null);
+        page.OpenUpcomingDetails(library.UpcomingPageItems[0]);
+        PumpDispatcher(TimeSpan.FromMilliseconds(150));
+        window.UpdateLayout();
+        Assert.True(((ScrollViewer)page.FindName("UpcomingDetailsPanel")).IsVisible);
+        Assert.False(((Grid)page.FindName("DownloadBody")).IsVisible);
+        SaveVisual(window, "games-upcoming-details.png");
+        page.CloseOverlay();
+        PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
+
         _phase = "Hover a gallery card";
         var cardSize = new Size(hoveredCard.ActualWidth, hoveredCard.ActualHeight);
         var cardPosition = hoveredCard.TranslatePoint(new Point(0,0), page);
@@ -464,7 +495,7 @@ public sealed partial class PageSmokeTests
         public Task<SpotlightSnapshot> GetAsync(bool force = false, CancellationToken cancellationToken = default) => Task.FromResult(Cached);
     }
 
-    private sealed class FixtureArtwork : IArtworkService
+    internal sealed class FixtureArtwork : IArtworkService
     {
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<(int, string), BitmapImage> Images = new();
         public System.Collections.Concurrent.ConcurrentDictionary<int, int> HeroRequests { get; } = new();
@@ -812,7 +843,14 @@ public class OfflineServiceProxy : DispatchProxy
             Interlocked.Increment(ref CatalogRequests);
             return Task.FromResult(new SteamCatalogSnapshot(true, ScreenshotCatalog ?? new[] { new SteamCatalogItem { AppId = 10, Name = "An offline library game", AppType = SteamCatalogAppType.Game } }, DateTimeOffset.UtcNow, true, "Offline fixture"));
         }
-        if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.EnsureArtworkAsync)) return Task.CompletedTask;
+        if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.PrepareArtworkAsync)) return Task.CompletedTask;
+        if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.EnsureArtworkAsync))
+        {
+            var item = (SteamCatalogItem)args![0]!;
+            item.ArtworkImage ??= PageSmokeTests.FixtureArtwork.Read(item.AppId, "portrait");
+            item.HeaderImage ??= PageSmokeTests.FixtureArtwork.Read(item.AppId, "header");
+            return Task.FromResult(item.ArtworkImage is not null);
+        }
         if ((method.DeclaringType == typeof(IRyuuCatalogService) || method.DeclaringType == typeof(IHubcapCatalogService)) && method.Name == "GetGamesAsync")
             return Task.FromResult(SteamCatalogSnapshot.Failure("Offline fixture"));
         if (method.DeclaringType == typeof(IManifestSourceService) && method.Name == nameof(IManifestSourceService.CheckAvailabilityAsync)) return Task.FromResult(new ManifestAvailability(true, true, "Available · offline fixture"));

@@ -15,6 +15,7 @@ public interface ISteamCatalogService : IDisposable
     Task<SteamCatalogSnapshot> GetCatalogAsync(bool forceRefresh = false, CancellationToken cancellationToken = default);
     Task<SteamCatalogDetails?> GetDetailsAsync(int appId, CancellationToken cancellationToken = default);
     Task<bool> EnsureDetailsAsync(SteamCatalogItem item, CancellationToken cancellationToken = default);
+    Task PrepareArtworkAsync(IReadOnlyList<SteamCatalogItem> items, CancellationToken cancellationToken = default) => Task.CompletedTask;
     Task<bool> EnsureArtworkAsync(SteamCatalogItem item, bool includeHeader = false, CancellationToken cancellationToken = default);
     Task<bool> EnsureScreenshotsAsync(SteamCatalogItem item, CancellationToken cancellationToken = default);
 }
@@ -445,6 +446,70 @@ public sealed class SteamCatalogService : ISteamCatalogService
         }
     }
 
+    private sealed record ArtworkAssets(string Portrait, string Header, DateTimeOffset FetchedAt);
+    private readonly SemaphoreSlim _assetLookupGate = new(1, 1);
+    private Dictionary<int, ArtworkAssets>? _artworkAssets;
+    public async Task PrepareArtworkAsync(IReadOnlyList<SteamCatalogItem> items, CancellationToken cancellationToken = default)
+    {
+        await _assetLookupGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var path = Path.Combine(_cacheDirectory, "artwork-assets.json");
+            _artworkAssets ??= await ReadJsonAsync<Dictionary<int, ArtworkAssets>>(path, cancellationToken).ConfigureAwait(false) ?? new();
+            var missing = items.Where(item => item.ArtworkImage is null && (item.PortraitImageUrl.Contains("library_600x900", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(item.PortraitImageUrl))
+                && (!_artworkAssets.TryGetValue(item.AppId, out var saved) || DateTimeOffset.UtcNow - saved.FetchedAt > DetailsLifetime)).Select(item => item.AppId).Distinct().Take(100).ToArray();
+            if (missing.Length > 0)
+            {
+                try
+                {
+                    var query = JsonSerializer.Serialize(new { ids = missing.Select(id => new { appid = id }),
+                        context = new { language = "english", country_code = "US", steam_realm = 1 },
+                        data_request = new { include_assets = true } });
+                    using var response = await _httpClient.GetAsync("https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json="
+                        + Uri.EscapeDataString(query), cancellationToken).ConfigureAwait(false);
+                    response.EnsureSuccessStatusCode();
+                    var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+                    if (bytes.Length > 2_000_000) throw new InvalidDataException("Artwork metadata is too large.");
+                    using var document = JsonDocument.Parse(bytes);
+                    if (document.RootElement.TryGetProperty("response", out var root) && root.TryGetProperty("store_items", out var rows))
+                    foreach (var row in rows.EnumerateArray())
+                    {
+                        if (!row.TryGetProperty("appid", out var idValue) || !idValue.TryGetInt32(out var id) || !missing.Contains(id)
+                            || !row.TryGetProperty("assets", out var assets)) continue;
+                        var template = assets.TryGetProperty("asset_url_format", out var format) ? format.GetString() : null;
+                        if (template is null || !template.StartsWith($"steam/apps/{id}/", StringComparison.Ordinal)
+                            || !template.Contains("${FILENAME}", StringComparison.Ordinal)) continue;
+                        string Resolve(params string[] keys)
+                        {
+                            foreach (var key in keys)
+                            {
+                                if (!assets.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.String
+                                    || string.IsNullOrWhiteSpace(value.GetString())) continue;
+                                var url = "https://shared.akamai.steamstatic.com/store_item_assets/" + template.Replace("${FILENAME}", value.GetString());
+                                if (SpotlightCatalogService.IsArtworkUrl(url)) return url;
+                            }
+                            return "";
+                        }
+                        var portrait = Resolve("library_capsule_2x", "library_capsule");
+                        var header = Resolve("header_2x", "header");
+                        if (portrait.Length > 0) _artworkAssets[id] = new(portrait, header, DateTimeOffset.UtcNow);
+                    }
+                    await WriteJsonAsync(path, _artworkAssets, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (IsNetworkException(exception) || exception is InvalidDataException or IOException or UnauthorizedAccessException)
+                { /* Previously saved art and the normal fallback remain usable. */ }
+            }
+            foreach (var item in items)
+                if (_artworkAssets.TryGetValue(item.AppId, out var saved)
+                    && SpotlightCatalogService.IsArtworkUrl(saved.Portrait))
+                {
+                    item.PortraitImageUrl = saved.Portrait;
+                    if (SpotlightCatalogService.IsArtworkUrl(saved.Header)) item.HeaderImageUrl = saved.Header;
+                }
+        }
+        finally { _assetLookupGate.Release(); }
+    }
+
     public async Task<bool> EnsureArtworkAsync(SteamCatalogItem item, bool includeHeader = false, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -728,9 +793,13 @@ public sealed class SteamCatalogService : ISteamCatalogService
         if (!string.IsNullOrWhiteSpace(plain)) lines.Add($"{label}: {plain}");
     }
 
-    private static SteamCatalogItem[] CreateItems(IEnumerable<CatalogEntry> entries) => entries.Select(entry => new SteamCatalogItem
+    private static SteamCatalogItem[] CreateItems(IEnumerable<CatalogEntry> entries)
+    {
+        var discovered = SpotlightCatalogService.LoadBundled().Games.ToDictionary(game => game.AppId);
+        var items = entries.Select(entry => new SteamCatalogItem
     {
         AppId = entry.AppId,
+        IsUpcoming = discovered.TryGetValue(entry.AppId, out var metadata) && metadata.ComingSoon,
         Name = entry.Name,
         AppType = SteamCatalogAppType.Unknown,
         HeaderImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/header.jpg",
@@ -738,6 +807,19 @@ public sealed class SteamCatalogService : ISteamCatalogService
         PortraitImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/library_600x900_2x.jpg",
         LibraryImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/library_600x900_2x.jpg"
     }).ToArray();
+        foreach (var item in items)
+            if (discovered.TryGetValue(item.AppId, out var game))
+            {
+                item.AppType = SteamCatalogAppType.Game;
+                item.PortraitImageUrl = game.PortraitUrl;
+                item.HeaderImageUrl = game.HeaderUrl;
+                item.ShortDescription = game.Description;
+                item.PublishersDisplay = game.Publisher;
+                item.GenresDisplay = game.Genres;
+                item.ReleaseDate = game.ReleaseLabel;
+            }
+        return items;
+    }
 
     private static async Task<T?> ReadJsonAsync<T>(string path, CancellationToken cancellationToken)
     {

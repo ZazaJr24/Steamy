@@ -158,15 +158,6 @@ public partial class DashboardPage : Page
         _slideElapsed = TimeSpan.Zero;
         _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
         HideSpotlightLoader();
-        var model = (DashboardViewModel)DataContext;
-        var index = model.SpotlightPreviews.ToList().FindIndex(item => item.IsSelected);
-        if (index >= 0)
-        {
-            var top = index * 48d;
-            if (top < SpotlightPreviewScroll.VerticalOffset) SpotlightPreviewScroll.ScrollToVerticalOffset(top);
-            else if (top + 48 > SpotlightPreviewScroll.VerticalOffset + SpotlightPreviewScroll.ViewportHeight)
-                SpotlightPreviewScroll.ScrollToVerticalOffset(top + 48 - SpotlightPreviewScroll.ViewportHeight);
-        }
         ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, null);
         ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, null);
         if (!Controls.MotionPreferences.AnimationsEnabled) return;
@@ -201,13 +192,10 @@ public partial class DashboardPage : Page
         DashboardHero.Height = compact ? 340 : width < 1100 ? 360 : 380;
         SpotlightArtworkFrame.Height = DashboardHero.Height;
         SpotlightTitle.FontSize = compact ? 24 : width < 1100 ? 28 : 30;
-        SpotlightPreviews.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        SpotlightPreviewScroll.Visibility = SpotlightPreviews.Visibility;
-        SpotlightPreviewScroll.MaxHeight = DashboardHero.Height - 100;
         SpotlightPaging.SetValue(Grid.RowProperty, 1);
         SpotlightPaging.SetValue(Grid.ColumnProperty, 1);
         SpotlightPaging.Margin = new Thickness(12,0,0,0);
-        SpotlightDetails.MaxWidth = compact ? Math.Max(220, Math.Min(460, width - 100)) : Math.Max(220, Math.Min(500, width - 245));
+        SpotlightDetails.MaxWidth = compact ? Math.Max(220, Math.Min(460, width - 100)) : Math.Max(220, Math.Min(500, width - 100));
         SpotlightDescription.MaxWidth = Math.Min(360, SpotlightDetails.MaxWidth * 0.8);
     }
 
@@ -284,9 +272,6 @@ public partial class DownloadsPage : Page
         Unloaded += (_, _) => viewModel.StopLiveStats();
         SizeChanged += (_, e) =>
         {
-            var showNetwork = e.NewSize.Width >= 740 && e.NewSize.Height >= 560;
-            NetworkColumn.Width = new GridLength(showNetwork ? 226 : 0);
-            NetworkCard.Visibility = showNetwork ? Visibility.Visible : Visibility.Collapsed;
             FeaturedPanel.Height = e.NewSize.Height < 620 ? 190 : 236;
         };
     }

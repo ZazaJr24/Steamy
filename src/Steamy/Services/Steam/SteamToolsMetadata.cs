@@ -1,3 +1,5 @@
+using SharpCompress.Archives;
+using SharpCompress.Common;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -58,7 +60,7 @@ public static class SteamToolsMetadata
 
     public static async Task<SteamToolsMetadataPlan> ReadAsync(IReadOnlyList<string> paths, int? appId = null, CancellationToken token = default)
     {
-        if (paths.Count is 0 or > DownloadPreparationReader.MaximumEntries) throw new InvalidDataException("Select ZIP, Lua or manifest files.");
+        if (paths.Count is 0 or > DownloadPreparationReader.MaximumEntries) throw new InvalidDataException("Select ZIP, 7z, RAR, Lua or manifest files.");
         var files = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
         var ids = new HashSet<int>();
         long bytes = 0;
@@ -97,6 +99,24 @@ public static class SteamToolsMetadata
                 Lua(Path.GetFileName(path), await File.ReadAllBytesAsync(path, token), appId);
             }
             else if (extension == ".manifest") Depot(Path.GetFileName(path), await File.ReadAllBytesAsync(path, token));
+            else if (extension is ".7z" or ".rar")
+            {
+                // Decode in one pass, including solid archives. Reuse the ZIP metadata reader so
+                // selection, validation and the final atomic Steam write behave identically.
+                var temporary = Path.Combine(Path.GetTempPath(), "Steamy-metadata-" + Guid.NewGuid().ToString("N") + ".zip");
+                try
+                {
+                    await Task.Run(() => NormalizeArchive(path, temporary, token), token);
+                    var imported = await ReadAsync([temporary], appId, token);
+                    foreach (var file in imported.Files) Put(file.Key, file.Value);
+                    ids.UnionWith(imported.AppIds);
+                }
+                catch (SharpCompress.Common.CryptographicException exception)
+                { throw new InvalidDataException("Encrypted metadata archives are not supported. Extract them first.", exception); }
+                catch (SharpCompressException exception)
+                { throw new InvalidDataException("The metadata archive is unsupported or damaged.", exception); }
+                finally { if (File.Exists(temporary)) File.Delete(temporary); }
+            }
             else if (extension == ".zip")
             {
                 using var zip = ZipFile.OpenRead(path);
@@ -147,10 +167,67 @@ public static class SteamToolsMetadata
                     }
                 }
             }
-            else throw new InvalidDataException("Select ZIP, Lua or manifest files.");
+            else throw new InvalidDataException("Select ZIP, 7z, RAR, Lua or manifest files.");
         }
         if (files.Count == 0) throw new InvalidDataException("No usable Lua or manifest files were found.");
         return new(files, ids.Order().ToArray(), files.Keys.Count(name => name.StartsWith("depotcache/", StringComparison.Ordinal)));
+    }
+
+    private static void NormalizeArchive(string path, string target, CancellationToken token)
+    {
+        using var archive = ArchiveFactory.OpenArchive(path);
+        var entries = archive.Entries.ToArray();
+        if (entries.Length > DownloadPreparationReader.MaximumEntries)
+            throw new InvalidDataException("The archive has too many entries.");
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        long total = 0;
+        foreach (var entry in entries)
+        {
+            token.ThrowIfCancellationRequested();
+            var name = entry.Key ?? "";
+            if (name.Length > 1024 || name.Contains('\\') || !names.Add(name)
+                || name.TrimEnd('/').Split('/').Any(part => !LocalManifestPackage.SafeSegment(part))
+                || !string.IsNullOrEmpty(entry.LinkTarget))
+                throw new InvalidDataException("The archive contains an unsafe, duplicate or linked path.");
+            if (entry.IsEncrypted) throw new InvalidDataException("Encrypted metadata archives are not supported. Extract them first.");
+            if (entry.Size < 0 || entry.Size > LocalManifestPackage.MaximumBytes - total)
+                throw new InvalidDataException("The expanded archive is too large.");
+            total += entry.Size;
+        }
+        using var output = ZipFile.Open(target, ZipArchiveMode.Create);
+        long expanded = 0;
+        void CopyEntry(IEntry entry, Func<Stream> open)
+        {
+            token.ThrowIfCancellationRequested();
+            if (entry.IsDirectory) return;
+            var key = entry.Key ?? throw new InvalidDataException("Missing archive path.");
+            var extension = Path.GetExtension(key).ToLowerInvariant();
+            var metadata = extension is ".lua" or ".manifest" || Path.GetFileName(key).Equals("steamy.json", StringComparison.OrdinalIgnoreCase);
+            var limit = extension is ".lua" or ".json" ? DownloadPreparationReader.MaximumLuaCharacters : LocalManifestPackage.MaximumBytes;
+            if (entry.Size > limit) throw new InvalidDataException("Archive entry exceeds the metadata size limit.");
+            using var input = open();
+            using var destination = metadata ? output.CreateEntry(key, CompressionLevel.NoCompression).Open() : Stream.Null;
+            var buffer = new byte[81920];
+            long copied = 0;
+            int count;
+            while ((count = input.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                token.ThrowIfCancellationRequested();
+                copied += count;
+                expanded += count;
+                if (copied > limit || expanded > LocalManifestPackage.MaximumBytes)
+                    throw new InvalidDataException("Expanded metadata exceeds its size limit.");
+                destination.Write(buffer, 0, count);
+            }
+            if (copied != entry.Size) throw new InvalidDataException("The archive is truncated.");
+        }
+        if (archive.IsSolid || archive.Type == ArchiveType.SevenZip)
+        {
+            using var reader = archive.ExtractAllEntries();
+            while (reader.MoveToNextEntry()) CopyEntry(reader.Entry, () => reader.OpenEntryStream());
+        }
+        else
+            foreach (var entry in entries) CopyEntry(entry, () => entry.OpenEntryStream());
     }
 
     public static void ValidateArchive(ZipArchive zip)

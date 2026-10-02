@@ -52,7 +52,7 @@
       <StackPanel MaxWidth="820" HorizontalAlignment="Stretch">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <TextBlock Text="SteamTools" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock Text="BetterSteamTools" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
           <TextBlock Grid.Column="1" Text="{Binding ConnectionLabel}" Style="{StaticResource ToolHint}" FontSize="11" VerticalAlignment="Center" />
         </Grid>
         <Border x:Name="BackendSetupNotice" Margin="0,18,0,0" Padding="16" CornerRadius="12" Background="{DynamicResource SurfaceBrush}"
@@ -67,7 +67,7 @@
         <Border x:Name="MetadataDropZone" Margin="0,28,0,20" CornerRadius="18" Padding="28" MinHeight="320"
                 AllowDrop="True" DragOver="Metadata_DragOver" DragLeave="Metadata_DragLeave" Drop="Metadata_Drop" IsEnabled="{Binding IsIdle}"
                 ToolTip="Drop to install. Leave App ID empty to detect games; manifest-only files are cached."
-                AutomationProperties.Name="Drop ZIP Lua or manifest files to install">
+                AutomationProperties.Name="Drop ZIP, 7z or RAR metadata archives">
           <Border.Style><Style TargetType="Border">
             <Setter Property="Background" Value="{StaticResource DropSurface}" />
             <Setter Property="BorderBrush" Value="{StaticResource DropOutline}" /><Setter Property="BorderThickness" Value="1" />
@@ -78,7 +78,7 @@
           <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
             <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="32" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,20" />
             <TextBlock Text="Drag &amp; drop" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" />
-            <TextBlock Text="ZIP, Lua or manifest" Style="{StaticResource ToolHint}" TextAlignment="Center" Margin="0,8,0,18" />
+            <TextBlock Text="ZIP · 7z · RAR  —  Lua + manifests inside" Style="{StaticResource ToolHint}" TextAlignment="Center" Margin="0,8,0,18" />
             <ui:Button x:Name="BrowseMetadataButton" Content="Browse files" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding BrowseFilesCommand}" Appearance="Transparent" HorizontalAlignment="Center" Padding="14,8" MinWidth="120" />
           </StackPanel>
         </Border>

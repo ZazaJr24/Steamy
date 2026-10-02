@@ -61,10 +61,10 @@
             <Border HorizontalAlignment="Right" VerticalAlignment="Top" CornerRadius="7" Padding="8,5" Margin="12" Background="#FFDAE1FF">
               <TextBlock Text="{Binding ReleaseStatus}" Foreground="#FF242F55" FontWeight="Bold" FontSize="8" />
             </Border>
-            <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,14">
-              <TextBlock Text="{Binding Game.Name}" FontSize="14" FontWeight="SemiBold" Foreground="#FFF5F6FD" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="38" />
+            <StackPanel VerticalAlignment="Bottom" Margin="10,0,10,10">
+              <TextBlock Text="{Binding Game.Name}" FontSize="12" FontWeight="SemiBold" Foreground="#FFF5F6FD" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="38" />
               <TextBlock Text="{Binding Publisher}" Foreground="#FFAFB5C9" FontSize="10" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
-              <Border Height="1" Background="#354F5C7C" Margin="0,12,0,9" />
+              <Border Height="1" Background="#354F5C7C" Margin="0,7,0,6" />
               <TextBlock Text="{Binding ReleaseLabel}" Foreground="#FFDCE2F4" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
               <TextBlock Text="{Binding Genres}" Foreground="#FF9DA7BE" FontSize="10" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
             </StackPanel>
@@ -144,26 +144,6 @@
               <TextBlock Text="UPCOMING" FontSize="9" FontWeight="SemiBold" Foreground="#DEDEE4" />
             </StackPanel>
           </Border>
-          <ScrollViewer x:Name="SpotlightPreviewScroll" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,40,20,0"
-                        Width="104" MaxHeight="260" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" CanContentScroll="False">
-            <ItemsControl x:Name="SpotlightPreviews" ItemsSource="{Binding DataContext.SpotlightPreviews, RelativeSource={RelativeSource AncestorType=Page}}">
-              <ItemsControl.ItemTemplate><DataTemplate>
-                <Button Style="{StaticResource CoverCardButton}" Height="42" Margin="0,0,0,6" ToolTip="{Binding Game.Name}"
-                        Command="{Binding DataContext.SelectFeaturedCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}">
-                  <Grid>
-                    <Border CornerRadius="6" BorderThickness="0" Background="#8008080A">
-                      <Border.Style><Style TargetType="Border"><Setter Property="Opacity" Value="0.55" />
-                        <Style.Triggers><DataTrigger Binding="{Binding IsSelected}" Value="True"><Setter Property="Opacity" Value="1" /></DataTrigger></Style.Triggers>
-                      </Style></Border.Style>
-                      <Border CornerRadius="6"><Border.Background><ImageBrush ImageSource="{Binding Game.HeaderImage}" Stretch="UniformToFill" /></Border.Background></Border>
-                    </Border>
-                    <Ellipse Width="4" Height="4" Fill="White" Margin="7" HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                             Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}" />
-                  </Grid>
-                </Button>
-              </DataTemplate></ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
           <Border x:Name="SpotlightLoader" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="24" Padding="10"
                   Background="#40000000" Visibility="Collapsed" IsHitTestVisible="False" AutomationProperties.Name="Next spotlight">
             <Path Width="24" Height="24" Stroke="#DDFFFFFF" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -181,13 +161,13 @@
                          MaxWidth="360" HorizontalAlignment="Left" Height="34" LineHeight="17" LineStackingStrategy="BlockLineHeight" Margin="0,8,0,0" />
             </StackPanel>
             <StackPanel x:Name="SpotlightActions" Grid.Row="1" Orientation="Horizontal" Margin="0,12,0,0" HorizontalAlignment="Left">
-              <Border x:Name="SpotlightCountdown" CornerRadius="10" Padding="0" BorderThickness="0" Background="Transparent"
+              <Border x:Name="SpotlightCountdown" CornerRadius="9" Padding="6,0" BorderThickness="1" BorderBrush="#24FFFFFF" Background="#550A0B10"
                       ToolTip="{Binding CountdownDetail}" MinWidth="100">
                 <StackPanel>
                   <StackPanel Orientation="Horizontal" Visibility="{Binding HasTimedCountdown, Converter={StaticResource BoolToVis}}">
-                    <controls:CountdownDigit Value="{Binding CountdownDays}" Label="DAYS" Margin="0,0,8,0" />
-                    <controls:CountdownDigit Value="{Binding CountdownHours}" Label="HOURS" Margin="0,0,8,0" />
-                    <controls:CountdownDigit Value="{Binding CountdownMinutes}" Label="MIN" Margin="0,0,8,0" />
+                    <controls:CountdownDigit Value="{Binding CountdownDays}" Label="DAYS" />
+                    <controls:CountdownDigit Value="{Binding CountdownHours}" Label="HRS" />
+                    <controls:CountdownDigit Value="{Binding CountdownMinutes}" Label="MIN" />
                     <controls:CountdownDigit Value="{Binding CountdownSeconds}" Label="SEC" />
                   </StackPanel>
                   <TextBlock Text="{Binding Countdown}" FontSize="21" Foreground="#EEEEF2" Padding="12,8">
@@ -211,18 +191,11 @@
         </Grid>
       </Border>
 
-      <StackPanel Margin="0,0,0,32" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
-        <TextBlock Text="On the horizon" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
-        <TextBlock Text="Upcoming games · click a cover for details" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,16" />
-        <ItemsControl x:Name="UpcomingGameGrid" ItemsSource="{Binding NewGames}" ItemTemplate="{StaticResource DiscoveryCoverTemplate}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="190" MaxColumns="5" Spacing="20" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-        </ItemsControl>
-      </StackPanel>
       <StackPanel Margin="0,0,0,24" Visibility="{Binding HasMajorGames, Converter={StaticResource BoolToVis}}">
         <TextBlock Text="Big worlds. Great games." Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
         <TextBlock Text="Major releases on Steam" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,16" />
         <ItemsControl x:Name="MajorGameGrid" ItemsSource="{Binding MajorGames}" ItemTemplate="{StaticResource DiscoveryCoverTemplate}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="190" MaxColumns="5" Spacing="20" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="124" MaxColumns="5" Spacing="12" CoverRatio="1.5" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         </ItemsControl>
       </StackPanel>
 
@@ -252,9 +225,9 @@
               <TextBlock Text="{Binding Genres}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,7,0,0" TextWrapping="Wrap" />
               <TextBlock Text="{Binding ReleaseLabel}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13" Margin="0,18,0,12" />
               <StackPanel Orientation="Horizontal" Visibility="{Binding HasTimedCountdown, Converter={StaticResource BoolToVis}}" ToolTip="{Binding CountdownDetail}" Margin="0,0,0,18">
-                <controls:CountdownDigit Value="{Binding CountdownDays}" Label="DAYS" Margin="0,0,8,0" />
-                <controls:CountdownDigit Value="{Binding CountdownHours}" Label="HOURS" Margin="0,0,8,0" />
-                <controls:CountdownDigit Value="{Binding CountdownMinutes}" Label="MIN" Margin="0,0,8,0" />
+                <controls:CountdownDigit Value="{Binding CountdownDays}" Label="DAYS" />
+                <controls:CountdownDigit Value="{Binding CountdownHours}" Label="HRS" />
+                <controls:CountdownDigit Value="{Binding CountdownMinutes}" Label="MIN" />
                 <controls:CountdownDigit Value="{Binding CountdownSeconds}" Label="SEC" />
               </StackPanel>
               <TextBlock Text="Release dates are from Steam. They do not confirm metadata or download availability." FontSize="10.5" TextWrapping="Wrap" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,18" />

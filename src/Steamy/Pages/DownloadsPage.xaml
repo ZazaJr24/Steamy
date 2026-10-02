@@ -185,7 +185,7 @@
     <Grid Grid.Row="1" x:Name="FeaturedPanel" Height="236" Margin="0,0,0,18" controls:EntranceMotion.Delay="20">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" />
-        <ColumnDefinition x:Name="NetworkColumn" Width="226" />
+
       </Grid.ColumnDefinitions>
       <Grid>
         <Border DataContext="{Binding HeroJob}" CornerRadius="20" Background="{DynamicResource SurfaceElevatedBrush}"
@@ -253,29 +253,6 @@
         </Border>
       </Grid>
 
-      <Border x:Name="NetworkCard" Grid.Column="1" Style="{StaticResource CardStyle}" Margin="16,0,0,0" Padding="16,14">
-        <StackPanel>
-          <TextBlock Text="NETWORK ACTIVITY" Style="{StaticResource OverlineStyle}" />
-          <TextBlock Text="{Binding InternetSpeedLabel}" FontSize="23" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,6,0,0" />
-          <TextBlock Text="Entire device · last 30 seconds" Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
-          <Viewbox Stretch="Fill" Height="26" Margin="0,9,0,10">
-            <Canvas Width="200" Height="40" ClipToBounds="True">
-              <Polygon Points="{Binding InternetSparklineArea}" Fill="{DynamicResource AccentSoftBrush}" />
-              <Polyline Points="{Binding InternetSparkline}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.7" StrokeLineJoin="Round" />
-            </Canvas>
-          </Viewbox>
-          <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBlock Text="Steamy downloads" Style="{StaticResource CaptionStyle}" />
-            <TextBlock Grid.Column="1" Text="{Binding JobsSpeedLabel}" Style="{StaticResource CardTitleStyle}" />
-          </Grid>
-          <Grid Margin="0,8,0,0" ToolTip="{Binding OverallEtaHint}">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBlock Text="Remaining" Style="{StaticResource CaptionStyle}" />
-            <TextBlock Grid.Column="1" Text="{Binding OverallEtaLabel}" Style="{StaticResource CardTitleStyle}" />
-          </Grid>
-        </StackPanel>
-      </Border>
     </Grid>
 
     <Grid Grid.Row="2" Margin="0,0,0,12">
@@ -325,17 +302,6 @@
     <StackPanel Grid.Row="4" Margin="0,8,0,0">
       <TextBlock Text="{Binding ResultLabel}" Style="{StaticResource CaptionStyle}" />
       <TextBlock Text="{Binding QueueStatus}" Style="{StaticResource CaptionStyle}" Margin="0,4,0,0" TextWrapping="Wrap" />
-      <Expander Header="Transfer controls" Margin="0,6,0,0">
-        <StackPanel Margin="14,10">
-          <WrapPanel>
-            <StackPanel Width="110" Margin="0,0,14,8"><TextBlock Text="Parallel jobs" Style="{StaticResource CaptionStyle}" Margin="0,0,0,5" /><ui:TextBox Text="{Binding ParallelJobsText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Parallel downloads" /></StackPanel>
-            <StackPanel Width="110" Margin="0,0,14,8"><TextBlock Text="Connections" Style="{StaticResource CaptionStyle}" Margin="0,0,0,5" /><ui:TextBox Text="{Binding ConnectionsText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Download connections" /></StackPanel>
-            <StackPanel Width="140" Margin="0,0,14,8"><TextBlock Text="Mod limit · MiB/s" Style="{StaticResource CaptionStyle}" Margin="0,0,0,5" /><ui:TextBox Text="{Binding RateLimitText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Bundled Mod speed limit in MiB per second per game" ToolTip="Per game with the bundled Mod, applies on next start or resume. 0 = unlimited. Standard and custom unpatched tools do not support this limit." /></StackPanel>
-            <ui:Button Content="Apply" Command="{Binding ApplyTransferSettingsCommand}" Appearance="Primary" VerticalAlignment="Center" Margin="0,10,0,0" />
-          </WrapPanel>
-          <TextBlock Text="{Binding TransferSettingsHint}" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" />
-        </StackPanel>
-      </Expander>
       <Expander Header="Details &amp; recovery" Margin="0,6,0,0" DataContext="{Binding SelectedJob}">
         <Expander.Style><Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
           <Style.Triggers><DataTrigger Binding="{Binding}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>

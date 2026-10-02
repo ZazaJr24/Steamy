@@ -3,6 +3,16 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.12 — 2026-10-02
+
+- Five smaller portrait covers per row in Games, AAA series first, and paged upcoming discoveries with an opaque information dialog.
+- Flat horizontal animated countdown; remove the right-side preview rail. Expand the daily verified Steam discovery feed.
+- Paint the catalog before building a search index; resolve and cache actual Steam artwork paths in one request per visible page.
+- Remove the Downloads Network activity card. Move transfer controls into Settings, including the real Mod speed limit.
+- Simplify DLC selection, compact the source picker and improve sidebar icons.
+- BetterSteamTools accepts ZIP, solid 7z and RAR archives containing Lua and manifests. Validate paths, links and expansion limits before any Steam write; never install executables from metadata packages.
+- Preserve verified automatic backend installation, provider selection, progress and cancellation.
+
 ## 0.4.11 — 2026-10-02
 
 - Discovery now shows full portrait-cover grids for upcoming major-studio games and large released titles. Click a cover or Spotlight Details to read its description, publisher, genres and actual Steam release information, then open Steam or explicitly browse sources.

@@ -29,27 +29,27 @@ The release is portable and includes the Windows runtime. Use Windows 10 or 11 o
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
-Normal releases use three version numbers, such as **0.4.11**. Optional hotfixes use four, such as **0.4.11.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
+Normal releases use three version numbers, such as **0.4.12**. Optional hotfixes use four, such as **0.4.12.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
 
 ## Inside Steamy
 
 | Your next stop | What you'll find |
 | --- | --- |
-| **Dashboard** | Spotlight artwork, animated release countdown tiles, full upcoming and major-release cover grids, and clickable game details. |
+| **Dashboard** | Spotlight artwork, a flat animated countdown and compact major-release covers, and clickable game details. |
 | **Spotlight** | Upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
-| **Games** | Large rounded portrait covers with integrated captions, typo-tolerant title/App ID search, favorites, sorting and source filters. |
+| **Games** | Five compact portrait covers per row, upcoming game infos, typo-tolerant title/App ID search, favorites, sorting and source filters. |
 | **Downloads** | Compact source → depots & version → location steps, right-hand depot selection and available Steam details, plus queue priority, pause, resume and repair. |
 | **Settings** | Searchable categories, dark/light themes, reduced effects, Windows backdrop options, download limits, network options and source connections. |
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
 | **Fixes** | Browse your configured fixes repository. **Hypervisor Fixes is Coming soon** and does not install anything yet. |
 
-Compact, frameless cover grids put the artwork first, with transparent captions over a neutral black background. Galleries appear with a calm fade; cards lift gently on hover while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → General → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
+Games fits five compact portrait covers per row at normal desktop sizes, with fewer columns in narrow windows. Established AAA series appear before the long tail in the default sort. The first catalog view skips the fuzzy-search index, public artwork paths are resolved in one cached Steam request per visible page, and optional providers load after the cached catalog is displayed. “On the horizon” lives in Games, with five upcoming covers at a time and a next-page arrow. Click a coming game for its publisher, description, genres and release information. Galleries appear with a calm fade; cards lift gently on hover while their clickable area stays fixed. Game details open over a frozen, blurred background. **Settings → General → Reduce effects** turns off optional motion, gallery blur and desktop transparency; the app also follows Windows animation preferences.
 
 ### A Spotlight that keeps moving
 
 The feed checks public Steam data daily for upcoming releases from established publishers and studios. DLC, demos, soundtracks, old editions and expired upcoming dates are excluded. A separate curated section keeps large released games, with their original release dates and released status. Confirmed near dates come first; vague dates follow. The app checks for updates every six hours and retains its last valid feed when a request fails.
 
-Official artwork is preloaded. Slides change about every five seconds while the app is active; **Pause / Resume**, manual arrows and artwork previews on wider windows give you control. Up to eight artwork previews appear on the right. A small rotating indicator precedes each slide change when motion is enabled. The Spotlight countdown sits at the bottom left beside **Details**. Click any discovery cover for description, publisher, genres and release information; **View on Steam** opens the official store and **Browse sources** explicitly opens the source picker. Countdown and image updates retain your scroll position. Exact release dates show remaining days and **Today** on the date; month/year or unknown dates show **TBA**. Steam’s published full-date schedules show separate days, hours, minutes and seconds, updated every second. Changed digits slide gently into place when animation is enabled; reduced effects disable that movement. Missing schedules retain honest date-only labels. A date reaching zero never proves that a game has released or is downloadable.
+Official artwork is preloaded. Slides change about every five seconds while the app is active; **Pause / Resume**, manual arrows give you control. A small rotating indicator precedes each slide change when motion is enabled. The Spotlight countdown sits at the bottom left beside **Details**. Click any discovery cover for description, publisher, genres and release information; **View on Steam** opens the official store and **Browse sources** explicitly opens the source picker. Countdown and image updates retain your scroll position. Exact release dates show remaining days and **Today** on the date; month/year or unknown dates show **TBA**. Steam’s published full-date schedules show days, hours, minutes and seconds in a single flat horizontal strip, updated every second. Changed digits slide gently into place when animation is enabled; reduced effects disable that movement. Missing schedules retain honest date-only labels. A date reaching zero never proves that a game has released or is downloadable.
 
 Dashboard search is hidden by default. Enable **Settings → General → Dashboard search** to search Discover. Disabling it clears the hidden query and results. The regular **Games** search is always available.
 
@@ -63,7 +63,7 @@ Open a game, choose **Download**, and follow three steps in the compact dialog:
 
 Pausing retains existing files and the exact selected depot manifests. Resume uses that saved selection without asking a provider for newer versions. Missing or corrupt saved data produces a clear error; **New selection** starts an explicit new setup. Duplicate jobs targeting the same folder are rejected.
 
-Waiting jobs can be reordered or prioritized; **Start queue** respects the selected parallel limit and existing running jobs. Transfer controls are directly on Downloads. The bundled Mod supports a real **MiB/s limit per game**, shared across its parallel HTTP connections and applied at start/resume. Standard or custom unpatched tools do not receive that option.
+Waiting jobs can be reordered or prioritized; **Start queue** respects the selected parallel limit and existing running jobs. Transfer controls are in **Settings → Downloads**, including parallel jobs, connections and the Mod speed limit. The device-wide Network activity card is removed. The bundled Mod supports a real **MiB/s limit per game**, shared across its parallel HTTP connections and applied at start/resume. Standard or custom unpatched tools do not receive that option.
 
 **Verify & repair** asks DepotDownloader to check and repair the files. The separate **local file check** reports what is already on disk. Queue actions show errors in the app, and waiting jobs are checked again before they start.
 
@@ -79,11 +79,11 @@ Preparation creates an independent copy. Moving, editing or deleting the origina
 
 ### Add game metadata to Steam
 
-Open **Tools → BetterSteamTools**. The minimal workspace focuses on one large **Drag & drop** area. Drop ZIP, Lua or manifest files, or use **Browse files**. App ID/source options and Steam setup stay in compact, collapsible sections; status and Cancel remain visible while scrolling.
+Open **Tools → BetterSteamTools**. The minimal workspace focuses on one large **Drag & drop** area. Drop ZIP, 7z, RAR, Lua or manifest files, or use **Browse files**. App ID/source options and Steam setup stay in compact, collapsible sections; status and Cancel remain visible while scrolling.
 
 1. Expand **Steam setup** to choose a Steam folder, install/update the official [BetterSteamTools](https://github.com/madoiscool/BetterSteamTools) backend or start Steam. Setup opens automatically if the backend is missing or damaged. Close Steam before installation. The downloaded archive and installed payload are verified against SHA-256 checksums; three matching filenames alone do not mean installed.
 2. Expand **Add by App ID or Steam link**, enter a game and click **Add to Steam**. **Automatic** tries available Sushi, Zaza and configured API sources; Hubcap, Ryuu and DepotBox use their existing Settings credentials. Availability depends on the selected provider. A prefilled game from Games details reveals these controls automatically.
-3. Dropping files, choosing files or adding an App ID installs a missing backend first, verifies it and then imports the metadata. An installation error or cancellation stops the import. Leave App ID empty to detect games from metadata; an explicit ID selects a game in a multi-game bundle. Standalone manifests are cached without inventing an App ID. The Games detail view also has an **Add to Steam** action: it opens SteamTools and starts the same installation/source/import sequence when Steam is detected.
+3. Dropping files, choosing files or adding an App ID installs a missing backend first, verifies it and then imports the metadata. An installation error or cancellation stops the import. Leave App ID empty to detect games from metadata; an explicit ID selects a game in a multi-game bundle. Standalone manifests are cached without inventing an App ID. The Games source picker also has an **Add game** action: it opens BetterSteamTools and starts the same installation/source/import sequence when Steam is detected.
 
 Lua is validated as `addappid`/`setManifestid` configuration and is never evaluated by Steamy. Lua goes to Steam's `config/stplug-in`; manifests go to its root `depotcache`. The existing backend configuration keeps its other paths/settings and registers the Lua folder for reload. Originals are retained under `config/steamy-backups`; failed writes restore previous files. Adding metadata does not download the game files or prove source availability for every title.
 
@@ -95,7 +95,7 @@ This workflow is inspired by [LuaTools](https://github.com/madoiscool/LuaTools).
 | Tool | Purpose |
 | --- | --- |
 | **DepotDownloader / DepotDownloaderMod** | Depot downloads, saved manifests, queue management and repair. The existing Mod fork is bundled. |
-| **BetterSteamTools** | Detect Steam, install/update the official backend, drop ZIP/Lua/manifest metadata, or add an App ID/store link through automatic Sushi/Zaza/API source detection. |
+| **BetterSteamTools** | Detect Steam, install/update the official backend, drop ZIP/7z/RAR archives containing Lua and manifests, or add an App ID/store link through automatic Sushi/Zaza/API source detection. |
 | **Steamless** | Run Steamless against a selected executable, with its options and output in the app. |
 | **Denuvo Activation** | Configure the activation tool and inspect its output; the information button links to the community help. |
 | **DLC Unlocker** | Configure supported CreamAPI or SmokeAPI integration for a selected game. |
@@ -111,15 +111,17 @@ Additional tools are fetched when needed. Credentials are kept in a Windows DPAP
 
 Screenshots are captured from the actual Windows app using sample library, queue, depot and SteamTools status metadata. The Spotlight uses verified public Steam data. Game artwork belongs to the respective rights holders.
 
-**Discovery** — upcoming major releases and large released games, with details on click.
+**Discovery** — a wide upcoming spotlight and compact major-release covers.
 
-![Upcoming portrait-cover grid](docs/screenshots/discover-games.png)
+![Compact major-release portrait covers](docs/screenshots/discover-games.png)
 
 ![Upcoming game details with the actual Steam release countdown](docs/screenshots/upcoming-details.png)
 
-**Games** — large portrait covers and integrated labels.
+**Games** — five smaller portrait covers per row, with upcoming discoveries on the same page.
 
 ![The Games grid](docs/screenshots/games.png)
+
+![Upcoming game information in Games](docs/screenshots/games-upcoming-details.png)
 
 **Card hover** — a subtle highlight and motion add depth while the card's layout and clickable area stay fixed.
 
@@ -167,6 +169,8 @@ Screenshots are captured from the actual Windows app using sample library, queue
 ![Hypervisor Fixes Coming soon page](docs/screenshots/hypervisor-fixes.png)
 
 </details>
+
+![Transfer settings with parallel jobs, connections and speed limit](docs/screenshots/settings-transfers.png)
 
 ### BetterSteamTools
 

@@ -117,8 +117,30 @@ public partial class LibraryPage : Page
             _ => null
         };
         if (item is null) return;
-        OpenGameDetails(item);
+        if (item.IsUpcoming) OpenUpcomingDetails(item);
+        else OpenGameDetails(item);
     }
+
+    public void OpenUpcomingDetails(SteamCatalogItem item)
+    {
+        OpenGame(item, setup: false);
+        UpcomingDetailsPanel.DataContext = item;
+        UpcomingDetailsPanel.Visibility = Visibility.Visible;
+        DownloadBody.Visibility = Visibility.Collapsed;
+        DownloadFooter.Visibility = Visibility.Collapsed;
+    }
+    private void UpcomingSources_Click(object sender, RoutedEventArgs args)
+    {
+        if (_selectedItem is { } item) OpenDownloadSetup(item);
+    }
+    private void UpcomingStore_Click(object sender, RoutedEventArgs args)
+    {
+        if (_selectedItem is not { } item) return;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo($"https://store.steampowered.com/app/{item.AppId}/") { UseShellExecute = true }); }
+        catch (Exception exception) { LoggingMessageForUpcoming(exception.Message); }
+    }
+    private void LoggingMessageForUpcoming(string message) => OverlayStatus.Text = "Could not open Steam: " + message;
+
 
     public void OpenGameDetails(SteamCatalogItem item) => OpenGame(item, setup: true);
     public void OpenDownloadSetup(SteamCatalogItem item) => OpenGame(item, setup: true);
@@ -214,7 +236,10 @@ public partial class LibraryPage : Page
 
     private void ConfigureOverlayLayout()
     {
-        DialogPanel.Width = 680;
+        UpcomingDetailsPanel.Visibility = Visibility.Collapsed;
+        DownloadBody.Visibility = Visibility.Visible;
+        DownloadFooter.Visibility = Visibility.Visible;
+        DialogPanel.Width = 580;
         DialogPanel.HorizontalAlignment = HorizontalAlignment.Center;
         DialogPanel.VerticalAlignment = VerticalAlignment.Center;
         DialogPanel.Margin = new Thickness(16);

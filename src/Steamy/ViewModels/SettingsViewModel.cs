@@ -340,6 +340,20 @@ public sealed class SettingsViewModel : ViewModelBase
         }
     }
 
+    private string _downloadRateLimitText = string.Empty;
+    private string _downloadRateLimitHint = string.Empty;
+    public string DownloadRateLimitText
+    {
+        get => _downloadRateLimitText;
+        set
+        {
+            if (!SetProperty(ref _downloadRateLimitText, value)) return;
+            ApplyNumber(value, 0, 1024, parsed => Settings.DownloadRateLimitMiB = parsed,
+                hint => DownloadRateLimitHint = hint, "MiB/s");
+        }
+    }
+    public string DownloadRateLimitHint { get => _downloadRateLimitHint; private set => SetProperty(ref _downloadRateLimitHint, value); }
+
     public string DownloadConnectionsText
     {
         get => _connectionsText;
@@ -1066,6 +1080,7 @@ public sealed class SettingsViewModel : ViewModelBase
         RetryCountText = Settings.RetryCount.ToString(CultureInfo.InvariantCulture);
         TimeoutSecondsText = Settings.TimeoutSeconds.ToString(CultureInfo.InvariantCulture);
         DownloadConnectionsText = Settings.DownloadConnections.ToString(CultureInfo.InvariantCulture);
+        DownloadRateLimitText = Settings.DownloadRateLimitMiB.ToString(CultureInfo.InvariantCulture);
 
         DownloadConnectionsHint = $"1–{DepotDownloaderArgumentBuilder.MaxDownloadsLimit} connections per job (current: {Settings.DownloadConnections}).";
         ParallelDownloadsHint = $"1–16 parallel jobs (current: {Settings.ParallelDownloads}).";

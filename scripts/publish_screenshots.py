@@ -7,7 +7,7 @@ import urllib.error
 import urllib.request
 
 FILES = (
-    'dashboard.png', 'discover-games.png', 'upcoming-details.png', 'better-steamtools.png', 'downloads.png', 'settings.png', 'games.png', 'games-hover.png',
+    'settings-transfers.png', 'games-upcoming-details.png', 'dashboard.png', 'discover-games.png', 'upcoming-details.png', 'better-steamtools.png', 'downloads.png', 'settings.png', 'games.png', 'games-hover.png',
     'game-details.png', 'local-package.png', 'download-depots.png',
     'download-location.png', 'hypervisor-fixes.png', 'game-fixes.png', 'dlc-unlocker.png',
 )

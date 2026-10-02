@@ -157,7 +157,7 @@ public sealed class BetterSteamToolsViewModel : ObservableObject
 
     private async Task BrowseFilesAsync()
     {
-        var dialog = new OpenFileDialog { Title = "Add game metadata", Filter = "Metadata (*.zip;*.lua;*.manifest)|*.zip;*.lua;*.manifest", Multiselect = true, CheckFileExists = true };
+        var dialog = new OpenFileDialog { Title = "Add game metadata", Filter = "Metadata (*.zip;*.7z;*.rar;*.lua;*.manifest)|*.zip;*.7z;*.rar;*.lua;*.manifest", Multiselect = true, CheckFileExists = true };
         if (dialog.ShowDialog() == true) await ImportFilesAsync(dialog.FileNames);
     }
 
