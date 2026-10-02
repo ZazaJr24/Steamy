@@ -19,8 +19,12 @@ PUBLISHERS = (
 )
 REQUESTED = ('ACE COMBAT 8', 'Black Flag Resynced', 'Gears of War E-Day', '007 First Light',
              'Fable', 'The Blood of Dawnwalker', 'The Witcher 4', 'PRAGMATA',
-             'Resident Evil Requiem', 'Grand Theft Auto VI', 'Marvel Wolverine')
-MAJOR_RELEASES = (1245620, 1091500, 1174180, 2358720, 1086940, 2322010)
+             'Resident Evil Requiem', 'Grand Theft Auto VI', 'Marvel Wolverine',
+             'Crimson Desert', 'Assassin Creed Hexe', 'Intergalactic', 'Silent Hill Townfall',
+             'Metro 2039', 'Judas', 'Kingdom Hearts', 'Marvel Blade', 'Control Resonant')
+MAJOR_RELEASES = (1245620, 1091500, 1174180, 2358720, 1086940, 2322010, 2050650, 1593500,
+                  990080, 1716740, 1817070, 553850, 2054970, 292030, 3159330, 1979720,
+                  2842040, 1903340, 2246340, 2677660, 1496790, 1328670, 1151640)
 STORE = 'https://store.steampowered.com/'
 
 
@@ -107,8 +111,9 @@ def select_game(data, now, allow_released=False):
 
 
 def collect_candidates():
-    ids = {}
+    ids = dict.fromkeys(MAJOR_RELEASES)
     requested_ids = set()
+    released_ids = set(MAJOR_RELEASES)
     for term in REQUESTED:
         result = fetch_json(STORE + 'api/storesearch/?' + urllib.parse.urlencode({'term': term, 'l': 'english', 'cc': 'us'}))
         expected = re.sub(r'[^a-z0-9]', '', term.casefold())
@@ -118,10 +123,12 @@ def collect_candidates():
                 ids[item['id']] = None
                 requested_ids.add(item['id'])
     categories = fetch_json(STORE + 'api/featuredcategories/?cc=us&l=english')
-    for key in ('coming_soon',):
+    for key in ('coming_soon', 'new_releases', 'top_sellers'):
         for item in categories.get(key, {}).get('items', []):
             if isinstance(item.get('id'), int):
                 ids[item['id']] = None
+                if key != 'coming_soon':
+                    released_ids.add(item['id'])
     for filter_name in ('popularcomingsoon', 'comingsoon'):
         query = urllib.parse.urlencode({'query': '', 'start': 0, 'count': 50, 'filter': filter_name,
                                        'category1': 998, 'infinite': 1, 'cc': 'us', 'l': 'english', 'ignore_preferences': 1})
@@ -130,7 +137,7 @@ def collect_candidates():
             ids[int(app_id)] = None
     for app_id in MAJOR_RELEASES:
         ids[app_id] = None
-    return list(ids)[:150], requested_ids
+    return list(ids)[:150], requested_ids, released_ids
 
 
 def confirmed_release_time(game, release, now):
@@ -185,12 +192,12 @@ def enrich_artwork(games, response):
 
 def refresh(output):
     now = datetime.now(timezone.utc)
-    candidates, requested_ids = collect_candidates()
+    candidates, requested_ids, released_ids = collect_candidates()
     def details(app_id):
         try:
             response = fetch_json(STORE + f'api/appdetails?appids={app_id}&l=english&cc=us')
             item = response.get(str(app_id), {})
-            return select_game(item.get('data', {}), now, allow_released=app_id in MAJOR_RELEASES) if item.get('success') else None
+            return select_game(item.get('data', {}), now, allow_released=app_id in released_ids) if item.get('success') else None
         except Exception as error:
             print(f'Skipped app {app_id}: {type(error).__name__}')
             return None
@@ -202,8 +209,8 @@ def refresh(output):
     # Keep named large productions even when they have not published an exact launch day.
     priority = [game for game in upcoming if game['appId'] in requested_ids]
     other = [game for game in upcoming if game['appId'] not in requested_ids]
-    upcoming = (priority[:10] + other)[:18]
-    released = [game for game in games if not game['comingSoon']][:6]
+    upcoming = (priority[:14] + other)[:28]
+    released = sorted((game for game in games if not game['comingSoon']), key=lambda game: game['releaseDate'] or '', reverse=True)[:20]
     if upcoming:
         query = {'ids': [{'appid': game['appId']} for game in upcoming + released],
                  'context': {'language': 'english', 'country_code': 'US', 'steam_realm': 1},

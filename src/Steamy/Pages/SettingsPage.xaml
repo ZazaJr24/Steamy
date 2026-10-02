@@ -6,7 +6,7 @@
       PreviewKeyDown="Settings_PreviewKeyDown"
       ScrollViewer.CanContentScroll="False"
       UseLayoutRounding="True" SnapsToDevicePixels="True"
-      Background="{DynamicResource WorkspaceBackgroundBrush}">
+      Background="{DynamicResource AppBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <Style x:Key="CredentialBoxStyle" TargetType="PasswordBox">
@@ -20,7 +20,7 @@
       <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style x:Key="SettingsCard" TargetType="Border" BasedOn="{StaticResource SurfaceCardStyle}">
-      <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
       <Style.Triggers>
         <Trigger Property="IsKeyboardFocusWithin" Value="True">
           <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -580,7 +580,7 @@
       </Border>
       <Border Style="{StaticResource SettingsCard}" CornerRadius="12" Padding="18" Margin="0,0,0,10">
         <StackPanel>
-          <TextBlock Text="SPEED &amp; QUEUE" Style="{StaticResource SettingsGroupLabel}" />
+          <TextBlock Text="TRANSFER CONTROLS" Style="{StaticResource SettingsGroupLabel}" />
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />
@@ -617,6 +617,15 @@
                         LostFocus="NumberBox_LostFocus" ToolTip="1–128 connections" />
           </Grid>
           <TextBlock Text="{Binding DownloadConnectionsHint}" Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="0,0,0,14" TextWrapping="Wrap" />
+          <Grid Margin="0,0,0,18">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="110" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Speed limit · MiB/s" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Per game with the bundled Mod. 0 = unlimited; applies on next start or resume." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" />
+              <TextBlock Text="{Binding DownloadRateLimitHint}" Style="{StaticResource CaptionStyle}" Margin="0,4,0,0" />
+            </StackPanel>
+            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding DownloadRateLimitText, UpdateSourceTrigger=PropertyChanged}" LostFocus="NumberBox_LostFocus" AutomationProperties.Name="Download speed limit in MiB per second" />
+          </Grid>
 
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>

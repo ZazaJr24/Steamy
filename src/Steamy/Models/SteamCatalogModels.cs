@@ -48,6 +48,8 @@ public sealed class SteamCatalogItem : UiObservableObject
     private SteamCatalogAppType _appType;
     private bool _isInstalled;
 
+    public bool IsUpcoming { get; init; }
+    public string CardLabel => IsUpcoming ? "UPCOMING" : TypeLabel;
     public int AppId { get; init; }
     public string Name { get; init; } = string.Empty;
     public SteamCatalogAppType AppType
@@ -311,14 +313,14 @@ public static class SteamCatalogQuery
         return sortOption?.Trim() switch
         {
             "Popular (AAA)" => query
-                .OrderByDescending(item => PopularityLookup.GetScore(item.AppId))
+                .OrderByDescending(item => PopularityLookup.GetScore(item.AppId, item.Name))
                 .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
             "App ID" => query.OrderByDescending(item => item.AppId).ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
             "Type" => query.OrderBy(item => item.TypeLabel, StringComparer.OrdinalIgnoreCase).ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
             "Installed first" => query.OrderByDescending(item => item.IsInstalled).ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
             "Name A–Z" => query.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ThenBy(item => item.AppId).ToArray(),
             _ => query
-                .OrderByDescending(item => PopularityLookup.GetScore(item.AppId))
+                .OrderByDescending(item => PopularityLookup.GetScore(item.AppId, item.Name))
                 .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
         };
     }
@@ -360,7 +362,8 @@ public static class PopularityLookup
         [1817070] = 84, // Spider-Man Remastered
         [1817190] = 83, // Spider-Man Miles Morales
         [2050650] = 82, // Resident Evil 4
-        [1196590] = 81, // Dragon's Dogma 2
+        [2054970] = 81, // Dragon's Dogma 2
+        [1196590] = 81, // Resident Evil Village
         [553850] = 80,  // Helldivers 2
         [730] = 79,     // Counter-Strike 2
         [1172470] = 78, // Apex Legends
@@ -374,6 +377,19 @@ public static class PopularityLookup
         [1174370] = 70, // Star Wars Jedi
     };
 
+    // Established series come before the long tail. This is catalog ordering, never availability.
+    private static readonly System.Text.RegularExpressions.Regex MajorSeries = new(
+        @"^(?:Assassin.s Creed|Avatar: Frontiers|Borderlands|Call of Duty|Crimson Desert|Death Stranding|Dead Space|Detroit: Become Human|Diablo|DOOM|Dragon.s Dogma|Dying Light|EA SPORTS|Fable|Fallout|Far Cry|FINAL FANTASY|Forza|Gears|Ghost of|God of War|Grand Theft Auto|HITMAN|Hogwarts Legacy|Horizon|Indiana Jones|Kingdom Come|Like a Dragon|Mafia|Marvel.s|METAL GEAR|Metro|Monster Hunter|Mortal Kombat|Need for Speed|NieR|Nioh|No Man.s Sky|PRAGMATA|Red Dead|Resident Evil|S.T.A.L.K.E.R.|Silent Hill|STAR WARS|Starfield|TEKKEN|The Elder Scrolls|The Last of Us|The Outer Worlds|The Witcher|Tom Clancy|UNCHARTED|Warhammer|Watch Dogs|Yakuza)",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(100));
+    private static readonly System.Text.RegularExpressions.Regex Extras = new(
+        @"\b(?:demo|soundtrack|artbook|season pass|upgrade|DLC|pack|dedicated server|test|beta|benchmark)\b",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100));
+    public static int GetScore(int appId, string? name)
+    {
+        if (Scores.TryGetValue(appId, out var score)) return score;
+        return !string.IsNullOrWhiteSpace(name) && MajorSeries.IsMatch(name) && !Extras.IsMatch(name) ? 60 : GetScore(appId);
+    }
     public static int GetScore(int appId)
     {
         if (Scores.TryGetValue(appId, out var score)) return score;

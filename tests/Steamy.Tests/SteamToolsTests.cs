@@ -16,6 +16,29 @@ public sealed class SteamToolsTests
         return bytes.ToArray();
     }
 
+    [Theory]
+    [InlineData("480.7z")]
+    [InlineData("480.rar")]
+    public async Task CompressedMetadataImportsLuaAndManifestsAndIgnoresExecutables(string name)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
+        var plan = await SteamToolsMetadata.ReadAsync([path]);
+        Assert.Equal(480, Assert.Single(plan.AppIds));
+        Assert.Equal(2, plan.Files.Count);
+        Assert.Contains("setManifestid(481,\"123\")", Encoding.UTF8.GetString(plan.Files["config/stplug-in/480.lua"]));
+        Assert.Equal("manifest fixture", Encoding.UTF8.GetString(plan.Files["depotcache/481_123.manifest"]));
+        Assert.DoesNotContain(plan.Files.Keys, file => file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+        await Assert.ThrowsAsync<InvalidDataException>(() => SteamToolsMetadata.ReadAsync([path], 999));
+    }
+
+    [Fact]
+    public async Task EncryptedMetadataArchiveReportsExtractionRequirement()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "fix-password.7z");
+        var exception = await Assert.ThrowsAsync<InvalidDataException>(() => SteamToolsMetadata.ReadAsync([path]));
+        Assert.Contains("Encrypted", exception.Message);
+    }
+
     [Fact]
     public async Task SushiStyleZipAndLooseFilesDetectAppsAndUseTheRealSteamFolders()
     {

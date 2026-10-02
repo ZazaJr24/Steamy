@@ -5,3 +5,5 @@
 - `Rar5.*.rar` — copied from the SharpCompress test suite
   (https://github.com/adamhathcock/sharpcompress, MIT License). The encrypted one uses the
   password `test`.
+
+- `480.7z` and `480.rar` — generated metadata fixtures containing nested `480.lua`, `481_123.manifest`, and an executable that must never be installed. The 7z fixture is solid; the RAR fixture uses the stored RAR4 format. No game data or executable backend is included.

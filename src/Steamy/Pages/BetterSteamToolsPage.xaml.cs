@@ -31,7 +31,7 @@ public partial class BetterSteamToolsPage : Page
     }
     private static bool Supports(DragEventArgs args) => args.Data.GetDataPresent(DataFormats.FileDrop)
         && args.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } paths
-        && paths.All(path => File.Exists(path) && Path.GetExtension(path).ToLowerInvariant() is ".zip" or ".lua" or ".manifest");
+        && paths.All(path => File.Exists(path) && Path.GetExtension(path).ToLowerInvariant() is ".zip" or ".7z" or ".rar" or ".lua" or ".manifest");
     private void Metadata_DragOver(object sender, DragEventArgs args)
     {
         args.Effects = !Model.IsBusy && Model.SteamDetected && Supports(args) ? DragDropEffects.Copy : DragDropEffects.None;
