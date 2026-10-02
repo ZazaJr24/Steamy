@@ -10,11 +10,52 @@ namespace Steamy.UiTests;
 
 public sealed partial class PageSmokeTests
 {
+    private static void CheckSteamToolsLayout(BetterSteamToolsPage page)
+    {
+        var workspace = (Grid)page.FindName("ImportWorkspace");
+        var game = (Border)page.FindName("GamePanel");
+        var drop = (Border)page.FindName("MetadataDropZone");
+        var wide = workspace.ActualWidth >= 740;
+        var gameBounds = game.TransformToAncestor(workspace).TransformBounds(new Rect(game.RenderSize));
+        var dropBounds = drop.TransformToAncestor(workspace).TransformBounds(new Rect(drop.RenderSize));
+        if (wide)
+        {
+            Assert.True(dropBounds.Left >= gameBounds.Right + 16, "The game and drop panels must not overlap.");
+            Assert.Equal(gameBounds.Top, dropBounds.Top);
+        }
+        else
+        {
+            Assert.True(dropBounds.Top >= gameBounds.Bottom + 14, "The drop target must flow below the game panel.");
+            Assert.Equal(gameBounds.Left, dropBounds.Left);
+        }
+        Assert.True(dropBounds.Right <= workspace.ActualWidth + 1);
+        Assert.True(drop.ActualHeight >= 290);
+        foreach (var name in new[] { "GameInputBox", "SourcePicker", "AddGameButton", "BrowseMetadataButton", "SteamFolderBox", "InstallBackendButton" })
+        {
+            var control = (FrameworkElement)page.FindName(name);
+            var bounds = control.TransformToAncestor(page).TransformBounds(new Rect(control.RenderSize));
+            Assert.True(bounds.Left >= 0 && bounds.Right <= page.ActualWidth, name + " must remain inside the page horizontally.");
+            Assert.True(control.ActualWidth >= 120, name + " must retain a usable width.");
+        }
+        var scroll = (ScrollViewer)page.FindName("ToolScrollHost");
+        if (!wide)
+        {
+            Assert.True(scroll.ScrollableHeight > 0);
+            scroll.ScrollToBottom(); page.UpdateLayout();
+            var setup = (Border)page.FindName("SteamConnectionPanel");
+            var bounds = setup.TransformToAncestor(page).TransformBounds(new Rect(setup.RenderSize));
+            Assert.True(bounds.Bottom <= page.ActualHeight, "Steam setup must remain reachable by native scrolling.");
+            scroll.ScrollToTop(); page.UpdateLayout();
+        }
+    }
+
     private static void CheckBetterSteamTools(IServiceProvider provider, BetterSteamToolsFixture fixture)
     {
         var model = provider.GetRequiredService<BetterSteamToolsViewModel>();
         fixture.Installed = false;
         model.RefreshDetection();
+        Assert.Equal("Steam detected", model.ConnectionLabel);
+        Assert.Equal("BetterSteamTools not installed", model.BackendLabel);
         Assert.True(model.InstallBackendCommand.CanExecute(null));
         model.GameInput = "https://store.steampowered.com/app/480/Spacewar/";
         Assert.False(model.AddGameCommand.CanExecute(null));
@@ -57,6 +98,16 @@ public sealed partial class PageSmokeTests
         model.GameInput = "";
         model.SelectedSource = model.Sources[0];
         model.RefreshDetection();
+        fixture.Detected = false;
+        fixture.Installed = false;
+        model.RefreshDetection();
+        Assert.Equal("Steam not detected", model.ConnectionLabel);
+        Assert.False(model.InstallBackendCommand.CanExecute(null));
+        Assert.False(model.AddGameCommand.CanExecute(null));
+        Assert.False(model.BrowseFilesCommand.CanExecute(null));
+        fixture.Detected = true;
+        fixture.Installed = true;
+        model.RefreshDetection();
         var library = new LibraryPage();
         library.OpenDownloadSetup(new Steamy.Models.SteamCatalogItem { AppId = 4242, Name = "A game for Steam metadata" });
         Type? route = null;
@@ -72,13 +123,15 @@ public sealed partial class PageSmokeTests
     private sealed class BetterSteamToolsFixture : IBetterSteamToolsService
     {
         public bool Installed { get; set; } = true;
+        public bool Detected { get; set; } = true;
         public bool HoldOperation { get; set; }
         public int InstallCalls { get; private set; }
         public int ImportCalls { get; private set; }
         public (int, ManifestSource?) LastSource { get; private set; }
         public IReadOnlyList<string>? ImportPaths { get; private set; }
         public int? ImportAppId { get; private set; }
-        public BetterSteamToolsState Detect(string? root = null) => new(@"C:\Program Files (x86)\Steam", true, Installed, [480], "Steam detected · sample backend and game configuration.");
+        public BetterSteamToolsState Detect(string? root = null) => new(@"C:\Program Files (x86)\Steam", Detected, Installed, Detected ? [480] : [],
+            Detected ? "Steam detected · sample backend and game configuration." : "Steam not found.");
         public Task<BetterSteamToolsResult> InstallBackendAsync(string root, IProgress<string>? progress = null, CancellationToken token = default)
         { InstallCalls++; Installed = true; return Task.FromResult(new BetterSteamToolsResult(true,"Backend ready.",[])); }
         public Task<BetterSteamToolsResult> ImportAsync(string root, IReadOnlyList<string> paths, int? appId = null, CancellationToken token = default)

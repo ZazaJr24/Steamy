@@ -132,6 +132,7 @@ public sealed partial class PageSmokeTests
                         Assert.Equal(size.Height, page.ActualHeight);
                         Assert.NotNull(page.DataContext);
                         if (page is DashboardPage dashboard) CheckDashboardLayout(dashboard);
+                        if (page is BetterSteamToolsPage steamTools) CheckSteamToolsLayout(steamTools);
                         SaveScreenshot(page, theme, size);
                     }
                     if (page is LibraryPage)
