@@ -29,7 +29,7 @@ The release is portable and includes the Windows runtime. Use Windows 10 or 11 o
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
-Normal releases use three version numbers, such as **0.4.13**. Optional hotfixes use four, such as **0.4.13.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
+Normal releases use three version numbers, such as **0.4.14**. Optional hotfixes use four, such as **0.4.14.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
 
 ## Inside Steamy
 

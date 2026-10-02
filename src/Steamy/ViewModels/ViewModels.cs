@@ -314,6 +314,12 @@ public sealed class LibraryViewModel : ViewModelBase
         _filterCancellation = new CancellationTokenSource();
         var cancellationToken = _filterCancellation.Token;
         var items = _catalogSnapshot;
+        foreach (var item in items)
+            if (_discoveryReleaseStatus.TryGetValue(item.AppId, out var comingSoon))
+            {
+                item.IsUpcoming = comingSoon;
+                item.IsReleaseVerified = true;
+            }
         if (!string.IsNullOrWhiteSpace(_search) && (!ReferenceEquals(_indexedCatalog, items) || _searchIndexTask is null))
         {
             _indexedCatalog = items;
@@ -392,11 +398,11 @@ public sealed class LibraryViewModel : ViewModelBase
     };
 
     private IReadOnlySet<int> _upcomingIds = new HashSet<int>();
+    private IReadOnlyDictionary<int, bool> _discoveryReleaseStatus = new Dictionary<int, bool>();
     private void UpdateReleaseFilter(SpotlightSnapshot snapshot)
     {
         _upcomingIds = snapshot.Games.Where(game => game.ComingSoon).Select(game => game.AppId).ToHashSet();
-        foreach (var item in _catalogSnapshot)
-            if (_upcomingIds.Contains(item.AppId)) item.IsUpcoming = true;
+        _discoveryReleaseStatus = snapshot.Games.ToDictionary(game => game.AppId, game => game.ComingSoon);
     }
     private async Task RefreshReleaseFilterAsync(bool force)
     {
