@@ -21,15 +21,7 @@ public sealed partial class PageSmokeTests
         var actions = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightActions"));
         var paging = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightPaging"));
         var countdown = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightCountdown"));
-        var previews = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightPreviews"));
-        Assert.Equal(page.ActualWidth < 700 ? Visibility.Collapsed : Visibility.Visible, previews.Visibility);
-        if (previews.Visibility == Visibility.Visible)
-        {
-            var titleStart = title.TranslatePoint(new Point(0,0), hero);
-            var previewStart = previews.TranslatePoint(new Point(0,0), hero);
-            Assert.True(titleStart.X + title.ActualWidth + 16 <= previewStart.X,
-                "Spotlight text must retain space beside the artwork previews.");
-        }
+        Assert.Null(page.FindName("SpotlightPreviews")); // The countdown has no right-hand artwork rail.
         if (Grid.GetRow(paging) == Grid.GetRow(actions))
         {
             var actionStart = actions.TranslatePoint(new Point(0,0), hero);

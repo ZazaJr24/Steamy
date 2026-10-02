@@ -330,6 +330,12 @@ public sealed partial class PageSmokeTests
                 ((Wpf.Ui.Controls.TextBox)settingsPage.FindName("SettingsSearch")).Text = "transfer";
                 PumpUntil(() => Descendants<TextBlock>(settingsPage).Any(text => text.IsVisible && text.Text == "TRANSFER CONTROLS"));
                 window.UpdateLayout();
+                var transferHeading = Descendants<TextBlock>(settingsPage).Single(text => text.IsVisible && text.Text == "TRANSFER CONTROLS");
+                var settingsScroll = (ScrollViewer)settingsPage.FindName("SettingsScrollViewer");
+                var position = transferHeading.TranslatePoint(new Point(0, 0), settingsScroll);
+                settingsScroll.ScrollToVerticalOffset(settingsScroll.VerticalOffset + position.Y - 24);
+                window.UpdateLayout();
+                PumpDispatcher(TimeSpan.FromMilliseconds(100));
                 SaveVisual(window, "settings-transfers.png");
                 ((Wpf.Ui.Controls.TextBox)settingsPage.FindName("SettingsSearch")).Text = "";
             }
@@ -362,7 +368,7 @@ public sealed partial class PageSmokeTests
         PumpDispatcher(TimeSpan.FromMilliseconds(400));
         window.UpdateLayout();
         var page = Descendants<LibraryPage>(window).Single();
-        var hoveredCard = Descendants<Button>(page).First(button => button.Tag is SteamCatalogItem);
+        var hoveredCard = Descendants<Button>(page).Single(button => button.Tag is SteamCatalogItem item && ReferenceEquals(item, library.PagedCatalogItems[0]));
         window.Activate();
         _phase = "Capture gallery without hover";
         var outsideCard = page.PointToScreen(new Point(page.ActualWidth - 12, 12));
