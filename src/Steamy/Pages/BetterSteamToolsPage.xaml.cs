@@ -1,4 +1,5 @@
 using System.IO;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,19 +14,20 @@ public partial class BetterSteamToolsPage : Page
     {
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<BetterSteamToolsViewModel>();
-        Loaded += (_, _) => Model.RefreshDetection();
+        UpdateSetupVisibility();
+        Loaded += (_, _) => { Model.RefreshDetection(); UpdateSetupVisibility(); Model.PropertyChanged += Model_PropertyChanged; };
+        Unloaded += (_, _) => Model.PropertyChanged -= Model_PropertyChanged;
     }
     private void SteamRoot_LostFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs args) => Model.RefreshDetection();
-    private void ImportWorkspace_SizeChanged(object sender, SizeChangedEventArgs args)
+    private void UpdateSetupVisibility()
     {
-        // Keep the main action and the full drop target beside each other on wide windows.
-        // Narrow windows retain natural vertical scrolling, without shrinking input controls.
-        var wide = args.NewSize.Width >= 740;
-        GameColumn.Width = new GridLength(wide ? 1.1 : 1, GridUnitType.Star);
-        DropColumn.Width = wide ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
-        Grid.SetColumn(MetadataDropZone, wide ? 1 : 0);
-        Grid.SetRow(MetadataDropZone, wide ? 0 : 1);
-        MetadataDropZone.Margin = wide ? new Thickness(18, 0, 0, 0) : new Thickness(0, 16, 0, 0);
+        if (!string.IsNullOrWhiteSpace(Model.GameInput)) GameExpander.IsExpanded = true;
+        if (!Model.BackendInstalled) SteamSetupExpander.IsExpanded = true;
+    }
+    private void Model_PropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName is nameof(BetterSteamToolsViewModel.GameInput) or nameof(BetterSteamToolsViewModel.BackendInstalled))
+            UpdateSetupVisibility();
     }
     private static bool Supports(DragEventArgs args) => args.Data.GetDataPresent(DataFormats.FileDrop)
         && args.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } paths

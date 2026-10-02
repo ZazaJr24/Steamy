@@ -388,7 +388,7 @@ public sealed partial class PageSmokeTests
         window.UpdateLayout();
         SaveVisual(window, "game-fixes.png");
         Assert.True(window.RootNavigationView.Navigate(typeof(BetterSteamToolsPage)));
-        provider.GetRequiredService<BetterSteamToolsViewModel>().GameInput = "480";
+        provider.GetRequiredService<BetterSteamToolsViewModel>().GameInput = "";
         PumpDispatcher(TimeSpan.FromMilliseconds(250));
         window.UpdateLayout();
         SaveVisual(window, "better-steamtools.png");

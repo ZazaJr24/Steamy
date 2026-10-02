@@ -29,7 +29,7 @@ The release is portable and includes the Windows runtime. Use Windows 10 or 11 o
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
-Normal releases use three version numbers, such as **0.4.9**. Optional hotfixes use four, such as **0.4.9.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
+Normal releases use three version numbers, such as **0.4.10**. Optional hotfixes use four, such as **0.4.10.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
 
 ## Inside Steamy
 
@@ -79,11 +79,11 @@ Preparation creates an independent copy. Moving, editing or deleting the origina
 
 ### Add game metadata to Steam
 
-Open **Tools → BetterSteamTools**. This page has its own soft blue/violet backdrop, transparent import surfaces and a large file drop target. The game and file panels sit side by side on wider windows and stack with native scrolling on smaller ones. Steam setup stays in a compact connection area. Steam is detected from your existing settings or Windows installation; **Browse** selects a different Steam folder.
+Open **Tools → BetterSteamTools**. The minimal workspace focuses on one large **Drag & drop** area. Drop ZIP, Lua or manifest files, or use **Browse files**. App ID/source options and Steam setup stay in compact, collapsible sections; status and Cancel remain visible while scrolling.
 
-1. Close Steam and click **Install / update backend**. Steamy downloads the official [BetterSteamTools](https://github.com/madoiscool/BetterSteamTools) Windows release, verifies its SHA-256 checksum and installs the required backend files. Start Steam afterwards.
-2. Enter an App ID or Steam store link and click **Add game to Steam**. **Automatic** tries available Sushi, Zaza and configured API sources; Hubcap, Ryuu and DepotBox use their existing Settings credentials. Availability depends on the selected provider.
-3. Alternatively, drop ZIP, Lua or manifest files to install directly, or choose files. An empty game field detects App IDs from the metadata; an explicit ID selects a game in a multi-game bundle. A standalone manifest is cached without inventing an App ID. The Games detail view also has an **Add to Steam** action: it starts automatic source detection immediately when the backend is ready, or opens the tool for setup.
+1. Expand **Steam setup** to choose a Steam folder, install/update the official [BetterSteamTools](https://github.com/madoiscool/BetterSteamTools) backend or start Steam. Setup opens automatically if the backend is missing. Close Steam before installation. The backend download is verified against its SHA-256 checksum.
+2. Expand **Add by App ID or Steam link**, enter a game and click **Add to Steam**. **Automatic** tries available Sushi, Zaza and configured API sources; Hubcap, Ryuu and DepotBox use their existing Settings credentials. Availability depends on the selected provider. A prefilled game from Games details reveals these controls automatically.
+3. Files install immediately when dropped or selected. Leave App ID empty to detect games from metadata; an explicit ID selects a game in a multi-game bundle. Standalone manifests are cached without inventing an App ID. The Games detail view also has an **Add to Steam** action: it starts automatic source detection immediately when the backend is ready, or opens the tool for setup.
 
 Lua is validated as `addappid`/`setManifestid` configuration and is never evaluated by Steamy. Lua goes to Steam's `config/stplug-in`; manifests go to its root `depotcache`. The existing backend configuration keeps its other paths/settings and registers the Lua folder for reload. Originals are retained under `config/steamy-backups`; failed writes restore previous files. Adding metadata does not download the game files or prove source availability for every title.
 
@@ -164,7 +164,7 @@ Screenshots are captured from the actual Windows app using sample library, queue
 
 ### BetterSteamTools
 
-![BetterSteamTools with transparent game and file import surfaces, a blue-violet backdrop and compact Steam setup](docs/screenshots/better-steamtools.png)
+![Minimal SteamTools workspace with one large drag-and-drop target and collapsed game and setup options](docs/screenshots/better-steamtools.png)
 
 ## Build it yourself
 

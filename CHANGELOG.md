@@ -3,6 +3,13 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.4.10 — 2026-10-02
+
+- Minimal SteamTools workspace: one large, quiet drag-and-drop target for ZIP, Lua and manifest files, a simple title, a subtle background wash and a file picker. Removed the large game card, boxed status panels, decorative badges and explanatory paragraphs from the initial view.
+- App ID / Steam link input and source selection sit behind a compact expander. Steam setup and detected metadata sit behind a second expander. Prefilled game IDs reveal the game controls; a missing backend reveals setup automatically.
+- Existing automatic sources, configured API providers, backend checksum checks, safe file import, progress and cancellation remain intact. Status and Cancel stay inside the real Windows viewport while scrolling.
+- Updated native Windows checks cover the uncluttered initial view, expanded controls, required setup, prefilled games and cancellation in the minimum supported window. README screenshots come from the actual Windows app.
+
 ## 0.4.9 — 2026-10-02
 
 - Redesigned only Tools → BetterSteamTools, using the actual LuaTools Windows interface as the layout reference. Large transparent surfaces sit over a restrained blue/violet/teal light gradient; the rest of Steamy keeps its existing appearance.
