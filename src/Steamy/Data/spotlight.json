@@ -1,21 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-01T19:59:15.470630+00:00",
+  "updatedAt": "2026-10-02T12:35:06.254621+00:00",
   "games": [
-    {
-      "appId": 2288340,
-      "name": "ACE COMBAT 8: WINGS OF THEVE",
-      "description": "Soar through the skies and rise above every challenge to earn your place among the elite. Engage in intense aerial combat to dominate the battlefield with powerful weapons. Experience a breathtaking campaign filled with high-stakes missions, hard choices, and deep squad connections.",
-      "genres": "Action",
-      "publisher": "Bandai Namco Entertainment Inc.",
-      "comingSoon": true,
-      "releaseLabel": "Oct 1, 2026",
-      "releaseDate": "2026-10-01",
-      "storeUrl": "https://store.steampowered.com/app/2288340/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/4b28102e4f8702f48bfc03e099246a55a200204f/page_bg_raw.jpg?t=1790763244",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/13dea8084135fd130605b78189c82e39bf944c35/header.jpg?t=1790763244",
-      "releaseTime": "2026-10-01T22:00:00+00:00"
-    },
     {
       "appId": 3010850,
       "name": "Gears of War: E-Day",
@@ -71,6 +57,20 @@
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/daf5d7dee8c89ae737aaac6b712288b934ee84dc/page_bg_raw.jpg?t=1790698027",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/0c492be3204835d71e8b454b6eb1817f8ff68c0d/header.jpg?t=1790698027",
       "releaseTime": "2026-10-23T05:00:00+00:00"
+    },
+    {
+      "appId": 4530370,
+      "name": "Football Manager 27",
+      "description": "Flow from the tactics board to the touchline in FM27, as foundations evolve to deliver greater control, smoother discovery and a richer footballing world to explore.",
+      "genres": "Simulation · Sports · Strategy",
+      "publisher": "SEGA",
+      "comingSoon": true,
+      "releaseLabel": "Nov 10, 2026",
+      "releaseDate": "2026-11-10",
+      "storeUrl": "https://store.steampowered.com/app/4530370/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/58ff694d0b284789666cea9601d774acbcc415ea/page_bg_raw.jpg?t=1790886528",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/32b41d18ffaac3d2e1dc1a9c3915538db0ba3fca/header.jpg?t=1790886528",
+      "releaseTime": "2026-11-10T16:00:00+00:00"
     }
   ]
 }
