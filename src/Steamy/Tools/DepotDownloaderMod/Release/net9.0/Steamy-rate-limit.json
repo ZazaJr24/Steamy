@@ -1,8 +1,0 @@
-{
-  "schemaVersion": 1,
-  "maxDownloadSpeed": true,
-  "progressTelemetry": true,
-  "singleFile": true,
-  "exeSha256": "98eafc9e7a320cdbce8c5671658ebba97ffdb1a02ce8d260a620a87a07505cce",
-  "upstreamRevision": "c0f62fb7f020087f36ae76adfc51fde1446af344"
-}

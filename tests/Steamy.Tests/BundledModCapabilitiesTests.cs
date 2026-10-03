@@ -58,9 +58,29 @@ public sealed class BundledModCapabilitiesTests : IDisposable
         WriteMarker(progressTelemetry: true); Assert.True(BundledModCapabilities.SupportsProgress(Executable));
         File.WriteAllText(Executable, "replacement"); Assert.False(BundledModCapabilities.SupportsProgress(Executable));
     }
+
+    [Fact]
+    public void OwnForkFlagsRequireItsIdentityVersionAndVerifiedExecutableHash()
+    {
+        File.WriteAllText(Executable, "original");
+        WriteForkMarker();
+        Assert.True(BundledModCapabilities.SupportsOwnFork(Executable));
+        Assert.True(BundledModCapabilities.SupportsGracefulStop(Executable));
+
+        File.WriteAllText(Executable, "replacement");
+        Assert.False(BundledModCapabilities.SupportsOwnFork(Executable));
+        Assert.False(BundledModCapabilities.SupportsGracefulStop(Executable));
+    }
     private void WriteMarker(bool singleFile = true, string? dllSha256 = null, bool progressTelemetry = false) =>
         File.WriteAllText(Path.Combine(_directory, BundledModCapabilities.MarkerFileName), JsonSerializer.Serialize(new
         { schemaVersion = 1, maxDownloadSpeed = true, progressTelemetry, singleFile, exeSha256 = Hash(Executable), dllSha256 }));
+    private void WriteForkMarker() =>
+        File.WriteAllText(Path.Combine(_directory, BundledModCapabilities.MarkerFileName), JsonSerializer.Serialize(new
+        {
+            schemaVersion = 1, forkName = "Steamy DepotDownloaderMod", forkVersion = "1.0.0",
+            sourceSha256 = new string('A', 64), maxDownloadSpeed = true, progressTelemetry = true,
+            gracefulStop = true, singleFile = true, exeSha256 = Hash(Executable)
+        }));
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
     public void Dispose() => Directory.Delete(_directory, true);
 }

@@ -7,13 +7,8 @@
     <IsPackable>false</IsPackable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(DepotDownloaderSource)' != ''">
-    <DefineConstants>$(DefineConstants);HAVE_PATCHED_FACTORY</DefineConstants>
-  </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../SteamyProgress.cs" Link="SteamyProgress.cs" />
-    <Compile Include="../RateLimitedReadStream.cs" Link="RateLimitedReadStream.cs" />
-    <Compile Condition="'$(DepotDownloaderSource)' != ''" Include="$(DepotDownloaderSource)/DepotDownloader/HttpClientFactory.cs" Link="PatchedHttpClientFactory.cs" />
+    <ProjectReference Include="../Source/DepotDownloader/DepotDownloaderMod.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />

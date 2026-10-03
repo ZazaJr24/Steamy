@@ -8,7 +8,7 @@ The components below are not covered by that license; each keeps its own terms.
 | Component | Author | License | Where |
 |---|---|---|---|
 | .NET runtime and WPF | Microsoft | MIT | self-contained runtime |
-| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod/tree/c0f62fb7f020087f36ae76adfc51fde1446af344) 3.4.0 | SteamAutoCracks and SteamRE contributors; Steamy bandwidth patch | GPL-2.0 (see bundled LICENSE) | `Tools/DepotDownloaderMod/`, modified; complete corresponding source in `DepotDownloaderMod-source.zip` |
+| [Steamy DepotDownloaderMod](tools/DepotDownloaderMod) 1.0.0, derived from [SteamAutoCracks/DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod/tree/c0f62fb7f020087f36ae76adfc51fde1446af344) 3.4.0 | Steamy maintainers; SteamAutoCracks and SteamRE contributors retain upstream credit | GPL-2.0 (see bundled LICENSE) | `Tools/DepotDownloaderMod/`, maintained source fork; complete corresponding source in `DepotDownloaderMod-source.zip` |
 | [WPF-UI](https://github.com/lepoco/wpfui) 4.2.0 | lepo.co | MIT | UI framework |
 | [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) 8.4.0 | .NET Foundation | MIT | view models |
 | [Microsoft.Data.Sqlite](https://github.com/dotnet/efcore) 9.0.9 | Microsoft | MIT | local database |
@@ -21,10 +21,11 @@ The components below are not covered by that license; each keeps its own terms.
 | [Steamless](https://github.com/atom0s/Steamless) 3.1.0.5 | atom0s | CC BY-NC-ND 4.0 | `Tools/Steamless/`, shipped unmodified |
 | CreamAPI `steam_api.dll` / `steam_api64.dll` (via [CreamInstaller](https://github.com/FroggMaster/CreamInstaller)) | original authors | not stated; rights stay with the authors | embedded for the DLC Unlocker |
 
-The DepotDownloaderMod modification adds a shared, cancellable HTTP/socket read
-limit and an optional `-max-download-speed` argument. The complete patched upstream
-source, build files, patch and offline tests accompany its binary in every bundle.
-Rebuild instructions are in the bundled `STEAMY-PATCH.md` and
+The Steamy DepotDownloaderMod fork adds bounded cancellable retries, safe manifest
+and target handling, resilient checkpoints, graceful host cancellation, shared
+cancellable HTTP/socket rate limiting, and versioned progress telemetry. The full
+corresponding source, provenance, build files, license and tests accompany its binary.
+Rebuild instructions are in the bundled `STEAMY-FORK.md` and
 [`tools/DepotDownloaderMod/README.md`](tools/DepotDownloaderMod/README.md).
 Steamy's application license does not cover that GPL component.
 

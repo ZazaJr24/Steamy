@@ -69,18 +69,19 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
             linked.Token.ThrowIfCancellationRequested();
             await _queueStore.SaveAsync(job, linked.Token).ConfigureAwait(false);
             var settings = _settingsService.Load();
-            if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath))
+            var executablePath = BundledModCapabilities.SelectExecutable(settings.DepotDownloaderPath);
+            if (string.IsNullOrWhiteSpace(executablePath))
             {
-                job.AppendLog("DepotDownloader is not configured. No file was downloaded.");
-                SetFailure(job, "DepotDownloader is not configured — no file was downloaded. Select the tool under Settings › Downloads.");
-                _logging.Add(LogLevel.Warning, "DownloadManager", "Download refused: no DepotDownloader executable is configured.", job.AppId, job.Id);
+                job.AppendLog("The bundled Steamy DepotDownloaderMod was not found or did not pass its identity check. No file was downloaded.");
+                SetFailure(job, "The bundled Steamy DepotDownloaderMod is unavailable. Repair Steamy or select a DepotDownloader executable under Settings › Downloads.");
+                _logging.Add(LogLevel.Warning, "DownloadManager", "Download refused: the bundled Steamy downloader was unavailable and no custom executable was configured.", job.AppId, job.Id);
                 return false;
             }
 
-            if (!File.Exists(settings.DepotDownloaderPath))
+            if (!File.Exists(executablePath))
             {
-                job.AppendLog($"DepotDownloader executable not found: {settings.DepotDownloaderPath}");
-                SetFailure(job, $"DepotDownloader executable not found — no file was downloaded: {settings.DepotDownloaderPath}");
+                job.AppendLog($"DepotDownloader executable not found: {executablePath}");
+                SetFailure(job, $"DepotDownloader executable not found — no file was downloaded: {executablePath}");
                 _logging.Add(LogLevel.Error, "DownloadManager", "Download refused: the configured DepotDownloader executable does not exist.", job.AppId, job.Id);
                 return false;
             }
@@ -113,7 +114,7 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
             var request = new DepotDownloaderRequest
             {
                 JobId = job.Id,
-                ExecutablePath = settings.DepotDownloaderPath,
+                ExecutablePath = executablePath,
                 AppId = job.AppId,
                 DepotId = job.DepotId,
                 Branch = job.Branch,

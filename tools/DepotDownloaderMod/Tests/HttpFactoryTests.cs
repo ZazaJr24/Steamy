@@ -1,5 +1,4 @@
 // GPL-2.0; see ../LICENSE. Steamy modification, 2026-10-01.
-#if HAVE_PATCHED_FACTORY
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
@@ -75,4 +74,3 @@ public sealed class HttpFactoryTests
         }
     }
 }
-#endif

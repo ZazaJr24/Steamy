@@ -49,7 +49,7 @@ public interface IRyuuGameDownloadService
 
 public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposable
 {
-    private const string GitHubReleasesApi = "https://api.github.com/repos/SteamAutoCracks/DepotDownloaderMod/releases/latest";
+    private const string GitHubReleasesApi = "https://api.github.com/repos/ZazaJr24/Steamy/releases/latest";
     private const long MaximumManifestBytes = 512L * 1024 * 1024;
 
     private readonly ISettingsService _settings;
@@ -511,7 +511,13 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             }
             DepotDownloaderArgumentBuilder.AddTransferOptions(args, settings.DownloadConnections, settings.UseLancache);
             args.AddRange(rateArguments);
-            if (BundledModCapabilities.SupportsProgress(ddPath)) args.Add("-steamy-progress");
+            string? stopSignalPath = null;
+            if (BundledModCapabilities.SupportsOwnFork(ddPath))
+            {
+                stopSignalPath = Path.Combine(Path.GetFullPath(appWorkDir), $".steamy-stop-{Guid.NewGuid():N}.signal");
+                args.AddRange(["-max-retries", "5", "-steamy-progress", "-steamy-cancel-file", stopSignalPath]);
+            }
+            else if (BundledModCapabilities.SupportsProgress(ddPath)) args.Add("-steamy-progress");
             // Reuse only chunks that match the saved manifest; repair interrupted writes and
             // fetch missing chunks without changing the version selected for this download.
             args.Add("-verify-all");
@@ -540,7 +546,8 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 }
 
                 var (exitCode, stdoutLines, depotBytesDownloaded) = await RunProcessWithWatchdogAsync(
-                    process, depot.DepotId, index + 1, depots.Count, completedDepotsBytes, Path.GetFullPath(targetFolder), progress, cancellationToken);
+                    process, depot.DepotId, index + 1, depots.Count, completedDepotsBytes, Path.GetFullPath(targetFolder),
+                    progress, cancellationToken, stopSignalPath);
 
                 cancellationToken.ThrowIfCancellationRequested();
                 var totalLine = stdoutLines.LastOrDefault(l => l.StartsWith("Total downloaded:", StringComparison.Ordinal));
@@ -581,6 +588,10 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             catch (Exception ex)
             {
                 failedDepots.Add($"Depot {depot.DepotId}: {ex.Message}");
+            }
+            finally
+            {
+                if (stopSignalPath is not null) try { File.Delete(stopSignalPath); } catch (IOException) { }
             }
         }
 
@@ -653,7 +664,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
 
     private static async Task<(int ExitCode, List<string> StdoutLines, long DepotBytesDownloaded)> RunProcessWithWatchdogAsync(
         Process process, int depotId, int depotIndex, int totalDepots, long completedDepotsBytes, string targetFolder,
-        IProgress<string>? progress, CancellationToken cancellationToken)
+        IProgress<string>? progress, CancellationToken cancellationToken, string? stopSignalPath)
     {
         const int maximumLogLines = 2_000;
         var output = new System.Collections.Concurrent.ConcurrentQueue<string>();
@@ -663,8 +674,8 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
 
         async Task ReadOutputAsync(StreamReader reader)
         {
-            // Cancellation kills the process, then both pipes are drained before the job can
-            // release its slot. Readers must not outlive or access a disposed Process instance.
+            // Ask the Steamy fork to stop between requests, then bound the wait before killing.
+            // The pipes are always drained before the job releases its slot.
             while (await reader.ReadLineAsync().ConfigureAwait(false) is { } line)
             {
                 if (line.Length > 8_192) line = line[..8_192];
@@ -679,9 +690,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         using var watchdog = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         using var registration = watchdog.Token.Register(() =>
         {
-            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-            catch (InvalidOperationException) { }
-            catch (System.ComponentModel.Win32Exception) { }
+            RequestProcessStop(process, stopSignalPath);
         });
         var readStdout = ReadOutputAsync(process.StandardOutput);
         var readStderr = ReadOutputAsync(process.StandardError);
@@ -745,6 +754,33 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         return (stalled ? -1 : process.ExitCode, output.ToList(), lastDepotBytes);
     }
 
+    private static void RequestProcessStop(Process process, string? signalPath)
+    {
+        if (signalPath is null) { TryKill(process); return; }
+        try { using var signal = new FileStream(signalPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        _ = KillAfterGraceAsync(process);
+    }
+
+    private static async Task KillAfterGraceAsync(Process process)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(8)).ConfigureAwait(false);
+            if (!process.HasExited) TryKill(process);
+        }
+        catch (InvalidOperationException) { }
+        catch (System.ComponentModel.Win32Exception) { }
+    }
+
+    private static void TryKill(Process process)
+    {
+        try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+        catch (InvalidOperationException) { }
+        catch (System.ComponentModel.Win32Exception) { }
+    }
+
     private static readonly Regex ManifestFilePattern = new(
         @"^(\d+)_(\d+)\.manifest$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250));
@@ -776,16 +812,17 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         if (Directory.Exists(_toolsFolder))
         {
             exePath = Directory.GetFiles(_toolsFolder, "DepotDownloader*.exe", SearchOption.AllDirectories)
-                .FirstOrDefault();
-            if (exePath is not null && File.Exists(exePath))
+                .FirstOrDefault(BundledModCapabilities.SupportsOwnFork);
+            if (exePath is not null)
                 return exePath;
         }
 
         var fallbackDir = _fallbackToolsFolder;
         if (Directory.Exists(fallbackDir))
         {
-            var fallbackExe = Directory.GetFiles(fallbackDir, "DepotDownloader*.exe", SearchOption.AllDirectories).FirstOrDefault();
-            if (fallbackExe is not null && File.Exists(fallbackExe))
+            var fallbackExe = Directory.GetFiles(fallbackDir, "DepotDownloader*.exe", SearchOption.AllDirectories)
+                .FirstOrDefault(BundledModCapabilities.SupportsOwnFork);
+            if (fallbackExe is not null)
                 return fallbackExe;
         }
 
@@ -821,8 +858,8 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             foreach (var asset in assets.EnumerateArray())
             {
                 var name = asset.GetProperty("name").GetString() ?? string.Empty;
-                if (name.EndsWith(".rar", StringComparison.OrdinalIgnoreCase)
-                    || name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                    && name.StartsWith("Steamy-", StringComparison.OrdinalIgnoreCase))
                 {
                     downloadUrl = asset.GetProperty("browser_download_url").GetString();
                     assetName = Path.GetFileName(name);
@@ -831,9 +868,22 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 }
             }
 
-            if (downloadUrl is null || assetName is null)
+            // GitHub's asset digest field is not populated on every release API response.
+            // Steamy publishes the same SHA-256 in the release body; bind it to this exact asset.
+            if (assetDigest is null && assetName is not null
+                && doc.RootElement.TryGetProperty("body", out var releaseBody)
+                && releaseBody.GetString() is { } notes)
             {
-                _logging.Add(Models.LogLevel.Error, "RyuuDownload", "No archive asset found in latest release.");
+                var checksum = Regex.Match(notes,
+                    $"(?im)^([0-9a-f]{{64}})\\s+{Regex.Escape(assetName)}\\s*$",
+                    RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250));
+                if (checksum.Success) assetDigest = "sha256:" + checksum.Groups[1].Value;
+            }
+
+            if (downloadUrl is null || assetName is null || string.IsNullOrWhiteSpace(assetDigest)
+                || !assetDigest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+            {
+                _logging.Add(Models.LogLevel.Error, "RyuuDownload", "No verifiable Steamy release ZIP was found.");
                 return null;
             }
 
@@ -851,12 +901,11 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 await CopyBoundedAsync(stream, archivePath, MaximumManifestBytes, ct).ConfigureAwait(false);
             }
 
-            if (assetDigest?.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) == true)
+            await using (var file = File.OpenRead(archivePath))
             {
-                await using var file = File.OpenRead(archivePath);
                 var actual = Convert.ToHexString(await SHA256.HashDataAsync(file, ct));
                 if (!actual.Equals(assetDigest[7..], StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("DepotDownloaderMod archive checksum does not match the release digest.");
+                    throw new InvalidDataException("Steamy release ZIP checksum does not match the release digest.");
             }
 
             progress?.Report("Extracting DepotDownloaderMod...");
@@ -864,9 +913,9 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             var extracted = await Task.Run(() => ArchiveExtractor.Extract(archivePath, extractionDirectory,
                 cancellationToken: ct), ct);
             if (!extracted.Succeeded) throw new InvalidDataException(extracted.Message);
-            var stagedExecutable = Directory.EnumerateFiles(extractionDirectory, "DepotDownloader*.exe", SearchOption.AllDirectories)
-                .FirstOrDefault();
-            if (stagedExecutable is null) throw new InvalidDataException("The release archive contains no DepotDownloader executable.");
+            var stagedExecutable = Directory.EnumerateFiles(extractionDirectory, "DepotDownloaderMod.exe", SearchOption.AllDirectories)
+                .FirstOrDefault(BundledModCapabilities.SupportsOwnFork);
+            if (stagedExecutable is null) throw new InvalidDataException("The Steamy release does not contain a verified Steamy DepotDownloaderMod.");
             ct.ThrowIfCancellationRequested();
             Directory.CreateDirectory(fallbackDir);
             var installedDirectory = Path.Combine(fallbackDir, "release-" + Guid.NewGuid().ToString("N"));
