@@ -13,6 +13,8 @@ namespace Steamy;
 public partial class App : Application
 {
     public static IServiceProvider Services { get; private set; } = null!;
+    public static bool ShouldShowFirstRunSetup { get; private set; }
+    private static TaskCompletionSource? _firstRunSetupDismissed;
     private UiResponsivenessMonitor? _responsivenessMonitor;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -45,6 +47,20 @@ public partial class App : Application
             args.SetObserved();
         };
 
+        var roamingData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy");
+        var localData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy");
+        var settingsPath = Path.Combine(roamingData, "settings.json");
+        var existingDatabase = Path.Combine(roamingData, "content-manager.db");
+        var existingActivity = Path.Combine(localData, "game-activity.json");
+        ShouldShowFirstRunSetup = !File.Exists(settingsPath)
+            && !File.Exists(existingDatabase)
+            && !File.Exists(existingActivity)
+            && !Directory.Exists(localData)
+            && !Directory.Exists(Path.Combine(roamingData, "credentials"));
+        _firstRunSetupDismissed = ShouldShowFirstRunSetup
+            ? new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+            : null;
+
         ApplySavedCulture();
 
         Services = new ServiceCollection().AddSteamyServices().BuildServiceProvider();
@@ -74,6 +90,8 @@ public partial class App : Application
             await Task.Run(updates.CleanUpPreviousInstall);
 
             if (!Services.GetRequiredService<ISettingsService>().Load().AutoUpdate) return;
+            if (ShouldShowFirstRunSetup && _firstRunSetupDismissed is not null)
+                await _firstRunSetupDismissed.Task;
             await Task.Delay(TimeSpan.FromSeconds(2));
             await CheckForUpdatesAsync();
         }
@@ -84,6 +102,13 @@ public partial class App : Application
     }
 
     /// <summary>Checks GitHub and offers a newer release. Returns a short status for the settings page.</summary>
+    public static void MarkFirstRunSetupCompleted()
+    {
+        ShouldShowFirstRunSetup = false;
+        _firstRunSetupDismissed?.TrySetResult();
+        _firstRunSetupDismissed = null;
+    }
+
     public static async Task<string> CheckForUpdatesAsync()
     {
         var updates = Services.GetRequiredService<IUpdateService>();
@@ -119,6 +144,9 @@ public partial class App : Application
     {
         try
         {
+            if (ShouldShowFirstRunSetup && _firstRunSetupDismissed is not null)
+                await _firstRunSetupDismissed.Task;
+
             var store = Services.GetRequiredService<IAppDataStore>();
             var queueStore = Services.GetRequiredService<IDownloadQueueStore>();
             await queueStore.RestoreAsync(store.Downloads, Services.GetRequiredService<ISettingsService>().Load().AutoResume);
@@ -251,7 +279,9 @@ public partial class App : Application
             if (string.IsNullOrWhiteSpace(value) || value.Equals("System Default", StringComparison.OrdinalIgnoreCase)) return;
             var culture = new CultureInfo(value.StartsWith("Deutsch", StringComparison.OrdinalIgnoreCase) ? "de-DE" : "en-US");
             CultureInfo.DefaultThreadCurrentUICulture = culture;
+            CultureInfo.DefaultThreadCurrentCulture = culture;
             Thread.CurrentThread.CurrentUICulture = culture;
+            Thread.CurrentThread.CurrentCulture = culture;
         }
         catch
         {
