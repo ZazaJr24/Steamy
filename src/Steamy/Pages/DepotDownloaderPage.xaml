@@ -20,35 +20,46 @@
       <Grid Margin="0,0,0,20">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel><TextBlock Text="DepotDownloader" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" /><TextBlock Text="Choose your game and version. Downloads keeps your queue and progress." Style="{StaticResource PageSubtitleStyle}" /></StackPanel>
-        <ui:Button Grid.Column="1" Content="Check tool" Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding CheckToolCommand}" VerticalAlignment="Top" Margin="12,0,0,0" />
+        <WrapPanel Grid.Column="1" MaxWidth="180" HorizontalAlignment="Right"><ui:Button Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding CheckToolCommand}" ToolTip="Check downloader" AutomationProperties.Name="Check downloader" Margin="0,0,6,0"/><ui:Button Icon="{ui:SymbolIcon Settings24}" Command="{Binding OpenSettingsCommand}" ToolTip="Configure downloader and transfers" AutomationProperties.Name="Downloader settings"/></WrapPanel>
       </Grid>
-      <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,18">
-        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <ui:SymbolIcon Symbol="ArrowDownload24" Foreground="{DynamicResource AccentBrush}" FontSize="22" Margin="0,0,12,0" />
-          <StackPanel Grid.Column="1"><TextBlock Text="{Binding ToolStatus}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" /><TextBlock Text="{Binding ToolPath}" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,4,10,0" ToolTip="{Binding ToolPath}" /></StackPanel>
-          <TextBlock Grid.Column="2" Text="{Binding ToolVersion}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" />
+      <Border x:Name="SetupGamePreview" Background="#171A20" CornerRadius="18" MinHeight="168" Margin="0,0,0,18">
+        <Grid>
+          <Border CornerRadius="18"><Border.Background><ImageBrush ImageSource="{Binding SelectedHeroUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=1280}" Stretch="UniformToFill" /></Border.Background></Border>
+          <Border CornerRadius="18" Background="{DynamicResource HeroShadeBrush}"/>
+          <Border CornerRadius="18" Background="{DynamicResource HeroBottomShadeBrush}"/>
+          <Grid Margin="20,18"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+            <WrapPanel><Border Background="#604A4E58" CornerRadius="8" Padding="8,3"><TextBlock Text="{Binding ToolCheckLabel}" FontSize="10.5" FontWeight="SemiBold" Foreground="#E7EDF7" ToolTip="{Binding ToolStatus}"/></Border><TextBlock Text="{Binding SelectedGame.AppIdLabel}" Foreground="#C4CEDD" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center"/></WrapPanel>
+            <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Margin="0,18,0,0"><TextBlock Text="{Binding SelectedGame.Name, TargetNullValue='Choose your next download'}" FontSize="26" FontWeight="SemiBold" Foreground="#F5F8FE" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedGame.Name}"/><TextBlock Text="{Binding DepotSelectionLabel}" FontSize="11" Foreground="#C4CEDD" TextTrimming="CharacterEllipsis" ToolTip="{Binding DepotSelectionLabel}" Margin="0,5,0,0"/></StackPanel>
+          </Grid>
         </Grid>
       </Border>
       <Border Background="{DynamicResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,18">
         <StackPanel>
-          <TextBlock Text="New download" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,14" />
+          <TextBlock Text="Download setup" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,14" />
           <TextBlock Text="Game" Style="{StaticResource CaptionStyle}" />
           <ComboBox ItemsSource="{Binding Games}" DisplayMemberPath="Name" SelectedItem="{Binding SelectedGame}" Margin="0,6,0,14" AutomationProperties.Name="Download game" />
           <UniformGrid x:Name="VersionFields" Columns="3" Margin="0,0,-10,14">
-            <StackPanel Margin="0,0,10,8"><TextBlock Text="Depot" Style="{StaticResource CaptionStyle}" /><ComboBox ItemsSource="{Binding Depots}" DisplayMemberPath="Name" SelectedItem="{Binding SelectedDepot}" Margin="0,6,0,0" /></StackPanel>
-            <StackPanel Margin="0,0,10,8"><TextBlock Text="Branch" Style="{StaticResource CaptionStyle}" /><ComboBox ItemsSource="{Binding Branches}" DisplayMemberPath="Name" SelectedItem="{Binding SelectedBranch}" Margin="0,6,0,0" /></StackPanel>
-            <StackPanel Margin="0,0,10,8"><TextBlock Text="Manifest · optional" Style="{StaticResource CaptionStyle}" /><ComboBox ItemsSource="{Binding Manifests}" DisplayMemberPath="ManifestId" SelectedItem="{Binding SelectedManifest}" Margin="0,6,0,0" /></StackPanel>
+            <StackPanel Margin="0,0,10,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Depot" Style="{StaticResource CaptionStyle}"/><Button Grid.Column="1" Content="All depots" Command="{Binding UseAllDepotsCommand}" FontSize="10" Padding="5,1" ToolTip="Use all compatible depots for this game"/></Grid><ComboBox ItemsSource="{Binding Depots}" DisplayMemberPath="Name" SelectedItem="{Binding SelectedDepot}" AutomationProperties.Name="Download depot" Margin="0,6,0,0" /></StackPanel>
+            <StackPanel Margin="0,0,10,8"><TextBlock Text="Branch" Style="{StaticResource CaptionStyle}" /><ComboBox ItemsSource="{Binding Branches}" DisplayMemberPath="Name" SelectedItem="{Binding SelectedBranch}" AutomationProperties.Name="Download branch" Margin="0,6,0,0" /></StackPanel>
+            <StackPanel Margin="0,0,10,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Manifest" Style="{StaticResource CaptionStyle}"/><Button Grid.Column="1" Content="Latest" Command="{Binding UseLatestManifestCommand}" FontSize="10" Padding="5,1" ToolTip="Follow the selected branch instead of pinning an imported manifest"/></Grid><ComboBox ItemsSource="{Binding Manifests}" DisplayMemberPath="ManifestId" SelectedItem="{Binding SelectedManifest}" AutomationProperties.Name="Download manifest" Margin="0,6,0,0" /></StackPanel>
           </UniformGrid>
           <TextBlock Text="Target folder" Style="{StaticResource CaptionStyle}" />
           <Grid Margin="0,6,0,14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <ui:TextBox Text="{Binding TargetFolder, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Choose a local folder" />
             <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon FolderOpen24}" Click="BrowseTargetFolderButton_Click" ToolTip="Choose target folder" AutomationProperties.Name="Choose target folder" Margin="8,0,0,0" />
           </Grid>
+          <Border x:Name="DownloadSelectionSummary" CornerRadius="10" Background="{DynamicResource SurfaceSubtleBrush}" Padding="12,10" Margin="0,0,0,14">
+            <StackPanel><WrapPanel><ui:SymbolIcon Symbol="DocumentCheckmark24" FontSize="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,7,0"/><TextBlock Text="{Binding BranchSelectionLabel}" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}"/></WrapPanel>
+              <TextBlock Text="{Binding ManifestSelectionLabel}" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+              <TextBlock Text="{Binding SelectionSizeLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+            </StackPanel>
+          </Border>
           <CheckBox IsChecked="{Binding AuthorizationConfirmed}" Margin="0,0,0,12"><TextBlock Text="I am authorized to access this content." Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" /></CheckBox>
           <WrapPanel><ui:Button Content="Add to queue" Icon="{ui:SymbolIcon Add24}" Appearance="Primary" Command="{Binding AddToQueueCommand}" Margin="0,0,8,0" /><ui:Button Content="Open Downloads" Icon="{ui:SymbolIcon ArrowDownload24}" Command="{Binding OpenDownloadsCommand}" /></WrapPanel>
           <TextBlock Text="{Binding LastMessage}" Style="{StaticResource BodyTextStyle}" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0" />
         </StackPanel>
       </Border>
+      <Expander Header="Downloader status &amp; setup" Margin="0,0,0,16"><StackPanel Margin="12,8"><TextBlock Text="{Binding ToolStatus}" TextWrapping="Wrap" Style="{StaticResource BodyTextStyle}"/><TextBlock Text="{Binding ToolPath}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,5,0,0"/><TextBlock Text="{Binding ToolVersion, StringFormat='Version: {0}'}" Style="{StaticResource CaptionStyle}" Margin="0,4,0,0"/><ui:Button Content="Open downloader settings" Icon="{ui:SymbolIcon Settings24}" Command="{Binding OpenSettingsCommand}" HorizontalAlignment="Left" Margin="0,10,0,0"/></StackPanel></Expander>
       <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Queue" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" /><TextBlock Text="{Binding QueueSummary}" Style="{StaticResource CaptionStyle}" Margin="0,4,0,0" /></StackPanel><ui:Button Grid.Column="1" Content="Start queued" Icon="{ui:SymbolIcon Play24}" Command="{Binding StartQueuedCommand}" /></Grid>
       <ListBox ItemsSource="{Binding QueueJobs}" MaxHeight="420" ItemContainerStyle="{StaticResource QueueListItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
         <ListBox.ItemTemplate><DataTemplate>

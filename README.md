@@ -38,7 +38,7 @@ Normal releases use three version numbers, such as **0.6.0**. Optional hotfixes 
 | **Dashboard** | Spotlight artwork, a flat animated countdown and wide upcoming covers, and clickable game details. |
 | **Spotlight** | Upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
 | **Games** | Larger portrait covers, up to five per row, released games only, typo-tolerant title/App ID search, favorites, sorting and source filters. |
-| **Downloads** | Clear transfer size, speed, remaining and active time; separate reused content and installation size. Compact queue with priority, pause, resume, retry and repair. Unknown measurements stay unknown. |
+| **Downloads** | Wide game artwork with clear transfer size, speed and remaining time. Details separate active time, reused content and installation size. Compact queue with priority, pause, resume, retry and repair. Unknown measurements stay unknown. |
 | **Settings** | Searchable categories, dark/light themes, reduced effects, Windows backdrop options, download limits, network options and source connections. |
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
 | **Fixes** | Browse your configured fixes repository. **Hypervisor Fixes is Coming soon** and does not install anything yet. |
@@ -64,6 +64,8 @@ Open a game, choose **Download**, and follow three steps in the compact dialog:
 Pausing retains existing files and the exact selected depot manifests. Resume uses that saved selection without asking a provider for newer versions. Missing or corrupt saved data produces a clear error; **New selection** starts an explicit new setup. Duplicate jobs targeting the same folder are rejected.
 
 Waiting jobs can be reordered or prioritized; **Start queue** respects the selected parallel limit and existing running jobs. Transfer controls are in **Settings → Downloads**, including parallel jobs, connections and the Mod speed limit. The device-wide Network activity card is removed. The bundled Mod supports a real **MiB/s limit per game**, shared across its parallel HTTP connections and applied at start/resume. Standard or custom unpatched tools do not receive that option.
+
+**Tools → DepotDownloader** previews the selected game and summarizes the depot, branch and manifest before adding it to the queue. **Latest** follows the selected branch; choosing an imported manifest explicitly pins that version. Reopening setup preserves the choice. A missing or mismatched manifest blocks enqueueing until you choose a valid version or deliberately select Latest. Downloader status is marked checked only after the configured tool passes its actual check.
 
 **Verify & repair** asks DepotDownloader to check and repair the files. The separate **local file check** reports what is already on disk. Queue actions show errors in the app, and waiting jobs are checked again before they start.
 
@@ -144,9 +146,9 @@ Screenshots are captured from the actual Windows app using sample library, queue
 
 **Downloads** — see what's running, what's next and what's ready to resume.
 
-![Downloads with measured progress and queue controls](docs/screenshots/downloads.png)
+![Wide Downloads artwork with measured progress and queue controls](docs/screenshots/downloads.png)
 
-![Compact DepotDownloader setup](docs/screenshots/depot-downloader.png)
+![DepotDownloader game preview and version setup](docs/screenshots/depot-downloader.png)
 
 **Settings** — find a setting, then make the app yours.
 

@@ -84,6 +84,60 @@ public sealed partial class PageSmokeTests
         model.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(model.QueueSummary)) changes++; };
         original.State = DownloadJobState.Paused;
         Assert.Equal(0, changes); // Reset detaches the old job watchers.
+
+        // Exercise real ComboBox bindings: collection refreshes used to discard pinned versions.
+        var depotOne = new Depot { AppId = 42, DepotId = 101, Name = "Main files", Selected = true };
+        var depotTwo = new Depot { AppId = 42, DepotId = 102, Name = "Audio" };
+        store.Depots.Add(depotOne);
+        store.Depots.Add(depotTwo);
+        var branch = new Branch { Name = "beta" };
+        store.Branches.Add(new Branch { Name = "public" });
+        store.Branches.Add(branch);
+        var version = new Manifest { AppId = 42, DepotId = 101, ManifestId = "18446744073709551615" };
+        var otherVersion = new Manifest { AppId = 42, DepotId = 102, ManifestId = "200" };
+        store.Manifests.Add(version);
+        store.Manifests.Add(otherVersion);
+        model.TargetFolder = @"C:\Games\Pinned";
+        model.SelectedDepot = depotOne;
+        model.SelectedManifest = version;
+        model.SelectedBranch = branch;
+        var page = new DepotDownloaderPage { DataContext = model, Width = 780, Height = 560 };
+        page.Measure(new Size(780,560));
+        page.Arrange(new Rect(0,0,780,560));
+        page.UpdateLayout();
+        model.OnNavigatedToAsync().GetAwaiter().GetResult();
+        Assert.Same(depotOne, model.SelectedDepot);
+        Assert.Same(version, model.SelectedManifest);
+        Assert.Same(branch, model.SelectedBranch);
+        model.SelectedDepot = depotTwo;
+        Assert.Null(model.SelectedManifest); // An imported file is not silently pinned.
+        model.SelectedDepot = depotOne;
+        Assert.Same(version, model.SelectedManifest);
+        model.SelectedManifest = otherVersion;
+        ((IAsyncRelayCommand)model.AddToQueueCommand).ExecuteAsync(null).GetAwaiter().GetResult();
+        Assert.Empty(store.Downloads);
+        Assert.Contains("valid manifest", model.LastMessage);
+        model.SelectedManifest = version;
+        ((IAsyncRelayCommand)model.AddToQueueCommand).ExecuteAsync(null).GetAwaiter().GetResult();
+        var pinned = Assert.Single(store.Downloads);
+        Assert.Equal(version.ManifestId, pinned.ManifestId);
+        Assert.Equal(101, pinned.DepotId);
+        Assert.Equal("beta", pinned.Branch);
+        store.Manifests.Remove(version);
+        model.TargetFolder = @"C:\Games\MissingVersion";
+        model.OnNavigatedToAsync().GetAwaiter().GetResult();
+        Assert.Same(version, model.SelectedManifest); // A missing pin must not become Latest.
+        ((IAsyncRelayCommand)model.AddToQueueCommand).ExecuteAsync(null).GetAwaiter().GetResult();
+        Assert.Single(store.Downloads);
+        Assert.Contains("valid manifest", model.LastMessage);
+        model.UseLatestManifestCommand.Execute(null);
+        model.OnNavigatedToAsync().GetAwaiter().GetResult();
+        Assert.Null(model.SelectedManifest);
+        Assert.Contains("Latest", model.ManifestSelectionLabel);
+        model.UseAllDepotsCommand.Execute(null);
+        Assert.Null(model.SelectedDepot);
+        Assert.Null(model.SelectedManifest);
+        Assert.Equal("All compatible depots", model.DepotSelectionLabel);
     }
 
     private static void CheckLibraryDialog(IServiceProvider provider, string theme)
