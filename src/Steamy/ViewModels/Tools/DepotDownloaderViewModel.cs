@@ -454,6 +454,9 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
 
     public override async Task OnNavigatedToAsync()
     {
+        // Library discovery can finish after this singleton view model was constructed.
+        if (SelectedGame is null || !Games.Contains(SelectedGame))
+            SelectedGame = Games.FirstOrDefault(game => game.AppId == SelectedGame?.AppId) ?? Games.FirstOrDefault();
         RefreshSelections();
         await base.OnNavigatedToAsync();
         OnPropertyChanged(nameof(ToolPath));

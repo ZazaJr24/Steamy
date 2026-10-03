@@ -9,6 +9,7 @@ Add a new `## x.y.z` section at the top before tagging.
 - Add a matching game preview and an explicit depot, branch and manifest summary to DepotDownloader; keep detailed setup and logs collapsed.
 - Preserve pinned manifests and branch selections when reopening setup. Default to the latest branch version instead of silently pinning the first imported manifest, and reject mismatched app/depot/manifest selections before saving a job.
 - Fix Windows screenshot artwork selection to render actual hero images for the download and setup banners.
+- Select discovered library games when DepotDownloader opens after the library scan; keep queue actions visible in the more compact setup form.
 
 ## 0.6.0 — 2026-10-02
 

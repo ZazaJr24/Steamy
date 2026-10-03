@@ -138,6 +138,15 @@ public sealed partial class PageSmokeTests
         Assert.Null(model.SelectedDepot);
         Assert.Null(model.SelectedManifest);
         Assert.Equal("All compatible depots", model.DepotSelectionLabel);
+        var lateStore = new AppDataStore();
+        var lateModel = new DepotDownloaderViewModel(lateStore, provider.GetRequiredService<INavigationService>(),
+            provider.GetRequiredService<ILoggingService>(), provider.GetRequiredService<IDepotDownloaderService>(), fixture, settings, fixture);
+        Assert.Null(lateModel.SelectedGame);
+        var discovered = new Game { AppId = 1091500, Name = "Discovered after startup" };
+        lateStore.Games.Add(discovered);
+        lateModel.OnNavigatedToAsync().GetAwaiter().GetResult();
+        Assert.Same(discovered, lateModel.SelectedGame);
+        Assert.Contains("1091500", lateModel.SelectedHeroUrl!);
     }
 
     private static void CheckLibraryDialog(IServiceProvider provider, string theme)
