@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-02T15:14:04.472780+00:00",
+  "updatedAt": "2026-10-03T11:39:54.763290+00:00",
   "games": [
     {
       "appId": 4078430,
@@ -9,14 +9,14 @@
       "genres": "Action · Adventure · Racing",
       "publisher": "Secret Mode",
       "comingSoon": true,
+      "featured": true,
       "releaseLabel": "Oct 6, 2026",
       "releaseDate": "2026-10-06",
       "storeUrl": "https://store.steampowered.com/app/4078430/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/541b6180ab006e79bb64ad768ad523ef0207c489/library_hero_2x.jpg?t=1790098978",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/97215eb609882139ce6a28419116be23fcf5ac86/header_2x.jpg?t=1790098978",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/16514821db6559e75c9067285fee5dd198492aee/library_capsule_2x.jpg?t=1790098978",
-      "releaseTime": "2026-10-06T09:00:00+00:00",
-      "featured": true
+      "releaseTime": "2026-10-06T09:00:00+00:00"
     },
     {
       "appId": 3010850,
@@ -25,14 +25,14 @@
       "genres": "Action · Adventure",
       "publisher": "Xbox Game Studios",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "Oct 6, 2026",
       "releaseDate": "2026-10-06",
       "storeUrl": "https://store.steampowered.com/app/3010850/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/b5751ae4302e34a0fdc216f7d23ba07a8d041443/library_hero_2x.jpg?t=1790871278",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header_2x.jpg?t=1790871278",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/f81b268dd5cb697bb6fc73e718f3a57a70657211/library_capsule_2x.jpg?t=1790871278",
-      "releaseTime": "2026-10-06T16:00:00+00:00",
-      "featured": false
+      "releaseTime": "2026-10-06T16:00:00+00:00"
     },
     {
       "appId": 1551980,
@@ -41,14 +41,14 @@
       "genres": "Action",
       "publisher": "Saber Interactive",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "Oct 8, 2026",
       "releaseDate": "2026-10-08",
       "storeUrl": "https://store.steampowered.com/app/1551980/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/fa536cdcd3bbcf5e8074d1c1a10e2c05e08469ec/library_hero_2x.jpg?t=1790374784",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/d1e7111b93b6a8b3eb029908887648348c2c55e6/header_2x.jpg?t=1790374784",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/07b6068f2992ba42c2d48846eea5703b7742293b/library_600x900_2x.jpg?t=1790374784",
-      "releaseTime": "2026-10-08T16:00:00+00:00",
-      "featured": false
+      "releaseTime": "2026-10-08T16:00:00+00:00"
     },
     {
       "appId": 1215940,
@@ -57,14 +57,14 @@
       "genres": "Adventure · Indie",
       "publisher": "Annapurna Interactive",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "Oct 8, 2026",
       "releaseDate": "2026-10-08",
       "storeUrl": "https://store.steampowered.com/app/1215940/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/5119333db4265f58fae129b41432742c9da0e2af/library_hero_2x.jpg?t=1790790784",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/463f75c014bc0ee1c6daf2ccda036edb28a0bb36/header_2x.jpg?t=1790790784",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/744e274929b880897af4febe86366997c51842aa/library_capsule_2x.jpg?t=1790790784",
-      "releaseTime": "2026-10-08T13:00:00+00:00",
-      "featured": false
+      "releaseTime": "2026-10-08T13:00:00+00:00"
     },
     {
       "appId": 4231820,
@@ -73,14 +73,14 @@
       "genres": "Action · RPG",
       "publisher": "KONAMI",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "Oct 14, 2026",
       "releaseDate": "2026-10-14",
       "storeUrl": "https://store.steampowered.com/app/4231820/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/a86259a3a341818b144f97400c4cc5b3db0e708e/library_hero_2x.jpg?t=1788478863",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/6b65aec2c398006aea8b76e1463cc34d0e4ba68b/header_2x.jpg?t=1788478863",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/a296479a772d37cfb6c36c59059b72d663abca38/library_capsule_2x.jpg?t=1788478863",
-      "releaseTime": "2026-10-15T04:00:00+00:00",
-      "featured": false
+      "releaseTime": "2026-10-15T04:00:00+00:00"
     },
     {
       "appId": 4435490,
@@ -89,14 +89,14 @@
       "genres": "Action",
       "publisher": "Activision",
       "comingSoon": true,
+      "featured": true,
       "releaseLabel": "Oct 22, 2026",
       "releaseDate": "2026-10-22",
       "storeUrl": "https://store.steampowered.com/app/4435490/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/4138eadd1bb476b0499f6ee7690aba461fdf179c/library_hero_2x.jpg?t=1790698027",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/0c492be3204835d71e8b454b6eb1817f8ff68c0d/header_2x.jpg?t=1790698027",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/c71bc2cb60e440d1a0d2435d0c06c4d4a4050edf/library_capsule_2x.jpg?t=1790698027",
-      "releaseTime": "2026-10-23T05:00:00+00:00",
-      "featured": true
+      "releaseTime": "2026-10-23T05:00:00+00:00"
     },
     {
       "appId": 3259780,
@@ -105,14 +105,14 @@
       "genres": "RPG",
       "publisher": "Square Enix",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "Oct 22, 2026",
       "releaseDate": "2026-10-22",
       "storeUrl": "https://store.steampowered.com/app/3259780/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/0cb714b00aaac49c450ad1d64c0c3a3cf14e4cfc/library_hero_2x.jpg?t=1788534743",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/710da43babb2043f9f6ad0e50023e31167d94708/header_2x.jpg?t=1788534743",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/21d8a7c692803448c79426fc88910d8658a058a8/library_capsule_2x.jpg?t=1788534743",
-      "releaseTime": "2026-10-22T16:00:00+00:00",
-      "featured": false
+      "releaseTime": "2026-10-22T16:00:00+00:00"
     },
     {
       "appId": 4115450,
@@ -121,14 +121,30 @@
       "genres": "Action · RPG",
       "publisher": "S-GAME Publishing",
       "comingSoon": true,
+      "featured": true,
       "releaseLabel": "Oct 28, 2026",
       "releaseDate": "2026-10-28",
       "storeUrl": "https://store.steampowered.com/app/4115450/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/1cd52ca84a3d974c4206e9cb90231956324c5999/library_hero_2x.jpg?t=1787142639",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/7f882f889630270d3d3fb93825ac6f55b55e7a6c/header_2x.jpg?t=1787142639",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/471e77854910665c03eb9a53ad06f2ac12903acd/library_capsule_2x.jpg?t=1787142639",
-      "releaseTime": "2026-10-29T02:00:00+00:00",
-      "featured": true
+      "releaseTime": "2026-10-29T02:00:00+00:00"
+    },
+    {
+      "appId": 4530370,
+      "name": "Football Manager 27",
+      "description": "Flow from the tactics board to the touchline in FM27, as foundations evolve to deliver greater control, smoother discovery and a richer footballing world to explore.",
+      "genres": "Simulation · Sports · Strategy",
+      "publisher": "SEGA",
+      "comingSoon": true,
+      "featured": false,
+      "releaseLabel": "Nov 10, 2026",
+      "releaseDate": "2026-11-10",
+      "storeUrl": "https://store.steampowered.com/app/4530370/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/d38e5bf84f475381c6146e2d54f03d1db5292f10/library_hero_2x.jpg?t=1790886528",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/32b41d18ffaac3d2e1dc1a9c3915538db0ba3fca/header_2x.jpg?t=1790886528",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/7ed4ea902189db0f278ae069ff5bfde4f601de93/library_capsule_2x.jpg?t=1790886528",
+      "releaseTime": "2026-11-10T16:00:00+00:00"
     },
     {
       "appId": 2272360,
@@ -137,14 +153,14 @@
       "genres": "Action · Strategy",
       "publisher": "Deep Silver",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "Dec 3, 2026",
       "releaseDate": "2026-12-03",
       "storeUrl": "https://store.steampowered.com/app/2272360/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/63bb72eb8e7513bc4756bb46d38f046114c33087/library_hero_2x.jpg?t=1790838178",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/f50a309da98ef75cbdae400a7d492e36314ce415/header_2x.jpg?t=1790838178",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/c7dfb77d135e6da1b8a392af39b4272c59b1162a/library_capsule_2x.jpg?t=1790838178",
-      "releaseTime": "2026-12-03T16:00:00+00:00",
-      "featured": false
+      "releaseTime": "2026-12-03T16:00:00+00:00"
     },
     {
       "appId": 2590240,
@@ -153,14 +169,14 @@
       "genres": "Action · Adventure",
       "publisher": "Deep Silver",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "Feb 4, 2027",
       "releaseDate": "2027-02-04",
       "storeUrl": "https://store.steampowered.com/app/2590240/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/2c74f11f5bc793ae3568adcdbe566ac128432367/library_hero_2x.jpg?t=1788444240",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/6998fb70f896b0f155061de0b472a8262bd06ef9/header_2x.jpg?t=1788444240",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/f5e198f382b98e13b4962f98ab7dcd8c5d2d62fa/library_capsule_2x.jpg?t=1788444240",
-      "releaseTime": "2027-02-04T16:00:00+00:00",
-      "featured": false
+      "releaseTime": "2027-02-04T16:00:00+00:00"
     },
     {
       "appId": 3558670,
@@ -169,14 +185,14 @@
       "genres": "Action · Adventure",
       "publisher": "Amazon Game Studios",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "Feb 12, 2027",
       "releaseDate": "2027-02-12",
       "storeUrl": "https://store.steampowered.com/app/3558670/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3558670/02a7a7c9346b19dfeda7b9548f4089173cf07cd8/library_hero_2x.jpg?t=1790789113",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3558670/d0d4229807e9bd939c2374cb94a1264aa1386398/header_2x.jpg?t=1790789113",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3558670/9da365c6dd7f21eff671a6c6854a680a6ac63f11/library_capsule_2x.jpg?t=1790789113",
-      "releaseTime": "2027-02-12T18:00:00+00:00",
-      "featured": false
+      "releaseTime": "2027-02-12T18:00:00+00:00"
     },
     {
       "appId": 2769570,
@@ -185,14 +201,14 @@
       "genres": "Action · Adventure · RPG",
       "publisher": "Xbox Game Studios",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "Feb 23, 2027",
       "releaseDate": "2027-02-23",
       "storeUrl": "https://store.steampowered.com/app/2769570/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2769570/931fc30f2a8f28552526b27483d3fed877452ea4/library_hero_2x.jpg?t=1788984944",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2769570/d2ffd7e15a91f3e5485601d3d876988ba3a859d7/header_2x.jpg?t=1788984944",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2769570/2ec61bc4af6cbd99d7a25ad392e66f17bb6cb0fb/library_capsule_2x.jpg?t=1788984944",
-      "releaseTime": "2027-02-23T16:00:00+00:00",
-      "featured": false
+      "releaseTime": "2027-02-23T16:00:00+00:00"
     },
     {
       "appId": 3788800,
@@ -201,14 +217,14 @@
       "genres": "Action · Adventure · RPG",
       "publisher": "Mundfish",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "To be announced",
       "releaseDate": null,
       "storeUrl": "https://store.steampowered.com/app/3788800/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3788800/105238f046cfd4d938c2fe5f9f32faf7f4e60458/library_hero_2x.jpg?t=1749814046",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3788800/ddbc5938e486052c2b51819e280a1993b5f510ac/header_2x.jpg?t=1749814046",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3788800/4857b65bf1f1951032ddf53375f7ea3820dc45a1/library_600x900_2x.jpg?t=1749814046",
-      "releaseTime": null,
-      "featured": false
+      "releaseTime": null
     },
     {
       "appId": 4767480,
@@ -217,14 +233,14 @@
       "genres": "Action · Adventure · RPG",
       "publisher": "CI Games",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "Coming soon",
       "releaseDate": null,
       "storeUrl": "https://store.steampowered.com/app/4767480/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4767480/8955516c7a5c4502731c669fe0b8c595e88d7cfb/library_hero_2x.jpg?t=1782480305",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4767480/a34e3c4d4088e71c7d2cdc5445dc950abd2521db/header_2x.jpg?t=1782480305",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4767480/9a591522b656d04c138a65fb01b74122b670cde6/library_capsule_2x.jpg?t=1782480305",
-      "releaseTime": null,
-      "featured": false
+      "releaseTime": null
     },
     {
       "appId": 2439280,
@@ -233,14 +249,14 @@
       "genres": "Action · RPG",
       "publisher": "Xbox Game Studios",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "2027",
       "releaseDate": null,
       "storeUrl": "https://store.steampowered.com/app/2439280/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2439280/4eb33c603db98716ae8bad6d949e7c52cbc477f2/library_hero_2x.jpg?t=1788707156",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2439280/19eb8ba017772920c7c6bf4287c0403b9675425d/header_2x.jpg?t=1788707156",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2439280/56073cd3f43bc8d6a3f232e2d03f6bc7da47bfef/library_600x900_2x.jpg?t=1788707156",
-      "releaseTime": null,
-      "featured": false
+      "releaseTime": null
     },
     {
       "appId": 3216600,
@@ -249,14 +265,14 @@
       "genres": "Action · Adventure · RPG",
       "publisher": "Square Enix",
       "comingSoon": true,
+      "featured": false,
       "releaseLabel": "2027",
       "releaseDate": null,
       "storeUrl": "https://store.steampowered.com/app/3216600/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3216600/aacea102a9f5ead3c9318904a8e8d507fc89a40b/library_hero_2x.jpg?t=1788158325",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3216600/cb9efcc0c932cb31f32d4f89c0709bcc805798eb/header_2x.jpg?t=1788158325",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3216600/792358d56ea0ab4c13c19a0cf39c46a351648ed4/library_capsule_2x.jpg?t=1788158325",
-      "releaseTime": null,
-      "featured": false
+      "releaseTime": null
     },
     {
       "appId": 2288340,
@@ -265,13 +281,13 @@
       "genres": "Action",
       "publisher": "Bandai Namco Entertainment Inc.",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Oct 1, 2026",
       "releaseDate": "2026-10-01",
       "storeUrl": "https://store.steampowered.com/app/2288340/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/2cb2890597c98cd90bc85e609dbb41645d269ad6/library_hero_2x.jpg?t=1790908088",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/13dea8084135fd130605b78189c82e39bf944c35/header_2x.jpg?t=1790908088",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/a1fb5685d2c140309d5549af1ddc725a7114d889/library_capsule_2x.jpg?t=1790908088",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/a1fb5685d2c140309d5549af1ddc725a7114d889/library_capsule_2x.jpg?t=1790908088"
     },
     {
       "appId": 3159330,
@@ -280,13 +296,13 @@
       "genres": "Action · Adventure · RPG",
       "publisher": "Ubisoft",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Mar 19, 2025",
       "releaseDate": "2025-03-19",
       "storeUrl": "https://store.steampowered.com/app/3159330/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3159330/7e28d06f1f49bfdf57f0eca2f570f3a0b3fb09b0/library_hero_2x.jpg?t=1789746114",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3159330/header_2x.jpg?t=1789746114",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3159330/bdab6ed673aea5877d76e8c99c696ced92cf0d12/library_capsule_2x.jpg?t=1789746114",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3159330/bdab6ed673aea5877d76e8c99c696ced92cf0d12/library_capsule_2x.jpg?t=1789746114"
     },
     {
       "appId": 2246340,
@@ -295,13 +311,13 @@
       "genres": "Action · Adventure · RPG",
       "publisher": "CAPCOM Co., Ltd.",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Feb 27, 2025",
       "releaseDate": "2025-02-27",
       "storeUrl": "https://store.steampowered.com/app/2246340/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2246340/6bfeb9022f014b53f7b6107aa6cd5399563cac29/library_hero_2x.jpg?t=1787549555",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2246340/header_2x.jpg?t=1787549555",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2246340/e3fc16c6bc498891e952500eda05fe6462ceb9f0/library_600x900_2x.jpg?t=1787549555",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2246340/e3fc16c6bc498891e952500eda05fe6462ceb9f0/library_600x900_2x.jpg?t=1787549555"
     },
     {
       "appId": 2677660,
@@ -310,13 +326,13 @@
       "genres": "Action · Adventure",
       "publisher": "Bethesda Softworks",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Dec 8, 2024",
       "releaseDate": "2024-12-08",
       "storeUrl": "https://store.steampowered.com/app/2677660/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2677660/library_hero_2x.jpg?t=1778168392",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2677660/151ae5a881f05ef630defef85d99b38146b7055c/header_2x.jpg?t=1778168392",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2677660/library_600x900_2x.jpg?t=1778168392",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2677660/library_600x900_2x.jpg?t=1778168392"
     },
     {
       "appId": 2842040,
@@ -325,13 +341,13 @@
       "genres": "Action · Adventure",
       "publisher": "Ubisoft",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Nov 21, 2024",
       "releaseDate": "2024-11-21",
       "storeUrl": "https://store.steampowered.com/app/2842040/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2842040/0db4f2ded3cad9b16f60a66acbcd5c35da036a1f/library_hero_2x.jpg?t=1773407100",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2842040/header_2x.jpg?t=1773407100",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2842040/1af87b1f9a2acb205ea5d4220cdae3228dfe0d83/library_600x900_2x.jpg?t=1773407100",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2842040/1af87b1f9a2acb205ea5d4220cdae3228dfe0d83/library_600x900_2x.jpg?t=1773407100"
     },
     {
       "appId": 2322010,
@@ -340,13 +356,13 @@
       "genres": "Action · Adventure · RPG",
       "publisher": "PlayStation Publishing LLC",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Sep 19, 2024",
       "releaseDate": "2024-09-19",
       "storeUrl": "https://store.steampowered.com/app/2322010/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2322010/8886984a9a1da221a8e043908c6e4918205ef784/library_hero_2x.jpg?t=1776465233",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2322010/header.jpg?t=1776465233",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2322010/library_600x900_2x.jpg?t=1776465233",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2322010/library_600x900_2x.jpg?t=1776465233"
     },
     {
       "appId": 2054970,
@@ -355,13 +371,13 @@
       "genres": "Action · RPG",
       "publisher": "CAPCOM Co., Ltd.",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Mar 21, 2024",
       "releaseDate": "2024-03-21",
       "storeUrl": "https://store.steampowered.com/app/2054970/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/library_hero_2x.jpg?t=1788308490",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/header.jpg?t=1788308490",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/library_600x900_2x.jpg?t=1788308490",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/library_600x900_2x.jpg?t=1788308490"
     },
     {
       "appId": 553850,
@@ -370,13 +386,13 @@
       "genres": "Action",
       "publisher": "PlayStation Publishing LLC",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Feb 8, 2024",
       "releaseDate": "2024-02-08",
       "storeUrl": "https://store.steampowered.com/app/553850/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/6cb2177e422438e35b0cd1f1111a468130a83a11/library_hero_2x.jpg?t=1789585784",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/850e2f9e5bb15c5706bb9a1edc832f4f782e8be5/header_2x.jpg?t=1789585784",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/a79b4d13ce2b1e1379116085b4f97b45c14548ab/library_capsule_2x.jpg?t=1789585784",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/a79b4d13ce2b1e1379116085b4f97b45c14548ab/library_capsule_2x.jpg?t=1789585784"
     },
     {
       "appId": 1716740,
@@ -385,13 +401,13 @@
       "genres": "RPG",
       "publisher": "Bethesda Softworks",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Sep 5, 2023",
       "releaseDate": "2023-09-05",
       "storeUrl": "https://store.steampowered.com/app/1716740/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1716740/library_hero_2x.jpg?t=1786648030",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1716740/header.jpg?t=1786648030",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1716740/library_600x900_2x.jpg?t=1786648030",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1716740/library_600x900_2x.jpg?t=1786648030"
     },
     {
       "appId": 1086940,
@@ -400,13 +416,13 @@
       "genres": "Adventure · RPG · Strategy",
       "publisher": "Larian Studios",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Aug 3, 2023",
       "releaseDate": "2023-08-03",
       "storeUrl": "https://store.steampowered.com/app/1086940/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/library_hero_2x.jpg?t=1777363040",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/48a2fcbda8565bb45025e98fd8ebde8a7203f6a0/header_2x.jpg?t=1777363040",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/library_600x900_2x.jpg?t=1777363040",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/library_600x900_2x.jpg?t=1777363040"
     },
     {
       "appId": 2050650,
@@ -415,13 +431,13 @@
       "genres": "Action · Adventure",
       "publisher": "CAPCOM Co., Ltd.",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Mar 23, 2023",
       "releaseDate": "2023-03-23",
       "storeUrl": "https://store.steampowered.com/app/2050650/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2050650/library_hero_2x.jpg?t=1772502922",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2050650/header.jpg?t=1772502922",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2050650/library_600x900_2x.jpg?t=1772502922",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2050650/library_600x900_2x.jpg?t=1772502922"
     },
     {
       "appId": 990080,
@@ -430,13 +446,13 @@
       "genres": "Action · Adventure · RPG",
       "publisher": "Warner Bros. Games",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Feb 10, 2023",
       "releaseDate": "2023-02-10",
       "storeUrl": "https://store.steampowered.com/app/990080/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/990080/471c718aa6d4e2111ae24d7a7427a7485c076f38/library_hero_2x.jpg?t=1790708992",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/990080/be2971b1023bccb04f993887d70ef4d2060262cf/header_2x.jpg?t=1790708992",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/990080/dca9bb926befe37ff9754e3336cd9fe4c969c1e9/library_capsule_2x.jpg?t=1790708992",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/990080/dca9bb926befe37ff9754e3336cd9fe4c969c1e9/library_capsule_2x.jpg?t=1790708992"
     },
     {
       "appId": 1496790,
@@ -445,13 +461,13 @@
       "genres": "Action · Adventure · RPG",
       "publisher": "Warner Bros. Games",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Oct 21, 2022",
       "releaseDate": "2022-10-21",
       "storeUrl": "https://store.steampowered.com/app/1496790/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1496790/library_hero_2x.jpg?t=1772146079",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1496790/header.jpg?t=1772146079",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1496790/library_600x900_2x.jpg?t=1772146079",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1496790/library_600x900_2x.jpg?t=1772146079"
     },
     {
       "appId": 1245620,
@@ -460,13 +476,13 @@
       "genres": "Action · RPG",
       "publisher": "FromSoftware, Inc. · Bandai Namco Entertainment",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Feb 24, 2022",
       "releaseDate": "2022-02-24",
       "storeUrl": "https://store.steampowered.com/app/1245620/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/library_hero_2x.jpg?t=1790290043",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/f0b19c231f86fa0e633ff88a1a63459443017728/header_alt_assets_3_2x.jpg?t=1790290043",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/library_600x900_2x.jpg?t=1790290043",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/library_600x900_2x.jpg?t=1790290043"
     },
     {
       "appId": 1593500,
@@ -475,13 +491,13 @@
       "genres": "Action · Adventure · RPG",
       "publisher": "PlayStation Publishing LLC",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Jan 14, 2022",
       "releaseDate": "2022-01-14",
       "storeUrl": "https://store.steampowered.com/app/1593500/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1593500/library_hero_2x.jpg?t=1763059412",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1593500/header.jpg?t=1763059412",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1593500/library_600x900_2x.jpg?t=1763059412",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1593500/library_600x900_2x.jpg?t=1763059412"
     },
     {
       "appId": 1328670,
@@ -490,13 +506,13 @@
       "genres": "Action · RPG",
       "publisher": "Electronic Arts",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "May 14, 2021",
       "releaseDate": "2021-05-14",
       "storeUrl": "https://store.steampowered.com/app/1328670/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1328670/library_hero_2x.jpg?t=1777395134",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1328670/header.jpg?t=1777395134",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1328670/library_600x900_2x.jpg?t=1777395134",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1328670/library_600x900_2x.jpg?t=1777395134"
     },
     {
       "appId": 1091500,
@@ -505,13 +521,13 @@
       "genres": "RPG",
       "publisher": "CD PROJEKT RED",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Dec 9, 2020",
       "releaseDate": "2020-12-09",
       "storeUrl": "https://store.steampowered.com/app/1091500/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/cf8cec802dc47d0f24b75f9eee135e96812e2652/library_hero_2x.jpg?t=1784714077",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/e9047d8ec47ae3d94bb8b464fb0fc9e9972b4ac7/header_2x.jpg?t=1784714077",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/6399de67cce3cecadce7900e03f6e09ff910a235/library_capsule_2x.jpg?t=1784714077",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/6399de67cce3cecadce7900e03f6e09ff910a235/library_capsule_2x.jpg?t=1784714077"
     },
     {
       "appId": 1174180,
@@ -520,13 +536,13 @@
       "genres": "Action · Adventure",
       "publisher": "Rockstar Games",
       "comingSoon": false,
+      "featured": false,
       "releaseLabel": "Dec 5, 2019",
       "releaseDate": "2019-12-05",
       "storeUrl": "https://store.steampowered.com/app/1174180/",
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/library_hero_2x.jpg?t=1759502961",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/header.jpg?t=1759502961",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/library_600x900_2x.jpg?t=1759502961",
-      "featured": false
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/library_600x900_2x.jpg?t=1759502961"
     }
   ]
 }
