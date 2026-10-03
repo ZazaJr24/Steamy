@@ -851,6 +851,8 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             }
             using var doc = JsonDocument.Parse(releaseOutput.ToArray());
             var assets = doc.RootElement.GetProperty("assets");
+            var latestTag = doc.RootElement.TryGetProperty("tag_name", out var tagName)
+                ? tagName.GetString() : null;
             string? downloadUrl = null;
             string? assetName = null;
             string? assetDigest = null;
@@ -858,8 +860,8 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             foreach (var asset in assets.EnumerateArray())
             {
                 var name = asset.GetProperty("name").GetString() ?? string.Empty;
-                if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
-                    && name.StartsWith("Steamy-", StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrWhiteSpace(latestTag)
+                    && name.Equals($"Steamy-{latestTag}.zip", StringComparison.OrdinalIgnoreCase))
                 {
                     downloadUrl = asset.GetProperty("browser_download_url").GetString();
                     assetName = Path.GetFileName(name);
