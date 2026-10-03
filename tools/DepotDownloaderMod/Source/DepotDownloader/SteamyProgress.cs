@@ -1,4 +1,7 @@
-// GPL-2.0; see LICENSE. Steamy modification, 2026-10-02.
+// This file is subject to the terms and conditions defined
+// in file 'LICENSE', which is part of this source code package.
+
+// Steamy modification, 2026-10-02: progress telemetry.
 using System;
 using System.Diagnostics;
 using System.Globalization;

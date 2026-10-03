@@ -6,7 +6,7 @@ on:
       version:
         description: 'Version tag (e.g. 0.2.2)'
         required: true
-        default: '0.6.1'
+        default: '0.6.2'
   push:
     tags:
       - 'v*'
@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Test and build the pinned DepotDownloaderMod
+      - name: Test and build the checked-in Steamy DepotDownloaderMod fork
         run: python tools/DepotDownloaderMod/build.py
 
       - name: Resolve version

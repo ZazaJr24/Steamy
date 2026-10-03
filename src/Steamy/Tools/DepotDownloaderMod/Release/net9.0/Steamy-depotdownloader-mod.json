@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "forkName": "Steamy DepotDownloaderMod",
+  "forkVersion": "1.0.0",
+  "upstreamRevision": "c0f62fb7f020087f36ae76adfc51fde1446af344",
+  "sourceSha256": "7badc6acd8c1fc35760b0135352e19df2435726a147bd172b8cc1fb83e1aa3c7",
+  "maxDownloadSpeed": true,
+  "progressTelemetry": true,
+  "gracefulStop": true,
+  "boundedRetries": true,
+  "atomicResume": true,
+  "safeManifestPaths": true,
+  "exclusiveTarget": true,
+  "singleFile": true,
+  "exeSha256": "e3d02d702bc10fb407b9ae180a11a51f5610e827fe53dddeba0cadd22d469b64"
+}

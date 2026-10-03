@@ -364,6 +364,21 @@ public static class DepotDownloaderOutputParser
         for (var index = lines.Length - 1; index >= 0; index--)
         {
             var line = lines[index].Trim();
+            const string failurePrefix = "STEAMY_FAILURE|1|";
+            if (line.StartsWith(failurePrefix, StringComparison.Ordinal))
+            {
+                return line[failurePrefix.Length..] switch
+                {
+                    "cancelled" => "Download stopped. Existing files are retained for resume.",
+                    "retry_exhausted" => "The download reached its retry limit. Resume to try again.",
+                    "manifest_invalid" or "manifest_mismatch" => "Steam returned invalid depot metadata. No unverified files were committed.",
+                    "unsafe_path" => "The depot manifest contains an unsafe file path.",
+                    "target_busy" => "Another download is already using this target folder.",
+                    "permission_denied" => "The target folder is not writable.",
+                    "storage_error" => "The target ran out of space or could not be written.",
+                    _ => "DepotDownloaderMod stopped with an internal error."
+                };
+            }
             if (line.Length > 0 && !PercentLinePattern.IsMatch(line) && FailurePattern.IsMatch(line)) return line;
         }
 
@@ -422,9 +437,19 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
 {
     private sealed class ActiveProcess
     {
-        public ActiveProcess(Process process) => Process = process;
+        public ActiveProcess(Process process, string? gracefulStopPath = null)
+        { Process = process; GracefulStopPath = gracefulStopPath; }
         public Process Process { get; }
+        public string? GracefulStopPath { get; }
         public bool PauseRequested { get; set; }
+        public void RequestStop()
+        {
+            if (GracefulStopPath is null) { TryKill(Process); return; }
+            try { using var signal = new FileStream(GracefulStopPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            _ = KillAfterGraceAsync(Process);
+        }
     }
 
     private sealed class BoundedOutputBuffer
@@ -546,17 +571,26 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
             ? command.WorkingDirectory
             : Path.GetFullPath(request.TargetFolder);
         var interactive = command.Interactive;
+        var arguments = command.Arguments.ToList();
+        string? gracefulStopPath = null;
+        if (BundledModCapabilities.SupportsOwnFork(command.FileName))
+        {
+            workingDirectory = Path.GetFullPath(workingDirectory);
+            gracefulStopPath = Path.Combine(workingDirectory, $".steamy-stop-{request.JobId:N}.signal");
+            File.Delete(gracefulStopPath); // A prior forced app shutdown must not cancel this resume.
+            arguments.AddRange(["-max-retries", "5", "-steamy-progress", "-steamy-cancel-file", gracefulStopPath]);
+        }
         using var process = new Process
         {
             StartInfo = DepotDownloaderProcessFactory.Create(
-                new DepotDownloaderCommand(command.FileName, command.Arguments, workingDirectory, interactive),
+                new DepotDownloaderCommand(command.FileName, arguments, workingDirectory, interactive),
                 interactive),
             EnableRaisingEvents = true
         };
 
         cancellationToken.ThrowIfCancellationRequested();
         if (!process.Start()) throw new InvalidOperationException("DepotDownloader could not be started.");
-        var active = new ActiveProcess(process);
+        var active = new ActiveProcess(process, gracefulStopPath);
         if (!_activeProcesses.TryAdd(request.JobId, active))
         {
             TryKill(process);
@@ -564,7 +598,7 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
         }
 
         progress?.Report(new DepotDownloaderProgress(null, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, "Process started."));
-        using var cancellationRegistration = cancellationToken.Register(() => TryKill(process));
+        using var cancellationRegistration = cancellationToken.Register(active.RequestStop);
         var stdout = new BoundedOutputBuffer();
         var stderr = new BoundedOutputBuffer();
 
@@ -616,6 +650,7 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
         finally
         {
             _activeProcesses.TryRemove(request.JobId, out _);
+            if (gracefulStopPath is not null) try { File.Delete(gracefulStopPath); } catch (IOException) { }
             DepotDownloaderOutputParser.FlushPendingOutput();
         }
     }
@@ -625,7 +660,7 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
         if (_activeProcesses.TryGetValue(jobId, out var active))
         {
             active.PauseRequested = pause;
-            TryKill(active.Process);
+            active.RequestStop();
             // Do not release the queue slot until the child has stopped writing its files.
             try { await active.Process.WaitForExitAsync(cancellationToken).ConfigureAwait(false); }
             catch (InvalidOperationException) { } // Run completion may already have disposed it.
@@ -684,9 +719,20 @@ public sealed class DepotDownloaderService : IDepotDownloaderService, IDisposabl
         catch (System.ComponentModel.Win32Exception) { }
     }
 
+    private static async Task KillAfterGraceAsync(Process process)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(8)).ConfigureAwait(false);
+            if (!process.HasExited) TryKill(process);
+        }
+        catch (InvalidOperationException) { }
+        catch (System.ComponentModel.Win32Exception) { }
+    }
+
     public void Dispose()
     {
-        foreach (var active in _activeProcesses.Values) TryKill(active.Process);
+        foreach (var active in _activeProcesses.Values) active.RequestStop();
         _activeProcesses.Clear();
     }
 }

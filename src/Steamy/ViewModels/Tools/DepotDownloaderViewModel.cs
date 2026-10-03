@@ -98,7 +98,7 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
     public string ToolStatus { get => _toolStatus; private set => SetProperty(ref _toolStatus, value); }
     public string ToolVersion { get => _toolVersion; private set => SetProperty(ref _toolVersion, value); }
     public string LastMessage { get => _lastMessage; private set => SetProperty(ref _lastMessage, value); }
-    public string ToolPath => _settingsService.Load().DepotDownloaderPath ?? string.Empty;
+    public string ToolPath => BundledModCapabilities.SelectExecutable(_settingsService.Load().DepotDownloaderPath);
     public string QueueSummary => $"{Jobs.Count(job => IsManualJob(job) && job.IsActive)} active · "
         + $"{Jobs.Count(job => IsManualJob(job) && job.State == DownloadJobState.Queued)} waiting · "
         + $"{Jobs.Count(job => IsManualJob(job) && job.State == DownloadJobState.Paused)} paused";

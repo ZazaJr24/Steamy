@@ -3,6 +3,13 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.2
+
+- Maintain an owned, versioned DepotDownloaderMod fork in the repository and build it only from checked-in source, with upstream GPL attribution and full corresponding source included.
+- Add bounded cancellable retries, a graceful stop signal, exclusive target-folder leases, safe manifest path and metadata checks, atomic resume checkpoints, damaged-checkpoint recovery, per-file rollback for interrupted updates and secret-safe depot-key validation.
+- Verify the bundled fork binary against its capability marker. Library and manual downloads use the bundled fork by default when no custom executable is selected; external or replaced binaries do not receive fork-only flags.
+- Route automatic repair installs to Steamy's own release artifact with required SHA-256 verification instead of installing a different upstream Mod release.
+
 ## 0.6.1
 
 - Restore the wide artwork banner on Downloads with in-banner actions, progress and measured speed, time left, transferred bytes and download size. Compact layouts preserve a usable queue.

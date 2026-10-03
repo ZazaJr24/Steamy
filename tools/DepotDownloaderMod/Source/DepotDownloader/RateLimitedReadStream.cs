@@ -1,5 +1,6 @@
 // This file is subject to the terms and conditions defined
 // in file 'LICENSE', which is part of this source code package.
+
 // Steamy modification, 2026-09-30: shared download bandwidth limit.
 
 using System;

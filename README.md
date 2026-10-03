@@ -96,7 +96,7 @@ This workflow is inspired by [LuaTools](https://github.com/madoiscool/LuaTools).
 
 | Tool | Purpose |
 | --- | --- |
-| **DepotDownloader / DepotDownloaderMod** | Depot downloads, saved manifests, queue management and repair. The existing Mod fork is bundled. |
+| **DepotDownloader / Steamy DepotDownloaderMod** | Depot downloads, saved manifests, queue management and repair. Steamy's maintained GPL source fork is bundled. |
 | **BetterSteamTools** | Detect Steam, install/update the official backend, drop ZIP/7z/RAR archives containing Lua and manifests, or add an App ID/store link through automatic Sushi/Zaza/API source detection. |
 | **Steamless** | Run Steamless against a selected executable, with its options and output in the app. |
 | **Denuvo Activation** | Configure the activation tool and inspect its output; the information button links to the community help. |
@@ -194,7 +194,7 @@ dotnet test tests/Steamy.UiTests/Steamy.UiTests.csproj -c Release
 ./run.ps1
 ```
 
-GitHub Actions rebuilds the pinned Mod tool and builds/tests `main` on Windows. The UI checks exercise the real view models, both themes, search, favorites, all download assistant stages, pause/resume, stale requests and queue persistence failures using offline test services. The screenshot workflow renders the app and updates this page's images.
+GitHub Actions builds Steamy's checked-in DepotDownloaderMod fork and tests `main` on Windows. The UI checks exercise the real view models, both themes, search, favorites, all download assistant stages, pause/resume, stale requests and queue persistence failures using offline test services. The screenshot workflow renders the app and updates this page's images.
 
 <details>
 <summary>Project map and automated discovery</summary>
@@ -205,7 +205,7 @@ GitHub Actions rebuilds the pinned Mod tool and builds/tests `main` on Windows. 
 - `src/Steamy/Controls` — grid, artwork, scrolling and motion.
 - `tests/Steamy.Tests` — core and download policy tests.
 - `tests/Steamy.UiTests` — Windows layout and interaction tests.
-- `tools/DepotDownloaderMod` — pinned fork patch, build script and shared rate limiter tests.
+- `tools/DepotDownloaderMod` — complete maintained GPL fork source, build script and tests.
 - `scripts/update_spotlight.py` — public Steam metadata → discovery feed; no API key or extra Python packages.
 - `.github/workflows/spotlight.yml` — daily discovery refresh, also runnable manually.
 
@@ -219,7 +219,7 @@ Steamy is maintained by [ZazaJr24](https://github.com/ZazaJr24). Thanks to the a
 
 | Project | Creator / community | Used for |
 | --- | --- | --- |
-| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod) | SteamAutoCracks and SteamRE contributors | Bundled Mod downloader; [pinned patch, build and tests](tools/DepotDownloaderMod), GPL license and complete corresponding source included |
+| [Steamy DepotDownloaderMod](tools/DepotDownloaderMod) | Steamy maintainers, derived from SteamAutoCracks and SteamRE | Bundled maintained GPL downloader fork; full [source, provenance, build and tests](tools/DepotDownloaderMod) included |
 | [DepotDownloader](https://github.com/SteamRE/DepotDownloader) | SteamRE | Standard depot downloader |
 | [SushiTools games repository](https://github.com/sushi-dev55/sushitools-games-repo) | [sushi-dev55](https://github.com/sushi-dev55) · [SushiTools server](https://discord.gg/sushitools) | Free Lua metadata and depot manifests, used under MIT |
 | [BetterSteamTools](https://github.com/madoiscool/BetterSteamTools) | madoiscool / OpenSteamTool contributors | Optional Steam backend; official releases downloaded on request, GPL-3.0 |

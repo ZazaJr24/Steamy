@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <RollForward>LatestMajor</RollForward>
+    <Version>1.0.0</Version>
+    <AssemblyName>DepotDownloaderMod</AssemblyName>
+    <Product>Steamy DepotDownloaderMod</Product>
+    <RepositoryUrl>https://github.com/ZazaJr24/Steamy</RepositoryUrl>
+    <Description>Steamy maintained DepotDownloaderMod fork: bounded retries, safe resume and host integration.</Description>
+    <Authors>Steamy; SteamAutoCracks; SteamRE Team</Authors>
+    <Copyright>Copyright © SteamRE Team 2025</Copyright>
+    <ApplicationIcon>..\Icon\DepotDownloader.ico</ApplicationIcon>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</TreatWarningsAsErrors>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE" Link="LICENSE">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.183">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="protobuf-net" Version="3.2.52" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="SteamKit2" Version="3.2.0" />
+  </ItemGroup>
+</Project>
