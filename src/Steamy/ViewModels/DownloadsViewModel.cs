@@ -66,9 +66,7 @@ public sealed class DownloadsViewModel : ViewModelBase
 
     public void StopLiveStats() => _liveTimer.Stop();
 
-    // Frame-rate friendly live stats: labels refresh twice a second, the sparkline geometry is
-    // only rebuilt once per second — new PointCollections invalidate the canvas, and doing that
-    // every tick doubled the render cost for a curve that crawls anyway.
+    // Labels refresh twice a second without rebuilding the queue rows.
     private void UpdateLiveStats()
     {
         foreach (var job in Jobs.Where(job => job.IsActive)) job.RefreshElapsed();
@@ -194,7 +192,7 @@ public sealed class DownloadsViewModel : ViewModelBase
         ? "Try a different game name, App ID, status or source."
         : "Choose a game from your library to start your first download.";
     public string TotalProgress => Jobs.Count == 0 ? "0%" : $"{Jobs.Average(x=>x.Progress):0}%";
-    public string DownloadToolStatus => string.IsNullOrWhiteSpace(_settings.Load().DepotDownloaderPath) ? "DepotDownloader: configure it in Settings" : "DepotDownloader: ready for authorized downloads";
+    public ICommand NavigateDepotDownloaderCommand => new RelayCommand(() => Navigation.Navigate<DepotDownloaderPage>());
     public string QueueLimits => $"{_settings.Load().ParallelDownloads} parallel job(s) · {_settings.Load().RetryCount} retries";
     public IAsyncRelayCommand StartQueuedCommand { get; }
     public ICommand StopQueueCommand { get; }

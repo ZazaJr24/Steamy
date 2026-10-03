@@ -3,6 +3,13 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.1
+
+- Restore the wide artwork banner on Downloads with in-banner actions, progress and measured speed, time left, transferred bytes and download size. Compact layouts preserve a usable queue.
+- Add a matching game preview and an explicit depot, branch and manifest summary to DepotDownloader; keep detailed setup and logs collapsed.
+- Preserve pinned manifests and branch selections when reopening setup. Default to the latest branch version instead of silently pinning the first imported manifest, and reject mismatched app/depot/manifest selections before saving a job.
+- Fix Windows screenshot artwork selection to render actual hero images for the download and setup banners.
+
 ## 0.6.0 — 2026-10-02
 
 - Rebuild Downloads around a compact live progress workspace: transferred bytes, download size, speed, remaining time, active time and verified reused content. Keep a virtualized queue, filters, priorities, pause/resume, retry, cancellation and recovery details.

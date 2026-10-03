@@ -272,9 +272,29 @@ public partial class DownloadsPage : Page
         Unloaded += (_, _) => viewModel.StopLiveStats();
         SizeChanged += (_, e) =>
         {
-            // Let content determine the height; fixed hero sizes clipped live metrics.
-            FocusedMetrics.Columns = e.NewSize.Width < 520 ? 2 : 4;
+            // Keep the wide artwork at desktop sizes while leaving a usable queue on laptops.
+            var shortWindow = e.NewSize.Height < 650;
+            FocusedMetrics.Columns = e.NewSize.Width < 700 && !shortWindow ? 2 : 4;
+            DownloadHero.MinHeight = shortWindow ? 250 : 330;
+            DownloadHeroContent.Margin = shortWindow ? new Thickness(18,14,18,14) : new Thickness(24,20,24,22);
+            DownloadHeroHeading.Margin = new Thickness(0, shortWindow ? 40 : 48, 0, 0);
+            DownloadHeroProgressRow.Margin = shortWindow ? new Thickness(0,10,0,6) : new Thickness(0,22,0,14);
+            DownloadHeroDetailRow.Visibility = shortWindow ? Visibility.Collapsed : Visibility.Visible;
+            foreach (StackPanel field in FocusedMetrics.Children)
+            {
+                ((TextBlock)field.Children[0]).FontSize = shortWindow && e.NewSize.Width < 700 ? 8 : 9.5;
+                ((TextBlock)field.Children[1]).FontSize = shortWindow && e.NewSize.Width < 700 ? 14 : 18;
+            }
+            DownloadHeroTitle.FontSize = e.NewSize.Width < 700 ? 26 : 32;
+            DownloadHeaderActions.MaxWidth = e.NewSize.Width < 600 ? 140 : double.PositiveInfinity;
         };
+    }
+
+    private void DownloadDetails_Click(object sender, RoutedEventArgs e)
+    {
+        var model = (DownloadsViewModel)DataContext;
+        model.SelectedJob = model.HeroJob;
+        DownloadDetails.IsExpanded = true;
     }
 
     // Clicking Start/Pause swaps the buttons and WPF would scroll the card into view; only

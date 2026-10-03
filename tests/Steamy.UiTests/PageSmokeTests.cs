@@ -124,7 +124,7 @@ public sealed partial class PageSmokeTests
                     _phase = theme + " " + page.GetType().Name;
                     PumpDispatcher(TimeSpan.FromMilliseconds(100));
                     foreach (var size in page is DownloadsPage or DepotDownloaderPage
-                        ? new[] { new Size(520, 560), new Size(780, 560), new Size(1280, 800) }
+                        ? new[] { new Size(520, 560), new Size(520, 800), new Size(780, 560), new Size(1280, 800) }
                         : new[] { new Size(780, 560), new Size(1280, 800) })
                     {
                         page.Width = size.Width;
@@ -144,6 +144,7 @@ public sealed partial class PageSmokeTests
                         }
                         if (page is DashboardPage dashboard) CheckDashboardLayout(dashboard);
                         if (page is DownloadsPage downloads) CheckDownloadsLayout(downloads);
+                        if (page is DepotDownloaderPage depotDownloader) CheckDepotDownloaderLayout(depotDownloader);
                         if (page is BetterSteamToolsPage steamTools) CheckSteamToolsLayout(steamTools);
                         SaveScreenshot(page, theme, size);
                         if (page is DownloadsPage)
@@ -475,7 +476,10 @@ public sealed partial class PageSmokeTests
         public object? Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
             var match = System.Text.RegularExpressions.Regex.Match(value?.ToString() ?? "", @"/apps/(\d+)/");
-            return match.Success ? FixtureArtwork.Read(int.Parse(match.Groups[1].Value), "header") : null;
+            var url = value?.ToString() ?? "";
+            var kind = url.Contains("library_hero", StringComparison.Ordinal) ? "hero"
+                : url.Contains("600x900", StringComparison.Ordinal) ? "portrait" : "header";
+            return match.Success ? FixtureArtwork.Read(int.Parse(match.Groups[1].Value), kind) : null;
         }
         public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotSupportedException();
     }

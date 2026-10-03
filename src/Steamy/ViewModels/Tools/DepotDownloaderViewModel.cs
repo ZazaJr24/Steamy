@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;
 using System.IO;
+using System.Globalization;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using Steamy.Models;
@@ -30,8 +31,26 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
     private string _toolStatus = "Not checked";
     private string _toolVersion = "—";
     private string _lastMessage = "Select a game, configure the tool in Settings and add an authorized job.";
+    private readonly Dictionary<(int App, int Depot), Manifest?> _manifestSelections = new();
+    private int _selectionAppId;
+    private string? _checkedToolPath;
+    private bool _toolReady;
+    private bool _refreshingSelections;
 
     public ICommand OpenDownloadsCommand => new RelayCommand(() => Navigation.Navigate<DownloadsPage>());
+    public ICommand OpenSettingsCommand => new RelayCommand(() => Navigation.Navigate<SettingsPage>());
+    public ICommand UseLatestManifestCommand => new RelayCommand(() => SelectedManifest = null);
+    public ICommand UseAllDepotsCommand => new RelayCommand(() => SelectedDepot = null);
+    public string? SelectedHeroUrl => SelectedGame is { AppId: > 0 } game
+        ? $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{game.AppId}/library_hero.jpg" : null;
+    public string DepotSelectionLabel => SelectedDepot is { } depot ? $"Depot {depot.DepotId} · {depot.Name}" : "All compatible depots";
+    public string ManifestSelectionLabel => SelectedManifest is { } manifest ? $"Pinned manifest {manifest.ManifestId}" : "Latest available on the selected branch";
+    public string BranchSelectionLabel => $"Branch: {SelectedBranch?.Name ?? "public"}";
+    public string SelectionSizeLabel => string.IsNullOrWhiteSpace(SelectedDepot?.Size ?? SelectedGame?.Size)
+        ? "Content size: unknown until the manifests are read"
+        : $"Catalog content size: {SelectedDepot?.Size ?? SelectedGame?.Size} · transfer size is measured after checking files";
+    public string ToolCheckLabel => !string.Equals(ToolPath, _checkedToolPath, StringComparison.OrdinalIgnoreCase)
+        ? "Not checked" : _toolReady ? "Verified" : "Needs attention";
 
     public ObservableCollection<Game> Games { get; }
     public ObservableCollection<Depot> Depots { get; } = new();
@@ -48,17 +67,31 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
         get => _selectedGame;
         set
         {
-            if (SetProperty(ref _selectedGame, value)) RefreshSelections();
+            if (SetProperty(ref _selectedGame, value))
+            {
+                RefreshSelections();
+                OnPropertyChanged(nameof(SelectedHeroUrl));
+            }
         }
     }
 
     public Depot? SelectedDepot
     {
         get => _selectedDepot;
-        set { if (SetProperty(ref _selectedDepot, value)) RefreshManifests(); }
+        set { if (!_refreshingSelections && SetProperty(ref _selectedDepot, value)) { RefreshManifests(); NotifySelection(); } }
     }
-    public Branch? SelectedBranch { get => _selectedBranch; set => SetProperty(ref _selectedBranch, value); }
-    public Manifest? SelectedManifest { get => _selectedManifest; set => SetProperty(ref _selectedManifest, value); }
+    public Branch? SelectedBranch { get => _selectedBranch; set { if (SetProperty(ref _selectedBranch, value)) NotifySelection(); } }
+    public Manifest? SelectedManifest
+    {
+        get => _selectedManifest;
+        set
+        {
+            if (_refreshingSelections || !SetProperty(ref _selectedManifest, value)) return;
+            if (SelectedGame is { } game && SelectedDepot is { } depot)
+                _manifestSelections[(game.AppId, depot.DepotId)] = value;
+            NotifySelection();
+        }
+    }
     public string TargetFolder { get => _targetFolder; set => SetProperty(ref _targetFolder, value); }
     public bool AuthorizationConfirmed { get => _authorizationConfirmed; set => SetProperty(ref _authorizationConfirmed, value); }
     public bool IsBusy { get => _isBusy; private set => SetProperty(ref _isBusy, value); }
@@ -129,9 +162,13 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
     private async Task CheckToolAsync()
     {
         IsBusy = ++_busyOperations > 0;
+        var path = ToolPath;
         try
         {
-            var status = await _depotDownloader.CheckAsync(ToolPath);
+            var status = await _depotDownloader.CheckAsync(path);
+            if (!string.Equals(path, ToolPath, StringComparison.OrdinalIgnoreCase)) return;
+            _checkedToolPath = path;
+            _toolReady = status.IsReady;
             ToolStatus = status.Message;
             ToolVersion = string.IsNullOrWhiteSpace(status.Version) ? "—" : status.Version;
             LastMessage = status.Message;
@@ -140,12 +177,16 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
+            if (!string.Equals(path, ToolPath, StringComparison.OrdinalIgnoreCase)) return;
+            _checkedToolPath = path;
+            _toolReady = false;
             ToolStatus = "Tool check failed";
             ToolVersion = "—";
             ReportError("Could not check the download tool", exception);
         }
         finally
         {
+            OnPropertyChanged(nameof(ToolCheckLabel));
             IsBusy = --_busyOperations > 0;
         }
     }
@@ -195,21 +236,54 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
 
     private void RefreshSelections()
     {
-        Depots.Clear();
-        foreach (var depot in Store.Depots.Where(item => SelectedGame is not null && item.AppId == SelectedGame.AppId)) Depots.Add(depot);
-        SelectedDepot = Depots.FirstOrDefault(item => item.Selected);
-        RefreshManifests();
-        SelectedBranch = Branches.FirstOrDefault(item => item.Name.Equals("public", StringComparison.OrdinalIgnoreCase)) ?? Branches.FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(TargetFolder)) TargetFolder = SelectedGame?.InstallFolder ?? _settingsService.Load().DownloadFolder;
+        var sameGame = _selectionAppId == SelectedGame?.AppId;
+        var depotId = sameGame ? SelectedDepot?.DepotId : null;
+        _selectionAppId = SelectedGame?.AppId ?? 0;
+        _refreshingSelections = true;
+        try
+        {
+            Depots.Clear();
+            foreach (var depot in Store.Depots.Where(item => SelectedGame is not null && item.AppId == SelectedGame.AppId)) Depots.Add(depot);
+            // A refresh must not silently replace a chosen depot, branch or pinned manifest.
+            _selectedDepot = sameGame ? Depots.FirstOrDefault(item => item.DepotId == depotId) : Depots.FirstOrDefault(item => item.Selected);
+            OnPropertyChanged(nameof(SelectedDepot));
+            RefreshManifests();
+            if (SelectedBranch is null || !Branches.Contains(SelectedBranch))
+                SelectedBranch = Branches.FirstOrDefault(item => item.Name.Equals("public", StringComparison.OrdinalIgnoreCase)) ?? Branches.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(TargetFolder)) TargetFolder = SelectedGame?.InstallFolder ?? _settingsService.Load().DownloadFolder;
+        }
+        finally { _refreshingSelections = false; }
+        NotifySelection();
     }
 
     private void RefreshManifests()
     {
-        Manifests.Clear();
-        foreach (var manifest in Store.Manifests.Where(item => SelectedGame is not null
-            && item.AppId == SelectedGame.AppId && SelectedDepot is not null && item.DepotId == SelectedDepot.DepotId))
-            Manifests.Add(manifest);
-        SelectedManifest = Manifests.FirstOrDefault();
+        var refreshing = _refreshingSelections;
+        _refreshingSelections = true;
+        try
+        {
+            Manifests.Clear();
+            foreach (var manifest in Store.Manifests.Where(item => SelectedGame is not null
+                && item.AppId == SelectedGame.AppId && SelectedDepot is not null && item.DepotId == SelectedDepot.DepotId))
+                Manifests.Add(manifest);
+            var remembered = SelectedGame is { } game && SelectedDepot is { } depot
+                && _manifestSelections.TryGetValue((game.AppId, depot.DepotId), out var id) ? id : null;
+            // Null intentionally means the latest branch version, not the first imported file.
+            // Keep an unavailable pin visible in the summary; validation blocks it until the
+            // user deliberately chooses another version or Latest.
+            _selectedManifest = Manifests.FirstOrDefault(item => item.ManifestId == remembered?.ManifestId) ?? remembered;
+            OnPropertyChanged(nameof(SelectedManifest));
+        }
+        finally { _refreshingSelections = refreshing; }
+        NotifySelection();
+    }
+
+    private void NotifySelection()
+    {
+        OnPropertyChanged(nameof(DepotSelectionLabel));
+        OnPropertyChanged(nameof(ManifestSelectionLabel));
+        OnPropertyChanged(nameof(BranchSelectionLabel));
+        OnPropertyChanged(nameof(SelectionSizeLabel));
     }
 
     private async Task AddToQueueAsync()
@@ -217,6 +291,20 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
         if (SelectedGame is null)
         {
             LastMessage = "Select a game first.";
+            return;
+        }
+        if (SelectedGame.AppId <= 0 || !Games.Contains(SelectedGame)
+            || SelectedDepot is { } selectedDepot && (selectedDepot.AppId != SelectedGame.AppId || !Depots.Contains(selectedDepot)))
+        {
+            LastMessage = "Choose a depot belonging to the selected game.";
+            return;
+        }
+        if (SelectedManifest is { } selectedManifest && (SelectedDepot is null
+            || selectedManifest.AppId != SelectedGame.AppId || selectedManifest.DepotId != SelectedDepot.DepotId
+            || !Manifests.Contains(selectedManifest)
+            || !ulong.TryParse(selectedManifest.ManifestId, NumberStyles.None, CultureInfo.InvariantCulture, out var manifestId) || manifestId == 0))
+        {
+            LastMessage = "Choose a valid manifest for this depot, or use the latest branch version.";
             return;
         }
         if (string.IsNullOrWhiteSpace(TargetFolder))
@@ -369,7 +457,8 @@ public sealed class DepotDownloaderViewModel : ViewModelBase
         RefreshSelections();
         await base.OnNavigatedToAsync();
         OnPropertyChanged(nameof(ToolPath));
-        if (ToolStatus == "Not checked" && !string.IsNullOrWhiteSpace(ToolPath)) await CheckToolAsync();
+        OnPropertyChanged(nameof(ToolCheckLabel));
+        if (!string.Equals(ToolPath, _checkedToolPath, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(ToolPath)) await CheckToolAsync();
     }
 
     /// <summary>
