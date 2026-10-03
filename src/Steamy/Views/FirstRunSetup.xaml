@@ -1,0 +1,212 @@
+<UserControl x:Class="Steamy.Views.FirstRunSetup"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+  <Border Width="800" MaxWidth="860" MaxHeight="700" CornerRadius="22"
+          Background="{DynamicResource DialogSurfaceBrush}"
+          BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1">
+    <Border.Effect>
+      <DropShadowEffect BlurRadius="42" ShadowDepth="10" Opacity="0.48" Color="Black" />
+    </Border.Effect>
+    <Grid>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="215" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+
+      <Border Background="{DynamicResource SidebarBackgroundBrush}" CornerRadius="22,0,0,22" Padding="24,28">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <Image Source="/Steamy;component/Resources/Brand/steamy-256.png" Width="44" Height="44"
+                 HorizontalAlignment="Left" RenderOptions.BitmapScalingMode="HighQuality" />
+          <TextBlock Grid.Row="1" Text="STEAMY · FIRST RUN" Margin="0,24,0,0" FontSize="10" FontWeight="Bold"
+                     Foreground="{DynamicResource AccentBrush}" />
+          <StackPanel Grid.Row="2">
+            <TextBlock Text="Make it yours." Margin="0,8,0,0" FontSize="24" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+            <TextBlock Text="A few quick choices now. You can change everything later in Settings."
+                       Margin="0,10,0,0" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+          </StackPanel>
+          <StackPanel Grid.Row="3" Margin="0,34,0,0">
+            <Border x:Name="StepOneMarker" CornerRadius="9" Padding="10,9" Background="{DynamicResource AccentSoftBrush}">
+              <TextBlock x:Name="StepOneLabel" Text="01   Preferences" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimaryBrush}" />
+            </Border>
+            <Border x:Name="StepTwoMarker" CornerRadius="9" Padding="10,9" Margin="0,7,0,0" Background="Transparent">
+              <TextBlock x:Name="StepTwoLabel" Text="02   Folders" FontSize="12"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+            </Border>
+            <Border x:Name="StepThreeMarker" CornerRadius="9" Padding="10,9" Margin="0,7,0,0" Background="Transparent">
+              <TextBlock x:Name="StepThreeLabel" Text="03   Downloads" FontSize="12"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+            </Border>
+          </StackPanel>
+          <Border Grid.Row="4" Style="{StaticResource InfoPanelStyle}" CornerRadius="12" Padding="12">
+            <StackPanel>
+              <TextBlock Text="Private by default" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimaryBrush}" />
+              <TextBlock Text="Preferences stay on this PC. No Steam password is requested here."
+                         Margin="0,5,0,0" FontSize="10.5" TextWrapping="Wrap" LineHeight="15"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Column="1" Margin="28,26,28,22">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+          <TextBlock x:Name="StepCounter" Text="STEP 1 OF 3" FontSize="10" FontWeight="Bold"
+                     Foreground="{DynamicResource AccentBrush}" />
+          <TextBlock x:Name="StepTitle" Text="Choose your defaults" Margin="0,7,0,0" FontSize="22"
+                     FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock x:Name="StepDescription" Text="Set the language and look you want Steamy to use."
+                     Margin="0,5,0,0" FontSize="12" TextWrapping="Wrap"
+                     Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Margin="0,20,0,16" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <StackPanel>
+            <StackPanel x:Name="PreferencesStep">
+              <TextBlock Text="LANGUAGE" FontSize="10" FontWeight="Bold" Margin="0,0,0,8"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+              <ComboBox x:Name="LanguageSelector" MinHeight="38" Padding="9,6" />
+              <TextBlock Text="Choose System Default, Deutsch or English for culture-aware content and formatting. Most interface labels are currently English."
+                         Margin="0,7,0,18" FontSize="11" TextWrapping="Wrap" LineHeight="16"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+
+              <TextBlock Text="APPEARANCE" FontSize="10" FontWeight="Bold" Margin="0,0,0,8"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+              <ComboBox x:Name="AppearanceSelector" MinHeight="38" Padding="9,6" />
+              <TextBlock Text="System follows your Windows app theme. You can also pick Light or Dark."
+                         Margin="0,7,0,0" FontSize="11" TextWrapping="Wrap" LineHeight="16"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+            </StackPanel>
+
+            <StackPanel x:Name="FoldersStep" Visibility="Collapsed">
+              <TextBlock Text="STEAM INSTALLATION (OPTIONAL)" FontSize="10" FontWeight="Bold"
+                         Margin="0,0,0,8" Foreground="{DynamicResource TextTertiaryBrush}" />
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBox x:Name="SteamFolderText" MinHeight="38" Padding="10,8" VerticalContentAlignment="Center"
+                         ToolTip="Steam installation folder" />
+                <ui:Button Grid.Column="1" Content="Browse" Appearance="Secondary" Margin="8,0,0,0"
+                           Click="BrowseSteam_Click" />
+              </Grid>
+              <TextBlock Text="Leave this blank to let Steamy detect Steam automatically."
+                         Margin="0,7,0,18" FontSize="11" TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+
+              <TextBlock Text="DEFAULT DOWNLOAD FOLDER" FontSize="10" FontWeight="Bold"
+                         Margin="0,0,0,8" Foreground="{DynamicResource TextTertiaryBrush}" />
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBox x:Name="DownloadFolderText" MinHeight="38" Padding="10,8" VerticalContentAlignment="Center"
+                         ToolTip="Default folder for downloads" />
+                <ui:Button Grid.Column="1" Content="Browse" Appearance="Secondary" Margin="8,0,0,0"
+                           Click="BrowseDownloads_Click" />
+              </Grid>
+              <TextBlock Text="You choose the target for each download too; this is only the suggested default."
+                         Margin="0,7,0,18" FontSize="11" TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+
+              <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="12" Padding="13">
+                <StackPanel>
+                  <TextBlock Text="Downloader setup" FontSize="12" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="Supported game downloads use Steamy's bundled, hash-verified DepotDownloaderMod. The separate DepotDownloader tool remains configurable in Settings."
+                             Margin="0,5,0,0" FontSize="11" LineHeight="16" TextWrapping="Wrap"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+
+            <StackPanel x:Name="DownloadsStep" Visibility="Collapsed">
+              <TextBlock Text="QUEUE &amp; SPEED" FontSize="10" FontWeight="Bold" Margin="0,0,0,9"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+              <Grid Margin="0,0,0,15">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="104" /></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,18,0">
+                  <TextBlock Text="Parallel jobs" FontSize="12" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="How many downloads may run together (1–16)."
+                             Margin="0,4,0,0" FontSize="11" TextWrapping="Wrap"
+                             Foreground="{DynamicResource TextTertiaryBrush}" />
+                </StackPanel>
+                <TextBox x:Name="ParallelJobsText" Grid.Column="1" MinHeight="38" Padding="10,8"
+                         VerticalContentAlignment="Center" Text="2" AutomationProperties.Name="Parallel download jobs" />
+              </Grid>
+              <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="104" /></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,18,0">
+                  <TextBlock Text="Connections per download" FontSize="12" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="Concurrent content chunks for each job (1–128). Lower this if your network or disk struggles."
+                             Margin="0,4,0,0" FontSize="11" TextWrapping="Wrap" LineHeight="15"
+                             Foreground="{DynamicResource TextTertiaryBrush}" />
+                </StackPanel>
+                <TextBox x:Name="ConnectionsText" Grid.Column="1" MinHeight="38" Padding="10,8"
+                         VerticalContentAlignment="Center" Text="16" AutomationProperties.Name="Connections per download" />
+              </Grid>
+
+              <Grid Margin="0,0,0,15">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="104" /></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,18,0">
+                  <TextBlock Text="Speed limit · MiB/s" FontSize="12" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="0 means unlimited. Applies to Steamy's bundled DepotDownloaderMod."
+                             Margin="0,4,0,0" FontSize="11" TextWrapping="Wrap"
+                             Foreground="{DynamicResource TextTertiaryBrush}" />
+                </StackPanel>
+                <TextBox x:Name="SpeedLimitText" Grid.Column="1" MinHeight="38" Padding="10,8"
+                         VerticalContentAlignment="Center" Text="0" AutomationProperties.Name="Download speed limit in MiB per second" />
+              </Grid>
+              <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="104" /></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,18,0">
+                  <TextBlock Text="Retry attempts" FontSize="12" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="Automatic retries for failed non-interactive jobs in the DepotDownloader tool (0–10)."
+                             Margin="0,4,0,0" FontSize="11" TextWrapping="Wrap"
+                             Foreground="{DynamicResource TextTertiaryBrush}" />
+                </StackPanel>
+                <TextBox x:Name="RetryCountText" Grid.Column="1" MinHeight="38" Padding="10,8"
+                         VerticalContentAlignment="Center" Text="3" AutomationProperties.Name="Download retry attempts" />
+              </Grid>
+              <TextBlock Text="RECOVERY &amp; VERIFICATION" FontSize="10" FontWeight="Bold"
+                         Margin="0,0,0,8" Foreground="{DynamicResource TextTertiaryBrush}" />
+              <CheckBox x:Name="VerifyCheck" Content="Verify local files after a DepotDownloader job completes"
+                        Margin="0,5,0,8" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <CheckBox x:Name="ResumeCheck" Content="Restore interrupted downloads after restarting Steamy"
+                        Margin="0,5,0,8" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <CheckBox x:Name="LancacheCheck" Content="Use a detected LANCache server, if available"
+                        Margin="0,5,0,12" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <TextBlock Text="Resumed content is validated by the downloader before reuse. More concurrency can increase network and disk load."
+                         FontSize="11" LineHeight="16" TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2">
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <ui:Button x:Name="BackButton" Content="Back" Appearance="Secondary" Click="Back_Click" Visibility="Collapsed" />
+          <ui:Button x:Name="SkipButton" Grid.Column="2" Content="Skip setup" Appearance="Secondary" Margin="0,0,9,0"
+                     Click="Skip_Click" />
+          <ui:Button x:Name="NextButton" Grid.Column="3" Content="Continue" Appearance="Primary"
+                     MinWidth="120" Click="Next_Click" />
+          <TextBlock x:Name="SaveErrorText" Grid.Row="1" Grid.ColumnSpan="4" Visibility="Collapsed" Margin="0,10,0,0"
+                     TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" FontSize="11" />
+        </Grid>
+      </Grid>
+    </Grid>
+  </Border>
+</UserControl>

@@ -3,6 +3,10 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.3
+
+- Add a first-run setup wizard for language, appearance, Steam/download folders and downloader preferences. Existing installs are not interrupted.
+
 ## 0.6.2
 
 - Maintain an owned, versioned DepotDownloaderMod fork in the repository and build it only from checked-in source, with upstream GPL attribution and full corresponding source included.
