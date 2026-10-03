@@ -300,6 +300,11 @@ public sealed partial class PageSmokeTests
             Progress = 61, Downloaded = "37.3 GB", TotalSize = "61.1 GB", Status = "Paused — existing files and manifests are retained", DownloadMode = "DepotDownloaderMod (Zaza)", TargetFolder = @"C:\Games\ELDEN RING" });
         jobs.Add(new DownloadJob { AppId = 2358720, GameName = "Black Myth: Wukong", State = DownloadJobState.Queued,
             TotalSize = "128 GB", Status = "Ready when you are", DownloadMode = "DepotDownloader", TargetFolder = @"C:\Games\Wukong" });
+        var setup = provider.GetRequiredService<DepotDownloaderViewModel>();
+        setup.SelectedGame = provider.GetRequiredService<IAppDataStore>().Games.First(game => game.AppId == 1091500);
+        setup.TargetFolder = @"C:\Games\Cyberpunk 2077";
+        if (!setup.Branches.Any(branch => branch.Name == "public")) setup.Branches.Add(new Branch { Name = "public" });
+        setup.SelectedBranch = setup.Branches.First(branch => branch.Name == "public");
         var window = new MainWindow { WindowState = WindowState.Normal, Width = 1600, Height = 1050 };
         Assert.False(window.RootNavigationView.IsFooterSeparatorVisible);
         var dashboard = provider.GetRequiredService<DashboardViewModel>();
