@@ -69,6 +69,10 @@ public sealed partial class PageSmokeTests
         services.AddSingleton<IGameActivityService>(activity);
         var navigation = new NavigationService();
         services.AddSingleton<INavigationService>(navigation);
+        // The production navigation provider is an interface, so replace the generic
+        // offline proxy registered above with its real page factory for MainWindow tests.
+        services.AddSingleton<Wpf.Ui.Abstractions.INavigationViewPageProvider>(
+            _ => new NavigationViewPageProvider(App.Services));
         services.AddSingleton<IAppDataStore>(store);
         services.AddSingleton<ISettingsService>(new MemorySettings());
         using var provider = services.BuildServiceProvider();

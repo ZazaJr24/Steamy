@@ -574,7 +574,6 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
                 // paid endpoint call cannot repair them and may consume another request.
                 if (resp.StatusCode is System.Net.HttpStatusCode.Unauthorized
                     or System.Net.HttpStatusCode.Forbidden
-                    or System.Net.HttpStatusCode.NotFound
                     or System.Net.HttpStatusCode.TooManyRequests)
                     return new ManifestDownloadResult(false, packageError);
             }
@@ -755,22 +754,12 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             // Never execute that script: extract only the numeric addappid/setManifestid records,
             // rebuild a tiny metadata-only script, then run the strict validator on that output.
             // The endpoint is already scoped to this requested App ID, so add its explicit root.
-            var catalog = DownloadPreparationReader.Read(luaText);
-            if (catalog.Manifests.Count == 0)
-                throw new InvalidDataException("DepotBox Lua contains no valid depot manifest entries.");
-
-            var sanitized = new System.Text.StringBuilder();
-            sanitized.AppendLine($"addappid({appId})");
-            foreach (var depot in catalog.Depots.OrderBy(depot => depot.DepotId))
-            {
-                var key = catalog.Manifests.FirstOrDefault(manifest => manifest.DepotId == depot.DepotId)?.DecryptionKey;
-                if (!string.IsNullOrWhiteSpace(key))
-                    sanitized.AppendLine($"addappid({depot.DepotId},1,\"{key}\")");
-                foreach (var manifest in depot.Versions.OrderBy(version => version.ManifestId, StringComparer.Ordinal))
-                    sanitized.AppendLine($"setManifestid({depot.DepotId},\"{manifest.ManifestId}\")");
-            }
-
-            return SteamToolsMetadata.ReadLua(sanitized.ToString(), $"{appId}.lua", appId).Lua;
+            // Provider Lua can contain valid unquoted numeric manifest IDs. First pass it
+            // through the strict, non-executing parser, which validates the allowlisted
+            // statements and canonicalizes every manifest ID to a quoted decimal string.
+            // The strict parser removes comments/guards and canonicalizes unquoted 64-bit
+            // manifest IDs, while retaining optional manifest sizes in the normalized output.
+            return SteamToolsMetadata.ReadLua(luaText, $"{appId}.lua", appId).Lua;
         }
         catch (InvalidDataException exception)
         {
