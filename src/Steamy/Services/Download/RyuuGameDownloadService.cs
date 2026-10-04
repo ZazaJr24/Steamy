@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 
@@ -53,7 +52,7 @@ public interface IRyuuGameDownloadService
 
 public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposable
 {
-    private const string GitHubReleasesApi = "https://api.github.com/repos/ZazaJr24/Steamy/releases/latest";
+    private const string GitHubToolBaseUrl = "https://raw.githubusercontent.com/ZazaJr24/Steamy/main/tools/DepotDownloaderMod/Release/net9.0";
     private const long MaximumManifestBytes = 512L * 1024 * 1024;
 
     private readonly ISettingsService _settings;
@@ -64,7 +63,6 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
     private readonly ISteamDepotMetadataService? _depotMetadata;
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
-    private readonly string _toolsFolder;
     private readonly string _workFolder;
     private readonly string _fallbackToolsFolder;
 
@@ -89,8 +87,6 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         var appData = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Steamy");
-        var appTools = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "DepotDownloaderMod");
-        _toolsFolder = toolsFolder ?? appTools;
         _workFolder = workFolder ?? Path.Combine(appData, "ryuu-workdir");
         _fallbackToolsFolder = workFolder is null ? Path.Combine(appData, "tools", "DepotDownloaderMod") : Path.Combine(workFolder, "tools");
     }
@@ -847,14 +843,6 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
     {
         ct.ThrowIfCancellationRequested();
         string? exePath = null;
-        if (Directory.Exists(_toolsFolder))
-        {
-            exePath = Directory.GetFiles(_toolsFolder, "DepotDownloader*.exe", SearchOption.AllDirectories)
-                .FirstOrDefault(BundledModCapabilities.SupportsOwnFork);
-            if (exePath is not null)
-                return exePath;
-        }
-
         var fallbackDir = _fallbackToolsFolder;
         if (Directory.Exists(fallbackDir))
         {
@@ -864,112 +852,37 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 return fallbackExe;
         }
 
-        progress?.Report("DepotDownloaderMod not found — downloading from GitHub...");
+        progress?.Report("DepotDownloaderMod not found — downloading the verified tool from GitHub...");
         var stagingDirectory = Path.Combine(Path.GetDirectoryName(fallbackDir)!, ".depot-install-" + Guid.NewGuid().ToString("N"));
         try
         {
-            using var releaseResponse = await _httpClient.GetAsync(GitHubReleasesApi, HttpCompletionOption.ResponseHeadersRead, ct);
-            if (!releaseResponse.IsSuccessStatusCode)
-            {
-                _logging.Add(Models.LogLevel.Error, "RyuuDownload", $"GitHub API returned {(int)releaseResponse.StatusCode}");
-                return null;
-            }
-
-            if (releaseResponse.Content.Headers.ContentLength > 4L * 1024 * 1024)
-                throw new InvalidDataException("The DepotDownloaderMod release metadata exceeds the size limit.");
-            await using var releaseInput = await releaseResponse.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            using var releaseOutput = new MemoryStream();
-            var releaseBuffer = new byte[81920];
-            int releaseRead;
-            while ((releaseRead = await releaseInput.ReadAsync(releaseBuffer, ct).ConfigureAwait(false)) > 0)
-            {
-                if (releaseOutput.Length + releaseRead > 4L * 1024 * 1024)
-                    throw new InvalidDataException("The DepotDownloaderMod release metadata exceeds the size limit.");
-                releaseOutput.Write(releaseBuffer, 0, releaseRead);
-            }
-            using var doc = JsonDocument.Parse(releaseOutput.ToArray());
-            var assets = doc.RootElement.GetProperty("assets");
-            var latestTag = doc.RootElement.TryGetProperty("tag_name", out var tagName)
-                ? tagName.GetString() : null;
-            string? downloadUrl = null;
-            string? assetName = null;
-            string? assetDigest = null;
-
-            var assetArray = assets.EnumerateArray().ToArray();
-            var separateToolAsset = !string.IsNullOrWhiteSpace(latestTag)
-                ? $"DepotDownloaderMod-{latestTag}-win-x64.zip"
-                : string.Empty;
-            // Accept the separate asset from older releases for compatibility. Current releases
-            // carry the verified tool inside the versioned Steamy archive instead.
-            var legacyAppAsset = !string.IsNullOrWhiteSpace(latestTag) ? $"Steamy-{latestTag}.zip" : string.Empty;
-            var selectedAsset = assetArray.FirstOrDefault(asset =>
-                string.Equals(asset.GetProperty("name").GetString(), separateToolAsset, StringComparison.OrdinalIgnoreCase));
-            if (selectedAsset.ValueKind != JsonValueKind.Object)
-                selectedAsset = assetArray.FirstOrDefault(asset =>
-                    string.Equals(asset.GetProperty("name").GetString(), legacyAppAsset, StringComparison.OrdinalIgnoreCase));
-            if (selectedAsset.ValueKind == JsonValueKind.Object)
-            {
-                var name = selectedAsset.GetProperty("name").GetString() ?? string.Empty;
-                downloadUrl = selectedAsset.GetProperty("browser_download_url").GetString();
-                assetName = Path.GetFileName(name);
-                assetDigest = selectedAsset.TryGetProperty("digest", out var digest) ? digest.GetString() : null;
-            }
-
-            // GitHub's asset digest field is not populated on every release API response.
-            // Steamy publishes the same SHA-256 in the release body; bind it to this exact asset.
-            if (assetDigest is null && assetName is not null
-                && doc.RootElement.TryGetProperty("body", out var releaseBody)
-                && releaseBody.GetString() is { } notes)
-            {
-                var checksum = Regex.Match(notes,
-                    $"(?im)^([0-9a-f]{{64}})\\s+{Regex.Escape(assetName)}\\s*$",
-                    RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250));
-                if (checksum.Success) assetDigest = "sha256:" + checksum.Groups[1].Value;
-            }
-
-            if (downloadUrl is null || assetName is null || string.IsNullOrWhiteSpace(assetDigest)
-                || !assetDigest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
-            {
-                _logging.Add(Models.LogLevel.Error, "RyuuDownload", "No verifiable DepotDownloaderMod release ZIP was found.");
-                return null;
-            }
-
-            progress?.Report($"Downloading {assetName}...");
-            // Keep incomplete downloads out of every executable search path. Installation goes
-            // into writable app data, which also supports a read-only application directory.
+            const string executableName = "DepotDownloaderMod.exe";
+            const string markerName = BundledModCapabilities.MarkerFileName;
             Directory.CreateDirectory(stagingDirectory);
-            var archivePath = Path.Combine(stagingDirectory, assetName);
-            using (var downloadResponse = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false))
+            var stagedExecutable = Path.Combine(stagingDirectory, executableName);
+            var stagedMarker = Path.Combine(stagingDirectory, markerName);
+            foreach (var fileName in new[] { executableName, markerName })
             {
-                downloadResponse.EnsureSuccessStatusCode();
-                if (downloadResponse.Content.Headers.ContentLength > MaximumManifestBytes)
-                    throw new InvalidDataException("The DepotDownloaderMod archive exceeds the size limit.");
-                await using var stream = await downloadResponse.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-                await CopyBoundedWithProgressAsync(stream, archivePath, MaximumManifestBytes,
-                    downloadResponse.Content.Headers.ContentLength, progress, ct).ConfigureAwait(false);
+                progress?.Report($"Downloading {fileName} from the Steamy tools folder...");
+                var destination = Path.Combine(stagingDirectory, fileName);
+                using var response = await _httpClient.GetAsync($"{GitHubToolBaseUrl}/{fileName}",
+                    HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                var maximumBytes = fileName == markerName ? 8192L : MaximumManifestBytes;
+                if (response.Content.Headers.ContentLength > maximumBytes)
+                    throw new InvalidDataException($"The DepotDownloaderMod {fileName} exceeds the size limit.");
+                await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+                await CopyBoundedWithProgressAsync(stream, destination, maximumBytes,
+                    response.Content.Headers.ContentLength, progress, ct).ConfigureAwait(false);
             }
 
-            await using (var file = File.OpenRead(archivePath))
-            {
-                var actual = Convert.ToHexString(await SHA256.HashDataAsync(file, ct));
-                if (!actual.Equals(assetDigest[7..], StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("DepotDownloaderMod release ZIP checksum does not match the release digest.");
-            }
-
-            progress?.Report("Extracting DepotDownloaderMod...");
-            var extractionDirectory = Path.Combine(stagingDirectory, "files");
-            var extracted = await Task.Run(() => ArchiveExtractor.Extract(archivePath, extractionDirectory,
-                cancellationToken: ct), ct);
-            if (!extracted.Succeeded) throw new InvalidDataException(extracted.Message);
-            var stagedExecutable = Directory.EnumerateFiles(extractionDirectory, "DepotDownloaderMod.exe", SearchOption.AllDirectories)
-                .FirstOrDefault(BundledModCapabilities.SupportsOwnFork);
-            if (stagedExecutable is null) throw new InvalidDataException("The DepotDownloaderMod release does not contain a verified Steamy DepotDownloaderMod.");
+            if (!BundledModCapabilities.SupportsOwnFork(stagedExecutable))
+                throw new InvalidDataException("The downloaded DepotDownloaderMod did not match its verified fork metadata.");
             ct.ThrowIfCancellationRequested();
             Directory.CreateDirectory(fallbackDir);
             var installedDirectory = Path.Combine(fallbackDir, "release-" + Guid.NewGuid().ToString("N"));
-            var relativeExecutable = Path.GetRelativePath(extractionDirectory, stagedExecutable);
-            Directory.Move(extractionDirectory, installedDirectory);
-            exePath = Path.Combine(installedDirectory, relativeExecutable);
+            Directory.Move(stagingDirectory, installedDirectory);
+            exePath = Path.Combine(installedDirectory, executableName);
 
             if (exePath is not null)
             {
