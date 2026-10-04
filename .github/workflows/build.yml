@@ -6,7 +6,7 @@ on:
       version:
         description: 'Version tag (e.g. 0.2.2)'
         required: true
-        default: '0.6.4'
+        default: '0.6.4.1'
   push:
     tags:
       - 'v*'
@@ -79,13 +79,6 @@ jobs:
             -p:EnableCompressionInSingleFile=true `
             -p:Version=${{ steps.ver.outputs.v }} `
             -o publish
-
-      - name: Bundle the verified downloader inside the app archive
-        shell: pwsh
-        run: |
-          $destination = 'publish/Tools/DepotDownloaderMod/Release/net9.0'
-          New-Item -ItemType Directory -Force -Path $destination | Out-Null
-          Copy-Item 'src/Steamy/Tools/DepotDownloaderMod/Release/net9.0/*' $destination -Recurse -Force
 
       - name: Add license files
         run: Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/

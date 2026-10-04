@@ -3,6 +3,10 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.4.1
+
+- Hotfix: fetch the verified DepotDownloaderMod executable and marker directly from `tools/DepotDownloaderMod` on GitHub when first needed. No separate downloader release asset or bundled copy is required.
+
 ## 0.6.4
 
 - Simplify Settings navigation to one compact category selector. Keep settings search, export, keyboard shortcuts and every existing setting available; make the page easier to scan.
@@ -11,7 +15,7 @@ Add a new `## x.y.z` section at the top before tagging.
 - Improve startup and navigation stability, reduce unnecessary UI work and smooth scrolling, transitions and download progress. Fix startup navigation and resource failures.
 - Refine the Dashboard, Games grid and BetterSteamTools layout; remove the unwanted window edge line while keeping the normal resizable window.
 - Harden manifest and source validation, download recovery, retries, transfer progress and bundled DepotDownloaderMod capability checks.
-- Bundle the verified DepotDownloaderMod inside the Steamy Windows ZIP so first-run setup is ready without a second release download. Publish generated changelog notes and a SHA-256 checksum for the app archive.
+- Download the verified DepotDownloaderMod directly from the Steamy GitHub repository when first needed. Publish generated changelog notes and a SHA-256 checksum for the app archive.
 
 ## 0.6.3
 
