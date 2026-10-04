@@ -26,12 +26,14 @@ public static class SteamToolsMetadata
         RegexOptions.None, Timeout);
     private static readonly UTF8Encoding Utf8 = new(false, true);
 
-    public static (int AppId, string Lua) ReadLua(string content, string fileName, int? requestedAppId = null)
+    public static (int AppId, string Lua) ReadLua(string content, string fileName, int? requestedAppId = null,
+        bool allowRequestedAppWithoutRootEntry = false)
     {
         if (content.Length > DownloadPreparationReader.MaximumLuaCharacters) throw new InvalidDataException("Lua metadata is too large.");
         var active = Comments.Replace(content.TrimStart('\uFEFF'), "");
         var calls = ReadMetadataStatements(active);
         var ids = new HashSet<int>();
+        var referencedIds = new HashSet<int>();
         var output = new StringBuilder();
         foreach (Match call in calls)
         {
@@ -41,6 +43,10 @@ public static class SteamToolsMetadata
                 throw new InvalidDataException("The Lua metadata has an invalid app or depot ID.");
             if (isAdd)
             {
+                // A three-argument addappid is an encrypted app/depot entry. It still names a
+                // valid app ID, even though it is not an unencrypted root game entry. Keep it
+                // available for an explicitly requested App ID (for example DepotBox Lua).
+                referencedIds.Add(id);
                 if (!args.Groups[3].Success) ids.Add(id);
                 var flag = args.Groups[2].Success ? args.Groups[2].Value : null;
                 if (flag is not null && !uint.TryParse(flag, out _)) throw new InvalidDataException("Invalid addappid flag.");
@@ -55,9 +61,15 @@ public static class SteamToolsMetadata
             }
         }
         var named = Regex.Match(Path.GetFileNameWithoutExtension(fileName), @"^(\d+)(?:\D|$)", RegexOptions.None, Timeout);
-        int? fromName = named.Success && int.TryParse(named.Groups[1].Value, out var parsed) && ids.Contains(parsed) ? parsed : null;
-        var appId = requestedAppId ?? fromName ?? (ids.Count == 1 ? ids.Single() : (int?)null);
-        if (appId is null || !ids.Contains(appId.Value)) throw new InvalidDataException("The game ID is missing or ambiguous. Enter its Steam App ID.");
+        int? fromName = named.Success && int.TryParse(named.Groups[1].Value, out var parsed) && referencedIds.Contains(parsed) ? parsed : null;
+        int? appId = requestedAppId is { } requested
+            ? referencedIds.Contains(requested) || allowRequestedAppWithoutRootEntry && ids.Count == 0 ? requested : null
+            : fromName ?? (ids.Count == 1 ? ids.Single() : ids.Count == 0 && referencedIds.Count == 1 ? referencedIds.Single() : (int?)null);
+        var appIdIsExplicitProviderFallback = requestedAppId == appId && allowRequestedAppWithoutRootEntry && ids.Count == 0;
+        if (appId is null || !referencedIds.Contains(appId.Value) && !appIdIsExplicitProviderFallback)
+            throw new InvalidDataException("The game ID is missing or ambiguous. Enter its Steam App ID.");
+        if (requestedAppId is { } apiAppId && !ids.Contains(apiAppId) && allowRequestedAppWithoutRootEntry)
+            output.Insert(0, $"addappid({apiAppId}){Environment.NewLine}");
         return (appId.Value, output.ToString());
     }
 

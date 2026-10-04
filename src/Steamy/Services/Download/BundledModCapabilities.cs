@@ -40,7 +40,21 @@ public static class BundledModCapabilities
         if (!string.IsNullOrWhiteSpace(configuredPath)) return configuredPath;
         var bundled = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "DepotDownloaderMod",
             "Release", "net9.0", "DepotDownloaderMod.exe");
-        return File.Exists(bundled) && SupportsOwnFork(bundled) ? bundled : string.Empty;
+        if (File.Exists(bundled) && SupportsOwnFork(bundled)) return bundled;
+
+        var appDataTools = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Steamy", "tools", "DepotDownloaderMod");
+        try
+        {
+            return Directory.Exists(appDataTools)
+                ? Directory.GetFiles(appDataTools, "DepotDownloaderMod.exe", SearchOption.AllDirectories)
+                    .FirstOrDefault(SupportsOwnFork) ?? string.Empty
+                : string.Empty;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return string.Empty;
+        }
     }
 
     private static bool Supports(string executablePath, string capability)

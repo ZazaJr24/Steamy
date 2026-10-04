@@ -110,7 +110,7 @@ public sealed class DepotBoxImportTests
             Calls++;
             Assert.Equal("depotbox.org", request.RequestUri!.Host);
             Assert.Equal("test-key", request.Headers.GetValues("X-API-Key").Single());
-            Assert.Equal("test-key", request.Headers.Authorization!.Parameter);
+            Assert.False(request.Headers.Contains("Authorization"));
             if (request.RequestUri.AbsolutePath.EndsWith("/availability"))
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"available\":true}") });
             if (response == "unauthorized" || response == "fallback-lua" && request.RequestUri.AbsolutePath == "/api/direct-download")

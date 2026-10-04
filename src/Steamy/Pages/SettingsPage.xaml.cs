@@ -94,10 +94,10 @@ public partial class SettingsPage : Page
         }
     }
 
-    private void Category_Checked(object sender, RoutedEventArgs e)
+    private void CategorySelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         _searchTimer.Stop();
-        if (sender is RadioButton { Tag: string category }) _selectedCategory = category;
+        if (CategorySelector.SelectedItem is ComboBoxItem { Tag: string category }) _selectedCategory = category;
         FilterSections();
     }
 
@@ -108,6 +108,18 @@ public partial class SettingsPage : Page
     }
 
     private void ClearSearch_Click(object sender, RoutedEventArgs e) => SettingsSearch.Clear();
+
+    private void RunSetupAgain_Click(object sender, RoutedEventArgs e)
+    {
+        if (Window.GetWindow(this) is not MainWindow mainWindow) return;
+        var setup = new Steamy.Views.FirstRunSetup(
+            App.Services.GetRequiredService<ISettingsService>(),
+            App.Services.GetRequiredService<IRyuuGameDownloadService>(),
+            App.Services.GetRequiredService<ISecureCredentialService>(),
+            ViewModel.Settings);
+        setup.Completed += (_, _) => mainWindow.HideOverlay();
+        mainWindow.ShowOverlay(setup);
+    }
 
     private void ResetDefaults_Click(object sender, RoutedEventArgs e)
     {
@@ -166,6 +178,8 @@ public partial class SettingsPage : Page
         ManifestHubApiKeyBox.Clear();
         MirrorTokenBox.Clear();
         ShareTokenBox.Clear();
+        if (IsLoaded && App.Services.GetService<UiTranslationService>() is { } translations)
+            _ = translations.ApplyToAsync((DependencyObject?)Window.GetWindow(this) ?? this, ViewModel.Settings.Language);
     }
 
     private void NumberBox_LostFocus(object sender, RoutedEventArgs e) => ViewModel.NormalizeNumberFields();
@@ -235,6 +249,14 @@ public partial class SettingsPage : Page
     {
         if (sender is PasswordBox passwordBox)
             CredentialTyped(passwordBox, "DepotBox API key", value => ViewModel.DepotBoxApiKeyInput = value);
+    }
+
+    private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.Count == 0 || e.AddedItems[0] is not string selection) return;
+        App.ApplyCulture(selection);
+        _ = App.Services.GetRequiredService<UiTranslationService>()
+            .ApplyToAsync((DependencyObject?)Window.GetWindow(this) ?? this, selection);
     }
 
     private void ManifestHubApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)

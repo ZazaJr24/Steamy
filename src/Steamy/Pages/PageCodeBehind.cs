@@ -11,7 +11,7 @@ namespace Steamy.Pages;
 public partial class DashboardPage : Page
 {
     private readonly System.Windows.Threading.DispatcherTimer _spotlightTimer = new(System.Windows.Threading.DispatcherPriority.Background)
-        { Interval = TimeSpan.FromMilliseconds(50) };
+        { Interval = TimeSpan.FromMilliseconds(250) };
     private readonly System.Windows.Threading.DispatcherTimer _countdownTimer = new(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
     private DateTime _nextFeedCheck = DateTime.MinValue;
     private TimeSpan _slideElapsed;

@@ -1,0 +1,53 @@
+<UserControl x:Class="Steamy.Views.FirstRunWizard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             MinWidth="620" MaxWidth="760">
+  <Border Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="16" Padding="28">
+    <Border.RenderTransform><ScaleTransform x:Name="WizardScale" ScaleX="0.96" ScaleY="0.96" /></Border.RenderTransform>
+    <Grid>
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Grid>
+        <StackPanel>
+          <TextBlock Text="Welcome to Steamy" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock Text="Set up your download workspace in a few steps. You can skip this and change everything later in Settings." TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,6,40,0" />
+        </StackPanel>
+        <TextBlock x:Name="StepLabel" HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" />
+      </Grid>
+      <Grid Grid.Row="1" Margin="0,24,0,24">
+        <StackPanel x:Name="LanguageStep">
+          <TextBlock Text="Choose your language" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock Text="The choice is applied after restarting Steamy." Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,6,0,18" />
+          <ComboBox x:Name="LanguageBox" ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" AutomationProperties.Name="Wizard language" />
+        </StackPanel>
+        <StackPanel x:Name="PathsStep" Visibility="Collapsed">
+          <TextBlock Text="Prepare your download workspace" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock Text="Choose where downloaded content should be stored. Existing files are never deleted silently." Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,18" />
+          <TextBlock Text="Default download folder" Style="{StaticResource CaptionStyle}" />
+          <Grid Margin="0,6,0,14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ui:TextBox x:Name="DownloadFolderBox" Text="{Binding DownloadFolder, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="C:\Games\Steam" /><ui:Button Grid.Column="1" Content="Browse" Click="BrowseFolder_Click" Margin="8,0,0,0" /></Grid>
+          <CheckBox x:Name="AuthorizationBox" IsChecked="True"><TextBlock Text="I understand that I may only download content I am authorized to access." TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" /></CheckBox>
+        </StackPanel>
+        <StackPanel x:Name="ProvidersStep" Visibility="Collapsed">
+          <TextBlock Text="Optional manifest sources" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock Text="Leave any provider empty to skip it. Values are encrypted locally and never exported." Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,14" />
+          <UniformGrid Columns="2">
+            <StackPanel Margin="0,0,12,10"><TextBlock Text="Hubcap API key" Style="{StaticResource CaptionStyle}"/><PasswordBox x:Name="HubcapBox" PasswordChanged="SecretChanged" Margin="0,5,0,0"/></StackPanel>
+            <StackPanel Margin="0,0,0,10"><TextBlock Text="Ryuu auth key" Style="{StaticResource CaptionStyle}"/><PasswordBox x:Name="RyuuBox" PasswordChanged="SecretChanged" Margin="0,5,0,0"/></StackPanel>
+            <StackPanel Margin="0,0,12,10"><TextBlock Text="DepotBox API key" Style="{StaticResource CaptionStyle}"/><PasswordBox x:Name="DepotBox" PasswordChanged="SecretChanged" Margin="0,5,0,0"/></StackPanel>
+            <StackPanel Margin="0,0,0,10"><TextBlock Text="Custom key name" Style="{StaticResource CaptionStyle}"/><ui:TextBox x:Name="CustomNameBox" PlaceholderText="my-source" Margin="0,5,0,0"/></StackPanel>
+          </UniformGrid>
+          <TextBlock Text="Custom key" Style="{StaticResource CaptionStyle}" Margin="0,4,0,0"/><PasswordBox x:Name="CustomBox" PasswordChanged="SecretChanged" Margin="0,5,0,0" />
+        </StackPanel>
+        <StackPanel x:Name="TutorialStep" Visibility="Collapsed">
+          <TextBlock Text="How downloads work" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+          <StackPanel Margin="0,16,0,0"><TextBlock Text="1  Choose a game, depot, branch and manifest." Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10"/><TextBlock Text="2  Select a target folder and confirm authorization." Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10"/><TextBlock Text="3  Add the job to the queue and watch real telemetry: percent, bytes, speed, phase and ETA." Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/></StackPanel>
+          <CheckBox x:Name="TutorialBox" IsChecked="True" Content="Show this tutorial again from Settings" Margin="0,22,0,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+      </Grid>
+      <Grid Grid.Row="2">
+        <ui:Button x:Name="SkipButton" Content="Skip setup" Click="Skip_Click" Appearance="Secondary" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><ui:Button x:Name="BackButton" Content="Back" Click="Back_Click" Appearance="Secondary" Margin="0,0,8,0" Visibility="Collapsed"/><ui:Button x:Name="NextButton" Content="Continue" Click="Next_Click" Appearance="Primary"/></StackPanel>
+      </Grid>
+    </Grid>
+  </Border>
+</UserControl>

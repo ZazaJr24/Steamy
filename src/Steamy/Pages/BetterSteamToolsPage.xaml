@@ -6,15 +6,13 @@
       Background="{DynamicResource AppBackgroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
-    <SolidColorBrush x:Key="DropSurface" Color="#057F8ACB" />
-    <SolidColorBrush x:Key="DropOutline" Color="#307F8ACB" />
     <Style x:Key="ToolHint" TargetType="TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
 
       <Setter Property="FontSize" Value="12" /><Setter Property="TextWrapping" Value="Wrap" />
     </Style>
     <Style x:Key="ToolOptions" TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
-      <Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" /><Setter Property="FontSize" Value="12" />
       <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Expander">
@@ -40,14 +38,8 @@
       </ControlTemplate></Setter.Value></Setter>
     </Style>
   </Page.Resources>
-  <Grid>
+  <Grid Background="{DynamicResource AppBackgroundBrush}">
     <Grid.RowDefinitions><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-    <!-- A single quiet wash, scoped to this page. -->
-    <Border Grid.RowSpan="2" IsHitTestVisible="False"><Border.Background>
-      <RadialGradientBrush Center="0.5,0.35" GradientOrigin="0.5,0.35" RadiusX="0.85" RadiusY="0.75">
-        <GradientStop Color="#106C68B8" Offset="0" /><GradientStop Color="#006C68B8" Offset="1" />
-      </RadialGradientBrush>
-    </Border.Background></Border>
     <ScrollViewer x:Name="ToolScrollHost" Style="{StaticResource PageScrollHostStyle}" Padding="28,28,28,24">
       <StackPanel MaxWidth="780" HorizontalAlignment="Stretch">
         <Grid>
@@ -69,8 +61,8 @@
                 ToolTip="Drop to install. Leave App ID empty to detect games; manifest-only files are cached."
                 AutomationProperties.Name="Drop ZIP, 7z or RAR metadata archives">
           <Border.Style><Style TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource DropSurface}" />
-            <Setter Property="BorderBrush" Value="{StaticResource DropOutline}" /><Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" /><Setter Property="BorderThickness" Value="1" />
             <Style.Triggers><Trigger Property="Tag" Value="AcceptedDrop">
               <Setter Property="Background" Value="#146C68B8" /><Setter Property="BorderBrush" Value="{DynamicResource VioletBrush}" />
             </Trigger></Style.Triggers>

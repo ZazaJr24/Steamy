@@ -57,43 +57,6 @@
     <Style x:Key="TestButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
       <Setter Property="Appearance" Value="Secondary" /><Setter Property="CornerRadius" Value="10" />
     </Style>
-    <Style x:Key="SettingsCategory" TargetType="RadioButton">
-      <Setter Property="controls:CardMotion.IsEnabled" Value="False" />
-      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="Padding" Value="8,10" /><Setter Property="Margin" Value="0,0,12,6" />
-      <Setter Property="FontSize" Value="12.5" /><Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Cursor" Value="Hand" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="RadioButton">
-            <Grid Background="Transparent"><Grid x:Name="MotionSurface">
-            <Border x:Name="CategorySurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="0" Padding="{TemplateBinding Padding}">
-              <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" RecognizesAccessKey="True" />
-            </Border>
-            </Grid></Grid>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-              </Trigger>
-              <Trigger Property="IsChecked" Value="True">
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-                <Setter Property="BorderThickness" Value="0,0,0,2" />
-              </Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter TargetName="CategorySurface" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
   </Page.Resources>
 
   <Grid Margin="28,22,28,16" MaxWidth="1120">
@@ -103,27 +66,32 @@
     </Grid.RowDefinitions>
     <StackPanel Margin="0,0,0,18">
       <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" />
-      <TextBlock Text="Appearance, downloads and connections." Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" />
+      <TextBlock Text="Personalize Steamy and manage downloads, connections, and privacy." Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" />
     </StackPanel>
 
     <StackPanel Grid.Row="1">
       <Grid Margin="0,0,0,12">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-        <ui:TextBox x:Name="SettingsSearch" PlaceholderText="Find a setting — theme, resume, DNS…"
+        <ui:TextBox x:Name="SettingsSearch" PlaceholderText="Search settings…"
                     Icon="{ui:SymbolIcon Search24}" TextChanged="SettingsSearch_TextChanged"
                     AutomationProperties.Name="Search all settings" Margin="0,0,10,0" />
         <ui:Button Grid.Column="1" Content="Export" Icon="{ui:SymbolIcon Document24}" Click="ExportButton_Click"
                    Appearance="Secondary" ToolTip="Export settings as JSON. Credentials are excluded." />
       </Grid>
-      <WrapPanel x:Name="CategoryNavigation" KeyboardNavigation.TabNavigation="Once" Margin="0,0,0,2">
-        <RadioButton Content="General" Tag="general" GroupName="SettingsCategories" IsChecked="True" Style="{StaticResource SettingsCategory}" Checked="Category_Checked" />
-        <RadioButton Content="Downloads" Tag="downloads" GroupName="SettingsCategories" Style="{StaticResource SettingsCategory}" Checked="Category_Checked" />
-        <RadioButton Content="Connections" Tag="services" GroupName="SettingsCategories" Style="{StaticResource SettingsCategory}" Checked="Category_Checked" />
-        <RadioButton Content="Network" Tag="network" GroupName="SettingsCategories" Style="{StaticResource SettingsCategory}" Checked="Category_Checked" />
-        <RadioButton Content="Sharing" Tag="sharing" GroupName="SettingsCategories" Style="{StaticResource SettingsCategory}" Checked="Category_Checked" />
-        <RadioButton Content="All settings" Tag="all" GroupName="SettingsCategories" Style="{StaticResource SettingsCategory}" Checked="Category_Checked" />
-      </WrapPanel>
-      <TextBlock x:Name="SectionSummary" Style="{StaticResource CaptionStyle}" Margin="2,0,0,8" AutomationProperties.LiveSetting="Polite" />
+      <Grid Margin="0,0,0,10">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+        <ComboBox x:Name="CategorySelector" Width="180" MinHeight="34" SelectedIndex="0"
+                  SelectionChanged="CategorySelector_SelectionChanged" AutomationProperties.Name="Settings category">
+          <ComboBoxItem Content="General" Tag="general" />
+          <ComboBoxItem Content="Downloads" Tag="downloads" />
+          <ComboBoxItem Content="Connections" Tag="services" />
+          <ComboBoxItem Content="Network" Tag="network" />
+          <ComboBoxItem Content="Sharing" Tag="sharing" />
+          <ComboBoxItem Content="All settings" Tag="all" />
+        </ComboBox>
+        <TextBlock x:Name="SectionSummary" Grid.Column="1" Style="{StaticResource CaptionStyle}"
+                   Margin="12,0,0,0" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+      </Grid>
     </StackPanel>
 
     <Grid Grid.Row="2">
@@ -197,8 +165,24 @@
                 <TextBlock Text="Language" Style="{StaticResource CardTitleStyle}" />
                 <TextBlock Text="Applied on next start." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
               </StackPanel></Grid>
-            <ComboBox Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Languages}" SelectedItem="{Binding Settings.Language}" />
+            <ComboBox Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Languages}" SelectedItem="{Binding Settings.Language}" SelectionChanged="LanguageComboBox_SelectionChanged" />
           </Grid>
+          <Grid Margin="0,16,0,0">
+            <StackPanel Margin="41,0,20,0" VerticalAlignment="Center">
+              <TextBlock Text="Interface translations" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Translated online when needed, then cached on this PC. No API key required." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+          <Border BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0" Margin="0,14,0,0">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <StackPanel Margin="41,0,20,0" VerticalAlignment="Center">
+                <TextBlock Text="First-run setup" Style="{StaticResource CardTitleStyle}" />
+                <TextBlock Text="Reopen preferences, folders, download options and dependency setup." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+              </StackPanel>
+              <ui:Button Grid.Column="1" Content="Run setup again" Appearance="Secondary" Click="RunSetupAgain_Click" />
+            </Grid>
+          </Border>
         </StackPanel>
       </Border>
 

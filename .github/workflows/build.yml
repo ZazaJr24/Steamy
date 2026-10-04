@@ -6,7 +6,7 @@ on:
       version:
         description: 'Version tag (e.g. 0.2.2)'
         required: true
-        default: '0.6.2'
+        default: '0.6.4'
   push:
     tags:
       - 'v*'
@@ -87,8 +87,12 @@ jobs:
         run: |
           Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ steps.ver.outputs.v }}.zip
 
+      - name: Package the downloader for first-run setup
+        run: |
+          Compress-Archive -Path src/Steamy/Tools/DepotDownloaderMod/Release/net9.0/* -DestinationPath DepotDownloaderMod-v${{ steps.ver.outputs.v }}-win-x64.zip
+
       - name: Release notes and SHA-256 from the packaged ZIP
-        run: python scripts/release_notes.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip' --output release-notes.md
+        run: python scripts/release_notes.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip' --tool-archive 'DepotDownloaderMod-v${{ steps.ver.outputs.v }}-win-x64.zip' --output release-notes.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -96,7 +100,9 @@ jobs:
           tag_name: v${{ steps.ver.outputs.v }}
           name: Steamy v${{ steps.ver.outputs.v }}
           make_latest: true
-          files: Steamy-v${{ steps.ver.outputs.v }}.zip
+          files: |
+            Steamy-v${{ steps.ver.outputs.v }}.zip
+            DepotDownloaderMod-v${{ steps.ver.outputs.v }}-win-x64.zip
           body_path: release-notes.md
 
       - name: Publish verified update metadata after the release exists

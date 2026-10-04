@@ -15,6 +15,7 @@
   <SolidColorBrush x:Key="ControlHoverBrush" Color="#E4E8F0" />
   <SolidColorBrush x:Key="BorderSubtleBrush" Color="#D8DFEB" />
   <SolidColorBrush x:Key="BorderStrongBrush" Color="#C5CDDA" />
+  <SolidColorBrush x:Key="SidebarSeparatorBrush" Color="#B0BAC8" />
 
   <SolidColorBrush x:Key="AccentBrush" Color="#2563EB" />
   <SolidColorBrush x:Key="AccentStrongBrush" Color="#1D4ED8" />

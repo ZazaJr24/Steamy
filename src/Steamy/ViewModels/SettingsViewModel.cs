@@ -144,7 +144,7 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public AppSettings Settings { get; private set; }
 
-    public string[] Languages { get; } = { "System Default", "Deutsch", "English" };
+    public string[] Languages { get; } = UiLanguageCatalog.Options;
     public string[] Appearances { get; } = { "System", "Light", "Dark" };
     public string[] BackdropStyles { get; } = { "None", "Mica", "Acrylic", "Tabbed" };
     public string[] DnsModes { get; } = { "System resolver", "Cloudflare DoH", "Google DoH", "Quad9 DoH", "Custom DoH" };
@@ -636,6 +636,7 @@ public sealed class SettingsViewModel : ViewModelBase
         try { await _credentials.DeleteAsync(RyuuAuthKeyName); } catch { }
         try { await _credentials.DeleteAsync(HubcapApiKeyName); } catch { }
         try { await _credentials.DeleteAsync(DepotBoxApiKeyName); } catch { }
+        try { await _credentials.DeleteAsync("google-translate-api-key"); } catch { }
         try { await _credentials.DeleteAsync(ManifestHubApiKeyName); } catch { }
         try { await _credentials.DeleteAsync(MirrorTokenName); } catch { }
 

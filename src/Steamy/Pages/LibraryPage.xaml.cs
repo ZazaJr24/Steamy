@@ -139,11 +139,8 @@ public partial class LibraryPage : Page
         OverlayTitle.Text = item.Name;
         OverlayAppId.Text = $"App {item.AppId}";
         _downloadCompleted = false;
-        FavoriteButton.Content = "Favorite";
-        FavoriteButton.IsEnabled = true;
         PlayButton.Visibility = App.Services.GetRequiredService<IAppDataStore>().Games.Any(game => game.AppId == item.AppId && game.InstallState == GameInstallState.Installed)
             ? Visibility.Visible : Visibility.Collapsed;
-        _ = UpdateFavoriteButtonAsync(item);
         GameInstallInfo.Text = PlayButton.Visibility == Visibility.Visible ? "Installed in your Steam library." : "Not installed in your Steam library.";
         OverlayStatus.Text = "";
 
@@ -252,35 +249,6 @@ public partial class LibraryPage : Page
                 { RoutedEvent = Mouse.MouseWheelEvent });
             break;
         }
-    }
-
-    private async Task UpdateFavoriteButtonAsync(SteamCatalogItem item)
-    {
-        try
-        {
-            var snapshot = await App.Services.GetRequiredService<IGameActivityService>().GetAsync();
-            if (ReferenceEquals(_selectedItem, item))
-                FavoriteButton.Content = snapshot.FavoriteAppIds.Contains(item.AppId) ? "Favorited" : "Favorite";
-        }
-        catch (Exception exception)
-        { App.Services.GetRequiredService<ILoggingService>().Add(LogLevel.Warning, "Library", $"Favorites could not be read: {exception.Message}"); }
-    }
-
-    private async void FavoriteButton_Click(object sender, RoutedEventArgs args)
-    {
-        if (_selectedItem is not { } item) return;
-        FavoriteButton.IsEnabled = false;
-        try
-        {
-            var favorite = await App.Services.GetRequiredService<IGameActivityService>().ToggleFavoriteAsync(item.AppId);
-            if (ReferenceEquals(_selectedItem, item)) FavoriteButton.Content = favorite ? "Favorited" : "Favorite";
-        }
-        catch (Exception exception)
-        {
-            if (ReferenceEquals(_selectedItem, item)) OverlayStatus.Text = "Your favorite could not be saved. Check access to the Steamy data folder.";
-            App.Services.GetRequiredService<ILoggingService>().Add(LogLevel.Warning, "Library", $"Favorite could not be saved: {exception.Message}");
-        }
-        finally { if (ReferenceEquals(_selectedItem, item)) FavoriteButton.IsEnabled = true; }
     }
 
     private async void AddToSteamTools_Click(object sender, RoutedEventArgs args)

@@ -85,6 +85,8 @@ public sealed partial class PageSmokeTests
             CheckReducedEffectsNativeWindow();
             _phase = "CheckSettingsCache()";
             CheckSettingsCache();
+            _phase = "CheckFirstRunSetup()";
+            CheckFirstRunSetup();
             _phase = "CheckArtworkDecoding()";
             CheckArtworkDecoding();
             _phase = "CheckScrollReversal()";

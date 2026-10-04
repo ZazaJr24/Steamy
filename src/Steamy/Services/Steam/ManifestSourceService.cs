@@ -338,17 +338,18 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     private static bool ReadAvailability(JsonElement root)
     {
         if (root.ValueKind != JsonValueKind.Object) return false;
-        if (root.TryGetProperty("available", out var avail))
-            return avail.ValueKind == JsonValueKind.True;
-        if (root.TryGetProperty("manifest_file_exists", out var exists))
-            return exists.ValueKind == JsonValueKind.True;
+        if (root.TryGetProperty("available", out var avail) && avail.ValueKind == JsonValueKind.True)
+            return true;
+        if (root.TryGetProperty("manifest_file_exists", out var exists) && exists.ValueKind == JsonValueKind.True)
+            return true;
         if (root.TryGetProperty("status", out var status) && status.ValueKind == JsonValueKind.String)
         {
             var text = status.GetString() ?? string.Empty;
-            return text.Equals("available", StringComparison.OrdinalIgnoreCase)
+            if (text.Equals("available", StringComparison.OrdinalIgnoreCase)
                 || text.Equals("ok", StringComparison.OrdinalIgnoreCase)
                 || text.Equals("ready", StringComparison.OrdinalIgnoreCase)
-                || text.Equals("exists", StringComparison.OrdinalIgnoreCase);
+                || text.Equals("exists", StringComparison.OrdinalIgnoreCase))
+                return true;
         }
         return false;
     }
@@ -409,7 +410,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
 
             using var doc = JsonDocument.Parse(body);
             return ReadAvailability(doc.RootElement)
-                ? new ManifestAvailability(true, true, $"Available on DepotBox")
+                ? new ManifestAvailability(true, true, $"App {appId} is listed on DepotBox. Its Lua metadata will be checked before import.")
                 : new ManifestAvailability(false, true, $"DepotBox has no manifest for App {appId} yet");
         }
         catch (OperationCanceledException) { throw; }
@@ -420,11 +421,10 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         }
     }
 
-    /// <summary>DepotBox accepts the key both as X-API-Key and as a Bearer token — send both.</summary>
+    /// <summary>DepotBox documents X-API-Key as its programmatic authentication header.</summary>
     private static void AddDepotBoxAuth(HttpRequestMessage request, string key)
     {
         request.Headers.TryAddWithoutValidation("X-API-Key", key);
-        request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
     }
 
     private Task<ManifestDownloadResult> DownloadFromHubcapAsync(
@@ -566,9 +566,17 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             }
             else
             {
+                var errorBody = await resp.Content.ReadAsStringAsync(ct);
                 packageError = ExtractApiErrorMessage(
-                    "",
+                    errorBody,
                     $"DepotBox returned HTTP {(int)resp.StatusCode} for App {appId}.");
+                // Credentials, quota and missing-app responses are definitive. A second
+                // paid endpoint call cannot repair them and may consume another request.
+                if (resp.StatusCode is System.Net.HttpStatusCode.Unauthorized
+                    or System.Net.HttpStatusCode.Forbidden
+                    or System.Net.HttpStatusCode.NotFound
+                    or System.Net.HttpStatusCode.TooManyRequests)
+                    return new ManifestDownloadResult(false, packageError);
             }
         }
         catch (OperationCanceledException) { throw; }
@@ -588,9 +596,12 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             AddDepotBoxAuth(req, key);
             using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode)
+            {
+                var errorBody = await resp.Content.ReadAsStringAsync(ct);
                 return new ManifestDownloadResult(false, packageError ?? ExtractApiErrorMessage(
-                    "",
+                    errorBody,
                     $"DepotBox returned HTTP {(int)resp.StatusCode} for App {appId}."));
+            }
 
             var contentType = resp.Content.Headers.ContentType?.MediaType ?? string.Empty;
             var bytes = await ReadPayloadAsync(resp.Content, 128L * 1024 * 1024, ct);
@@ -685,6 +696,16 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             if (luaContent is null)
                 return new ManifestDownloadResult(false, $"No Lua script found in DepotBox archive for App {appId}.");
 
+            try
+            {
+                luaContent = NormalizeDepotBoxLua(appId, luaContent);
+                await File.WriteAllTextAsync(Path.Combine(appWorkDir, $"{appId}.lua"), luaContent, ct);
+            }
+            catch (InvalidDataException ex)
+            {
+                return new ManifestDownloadResult(false, ex.Message);
+            }
+
             _logging.Add(Models.LogLevel.Info, "ManifestSource",
                 $"DepotBox package for App {appId} unpacked: {fileCount} file(s).", appId);
             return new ManifestDownloadResult(true, "Downloaded from DepotBox.", luaContent, appWorkDir);
@@ -711,12 +732,52 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         if (string.IsNullOrWhiteSpace(luaText))
             return new ManifestDownloadResult(false, "DepotBox returned empty content.");
 
-        luaText = SteamToolsMetadata.ReadLua(luaText, $"{appId}.lua", appId).Lua;
+        try
+        {
+            luaText = NormalizeDepotBoxLua(appId, luaText);
+        }
+        catch (InvalidDataException ex)
+        {
+            return new ManifestDownloadResult(false, ex.Message);
+        }
         var luaPath = Path.Combine(appWorkDir, $"{appId}.lua");
         await File.WriteAllTextAsync(luaPath, luaText, ct);
         _logging.Add(Models.LogLevel.Info, "ManifestSource",
             $"Downloaded Lua from DepotBox for App {appId}.", appId);
         return new ManifestDownloadResult(true, "Downloaded from DepotBox.", luaText, appWorkDir);
+    }
+
+    private static string NormalizeDepotBoxLua(int appId, string luaText)
+    {
+        try
+        {
+            // DepotBox's generator can wrap its metadata in helper Lua (guards/local setup code).
+            // Never execute that script: extract only the numeric addappid/setManifestid records,
+            // rebuild a tiny metadata-only script, then run the strict validator on that output.
+            // The endpoint is already scoped to this requested App ID, so add its explicit root.
+            var catalog = DownloadPreparationReader.Read(luaText);
+            if (catalog.Manifests.Count == 0)
+                throw new InvalidDataException("DepotBox Lua contains no valid depot manifest entries.");
+
+            var sanitized = new System.Text.StringBuilder();
+            sanitized.AppendLine($"addappid({appId})");
+            foreach (var depot in catalog.Depots.OrderBy(depot => depot.DepotId))
+            {
+                var key = catalog.Manifests.FirstOrDefault(manifest => manifest.DepotId == depot.DepotId)?.DecryptionKey;
+                if (!string.IsNullOrWhiteSpace(key))
+                    sanitized.AppendLine($"addappid({depot.DepotId},1,\"{key}\")");
+                foreach (var manifest in depot.Versions.OrderBy(version => version.ManifestId, StringComparer.Ordinal))
+                    sanitized.AppendLine($"setManifestid({depot.DepotId},\"{manifest.ManifestId}\")");
+            }
+
+            return SteamToolsMetadata.ReadLua(sanitized.ToString(), $"{appId}.lua", appId).Lua;
+        }
+        catch (InvalidDataException exception)
+        {
+            throw new InvalidDataException(
+                $"DepotBox returned Lua that Steamy could not safely import for App {appId}: {exception.Message}",
+                exception);
+        }
     }
 
     private async Task<ManifestDownloadResult> DownloadFromGitHubAsync(

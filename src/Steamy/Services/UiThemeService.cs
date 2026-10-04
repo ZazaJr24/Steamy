@@ -29,6 +29,7 @@ public static class UiThemeService
 
         _isLight = light;
         try { SwapPalette(light); } catch { }
+        ApplyWorkspaceBackground(light);
 
         try
         {
@@ -41,6 +42,29 @@ public static class UiThemeService
             ApplyTransparentBackgrounds();
         else
             RestoreOpaqueBackgrounds();
+
+        if (Application.Current?.MainWindow is MainWindow mainWindow)
+            mainWindow.RefreshFrameAppearance();
+    }
+
+    private static void ApplyWorkspaceBackground(bool light)
+    {
+        var app = Application.Current;
+        if (app is null) return;
+
+        if (light)
+        {
+            // The shared workspace wash is intentionally part of Dark mode. In Light mode a
+            // solid palette surface keeps pages from retaining a blue/purple cast after a swap.
+            app.Resources["WorkspaceBackgroundBrush"] = LightPalette["AppBackgroundBrush"];
+            return;
+        }
+
+        var styles = app.Resources.MergedDictionaries.FirstOrDefault(dictionary =>
+            dictionary.Source?.OriginalString.Contains("Resources/Styles.xaml", StringComparison.OrdinalIgnoreCase) == true
+            || dictionary.Source?.OriginalString.Contains(@"Resources\Styles.xaml", StringComparison.OrdinalIgnoreCase) == true);
+        if (styles?.Contains("WorkspaceBackgroundBrush") == true)
+            app.Resources["WorkspaceBackgroundBrush"] = styles["WorkspaceBackgroundBrush"];
     }
 
     public static void ApplyBackdrop(string? style)

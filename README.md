@@ -37,7 +37,7 @@ Normal releases use three version numbers, such as **0.6.0**. Optional hotfixes 
 | --- | --- |
 | **Dashboard** | Spotlight artwork, a flat animated countdown and wide upcoming covers, and clickable game details. |
 | **Spotlight** | Upcoming major studio releases, automatically refreshed from public Steam metadata. Official artwork, publisher, release status and dates; a local cache works offline. |
-| **Games** | Larger portrait covers, up to five per row, released games only, typo-tolerant title/App ID search, favorites, sorting and source filters. |
+| **Games** | Larger portrait covers, up to five per row, released games only, typo-tolerant title/App ID search, sorting and source filters. |
 | **Downloads** | Wide game artwork with clear transfer size, speed and remaining time. Details separate active time, reused content and installation size. Compact queue with priority, pause, resume, retry and repair. Unknown measurements stay unknown. |
 | **Settings** | Searchable categories, dark/light themes, reduced effects, Windows backdrop options, download limits, network options and source connections. |
 | **Share** | Scan local Lua files and manifests, preview a pack, export an archive or upload to your own GitHub repository. |
@@ -96,7 +96,7 @@ This workflow is inspired by [LuaTools](https://github.com/madoiscool/LuaTools).
 
 | Tool | Purpose |
 | --- | --- |
-| **DepotDownloader / Steamy DepotDownloaderMod** | Depot downloads, saved manifests, queue management and repair. Steamy's maintained GPL source fork is bundled. |
+| **DepotDownloader / Steamy DepotDownloaderMod** | Depot downloads, saved manifests, queue management and repair. The verified Steamy GPL fork is downloaded from the GitHub release during first-run setup. |
 | **BetterSteamTools** | Detect Steam, install/update the official backend, drop ZIP/7z/RAR archives containing Lua and manifests, or add an App ID/store link through automatic Sushi/Zaza/API source detection. |
 | **Steamless** | Run Steamless against a selected executable, with its options and output in the app. |
 | **Denuvo Activation** | Configure the activation tool and inspect its output; the information button links to the community help. |
@@ -219,7 +219,7 @@ Steamy is maintained by [ZazaJr24](https://github.com/ZazaJr24). Thanks to the a
 
 | Project | Creator / community | Used for |
 | --- | --- | --- |
-| [Steamy DepotDownloaderMod](tools/DepotDownloaderMod) | Steamy maintainers, derived from SteamAutoCracks and SteamRE | Bundled maintained GPL downloader fork; full [source, provenance, build and tests](tools/DepotDownloaderMod) included |
+| [Steamy DepotDownloaderMod](tools/DepotDownloaderMod) | Steamy maintainers, derived from SteamAutoCracks and SteamRE | Downloaded on first-run setup from the matching GitHub release; full [source, provenance, build and tests](tools/DepotDownloaderMod) included |
 | [DepotDownloader](https://github.com/SteamRE/DepotDownloader) | SteamRE | Standard depot downloader |
 | [SushiTools games repository](https://github.com/sushi-dev55/sushitools-games-repo) | [sushi-dev55](https://github.com/sushi-dev55) · [SushiTools server](https://discord.gg/sushitools) | Free Lua metadata and depot manifests, used under MIT |
 | [BetterSteamTools](https://github.com/madoiscool/BetterSteamTools) | madoiscool / OpenSteamTool contributors | Optional Steam backend; official releases downloaded on request, GPL-3.0 |
