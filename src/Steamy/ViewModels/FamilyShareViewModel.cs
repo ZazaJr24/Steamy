@@ -526,7 +526,8 @@ public sealed class FamilyShareViewModel : ViewModelBase
         {
             if (ct.IsCancellationRequested) break;
             var id = item.TryGetProperty("game_id", out var gid) && int.TryParse(gid.ToString(), out var p1) ? p1
-                   : item.TryGetProperty("app_id", out var aid) && int.TryParse(aid.ToString(), out var p2) ? p2 : 0;
+                   : item.TryGetProperty("app_id", out var aid) && int.TryParse(aid.ToString(), out var p2) ? p2
+                   : item.TryGetProperty("appid", out var appid) && int.TryParse(appid.ToString(), out var p3) ? p3 : 0;
             var name = item.TryGetProperty("game_name", out var gn) ? gn.GetString() ?? $"App {id}"
                      : item.TryGetProperty("name", out var n) ? n.GetString() ?? $"App {id}" : $"App {id}";
             if (id > 0) Suggestions.Add(new SteamSearchEntry(id, name));

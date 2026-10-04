@@ -118,7 +118,14 @@ public sealed class DownloadProgressTracker
                 long? transferTotal = allKnown && _depotTelemetry.Values.All(depot => depot.TransferTotalBytes is not null)
                     ? (long?)Math.Min(long.MaxValue - 1.0, _depotTelemetry.Values.Sum(depot => (double)depot.TransferTotalBytes!.Value)) : null;
                 if (!allKnown || _depotTelemetry.Count > 1) eta = null;
-                return new(value.Phase == "downloading" && allKnown && totalContent > 0 ? Math.Min(99.9, content * 100.0 / totalContent) : null,
+                // When several depots are present the aggregate is intentionally withheld until
+                // every depot has reported its real size. In the meantime report the current
+                // depot's own measured fraction, the same useful per-depot signal the tool emits.
+                var depotProgressPercent = value.Phase != "downloading" ? (double?)null
+                    : allKnown && totalContent > 0 ? Math.Min(99.9, content * 100.0 / totalContent)
+                    : value.TotalBytes > 0 ? Math.Min(99.9, value.ContentBytes * 100.0 / value.TotalBytes)
+                    : null;
+                return new(depotProgressPercent,
                     _legacy?.CurrentFile ?? "", DownloadFormat.Bytes((long)Math.Min(transferred, long.MaxValue - 1.0)),
                     transferTotal is { } size ? DownloadFormat.Bytes(size) : "Unknown",
                     value.Phase == "downloading" ? DownloadFormat.Speed(rate) : "", eta is { } seconds ? "~" + DownloadFormat.Duration(seconds) : "", raw,

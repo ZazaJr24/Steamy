@@ -1,0 +1,242 @@
+<UserControl x:Class="Steamy.Views.FirstRunSetup"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+  <UserControl.Resources>
+    <Style x:Key="SetupAppearanceChoice" TargetType="RadioButton">
+      <Setter Property="Margin" Value="0,0,12,0" />
+      <Setter Property="Padding" Value="14" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="Card" Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+                    CornerRadius="10" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Card" Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                <Setter TargetName="Card" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </UserControl.Resources>
+  <Border Width="700" Height="460" MaxWidth="920" MaxHeight="700" CornerRadius="14"
+          Background="{DynamicResource SolidSurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" SnapsToDevicePixels="True">
+    <Border.Effect>
+      <DropShadowEffect BlurRadius="28" ShadowDepth="8" Opacity="0.34" Color="#000000" />
+    </Border.Effect>
+    <Grid Margin="32,26,32,22">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <TextBlock Text="SETUP PREFERENCES" VerticalAlignment="Center" FontSize="10" FontWeight="Bold"
+                     Foreground="{DynamicResource TextTertiaryBrush}" />
+          <TextBlock x:Name="StepCounter" Grid.Column="1" Text="01  /  07" VerticalAlignment="Center"
+                     FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" />
+        </Grid>
+
+        <ProgressBar x:Name="WizardProgress" Grid.Row="1" Minimum="0" Maximum="7" Value="1"
+                     Height="3" Margin="0,15,0,0" IsHitTestVisible="False"
+                     Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource SurfaceSubtleBrush}"
+                     Style="{StaticResource JobProgressBar}" />
+
+        <Grid Grid.Row="2" Margin="0,12,0,12" VerticalAlignment="Center">
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+          <TextBlock x:Name="StepTitle" Text="Select Language" FontSize="30"
+                     FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock x:Name="StepDescription" Grid.Row="1" Text="Choose the language Steamy should use."
+                     FontSize="13" Margin="0,8,0,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+          <ScrollViewer Grid.Row="2" MinHeight="145" Margin="0,20,0,0" VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled">
+          <StackPanel x:Name="StepContent" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+            <StackPanel.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform x:Name="StepScale" ScaleX="1" ScaleY="1" />
+                <TranslateTransform x:Name="StepSlide" X="0" Y="0" />
+              </TransformGroup>
+            </StackPanel.RenderTransform>
+
+            <StackPanel x:Name="LanguageStep" Visibility="Visible">
+              <Border Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="9" Padding="14">
+                <Grid>
+                  <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                  <Grid>
+                    <TextBlock Text="LANGUAGE" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                  </Grid>
+                  <ComboBox x:Name="LanguageSelector" Grid.Row="1" MinHeight="42" Padding="10,7" Margin="0,8,0,0"
+                            IsTextSearchEnabled="True" ToolTip="Type to find a language"
+                            SelectionChanged="LanguageSelector_SelectionChanged" />
+                </Grid>
+              </Border>
+              <TextBlock Text="Translations download when needed and are cached on this PC. No API key required."
+                         Foreground="{DynamicResource TextTertiaryBrush}" FontSize="10.5" Margin="2,9,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel x:Name="AppearanceStep" Visibility="Collapsed">
+              <UniformGrid Columns="3" Rows="1">
+                <RadioButton x:Name="SystemAppearance" Style="{StaticResource SetupAppearanceChoice}"
+                             Tag="System" Checked="AppearanceCard_Checked">
+                  <StackPanel>
+                    <Border Height="66" CornerRadius="8" Background="#E5E7EB" Padding="7" Margin="0,0,0,14">
+                      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <Border Background="#D1D5DB" CornerRadius="4" />
+                        <StackPanel Grid.Column="1" Margin="7,5,0,0"><Border Height="4" Width="54" HorizontalAlignment="Left" Background="#565A65" CornerRadius="2" />
+                          <Border Height="4" Width="92" HorizontalAlignment="Left" Background="#C3C6CD" CornerRadius="2" Margin="0,7,0,0" />
+                          <Border Height="4" Width="74" HorizontalAlignment="Left" Background="#C3C6CD" CornerRadius="2" Margin="0,5,0,0" /></StackPanel>
+                      </Grid>
+                    </Border>
+                    <TextBlock Text="System" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock Text="Follow Windows" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton x:Name="LightAppearance" Style="{StaticResource SetupAppearanceChoice}"
+                             Tag="Light" Checked="AppearanceCard_Checked">
+                  <StackPanel>
+                    <Border Height="66" CornerRadius="8" Background="#F3F4F6" Padding="7" Margin="0,0,0,14">
+                      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <Border Background="#E1E3E8" CornerRadius="4" />
+                        <StackPanel Grid.Column="1" Margin="7,5,0,0"><Border Height="4" Width="54" HorizontalAlignment="Left" Background="#41444D" CornerRadius="2" />
+                          <Border Height="4" Width="92" HorizontalAlignment="Left" Background="#D4D6DC" CornerRadius="2" Margin="0,7,0,0" />
+                          <Border Height="4" Width="74" HorizontalAlignment="Left" Background="#D4D6DC" CornerRadius="2" Margin="0,5,0,0" /></StackPanel>
+                      </Grid>
+                    </Border>
+                    <TextBlock Text="Light" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock Text="Bright surfaces" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton x:Name="DarkAppearance" Style="{StaticResource SetupAppearanceChoice}"
+                             Tag="Dark" Checked="AppearanceCard_Checked" Margin="0">
+                  <StackPanel>
+                    <Border Height="66" CornerRadius="8" Background="#191A1F" Padding="7" Margin="0,0,0,14">
+                      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <Border Background="#30323A" CornerRadius="4" />
+                        <StackPanel Grid.Column="1" Margin="7,5,0,0"><Border Height="4" Width="54" HorizontalAlignment="Left" Background="#E1E3EA" CornerRadius="2" />
+                          <Border Height="4" Width="92" HorizontalAlignment="Left" Background="#363840" CornerRadius="2" Margin="0,7,0,0" />
+                          <Border Height="4" Width="74" HorizontalAlignment="Left" Background="#363840" CornerRadius="2" Margin="0,5,0,0" /></StackPanel>
+                      </Grid>
+                    </Border>
+                    <TextBlock Text="Dark" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock Text="Low-light surfaces" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                  </StackPanel>
+                </RadioButton>
+              </UniformGrid>
+            </StackPanel>
+
+            <StackPanel x:Name="ApiKeysStep" Visibility="Collapsed">
+              <TextBlock Text="HUBCAP API KEY" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,6"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+              <PasswordBox x:Name="HubcapKeyBox" MinHeight="42" Padding="11,8" Margin="0,0,0,16"
+                           AutomationProperties.Name="Hubcap API key" />
+              <TextBlock Text="DEPOTBOX API KEY" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,6"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+              <PasswordBox x:Name="DepotBoxKeyBox" MinHeight="42" Padding="11,8"
+                           AutomationProperties.Name="DepotBox API key" />
+              <TextBlock Text="Interface translations are fetched when needed and cached on this PC. No translation API key is required."
+                         FontSize="11" TextWrapping="Wrap" Margin="0,16,0,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+            </StackPanel>
+
+            <StackPanel x:Name="FoldersStep" Visibility="Collapsed">
+              <TextBlock Text="STEAM FOLDER" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,6"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+              <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBox x:Name="SteamFolderText" MinHeight="42" Padding="11,8" VerticalContentAlignment="Center"
+                         ToolTip="Steam installation folder" />
+                <ui:Button Grid.Column="1" Content="Browse" Appearance="Secondary" Margin="8,0,0,0"
+                           Click="BrowseSteam_Click" />
+              </Grid>
+              <TextBlock Text="DOWNLOAD FOLDER" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,6"
+                         Foreground="{DynamicResource TextTertiaryBrush}" />
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBox x:Name="DownloadFolderText" MinHeight="42" Padding="11,8" VerticalContentAlignment="Center"
+                         ToolTip="Default folder for downloads" />
+                <ui:Button Grid.Column="1" Content="Browse" Appearance="Secondary" Margin="8,0,0,0"
+                           Click="BrowseDownloads_Click" />
+              </Grid>
+            </StackPanel>
+
+            <StackPanel x:Name="DownloadsStep" Visibility="Collapsed">
+              <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="112" /></Grid.ColumnDefinitions>
+                <TextBlock Text="Parallel downloads" VerticalAlignment="Center" FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBox x:Name="ParallelJobsText" Grid.Column="1" MinHeight="40" Padding="10,8"
+                         VerticalContentAlignment="Center" Text="2" AutomationProperties.Name="Parallel download jobs" />
+              </Grid>
+              <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="112" /></Grid.ColumnDefinitions>
+                <TextBlock Text="Connections per download" VerticalAlignment="Center" FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBox x:Name="ConnectionsText" Grid.Column="1" MinHeight="40" Padding="10,8"
+                         VerticalContentAlignment="Center" Text="16" AutomationProperties.Name="Download connections" />
+              </Grid>
+              <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="112" /></Grid.ColumnDefinitions>
+                <TextBlock Text="Speed limit · MiB/s" VerticalAlignment="Center" FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBox x:Name="SpeedLimitText" Grid.Column="1" MinHeight="40" Padding="10,8"
+                         VerticalContentAlignment="Center" Text="0" AutomationProperties.Name="Download speed limit" />
+              </Grid>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="112" /></Grid.ColumnDefinitions>
+                <TextBlock Text="Retry attempts" VerticalAlignment="Center" FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBox x:Name="RetryCountText" Grid.Column="1" MinHeight="40" Padding="10,8"
+                         VerticalContentAlignment="Center" Text="3" AutomationProperties.Name="Download retry attempts" />
+              </Grid>
+            </StackPanel>
+
+            <StackPanel x:Name="RecoveryStep" Visibility="Collapsed">
+              <CheckBox x:Name="VerifyCheck" Content="Verify files after download" Margin="0,4,0,14"
+                        FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <CheckBox x:Name="ResumeCheck" Content="Resume interrupted downloads" Margin="0,4,0,14"
+                        FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <CheckBox x:Name="LancacheCheck" Content="Use LANCache when available" Margin="0,4,0,4"
+                        FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" />
+            </StackPanel>
+
+            <StackPanel x:Name="ReadyStep" Visibility="Collapsed">
+              <TextBlock x:Name="DependencyStatus" Text="Checking required files…"
+                         Margin="0,0,0,12" FontSize="13" TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextPrimaryBrush}" />
+              <ProgressBar x:Name="DependencyProgress" IsIndeterminate="True" Height="4"
+                           Style="{StaticResource JobProgressBar}" />
+            </StackPanel>
+          </StackPanel>
+          </ScrollViewer>
+        </Grid>
+
+      <Grid Grid.Row="3">
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+        <ui:Button x:Name="BackButton" Content="Back" Appearance="Secondary" Click="Back_Click" Visibility="Collapsed" />
+        <ui:Button x:Name="SkipButton" Grid.Column="2" Content="Skip" Appearance="Secondary" Margin="0,0,9,0"
+                   Click="Skip_Click" Visibility="Collapsed" />
+        <ui:Button x:Name="NextButton" Grid.Column="3" Content="Continue  ›" Appearance="Primary"
+                   Background="{DynamicResource AccentBrush}" BorderBrush="{DynamicResource AccentBrush}"
+                   Foreground="{DynamicResource TextOnAccentBrush}"
+                   MinWidth="136" MinHeight="42" Click="Next_Click" />
+        <TextBlock x:Name="SaveErrorText" Grid.Row="1" Grid.ColumnSpan="4" Visibility="Collapsed" Margin="0,10,0,0"
+                   TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" FontSize="11" />
+      </Grid>
+    </Grid>
+  </Border>
+</UserControl>

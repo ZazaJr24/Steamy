@@ -72,8 +72,10 @@ public partial class UpdatePrompt : UserControl
     private void ShowProgress(UpdateProgress progress)
     {
         Bar.SmoothValue = progress.Percent;
-        StatusText.Text = progress.Stage == UpdateStage.Downloading && progress.TotalBytes > 0
-            ? $"{DownloadFormat.Bytes(progress.Bytes)} of {DownloadFormat.Bytes(progress.TotalBytes)}  ·  {progress.Percent:0}%"
+        StatusText.Text = progress.Stage == UpdateStage.Downloading
+            ? progress.TotalBytes > 0
+                ? $"{DownloadFormat.Bytes(progress.Bytes)} of {DownloadFormat.Bytes(progress.TotalBytes)}  ·  {progress.Percent:0}%"
+                : $"Downloading update · {progress.Percent:0}%"
             : "Installing…";
     }
 

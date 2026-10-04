@@ -170,7 +170,7 @@
           <ItemsControl ItemsSource="{Binding PagedCatalogItems}" controls:EntranceMotion.Delay="30">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <controls:AdaptiveGridPanel MinItemWidth="160" MaxItemWidth="210" Spacing="16" CoverRatio="1.5" FooterHeight="0" MaxColumns="5" />
+                <controls:AdaptiveGridPanel MinItemWidth="160" MaxItemWidth="210" Spacing="14" CoverRatio="1.8" FooterHeight="0" MaxColumns="6" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -470,7 +470,6 @@
             <StackPanel x:Name="GameInfoPanel" Grid.Column="1" Visibility="Visible" Margin="8,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center">
               <TextBlock x:Name="GameInstallInfo" Visibility="Collapsed" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16" />
               <StackPanel Orientation="Horizontal">
-                <ui:Button x:Name="FavoriteButton" Content="Favorite" Icon="{ui:SymbolIcon Heart24}" Appearance="Secondary" Click="FavoriteButton_Click" />
                 <ui:Button x:Name="AddToSteamToolsButton" Content="Add game" ToolTip="Add using BetterSteamTools" Appearance="Secondary" Margin="8,0,0,0" Click="AddToSteamTools_Click" />
                 <ui:Button x:Name="PlayButton" Content="Play in Steam" Icon="{ui:SymbolIcon Play24}" Appearance="Secondary" Margin="8,0,0,0" Visibility="Collapsed" Click="PlayButton_Click" />
               </StackPanel>

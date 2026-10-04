@@ -21,6 +21,7 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
     private readonly IDownloadQueueStore _queueStore;
     private readonly ILoggingService _logging;
     private readonly INotificationService _notifications;
+    private readonly IRyuuGameDownloadService? _downloaderSetup;
     private readonly DownloadOperationRegistry _operations = new();
 
     private sealed class InlineProgress<T> : IProgress<T>
@@ -39,7 +40,8 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
         IFileVerificationService verification,
         IDownloadQueueStore queueStore,
         ILoggingService logging,
-        INotificationService notifications)
+        INotificationService notifications,
+        IRyuuGameDownloadService? downloaderSetup = null)
     {
         _store = store;
         _settingsService = settingsService;
@@ -48,6 +50,7 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
         _queueStore = queueStore;
         _logging = logging;
         _notifications = notifications;
+        _downloaderSetup = downloaderSetup;
     }
 
     public async Task<bool> StartAsync(DownloadJob job, CancellationToken cancellationToken = default)
@@ -70,11 +73,24 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
             await _queueStore.SaveAsync(job, linked.Token).ConfigureAwait(false);
             var settings = _settingsService.Load();
             var executablePath = BundledModCapabilities.SelectExecutable(settings.DepotDownloaderPath);
+            if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath)
+                && string.IsNullOrWhiteSpace(executablePath)
+                && _downloaderSetup is not null)
+            {
+                job.Status = "Downloading the verified DepotDownloaderMod from GitHub";
+                var setupProgress = new InlineProgress<string>(message =>
+                {
+                    job.Status = message;
+                    job.AppendLog(message);
+                });
+                if (await _downloaderSetup.EnsureDepotDownloaderModAsync(setupProgress, linked.Token).ConfigureAwait(false))
+                    executablePath = BundledModCapabilities.SelectExecutable(null);
+            }
             if (string.IsNullOrWhiteSpace(executablePath))
             {
-                job.AppendLog("The bundled Steamy DepotDownloaderMod was not found or did not pass its identity check. No file was downloaded.");
-                SetFailure(job, "The bundled Steamy DepotDownloaderMod is unavailable. Repair Steamy or select a DepotDownloader executable under Settings › Downloads.");
-                _logging.Add(LogLevel.Warning, "DownloadManager", "Download refused: the bundled Steamy downloader was unavailable and no custom executable was configured.", job.AppId, job.Id);
+                job.AppendLog("The verified Steamy DepotDownloaderMod was not found or downloaded. No game files were downloaded.");
+                SetFailure(job, "The Steamy DepotDownloaderMod could not be downloaded or verified. Check your connection, then retry.");
+                _logging.Add(LogLevel.Warning, "DownloadManager", "Download refused: the Steamy downloader was unavailable and no custom executable was configured.", job.AppId, job.Id);
                 return false;
             }
 
@@ -429,6 +445,7 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
         if (!string.IsNullOrWhiteSpace(update.RawLine)) job.AppendLog(update.RawLine);
         if (update.Percent is not null) job.Progress = update.Percent.Value;
         job.HasMeasuredProgress = update.Percent is not null;
+        job.HasWholeGameProgress = update.Percent is not null && update.DepotCount <= 1;
         job.Phase = update.Phase;
         job.TransferredBytes = update.DownloadedBytes;
         job.TransferTotalBytes = update.TransferTotalBytes;

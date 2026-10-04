@@ -61,7 +61,7 @@ public sealed class LibraryViewModel : ViewModelBase
         : SelectedSourceFilter == "Installed" ? "Apps found in your local Steam libraries."
         : SelectedSourceFilter == "Favorites" ? $"{_favoriteApps.Count:N0} favorites saved on this device."
         : _sourceMessages.TryGetValue(SelectedSourceFilter, out var message) ? message : "Source index is loading; you can still select a source in the download picker.";
-    public string[] SourceFilters { get; } = { "All sources", "Favorites", "Sushi", "Zaza", "Ryuu", "Hubcap", "Installed" };
+    public string[] SourceFilters { get; } = { "All sources", "Sushi", "Zaza", "Ryuu", "Hubcap", "Installed" };
     public string SelectedSourceFilter
     {
         get => _sourceFilter;

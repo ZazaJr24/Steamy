@@ -12,6 +12,10 @@ public interface IRyuuGameDownloadService
 {
     IReadOnlyList<RyuuDepotInfo> ParseLua(string luaContent);
 
+    /// <summary>Checks the locally installed DepotDownloaderMod and fetches its verified release if needed.</summary>
+    Task<bool> EnsureDepotDownloaderModAsync(IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default) => Task.FromResult(false);
+
     Task<GameDownloadPreparation> PrepareDownloadAsync(int appId, ManifestSource source,
         IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
         Task.FromResult(new GameDownloadPreparation(false, "This downloader does not support depot selection."));
@@ -113,6 +117,13 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         var catalog = DownloadPreparationReader.Read(luaContent);
         return catalog.Depots.Select(depot => catalog.Manifests.Single(manifest =>
             manifest.DepotId == depot.DepotId && manifest.ManifestId == depot.DefaultManifestId)).ToArray();
+    }
+
+    public async Task<bool> EnsureDepotDownloaderModAsync(IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var path = await EnsureDepotDownloaderModCoreAsync(progress, cancellationToken).ConfigureAwait(false);
+        return path is not null && BundledModCapabilities.SupportsOwnFork(path);
     }
 
     public Task<GameDownloadPreparation> PrepareDownloadAsync(int appId, ManifestSource source,
@@ -278,7 +289,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 await PrepareResumeSessionAsync(plan.AppId, canonicalTarget, depots,
                     snapshot.Directory, cancellationToken).ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
-                var ddPath = await EnsureDepotDownloaderModAsync(progress, cancellationToken).ConfigureAwait(false);
+                var ddPath = await EnsureDepotDownloaderModCoreAsync(progress, cancellationToken).ConfigureAwait(false);
                 if (ddPath is null) return new(false, "Could not find or download DepotDownloaderMod.");
                 Directory.CreateDirectory(canonicalTarget);
                 return await RunDepotDownloaderModAsync(ddPath, plan.AppId, depots, sessionDirectory,
@@ -337,6 +348,33 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             if (copied > maximumBytes) throw new InvalidDataException("A manifest exceeds the preparation limit.");
             await output.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
         }
+        return copied;
+    }
+
+    private static async Task<long> CopyBoundedWithProgressAsync(Stream input, string destination, long maximumBytes,
+        long? totalBytes, IProgress<string>? progress, CancellationToken token)
+    {
+        await using var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+        var buffer = new byte[81920];
+        long copied = 0;
+        var lastReport = Stopwatch.GetTimestamp();
+        int read;
+        while ((read = await input.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
+        {
+            copied += read;
+            if (copied > maximumBytes) throw new InvalidDataException("The DepotDownloaderMod archive exceeds the size limit.");
+            await output.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
+            if (Stopwatch.GetElapsedTime(lastReport) >= TimeSpan.FromMilliseconds(350))
+            {
+                var transferred = DownloadFormat.Bytes(copied);
+                var total = totalBytes is > 0 ? DownloadFormat.Bytes(totalBytes.Value) : "Unknown";
+                var percent = totalBytes is > 0 ? $" · {Math.Min(99.9, copied * 100d / totalBytes.Value):0.0}%" : string.Empty;
+                progress?.Report($"Downloading DepotDownloaderMod · {transferred} / {total}{percent}");
+                lastReport = Stopwatch.GetTimestamp();
+            }
+        }
+        var finalTotal = totalBytes is > 0 ? DownloadFormat.Bytes(totalBytes.Value) : DownloadFormat.Bytes(copied);
+        progress?.Report($"Download complete · {DownloadFormat.Bytes(copied)} / {finalTotal} · 100%");
         return copied;
     }
 
@@ -400,7 +438,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             var depots = pinned.Depots.Select(depot => new RyuuDepotInfo(depot.DepotId, depot.ManifestId,
                 keys.GetValueOrDefault(depot.DepotId, string.Empty))).ToArray();
             cancellationToken.ThrowIfCancellationRequested();
-            var ddPath = await EnsureDepotDownloaderModAsync(progress, cancellationToken).ConfigureAwait(false);
+            var ddPath = await EnsureDepotDownloaderModCoreAsync(progress, cancellationToken).ConfigureAwait(false);
             if (ddPath is null) return new(false, "Could not find DepotDownloaderMod.");
             _logging.Add(Models.LogLevel.Info, "GameDownload",
                 $"Resuming {depots.Length} pinned depot(s) for App {appId}.", appId);
@@ -805,7 +843,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         return keys;
     }
 
-    private async Task<string?> EnsureDepotDownloaderModAsync(IProgress<string>? progress, CancellationToken ct)
+    private async Task<string?> EnsureDepotDownloaderModCoreAsync(IProgress<string>? progress, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         string? exePath = null;
@@ -857,17 +895,25 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             string? assetName = null;
             string? assetDigest = null;
 
-            foreach (var asset in assets.EnumerateArray())
+            var assetArray = assets.EnumerateArray().ToArray();
+            var separateToolAsset = !string.IsNullOrWhiteSpace(latestTag)
+                ? $"DepotDownloaderMod-{latestTag}-win-x64.zip"
+                : string.Empty;
+            // New releases publish the tool independently so it is not shipped in the app ZIP.
+            // Keep old releases usable during the transition; they contain the same verified tool
+            // inside the versioned app archive.
+            var legacyAppAsset = !string.IsNullOrWhiteSpace(latestTag) ? $"Steamy-{latestTag}.zip" : string.Empty;
+            var selectedAsset = assetArray.FirstOrDefault(asset =>
+                string.Equals(asset.GetProperty("name").GetString(), separateToolAsset, StringComparison.OrdinalIgnoreCase));
+            if (selectedAsset.ValueKind != JsonValueKind.Object)
+                selectedAsset = assetArray.FirstOrDefault(asset =>
+                    string.Equals(asset.GetProperty("name").GetString(), legacyAppAsset, StringComparison.OrdinalIgnoreCase));
+            if (selectedAsset.ValueKind == JsonValueKind.Object)
             {
-                var name = asset.GetProperty("name").GetString() ?? string.Empty;
-                if (!string.IsNullOrWhiteSpace(latestTag)
-                    && name.Equals($"Steamy-{latestTag}.zip", StringComparison.OrdinalIgnoreCase))
-                {
-                    downloadUrl = asset.GetProperty("browser_download_url").GetString();
-                    assetName = Path.GetFileName(name);
-                    assetDigest = asset.TryGetProperty("digest", out var digest) ? digest.GetString() : null;
-                    break;
-                }
+                var name = selectedAsset.GetProperty("name").GetString() ?? string.Empty;
+                downloadUrl = selectedAsset.GetProperty("browser_download_url").GetString();
+                assetName = Path.GetFileName(name);
+                assetDigest = selectedAsset.TryGetProperty("digest", out var digest) ? digest.GetString() : null;
             }
 
             // GitHub's asset digest field is not populated on every release API response.
@@ -885,7 +931,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             if (downloadUrl is null || assetName is null || string.IsNullOrWhiteSpace(assetDigest)
                 || !assetDigest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
             {
-                _logging.Add(Models.LogLevel.Error, "RyuuDownload", "No verifiable Steamy release ZIP was found.");
+                _logging.Add(Models.LogLevel.Error, "RyuuDownload", "No verifiable DepotDownloaderMod release ZIP was found.");
                 return null;
             }
 
@@ -900,14 +946,15 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 if (downloadResponse.Content.Headers.ContentLength > MaximumManifestBytes)
                     throw new InvalidDataException("The DepotDownloaderMod archive exceeds the size limit.");
                 await using var stream = await downloadResponse.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-                await CopyBoundedAsync(stream, archivePath, MaximumManifestBytes, ct).ConfigureAwait(false);
+                await CopyBoundedWithProgressAsync(stream, archivePath, MaximumManifestBytes,
+                    downloadResponse.Content.Headers.ContentLength, progress, ct).ConfigureAwait(false);
             }
 
             await using (var file = File.OpenRead(archivePath))
             {
                 var actual = Convert.ToHexString(await SHA256.HashDataAsync(file, ct));
                 if (!actual.Equals(assetDigest[7..], StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("Steamy release ZIP checksum does not match the release digest.");
+                    throw new InvalidDataException("DepotDownloaderMod release ZIP checksum does not match the release digest.");
             }
 
             progress?.Report("Extracting DepotDownloaderMod...");
@@ -917,7 +964,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             if (!extracted.Succeeded) throw new InvalidDataException(extracted.Message);
             var stagedExecutable = Directory.EnumerateFiles(extractionDirectory, "DepotDownloaderMod.exe", SearchOption.AllDirectories)
                 .FirstOrDefault(BundledModCapabilities.SupportsOwnFork);
-            if (stagedExecutable is null) throw new InvalidDataException("The Steamy release does not contain a verified Steamy DepotDownloaderMod.");
+            if (stagedExecutable is null) throw new InvalidDataException("The DepotDownloaderMod release does not contain a verified Steamy DepotDownloaderMod.");
             ct.ThrowIfCancellationRequested();
             Directory.CreateDirectory(fallbackDir);
             var installedDirectory = Path.Combine(fallbackDir, "release-" + Guid.NewGuid().ToString("N"));
@@ -1008,7 +1055,9 @@ public static class GameDownloadProgressMessage
         job.Phase = phase;
         job.CurrentDepotDetail = count > 1 ? $"Depot {index}/{count} · {(double.IsFinite(percent) && percent >= 0 && phase == "downloading" ? percent.ToString("0.0", CultureInfo.InvariantCulture) + "%" : job.PhaseLabel)}"
             + (depotDownloaded.Length > 0 && depotTotal.Length > 0 ? $" · {depotDownloaded} / {depotTotal}" : "") : "";
-        job.Status = hasDepots ? $"{job.PhaseLabel} · depot {index} of {count}" : job.PhaseLabel;
+        job.Status = hasDepots
+            ? phase == "downloading" ? $"Downloading depot {index} of {count}" : $"{job.PhaseLabel} · depot {index} of {count}"
+            : job.PhaseLabel;
         job.Downloaded = cumulativeBytes > 0 ? DownloadFormat.Bytes(cumulativeBytes) : string.IsNullOrEmpty(depotDownloaded) ? "0 B" : depotDownloaded;
         // A runner starts one process per depot. Transfer totals and ETA therefore describe
         // the current depot; do not claim the unknown remainder of the whole game is known.
@@ -1026,8 +1075,12 @@ public static class GameDownloadProgressMessage
         job.EtaSeconds = count <= 1 && parts.Length >= 12 && double.TryParse(parts[11], NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)
             && double.IsFinite(seconds) && seconds >= 0 ? seconds : null;
         if (parts[9].Length > 0) job.CurrentFile = parts[9];
-        if (count <= 1 && double.IsFinite(percent) && percent >= 0) job.Progress = Math.Min(99.9, percent);
-        job.HasMeasuredProgress = count <= 1 && double.IsFinite(percent) && percent >= 0;
+        // This percentage is for the active depot. Keep it for multi-depot games too;
+        // ProgressCaption includes the depot index so it is not presented as a whole-game total.
+        var hasDepotProgress = double.IsFinite(percent) && percent >= 0 && phase is not ("checking" or "finalizing");
+        if (hasDepotProgress) job.Progress = Math.Min(99.9, percent);
+        job.HasMeasuredProgress = hasDepotProgress;
+        job.HasWholeGameProgress = hasDepotProgress && count <= 1;
         return true;
     }
 

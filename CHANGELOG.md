@@ -3,6 +3,20 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.4
+
+- Simplify Settings navigation to one compact category selector. Keep settings search, export, keyboard shortcuts and every existing setting available; make the page easier to scan.
+- Add the first-run setup wizard with saved language, appearance, Steam folder and downloader choices, plus a safe way to reopen setup from Settings.
+- Expand the interface language catalog and translate static UI text on demand without an API key; cache downloaded translations locally. Improve theme switching, including Light mode.
+- Improve startup and navigation stability, reduce unnecessary UI work and smooth scrolling, transitions and download progress. Fix startup navigation and resource failures.
+- Refine the Dashboard, Games grid and BetterSteamTools layout; remove the unwanted window edge line while keeping the normal resizable window.
+- Harden manifest and source validation, download recovery, retries, transfer progress and bundled DepotDownloaderMod capability checks.
+- Publish a self-contained Windows release with the verified DepotDownloaderMod package, generated changelog notes and SHA-256 checksums.
+
+## 0.6.3
+
+- Add a first-run setup wizard for language, appearance, Steam/download folders and downloader preferences. Existing installs are not interrupted.
+
 ## 0.6.2
 
 - Maintain an owned, versioned DepotDownloaderMod fork in the repository and build it only from checked-in source, with upstream GPL attribution and full corresponding source included.

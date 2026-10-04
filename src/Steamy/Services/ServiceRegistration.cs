@@ -9,6 +9,7 @@ public static class ServiceRegistration
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.AddSingleton<Wpf.Ui.Abstractions.INavigationViewPageProvider, NavigationViewPageProvider>();
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IAppDataStore, AppDataStore>();
         services.AddSingleton<ILocalDatabase, SqliteLocalDatabase>();
@@ -18,17 +19,19 @@ public static class ServiceRegistration
         services.AddSingleton<ISettingsService, JsonSettingsService>();
         services.AddSingleton<IGameActivityService>(_ => new JsonGameActivityService());
         services.AddSingleton<ISecureCredentialService, DpapiCredentialService>();
+        services.AddSingleton<UiTranslationService>();
         services.AddSingleton<ILogDispatcher, WpfLogDispatcher>();
         services.AddSingleton<ILoggingService, InMemoryLoggingService>();
         services.AddSingleton<IDepotDownloaderService, DepotDownloaderService>();
-        services.AddSingleton<IDownloadManager>(_ => new DownloadManager(
-            _.GetRequiredService<IAppDataStore>(),
-            _.GetRequiredService<ISettingsService>(),
-            _.GetRequiredService<IDepotDownloaderService>(),
-            _.GetRequiredService<IFileVerificationService>(),
-            _.GetRequiredService<IDownloadQueueStore>(),
-            _.GetRequiredService<ILoggingService>(),
-            _.GetRequiredService<INotificationService>()
+        services.AddSingleton<IDownloadManager>(sp => new DownloadManager(
+            sp.GetRequiredService<IAppDataStore>(),
+            sp.GetRequiredService<ISettingsService>(),
+            sp.GetRequiredService<IDepotDownloaderService>(),
+            sp.GetRequiredService<IFileVerificationService>(),
+            sp.GetRequiredService<IDownloadQueueStore>(),
+            sp.GetRequiredService<ILoggingService>(),
+            sp.GetRequiredService<INotificationService>(),
+            sp.GetRequiredService<IRyuuGameDownloadService>()
         ));
         services.AddSingleton<ISteamApiHealthService, DemoSteamApiHealthService>();
         services.AddSingleton<IFileVerificationService, LocalFileVerificationService>();

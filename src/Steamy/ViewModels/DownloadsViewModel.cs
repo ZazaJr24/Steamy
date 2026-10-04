@@ -80,7 +80,7 @@ public sealed class DownloadsViewModel : ViewModelBase
         OverallEtaHint = active.Count == 0 ? "No active downloads"
             : longestEta is not null ? "Active jobs · queued jobs excluded" : "Waiting for estimates from every active job";
 
-        var known = active.Count > 0 && active.All(job => job.HasMeasuredProgress && job.InstallationBytes > 0);
+        var known = active.Count > 0 && active.All(job => job.HasWholeGameProgress && job.InstallationBytes > 0);
         var total = active.Sum(job => (double)job.InstallationBytes);
         ActiveProgress = known && total > 0 ? active.Sum(job => job.ContentBytes) * 100.0 / total : 0;
         ActiveProgressLabel = known ? $"{ActiveProgress:0.0}%" : "—";

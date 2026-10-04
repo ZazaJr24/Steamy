@@ -1,0 +1,117 @@
+namespace Steamy.Services;
+
+public static class UiLanguageCatalog
+{
+    // Native-language names make the long list easy to scan. Missing static UI labels are fetched
+    // without a key on first use, then kept in the local translation cache.
+    public static readonly string[] Options =
+    [
+        "System Default",
+        "de-DE · Deutsch",
+        "en-US · English",
+        "af-ZA · Afrikaans",
+        "ar-SA · العربية",
+        "am-ET · አማርኛ",
+        "as-IN · অসমীয়া",
+        "az-AZ · Azərbaycanca",
+        "eu-ES · Euskara",
+        "be-BY · Беларуская",
+        "bn-BD · বাংলা",
+        "bs-Latn-BA · Bosanski",
+        "bg-BG · Български",
+        "hy-AM · Հայերեն",
+        "my-MM · မြန်မာ",
+        "ca-ES · Català",
+        "zh-HK · 繁體中文（香港）",
+        "co-FR · Corsu",
+        "hr-HR · Hrvatski",
+        "cs-CZ · Čeština",
+        "da-DK · Dansk",
+        "nl-BE · Nederlands (België)",
+        "nl-NL · Nederlands",
+        "el-GR · Ελληνικά",
+        "eo · Esperanto",
+        "es-ES · Español",
+        "es-419 · Español (Latinoamérica)",
+        "es-MX · Español (México)",
+        "et-EE · Eesti",
+        "fil-PH · Filipino",
+        "fi-FI · Suomi",
+        "fr-CA · Français (Canada)",
+        "fr-FR · Français",
+        "fy-NL · Frysk",
+        "gl-ES · Galego",
+        "ka-GE · ქართული",
+        "he-IL · עברית",
+        "hi-IN · हिन्दी",
+        "ha-NG · Hausa",
+        "ht-HT · Kreyòl ayisyen",
+        "hu-HU · Magyar",
+        "is-IS · Íslenska",
+        "id-ID · Bahasa Indonesia",
+        "ig-NG · Igbo",
+        "ga-IE · Gaeilge",
+        "it-IT · Italiano",
+        "ja-JP · 日本語",
+        "jv-ID · Basa Jawa",
+        "kn-IN · ಕನ್ನಡ",
+        "kk-KZ · Қазақша",
+        "km-KH · ខ្មែរ",
+        "ko-KR · 한국어",
+        "ky-KG · Кыргызча",
+        "lo-LA · ລາວ",
+        "lv-LV · Latviešu",
+        "lt-LT · Lietuvių",
+        "mk-MK · Македонски",
+        "ms-MY · Bahasa Melayu",
+        "ml-IN · മലയാളം",
+        "mr-IN · मराठी",
+        "mn-MN · Монгол хэл",
+        "ne-NP · नेपाली",
+        "nb-NO · Norsk bokmål",
+        "no-NO · Norsk",
+        "or-IN · ଓଡ଼ିଆ",
+        "fa-IR · فارسی",
+        "pl-PL · Polski",
+        "pt-PT · Português (Portugal)",
+        "pt-BR · Português (Brasil)",
+        "pa-IN · ਪੰਜਾਬੀ",
+        "ps-AF · پښتو",
+        "ro-RO · Română",
+        "ru-RU · Русский",
+        "sr-RS · Српски",
+        "si-LK · සිංහල",
+        "sk-SK · Slovenčina",
+        "sl-SI · Slovenščina",
+        "so-SO · Soomaali",
+        "sw-KE · Kiswahili",
+        "sv-SE · Svenska",
+        "tg-TJ · Тоҷикӣ",
+        "ta-IN · தமிழ்",
+        "te-IN · తెలుగు",
+        "th-TH · ไทย",
+        "tr-TR · Türkçe",
+        "uk-UA · Українська",
+        "ur-PK · اردو",
+        "uz-UZ · O‘zbekcha",
+        "vi-VN · Tiếng Việt",
+        "cy-GB · Cymraeg",
+        "xh-ZA · isiXhosa",
+        "yi · ייִדיש",
+        "yo-NG · Yorùbá",
+        "zh-CN · 简体中文",
+        "zh-TW · 繁體中文",
+        "zu-ZA · isiZulu"
+    ];
+
+    public static string ResolveCultureName(string? selection)
+    {
+        if (string.IsNullOrWhiteSpace(selection) || selection.Equals("System Default", StringComparison.OrdinalIgnoreCase))
+            return string.Empty;
+        if (selection.Equals("Deutsch", StringComparison.OrdinalIgnoreCase)) return "de-DE";
+        if (selection.Equals("English", StringComparison.OrdinalIgnoreCase)) return "en-US";
+        var separator = selection.IndexOf('·');
+        var cultureName = separator > 0 ? selection[..separator].Trim() : selection.Trim();
+        return cultureName;
+    }
+}

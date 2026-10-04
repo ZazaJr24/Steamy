@@ -49,7 +49,7 @@
               AutomationProperties.Name="{Binding Game.Name}">
         <Grid>
           <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="52" /></Grid.RowDefinitions>
-          <Border CornerRadius="12" RenderOptions.BitmapScalingMode="HighQuality">
+          <Border CornerRadius="12" RenderOptions.BitmapScalingMode="LowQuality">
             <Border.Background><ImageBrush ImageSource="{Binding Game.HeaderImage}" Stretch="UniformToFill" /></Border.Background>
             <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" CornerRadius="6" Padding="8,5" Margin="10" Background="#E51B2534" ToolTip="{Binding CountdownDetail}">
               <TextBlock Text="{Binding ReleaseBadge}" Foreground="#FFDCE2F4" FontWeight="SemiBold" FontSize="10" />
@@ -113,7 +113,7 @@
               BorderThickness="0" Margin="0,0,0,24"
               Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}" DataContext="{Binding FeaturedGame}">
         <Grid>
-          <Border x:Name="SpotlightArtworkFrame" Height="360" CornerRadius="16" RenderOptions.BitmapScalingMode="HighQuality">
+          <Border x:Name="SpotlightArtworkFrame" Height="360" CornerRadius="16" RenderOptions.BitmapScalingMode="LowQuality">
             <Image Source="{Binding HeroArtwork}" Stretch="UniformToFill" StretchDirection="DownOnly" RenderTransformOrigin="0.5,0.5">
               <Image.RenderTransform><ScaleTransform x:Name="ArtworkZoom" /></Image.RenderTransform>
             </Image>

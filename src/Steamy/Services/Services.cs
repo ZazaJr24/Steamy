@@ -179,13 +179,17 @@ public sealed class JsonSettingsService : ISettingsService
             // Auto-detect DepotDownloader from application's Tools folder
             if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath) || !File.Exists(settings.DepotDownloaderPath))
             {
+                var verifiedMod = BundledModCapabilities.SelectExecutable(null);
+                if (!string.IsNullOrWhiteSpace(verifiedMod))
+                    settings.DepotDownloaderPath = verifiedMod;
+
                 var baseTools = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools");
                 var candidate = Path.Combine(baseTools, "DepotDownloader", "DepotDownloader.exe");
-                if (File.Exists(candidate))
+                if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath) && File.Exists(candidate))
                 {
                     settings.DepotDownloaderPath = candidate;
                 }
-                else
+                else if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath))
                 {
                     var modCandidate = Directory.Exists(Path.Combine(baseTools, "DepotDownloaderMod"))
                         ? Directory.GetFiles(Path.Combine(baseTools, "DepotDownloaderMod"), "DepotDownloader*.exe", SearchOption.AllDirectories).FirstOrDefault()
