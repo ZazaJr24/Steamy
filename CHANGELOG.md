@@ -11,7 +11,7 @@ Add a new `## x.y.z` section at the top before tagging.
 - Improve startup and navigation stability, reduce unnecessary UI work and smooth scrolling, transitions and download progress. Fix startup navigation and resource failures.
 - Refine the Dashboard, Games grid and BetterSteamTools layout; remove the unwanted window edge line while keeping the normal resizable window.
 - Harden manifest and source validation, download recovery, retries, transfer progress and bundled DepotDownloaderMod capability checks.
-- Publish a self-contained Windows release with the verified DepotDownloaderMod package, generated changelog notes and SHA-256 checksums.
+- Bundle the verified DepotDownloaderMod inside the Steamy Windows ZIP so first-run setup is ready without a second release download. Publish generated changelog notes and a SHA-256 checksum for the app archive.
 
 ## 0.6.3
 

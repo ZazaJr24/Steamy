@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 
 
-def release_notes(changelog, version, archive, tool_archive=None):
+def release_notes(changelog, version, archive):
     if not re.fullmatch(r'\d+\.\d+\.\d+(?:\.\d+)?', version):
         raise ValueError('Expected a three- or four-part release version')
     if archive.name != f'Steamy-v{version}.zip':
@@ -22,12 +22,6 @@ def release_notes(changelog, version, archive, tool_archive=None):
     with archive.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
     checksums = [digest + '  ' + archive.name]
-    if tool_archive is not None:
-        if tool_archive.name != f'DepotDownloaderMod-v{version}-win-x64.zip':
-            raise ValueError('DepotDownloaderMod archive must match the release version')
-        with tool_archive.open('rb') as stream:
-            tool_digest = hashlib.file_digest(stream, 'sha256').hexdigest()
-        checksums.append(tool_digest + '  ' + tool_archive.name)
     return notes + '\n\n### SHA-256\n\n```text\n' + '\n'.join(checksums) + '\n```\n'
 
 
@@ -35,8 +29,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', required=True)
     parser.add_argument('--archive', type=Path, required=True)
-    parser.add_argument('--tool-archive', type=Path)
     parser.add_argument('--changelog', type=Path, default=Path('CHANGELOG.md'))
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    args.output.write_text(release_notes(args.changelog.read_text(encoding='utf-8'), args.version, args.archive, args.tool_archive), encoding='utf-8')
+    args.output.write_text(release_notes(args.changelog.read_text(encoding='utf-8'), args.version, args.archive), encoding='utf-8')

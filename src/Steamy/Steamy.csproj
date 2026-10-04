@@ -46,7 +46,7 @@
     <None Include="Data\appid.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Data\appid.json')" />
   </ItemGroup>
 
-  <!-- DepotDownloaderMod is a separate GitHub release asset, downloaded during first-run setup. -->
+  <!-- The release workflow bundles its verified DepotDownloaderMod output under Tools in the app ZIP. -->
 
   <!-- CreamAPI replacement DLLs bundled for the DLC Unlocker (CreamAPI mode). -->
   <ItemGroup>
