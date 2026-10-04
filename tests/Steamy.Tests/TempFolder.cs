@@ -22,7 +22,35 @@ internal sealed class TempFolder : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(Path, recursive: true); }
+        try { DeleteTreeWithoutFollowingLinks(Path); }
         catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private static void DeleteTreeWithoutFollowingLinks(string directory)
+    {
+        if (!Directory.Exists(directory)) return;
+
+        foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
+        {
+            var attributes = File.GetAttributes(entry);
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                // Tests deliberately create junctions to prove imports cannot write through
+                // them. Remove the link itself; never recurse into its target.
+                if ((attributes & FileAttributes.Directory) != 0) Directory.Delete(entry, recursive: false);
+                else File.Delete(entry);
+            }
+            else if ((attributes & FileAttributes.Directory) != 0)
+            {
+                DeleteTreeWithoutFollowingLinks(entry);
+            }
+            else
+            {
+                File.Delete(entry);
+            }
+        }
+
+        Directory.Delete(directory, recursive: false);
     }
 }

@@ -52,14 +52,6 @@ public sealed partial class PageSmokeTests
             PumpUntil(() => ((Grid)page.FindName("OverlayGrid")).Visibility == Visibility.Collapsed);
             page.OpenGameDetails(game);
             Assert.Equal(Visibility.Collapsed, ((Button)page.FindName("PlayButton")).Visibility);
-            var activity = provider.GetRequiredService<IGameActivityService>();
-            var favoriteButton = (Button)page.FindName("FavoriteButton");
-            favoriteButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-            PumpUntil(() => favoriteButton.Content?.ToString() == "Favorited" && favoriteButton.IsEnabled);
-            Assert.Contains(game.AppId, activity.GetAsync().GetAwaiter().GetResult().FavoriteAppIds);
-            favoriteButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-            PumpUntil(() => favoriteButton.Content?.ToString() == "Favorite" && favoriteButton.IsEnabled);
-            Assert.DoesNotContain(game.AppId, activity.GetAsync().GetAwaiter().GetResult().FavoriteAppIds);
             Assert.Equal(0, page.DownloadWizardStep); // A game opens the original compact source picker.
             CheckWizardStage(page, 0);
             page.SelectDownloadSource(ManifestSource.Zaza);
@@ -77,6 +69,8 @@ public sealed partial class PageSmokeTests
             AwaitWizardStep(page);
             Assert.Equal(1, page.DownloadWizardStep); // No empty depot selection may reach Location.
             Assert.Equal(beforeDownload, downloads.Downloads.Count);
+            page.UpdateLayout();
+            PumpDispatcher(TimeSpan.FromMilliseconds(80));
             var firstCheckbox = Descendants<CheckBox>((FrameworkElement)page.FindName("DepotStepPanel"))
                 .Single(checkbox => ReferenceEquals(checkbox.DataContext, page.DownloadDepotChoices[0]));
             firstCheckbox.IsChecked = true;

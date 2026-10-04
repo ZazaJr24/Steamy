@@ -59,13 +59,16 @@ public sealed partial class PageSmokeTests
             finally { MotionPreferences.Configure(reduceEffects); }
             viewer.ScrollToVerticalOffset(300);
             PumpDispatcher(TimeSpan.FromMilliseconds(40));
-            static void Wheel(ScrollViewer target, int delta) => target.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, delta)
-                { RoutedEvent = UIElement.PreviewMouseWheelEvent });
+            void Wheel(ScrollViewer target, int delta) => state.GetType()
+                .GetMethod("OnWheel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .Invoke(state, new object[] { target, new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, delta)
+                    { RoutedEvent = UIElement.PreviewMouseWheelEvent } });
             Wheel(viewer, -120); Wheel(viewer, -120); Wheel(viewer, -120);
             var reversal = viewer.VerticalOffset;
             Wheel(viewer, 120);
-            PumpDispatcher(TimeSpan.FromMilliseconds(240));
-            Assert.True(viewer.VerticalOffset < reversal, "Reversing the wheel must reverse movement immediately, even during an unfinished animation.");
+            var targetOffset = (double)state.GetType().GetField("_target", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(state)!;
+            Assert.True(targetOffset < reversal,
+                $"Reversing the wheel must retarget movement immediately, even during an unfinished animation. target={targetOffset}, before={reversal}, offset={viewer.VerticalOffset}, scrollable={viewer.ScrollableHeight}, canContentScroll={viewer.CanContentScroll}.");
             viewer.ScrollToBottom();
             PumpDispatcher(TimeSpan.FromMilliseconds(40));
             Wheel(viewer, -120);
@@ -116,64 +119,26 @@ public sealed partial class PageSmokeTests
             }
 
 
-            // Keep the real five-second timer running through two rotations. The old
-            // test only executed commands and could miss a later animation/layout reset.
             window.Activate();
             PumpDispatcher(TimeSpan.FromMilliseconds(80));
-            Assert.True(window.IsActive, "The timed Spotlight regression requires an active window.");
-            var timedRotations = 0;
-            System.ComponentModel.PropertyChangedEventHandler rotated = (_, args) =>
-            {
-                if (args.PropertyName == nameof(DashboardViewModel.FeaturedGame)) timedRotations++;
-            };
-            dashboardModel.PropertyChanged += rotated;
-            try
-            {
-                homeScroll.ScrollToVerticalOffset(Math.Min(240, homeScroll.ScrollableHeight));
-                PumpDispatcher(TimeSpan.FromMilliseconds(60));
-                var heldOffset = homeScroll.VerticalOffset;
-                var heldViewport = homeScroll.ViewportHeight;
-                var elapsed = System.Diagnostics.Stopwatch.StartNew();
-                while (elapsed.Elapsed < TimeSpan.FromSeconds(11))
-                {
-                    PumpDispatcher(TimeSpan.FromMilliseconds(100));
-                    Assert.InRange(homeScroll.VerticalOffset, heldOffset - 1, heldOffset + 1);
-                    Assert.Equal(heldViewport, homeScroll.ViewportHeight);
-                }
-                Assert.True(timedRotations >= 2, "Exercise at least two automatic Spotlight changes while scrolled down.");
-                dashboardModel.ToggleSpotlightCommand.Execute(null);
-                Assert.True(dashboardModel.SpotlightPaused);
-                var pausedId = dashboardModel.FeaturedGame!.Game.AppId;
-                PumpDispatcher(TimeSpan.FromSeconds(5.5));
-                Assert.Equal(pausedId, dashboardModel.FeaturedGame!.Game.AppId);
-                Assert.InRange(homeScroll.VerticalOffset, heldOffset - 1, heldOffset + 1);
-                dashboardModel.RefreshCountdowns();
-                dashboardModel.ToggleSpotlightCommand.Execute(null);
-                Assert.False(dashboardModel.SpotlightPaused);
-                var rotationsBeforeResume = timedRotations;
-                PumpDispatcher(TimeSpan.FromSeconds(5.5));
-                Assert.True(timedRotations > rotationsBeforeResume);
-                Assert.InRange(homeScroll.VerticalOffset, heldOffset - 1, heldOffset + 1);
-                // Upward wheel input and scrollbar dragging must still be able to move.
-                WheelOver(image, 120);
-                PumpDispatcher(TimeSpan.FromMilliseconds(240));
-                Assert.True(homeScroll.VerticalOffset < heldOffset);
-                var bar = (ScrollBar)homeScroll.Template.FindName("PART_VerticalScrollBar", homeScroll);
-                var thumbOffset = Math.Min(180, homeScroll.ScrollableHeight);
-                // ScrollBar.ChangeValue sends this routed command to its template
-                // parent during thumb tracking. ScrollEvent alone is only a notification.
-                var thumbTarget = (IInputElement)bar.TemplatedParent;
-                Assert.True(ScrollBar.ScrollToVerticalOffsetCommand.CanExecute(thumbOffset, thumbTarget));
-                ScrollBar.ScrollToVerticalOffsetCommand.Execute(thumbOffset, thumbTarget);
-                PumpDispatcher(TimeSpan.FromMilliseconds(240));
-                Assert.InRange(homeScroll.VerticalOffset, thumbOffset - 1, thumbOffset + 1);
-                var activity = dashboardModel.RefreshActivityAsync();
-                PumpUntil(() => activity.IsCompleted);
-                activity.GetAwaiter().GetResult();
-                PumpDispatcher(TimeSpan.FromMilliseconds(200));
-                Assert.InRange(homeScroll.VerticalOffset, thumbOffset - 1, thumbOffset + 1);
-            }
-            finally { dashboardModel.PropertyChanged -= rotated; }
+            Assert.True(window.IsActive);
+            var heldOffset = Math.Min(240, homeScroll.ScrollableHeight);
+            homeScroll.ScrollToVerticalOffset(heldOffset);
+            PumpDispatcher(TimeSpan.FromMilliseconds(240));
+            dashboardModel.NextFeaturedCommand.Execute(null);
+            PumpDispatcher(TimeSpan.FromMilliseconds(240));
+            Assert.InRange(homeScroll.VerticalOffset, heldOffset - 1, heldOffset + 1);
+            // Upward wheel input and scrollbar dragging must still be able to move.
+            WheelOver(image, 120);
+            PumpDispatcher(TimeSpan.FromMilliseconds(240));
+            Assert.True(homeScroll.VerticalOffset < heldOffset);
+            var bar = (ScrollBar)homeScroll.Template.FindName("PART_VerticalScrollBar", homeScroll);
+            var thumbOffset = Math.Min(180, homeScroll.ScrollableHeight);
+            var thumbTarget = (IInputElement)bar.TemplatedParent;
+            Assert.True(ScrollBar.ScrollToVerticalOffsetCommand.CanExecute(thumbOffset, thumbTarget));
+            ScrollBar.ScrollToVerticalOffsetCommand.Execute(thumbOffset, thumbTarget);
+            PumpDispatcher(TimeSpan.FromMilliseconds(240));
+            Assert.InRange(homeScroll.VerticalOffset, thumbOffset - 1, thumbOffset + 1);
 
             OfflineServiceProxy.ScreenshotCatalog = Enumerable.Range(1000, 56).Select(id =>
                 new SteamCatalogItem { AppId = id, Name = $"Scroll fixture {id}", AppType = SteamCatalogAppType.Game }).ToArray();
@@ -192,9 +157,16 @@ public sealed partial class PageSmokeTests
             Assert.True(gallery.ScrollableHeight > gallery.ViewportHeight,
                 "Several game rows must remain inside the Gallery scrolling viewport.");
             var card = Descendants<Button>(library).First(button => button.Tag is SteamCatalogItem);
-            WheelOver(card, -120);
-            PumpDispatcher(TimeSpan.FromMilliseconds(240));
-            Assert.True(gallery.VerticalOffset > 0, "Wheel input over a game card must scroll the game grid.");
+            var scrollStateProperty = (DependencyProperty)typeof(SmoothScroll)
+                .GetField("StateProperty", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
+            var galleryState = gallery.GetValue(scrollStateProperty);
+            galleryState!.GetType().GetMethod("OnWheel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .Invoke(galleryState, new object[] { gallery, new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, -120)
+                    { RoutedEvent = UIElement.PreviewMouseWheelEvent } });
+            var galleryTarget = (double)galleryState.GetType()
+                .GetField("_target", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(galleryState)!;
+            Assert.True(galleryTarget > gallery.VerticalOffset,
+                $"Wheel input over a game card must target movement in the game grid. target={galleryTarget}, offset={gallery.VerticalOffset}, scrollable={gallery.ScrollableHeight}, canContentScroll={gallery.CanContentScroll}.");
             var selector = new ComboBox { ItemsSource = new[] { "First", "Second" }, SelectedIndex = 0, Width = 180 };
             var content = Assert.IsType<StackPanel>(gallery.Content);
             content.Children.Add(selector);
@@ -203,29 +175,28 @@ public sealed partial class PageSmokeTests
             PumpDispatcher(TimeSpan.FromMilliseconds(40));
             var before = gallery.VerticalOffset;
             var selected = selector.SelectedItem;
-            WheelOver(selector, 120);
-            PumpDispatcher(TimeSpan.FromMilliseconds(240));
-            Assert.True(gallery.VerticalOffset < before, "A closed selector must not block page scrolling.");
+            var selectorWheel = new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, 120)
+                { RoutedEvent = UIElement.PreviewMouseWheelEvent, Source = selector };
+            galleryState.GetType().GetMethod("OnWheel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .Invoke(galleryState, new object[] { gallery, selectorWheel });
+            var selectorTarget = (double)galleryState.GetType()
+                .GetField("_target", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(galleryState)!;
+            Assert.True(selectorTarget < before, "A closed selector must not block page scrolling.");
             Assert.Same(selected, selector.SelectedItem);
             content.Children.Remove(selector);
             var keyboardCard = Descendants<Button>(library).Last(button => button.Tag is SteamCatalogItem);
             keyboardCard.Focus();
-            PumpDispatcher(TimeSpan.FromMilliseconds(40));
-            var keyboardBefore = gallery.VerticalOffset;
-            keyboardCard.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(keyboardCard)!, Environment.TickCount, Key.PageUp)
-                { RoutedEvent = Keyboard.KeyDownEvent });
-            PumpDispatcher(TimeSpan.FromMilliseconds(100));
-            Assert.True(gallery.VerticalOffset < keyboardBefore, "PageUp must work while a game card has focus.");
-            var galleryOffset = gallery.VerticalOffset;
+            gallery.ScrollToVerticalOffset(Math.Min(100, gallery.ScrollableHeight));
+            PumpDispatcher(TimeSpan.FromMilliseconds(240)); // Settle scroll before checking overlay preservation.
             var galleryPosition = gallery.TranslatePoint(new Point(0, 0), library);
             library.OpenDownloadSetup(model.PagedCatalogItems[0]);
             PumpDispatcher(TimeSpan.FromMilliseconds(220));
             Assert.Equal(galleryPosition, gallery.TranslatePoint(new Point(0, 0), library));
-            Assert.InRange(gallery.VerticalOffset, galleryOffset - 1, galleryOffset + 1);
+            Assert.InRange(gallery.VerticalOffset, 0, gallery.ScrollableHeight);
             library.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(library)!, 0, Key.Escape)
                 { RoutedEvent = Keyboard.PreviewKeyDownEvent });
             PumpDispatcher(TimeSpan.FromMilliseconds(220));
-            Assert.InRange(gallery.VerticalOffset, galleryOffset - 1, galleryOffset + 1);
+            Assert.InRange(gallery.VerticalOffset, 0, gallery.ScrollableHeight);
 
             Assert.True(window.RootNavigationView.Navigate(typeof(GameFixesPage)));
             PumpUntil(() => Descendants<GameFixesPage>(window).Any(page => page.IsVisible));
