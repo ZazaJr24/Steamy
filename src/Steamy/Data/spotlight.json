@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-03T11:39:54.763290+00:00",
+  "updatedAt": "2026-10-04T12:21:52.904274+00:00",
   "games": [
     {
       "appId": 4078430,
@@ -35,54 +35,6 @@
       "releaseTime": "2026-10-06T16:00:00+00:00"
     },
     {
-      "appId": 1551980,
-      "name": "Clive Barker's Hellraiser: Revival",
-      "description": "Experience a new chapter in the legendary horror series like never before. Clive Barker's Hellraiser: Revival takes first-person action horror survival to the next level. Wield the powers of the Genesis Configuration puzzle box to survive your bargain with the infamous Pinhead.",
-      "genres": "Action",
-      "publisher": "Saber Interactive",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Oct 8, 2026",
-      "releaseDate": "2026-10-08",
-      "storeUrl": "https://store.steampowered.com/app/1551980/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/fa536cdcd3bbcf5e8074d1c1a10e2c05e08469ec/library_hero_2x.jpg?t=1790374784",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/d1e7111b93b6a8b3eb029908887648348c2c55e6/header_2x.jpg?t=1790374784",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/07b6068f2992ba42c2d48846eea5703b7742293b/library_600x900_2x.jpg?t=1790374784",
-      "releaseTime": "2026-10-08T16:00:00+00:00"
-    },
-    {
-      "appId": 1215940,
-      "name": "Forever Ago",
-      "description": "Following a tragic stroke of fate, Alfred embarks on a journey north in search of redemption in this single-player road trip adventure.",
-      "genres": "Adventure · Indie",
-      "publisher": "Annapurna Interactive",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Oct 8, 2026",
-      "releaseDate": "2026-10-08",
-      "storeUrl": "https://store.steampowered.com/app/1215940/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/5119333db4265f58fae129b41432742c9da0e2af/library_hero_2x.jpg?t=1790790784",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/463f75c014bc0ee1c6daf2ccda036edb28a0bb36/header_2x.jpg?t=1790790784",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/744e274929b880897af4febe86366997c51842aa/library_capsule_2x.jpg?t=1790790784",
-      "releaseTime": "2026-10-08T13:00:00+00:00"
-    },
-    {
-      "appId": 4231820,
-      "name": "Castlevania: Belmont's Curse",
-      "description": "Crimson Curse —Will Your Fate Bloom in Despair or Salvation Set 23 years after Castlevania Dracula's Curse - follow Rose Belmont's journey in an all new 2D Action-Exploration title from KONAMI, Evil Empire and Motion Twin.",
-      "genres": "Action · RPG",
-      "publisher": "KONAMI",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Oct 14, 2026",
-      "releaseDate": "2026-10-14",
-      "storeUrl": "https://store.steampowered.com/app/4231820/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/a86259a3a341818b144f97400c4cc5b3db0e708e/library_hero_2x.jpg?t=1788478863",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/6b65aec2c398006aea8b76e1463cc34d0e4ba68b/header_2x.jpg?t=1788478863",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/a296479a772d37cfb6c36c59059b72d663abca38/library_capsule_2x.jpg?t=1788478863",
-      "releaseTime": "2026-10-15T04:00:00+00:00"
-    },
-    {
       "appId": 4435490,
       "name": "Call of Duty®: Modern Warfare® 4",
       "description": "War erupts on the Korean Peninsula as North Korea launches an invasion that threatens to destabilize the world in Call of Duty®: Modern Warfare® 4.",
@@ -99,22 +51,6 @@
       "releaseTime": "2026-10-23T05:00:00+00:00"
     },
     {
-      "appId": 3259780,
-      "name": "FINAL FANTASY RESONANCE",
-      "description": "Return to the pixel‑art world of FINAL FANTASY, evolved from its classic roots. Travel with companions bound by fate and call on Visions to aid you in battle to uncover the truth behind a force that threatens to bring everything to ruin.",
-      "genres": "RPG",
-      "publisher": "Square Enix",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Oct 22, 2026",
-      "releaseDate": "2026-10-22",
-      "storeUrl": "https://store.steampowered.com/app/3259780/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/0cb714b00aaac49c450ad1d64c0c3a3cf14e4cfc/library_hero_2x.jpg?t=1788534743",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/710da43babb2043f9f6ad0e50023e31167d94708/header_2x.jpg?t=1788534743",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/21d8a7c692803448c79426fc88910d8658a058a8/library_capsule_2x.jpg?t=1788534743",
-      "releaseTime": "2026-10-22T16:00:00+00:00"
-    },
-    {
       "appId": 4115450,
       "name": "Phantom Blade Zero",
       "description": "S-GAME presents Phantom Blade Zero, a fusion of classic Wuxia storytelling and exhilarating action powered by Unreal Engine 5. You play as Soul, a warrior with only sixty-six days left to live. Fend off assassins, unravel world-ending conspiracies, and defend your values with your life.",
@@ -129,22 +65,6 @@
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/7f882f889630270d3d3fb93825ac6f55b55e7a6c/header_2x.jpg?t=1787142639",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/471e77854910665c03eb9a53ad06f2ac12903acd/library_capsule_2x.jpg?t=1787142639",
       "releaseTime": "2026-10-29T02:00:00+00:00"
-    },
-    {
-      "appId": 4530370,
-      "name": "Football Manager 27",
-      "description": "Flow from the tactics board to the touchline in FM27, as foundations evolve to deliver greater control, smoother discovery and a richer footballing world to explore.",
-      "genres": "Simulation · Sports · Strategy",
-      "publisher": "SEGA",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Nov 10, 2026",
-      "releaseDate": "2026-11-10",
-      "storeUrl": "https://store.steampowered.com/app/4530370/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/d38e5bf84f475381c6146e2d54f03d1db5292f10/library_hero_2x.jpg?t=1790886528",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/32b41d18ffaac3d2e1dc1a9c3915538db0ba3fca/header_2x.jpg?t=1790886528",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/7ed4ea902189db0f278ae069ff5bfde4f601de93/library_capsule_2x.jpg?t=1790886528",
-      "releaseTime": "2026-11-10T16:00:00+00:00"
     },
     {
       "appId": 2272360,
