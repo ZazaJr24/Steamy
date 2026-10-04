@@ -899,9 +899,8 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
             var separateToolAsset = !string.IsNullOrWhiteSpace(latestTag)
                 ? $"DepotDownloaderMod-{latestTag}-win-x64.zip"
                 : string.Empty;
-            // New releases publish the tool independently so it is not shipped in the app ZIP.
-            // Keep old releases usable during the transition; they contain the same verified tool
-            // inside the versioned app archive.
+            // Accept the separate asset from older releases for compatibility. Current releases
+            // carry the verified tool inside the versioned Steamy archive instead.
             var legacyAppAsset = !string.IsNullOrWhiteSpace(latestTag) ? $"Steamy-{latestTag}.zip" : string.Empty;
             var selectedAsset = assetArray.FirstOrDefault(asset =>
                 string.Equals(asset.GetProperty("name").GetString(), separateToolAsset, StringComparison.OrdinalIgnoreCase));

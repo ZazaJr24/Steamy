@@ -80,6 +80,13 @@ jobs:
             -p:Version=${{ steps.ver.outputs.v }} `
             -o publish
 
+      - name: Bundle the verified downloader inside the app archive
+        shell: pwsh
+        run: |
+          $destination = 'publish/Tools/DepotDownloaderMod/Release/net9.0'
+          New-Item -ItemType Directory -Force -Path $destination | Out-Null
+          Copy-Item 'src/Steamy/Tools/DepotDownloaderMod/Release/net9.0/*' $destination -Recurse -Force
+
       - name: Add license files
         run: Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/
 
@@ -87,12 +94,37 @@ jobs:
         run: |
           Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ steps.ver.outputs.v }}.zip
 
-      - name: Package the downloader for first-run setup
-        run: |
-          Compress-Archive -Path src/Steamy/Tools/DepotDownloaderMod/Release/net9.0/* -DestinationPath DepotDownloaderMod-v${{ steps.ver.outputs.v }}-win-x64.zip
-
       - name: Release notes and SHA-256 from the packaged ZIP
-        run: python scripts/release_notes.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip' --tool-archive 'DepotDownloaderMod-v${{ steps.ver.outputs.v }}-win-x64.zip' --output release-notes.md
+        run: python scripts/release_notes.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip' --output release-notes.md
+
+      - name: Remove the old separate downloader asset
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.ver.outputs.v }}
+        run: |
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $tag = "v$env:RELEASE_VERSION"
+          $releaseUrl = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/tags/$tag"
+          try {
+            $release = Invoke-RestMethod -Uri $releaseUrl -Headers $headers
+          } catch {
+            if ($_.Exception.Response.StatusCode.value__ -eq 404) {
+              Write-Host 'No existing release to clean up.'
+              exit 0
+            }
+            throw
+          }
+          $oldAssetName = "DepotDownloaderMod-$tag-win-x64.zip"
+          $oldAsset = $release.assets | Where-Object name -EQ $oldAssetName | Select-Object -First 1
+          if ($null -ne $oldAsset) {
+            Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/assets/$($oldAsset.id)" -Headers $headers
+            Write-Host "Removed obsolete standalone asset $oldAssetName"
+          }
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -102,7 +134,6 @@ jobs:
           make_latest: true
           files: |
             Steamy-v${{ steps.ver.outputs.v }}.zip
-            DepotDownloaderMod-v${{ steps.ver.outputs.v }}-win-x64.zip
           body_path: release-notes.md
 
       - name: Publish verified update metadata after the release exists
