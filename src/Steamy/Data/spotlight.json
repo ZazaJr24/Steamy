@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-04T12:21:52.904274+00:00",
+  "updatedAt": "2026-10-05T14:38:51.850076+00:00",
   "games": [
     {
       "appId": 4078430,
@@ -33,6 +33,38 @@
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header_2x.jpg?t=1790871278",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/f81b268dd5cb697bb6fc73e718f3a57a70657211/library_capsule_2x.jpg?t=1790871278",
       "releaseTime": "2026-10-06T16:00:00+00:00"
+    },
+    {
+      "appId": 1551980,
+      "name": "Clive Barker's Hellraiser: Revival",
+      "description": "Experience a new chapter in the legendary horror series like never before. Clive Barker's Hellraiser: Revival takes first-person action horror survival to the next level. Wield the powers of the Genesis Configuration puzzle box to survive your bargain with the infamous Pinhead.",
+      "genres": "Action",
+      "publisher": "Saber Interactive",
+      "comingSoon": true,
+      "featured": false,
+      "releaseLabel": "Oct 8, 2026",
+      "releaseDate": "2026-10-08",
+      "storeUrl": "https://store.steampowered.com/app/1551980/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/fa536cdcd3bbcf5e8074d1c1a10e2c05e08469ec/library_hero_2x.jpg?t=1791195535",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/d1e7111b93b6a8b3eb029908887648348c2c55e6/header_2x.jpg?t=1791195535",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/07b6068f2992ba42c2d48846eea5703b7742293b/library_600x900_2x.jpg?t=1791195535",
+      "releaseTime": "2026-10-08T16:00:00+00:00"
+    },
+    {
+      "appId": 4231820,
+      "name": "Castlevania: Belmont's Curse",
+      "description": "Crimson Curse —Will Your Fate Bloom in Despair or Salvation Set 23 years after Castlevania Dracula's Curse - follow Rose Belmont's journey in an all new 2D Action-Exploration title from KONAMI, Evil Empire and Motion Twin.",
+      "genres": "Action · RPG",
+      "publisher": "KONAMI",
+      "comingSoon": true,
+      "featured": false,
+      "releaseLabel": "Oct 14, 2026",
+      "releaseDate": "2026-10-14",
+      "storeUrl": "https://store.steampowered.com/app/4231820/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/a86259a3a341818b144f97400c4cc5b3db0e708e/library_hero_2x.jpg?t=1788478863",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/6b65aec2c398006aea8b76e1463cc34d0e4ba68b/header_2x.jpg?t=1788478863",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/a296479a772d37cfb6c36c59059b72d663abca38/library_capsule_2x.jpg?t=1788478863",
+      "releaseTime": "2026-10-15T04:00:00+00:00"
     },
     {
       "appId": 4435490,
@@ -193,21 +225,6 @@
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3216600/cb9efcc0c932cb31f32d4f89c0709bcc805798eb/header_2x.jpg?t=1788158325",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3216600/792358d56ea0ab4c13c19a0cf39c46a351648ed4/library_capsule_2x.jpg?t=1788158325",
       "releaseTime": null
-    },
-    {
-      "appId": 2288340,
-      "name": "ACE COMBAT 8: WINGS OF THEVE",
-      "description": "Soar through the skies and rise above every challenge to earn your place among the elite. Engage in intense aerial combat to dominate the battlefield with powerful weapons. Experience a breathtaking campaign filled with high-stakes missions, hard choices, and deep squad connections.",
-      "genres": "Action",
-      "publisher": "Bandai Namco Entertainment Inc.",
-      "comingSoon": false,
-      "featured": false,
-      "releaseLabel": "Oct 1, 2026",
-      "releaseDate": "2026-10-01",
-      "storeUrl": "https://store.steampowered.com/app/2288340/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/2cb2890597c98cd90bc85e609dbb41645d269ad6/library_hero_2x.jpg?t=1790908088",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/13dea8084135fd130605b78189c82e39bf944c35/header_2x.jpg?t=1790908088",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/a1fb5685d2c140309d5549af1ddc725a7114d889/library_capsule_2x.jpg?t=1790908088"
     },
     {
       "appId": 3159330,
