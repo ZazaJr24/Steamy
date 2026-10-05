@@ -52,19 +52,9 @@ public static class UiThemeService
         var app = Application.Current;
         if (app is null) return;
 
-        if (light)
-        {
-            // The shared workspace wash is intentionally part of Dark mode. In Light mode a
-            // solid palette surface keeps pages from retaining a blue/purple cast after a swap.
-            app.Resources["WorkspaceBackgroundBrush"] = LightPalette["AppBackgroundBrush"];
-            return;
-        }
-
-        var styles = app.Resources.MergedDictionaries.FirstOrDefault(dictionary =>
-            dictionary.Source?.OriginalString.Contains("Resources/Styles.xaml", StringComparison.OrdinalIgnoreCase) == true
-            || dictionary.Source?.OriginalString.Contains(@"Resources\Styles.xaml", StringComparison.OrdinalIgnoreCase) == true);
-        if (styles?.Contains("WorkspaceBackgroundBrush") == true)
-            app.Resources["WorkspaceBackgroundBrush"] = styles["WorkspaceBackgroundBrush"];
+        // Keep the workspace a solid palette colour in both themes. Translucent ambient
+        // gradients made the dark workspace look grey, especially with Mica enabled.
+        app.Resources["WorkspaceBackgroundBrush"] = (light ? LightPalette : DarkPalette)["AppBackgroundBrush"];
     }
 
     public static void ApplyBackdrop(string? style)
@@ -107,7 +97,7 @@ public static class UiThemeService
 
         app.Resources["AppBackgroundBrush"] = _isLight
             ? new SolidColorBrush(Color.FromArgb(0xEA, 0xF4, 0xF6, 0xFA))
-            : new SolidColorBrush(Color.FromArgb(0xEF, 0x09, 0x09, 0x0B));
+            : new SolidColorBrush(Color.FromRgb(0x00, 0x00, 0x00));
         // Keep the palette's translucent sidebar gradient when native backdrops are enabled.
         app.Resources["SidebarBackgroundBrush"] = (_isLight ? LightPalette : DarkPalette)["SidebarBackgroundBrush"];
     }

@@ -113,9 +113,9 @@ public partial class MainWindow : FluentWindow
     public void ShowOverlay(UIElement content)
     {
         OverlayHost.Content = content;
-        // Keep the setup canvas tied to the selected palette so Light mode switches live too.
+        // Keep first-run setup fully opaque black even over a native Mica/Acrylic backdrop.
         if (content is FirstRunSetup)
-            OverlayLayer.SetResourceReference(System.Windows.Controls.Panel.BackgroundProperty, "AppBackgroundBrush");
+            OverlayLayer.Background = System.Windows.Media.Brushes.Black;
         else
             OverlayLayer.SetResourceReference(System.Windows.Controls.Panel.BackgroundProperty, "ScrimBrush");
         OverlayLayer.Visibility = Visibility.Visible;

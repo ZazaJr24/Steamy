@@ -3,6 +3,10 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.4.2
+
+- Make the Dark theme workspace and first-run backdrop solid black, including when a native window backdrop is selected.
+
 ## 0.6.4.1
 
 - Hotfix: fetch the verified DepotDownloaderMod executable and marker directly from `tools/DepotDownloaderMod` on GitHub when first needed. No separate downloader release asset or bundled copy is required.
