@@ -16,7 +16,7 @@ public static class BuildStamp
         get
         {
             var version = Assembly.GetExecutingAssembly().GetName().Version;
-            return version?.ToString(version.Revision > 0 ? 4 : 3) ?? "dev";
+            return version?.ToString(version.Revision > 0 ? 4 : 3) ?? "ZazaJr24";
         }
     }
 
