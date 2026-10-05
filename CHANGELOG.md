@@ -3,6 +3,11 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.4.4
+
+- Apply fixes directly into the selected game folder, without creating an extra archive-named folder. Stage files first and roll back overwritten files if applying fails.
+- Resolve current Steam artwork asset URLs from public store metadata when standard image filenames are unavailable.
+
 ## 0.6.4.3
 
 - Follow the Windows appearance by default, restore the soft charcoal Dark theme background and make the Setup wizard adapt between light and dark Windows themes.

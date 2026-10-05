@@ -9,8 +9,7 @@ namespace Steamy.Services;
 /// a chosen game folder. It performs read-only HTTP GET requests, never stores credentials and
 /// only ever writes into the folder the user selected — it does not touch
 /// anything else on disk. Downloads land in the application's download folder (or a local fallback
-/// temp folder), and extractions go into a subfolder named after the archive file so that a failed
-/// run leaves its own folder rather than clobbering unrelated game files.
+/// temp folder), and archive contents are applied directly into the selected game folder.
 /// </summary>
 public interface IGameFixDownloadService
 {
@@ -28,9 +27,8 @@ public interface IGameFixDownloadService
         string? authToken = null);
 
     /// <summary>
-    /// Extracts <paramref name="archivePath"/> into <paramref name="targetFolder"/>. The contents
-    /// go into a subfolder named after the archive (without extension) to keep each fix isolated.
-    /// Returns the extraction root and a best-effort total size of the extracted files.
+    /// Extracts <paramref name="archivePath"/> directly into <paramref name="targetFolder"/>.
+    /// Returns the target folder and a best-effort total size of the extracted files.
     /// </summary>
     Task<GameFixApplyResult> ApplyAsync(
         string archivePath,
@@ -40,14 +38,13 @@ public interface IGameFixDownloadService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Removes the extracted folder created by an earlier <see cref="ApplyAsync"/> call for the
-    /// given archive. Returns true when the folder existed and was removed.
+    /// Resets an applied fix when its installed files are tracked. Direct game-folder applies are
+    /// not currently tracked, so this returns false rather than deleting unrelated game files.
     /// </summary>
     Task<bool> ResetAsync(string archiveFileName, string targetFolder, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Extracts a ZIP, 7z or RAR archive into <paramref name="targetFolder"/>. The contents go into a
-    /// subfolder named after the archive (without extension) so each extraction is isolated.
+    /// Extracts a ZIP, 7z or RAR archive directly into <paramref name="targetFolder"/>.
     /// Returns the extraction root and a best-effort total size of the extracted files.
     /// </summary>
     Task<GameFixApplyResult> ApplyArchiveAsync(
@@ -245,37 +242,18 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
 
         TryEnsureFolder(targetFolder);
 
-        // Isolate each fix in its own subfolder so a bad extraction never clobbers the game tree.
-        var extension = Path.GetExtension(archiveFileName);
-        var baseName = string.IsNullOrWhiteSpace(extension) ? archiveFileName : archiveFileName[..^extension.Length];
-        var extractionRoot = Path.Combine(targetFolder, EscapeFileName(baseName));
-
-        if (Directory.Exists(extractionRoot))
-        {
-            // Be conservative: do not silently overwrite an existing extraction. Report it and reuse
-            // the existing folder rather than deleting user files.
-            progress?.Report($"Extraction folder already exists: {extractionRoot}");
-            var size = FolderSize(extractionRoot);
-            return new GameFixApplyResult(true, extractionRoot, FormatSize(size), "Already applied.");
-        }
-
-        return await ExtractIntoAsync(archivePath, extractionRoot, progress, cancellationToken).ConfigureAwait(false);
+        _ = archiveFileName;
+        return await ExtractIntoAsync(archivePath, targetFolder, progress, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<bool> ResetAsync(string archiveFileName, string targetFolder, CancellationToken cancellationToken = default)
+    public Task<bool> ResetAsync(string archiveFileName, string targetFolder, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(archiveFileName) || string.IsNullOrWhiteSpace(targetFolder))
-            return false;
-
-        var extension = Path.GetExtension(archiveFileName);
-        var baseName = string.IsNullOrWhiteSpace(extension) ? archiveFileName : archiveFileName[..^extension.Length];
-        var folder = Path.Combine(targetFolder, EscapeFileName(baseName));
-
-        if (!Directory.Exists(folder))
-            return false;
-
-        await Task.Run(() => TryDeleteDirectory(folder), cancellationToken).ConfigureAwait(false);
-        return !Directory.Exists(folder);
+        // Fix files are merged into the game tree, so deleting an archive-named folder would
+        // no longer undo the apply and could destroy unrelated game files.
+        _ = archiveFileName;
+        _ = targetFolder;
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(false);
     }
 
     public async Task<GameFixApplyResult> ApplyArchiveAsync(
@@ -292,62 +270,89 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
 
         TryEnsureFolder(targetFolder);
 
-        var archiveFileName = Path.GetFileName(archivePath);
-        if (string.IsNullOrWhiteSpace(archiveFileName))
-            archiveFileName = "fix.zip";
-
-        var baseName = Path.GetFileNameWithoutExtension(archiveFileName);
-        if (string.IsNullOrWhiteSpace(baseName))
-            baseName = "fix";
-
-        var extractionRoot = Path.Combine(targetFolder, EscapeFileName(baseName));
-
-        if (Directory.Exists(extractionRoot))
-        {
-            progress?.Report($"Extraction folder already exists: {extractionRoot}");
-            var size = FolderSize(extractionRoot);
-            return new GameFixApplyResult(true, extractionRoot, FormatSize(size), "Already applied.");
-        }
-
-        return await ExtractIntoAsync(archivePath, extractionRoot, progress, cancellationToken).ConfigureAwait(false);
+        return await ExtractIntoAsync(archivePath, targetFolder, progress, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Extracts ZIP, 7z or RAR (also RAR5, solid and multi-part) into a fresh folder. Fix archives
-    /// are often protected with their site's public password, so those are tried automatically.
+    /// Extracts ZIP, 7z or RAR (also RAR5, solid and multi-part) into a temporary staging folder,
+    /// then merges its files directly into the selected game folder. Existing files are backed up
+    /// temporarily and restored if the merge fails. Fix archives are often protected with their
+    /// site's public password, so those are tried automatically.
     /// </summary>
-    private static async Task<GameFixApplyResult> ExtractIntoAsync(string archivePath, string extractionRoot,
+    private static async Task<GameFixApplyResult> ExtractIntoAsync(string archivePath, string targetFolder,
         IProgress<string>? progress, CancellationToken cancellationToken)
     {
+        var stagingRoot = Path.Combine(Path.GetTempPath(), $"SteamyFix-{Guid.NewGuid():N}");
+        var backupRoot = Path.Combine(stagingRoot, "originals");
+        var replacedFiles = new List<(string Destination, string? Backup)>();
         try
         {
-            Directory.CreateDirectory(extractionRoot);
-            progress?.Report($"Extracting to {extractionRoot}…");
+            Directory.CreateDirectory(targetFolder);
+            var stagedFilesRoot = Path.Combine(stagingRoot, "files");
+            Directory.CreateDirectory(stagedFilesRoot);
+            progress?.Report($"Extracting fix files…");
 
             var extractProgress = progress is null ? null : new Progress<ArchiveExtractProgress>(update =>
                 progress.Report($"Extracting {update.Done}/{update.Total} · {Path.GetFileName(update.CurrentFile)}"));
-            var result = await Task.Run(() => ArchiveExtractor.Extract(archivePath, extractionRoot, KnownFixPasswords,
+            var result = await Task.Run(() => ArchiveExtractor.Extract(archivePath, stagedFilesRoot, KnownFixPasswords,
                 extractProgress, cancellationToken), cancellationToken).ConfigureAwait(false);
 
             if (!result.Succeeded)
             {
-                TryDeleteDirectory(extractionRoot);
                 return new GameFixApplyResult(false, string.Empty, string.Empty, result.Message);
             }
 
-            var size = FolderSize(extractionRoot);
-            progress?.Report($"Extracted {FormatSize(size)} into {extractionRoot}");
-            return new GameFixApplyResult(true, extractionRoot, FormatSize(size), "Applied.");
+            var files = Directory.EnumerateFiles(stagedFilesRoot, "*", SearchOption.AllDirectories).ToArray();
+            var targetRoot = Path.GetFullPath(targetFolder).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            for (var index = 0; index < files.Length; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var relativePath = Path.GetRelativePath(stagedFilesRoot, files[index]);
+                var destination = Path.GetFullPath(Path.Combine(targetFolder, relativePath));
+                if (!destination.StartsWith(targetRoot, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("An archive entry points outside the selected game folder.");
+
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                string? backup = null;
+                if (File.Exists(destination))
+                {
+                    backup = Path.Combine(backupRoot, relativePath);
+                    Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
+                    File.Copy(destination, backup, overwrite: true);
+                }
+                replacedFiles.Add((destination, backup));
+                File.Copy(files[index], destination, overwrite: true);
+                progress?.Report($"Applying {index + 1}/{files.Length} · {Path.GetFileName(destination)}");
+            }
+
+            progress?.Report($"Applied {FormatSize(result.BytesWritten)} directly into {targetFolder}");
+            return new GameFixApplyResult(true, targetFolder, FormatSize(result.BytesWritten), "Applied.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            TryDeleteDirectory(extractionRoot);
+            RollBackFiles(replacedFiles);
             return new GameFixApplyResult(false, string.Empty, string.Empty, "Extraction cancelled.");
         }
         catch (Exception exception)
         {
-            TryDeleteDirectory(extractionRoot);
+            RollBackFiles(replacedFiles);
             return new GameFixApplyResult(false, string.Empty, string.Empty, $"Extraction failed: {exception.Message}");
+        }
+        finally { TryDeleteDirectory(stagingRoot); }
+    }
+
+    private static void RollBackFiles(IEnumerable<(string Destination, string? Backup)> files)
+    {
+        foreach (var (destination, backup) in files.Reverse())
+        {
+            try
+            {
+                if (backup is not null && File.Exists(backup))
+                    File.Copy(backup, destination, overwrite: true);
+                else
+                    File.Delete(destination);
+            }
+            catch { /* Preserve remaining game files if rollback itself is interrupted. */ }
         }
     }
 
@@ -391,19 +396,6 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
     {
         try { if (Directory.Exists(path)) Directory.Delete(path, recursive: true); }
         catch { }
-    }
-
-    private static long FolderSize(string folder)
-    {
-        var info = new DirectoryInfo(folder);
-        long size = 0;
-        try
-        {
-            foreach (var file in info.EnumerateFiles("*", SearchOption.AllDirectories))
-                size += file.Length;
-        }
-        catch { }
-        return size;
     }
 
     private static string FormatSize(long bytes)

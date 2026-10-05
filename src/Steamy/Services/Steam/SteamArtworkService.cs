@@ -1,5 +1,6 @@
 using System.IO;
 using System.Net.Http;
+using System.Text.Json;
 using System.Windows.Media.Imaging;
 using Steamy.Models;
 
@@ -154,6 +155,22 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
             var portraitImage = await portraitTask;
             var headerImage = await headerTask;
 
+            // Store art filenames can be versioned (hash-prefixed) for newer games.
+            // Steam's public store metadata supplies the current asset URLs when the
+            // stable legacy filenames above are no longer available.
+            if (portraitImage is null && headerImage is null)
+            {
+                var storeAssets = await GetStoreAssetUrlsAsync(game.AppId, cancellationToken).ConfigureAwait(false);
+                var storePortrait = storeAssets.Portrait.Length > 0
+                    ? await LoadFirstAvailableAsync(new[] { storeAssets.Portrait }, portraitCachePath, cancellationToken).ConfigureAwait(false)
+                    : null;
+                var storeHeader = storeAssets.Header.Length > 0
+                    ? await LoadFirstAvailableAsync(new[] { storeAssets.Header }, headerCachePath, cancellationToken).ConfigureAwait(false)
+                    : null;
+                portraitImage ??= storePortrait;
+                headerImage ??= storeHeader;
+            }
+
             game.ArtworkImage = portraitImage ?? headerImage;
             game.HeaderImage = headerImage ?? portraitImage;
         }
@@ -169,6 +186,58 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
         {
             game.IsArtworkLoading = false;
         }
+    }
+
+    private async Task<(string Portrait, string Header)> GetStoreAssetUrlsAsync(int appId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var query = JsonSerializer.Serialize(new
+            {
+                ids = new[] { new { appid = appId } },
+                context = new { language = "english", country_code = "US", steam_realm = 1 },
+                data_request = new { include_assets = true }
+            });
+            using var response = await _httpClient.GetAsync(
+                "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json=" + Uri.EscapeDataString(query),
+                cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode) return (string.Empty, string.Empty);
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!document.RootElement.TryGetProperty("response", out var root)
+                || !root.TryGetProperty("store_items", out var rows)) return (string.Empty, string.Empty);
+
+            foreach (var row in rows.EnumerateArray())
+            {
+                if (!row.TryGetProperty("appid", out var id) || !id.TryGetInt32(out var resultId) || resultId != appId
+                    || !row.TryGetProperty("assets", out var assets)
+                    || !assets.TryGetProperty("asset_url_format", out var formatValue)) continue;
+
+                var format = formatValue.GetString();
+                if (string.IsNullOrWhiteSpace(format)
+                    || !format.StartsWith($"steam/apps/{appId}/", StringComparison.Ordinal)
+                    || !format.Contains("${FILENAME}", StringComparison.Ordinal)) continue;
+
+                string Resolve(params string[] names)
+                {
+                    foreach (var name in names)
+                    {
+                        if (!assets.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.String) continue;
+                        var filename = value.GetString();
+                        if (!string.IsNullOrWhiteSpace(filename))
+                            return "https://shared.akamai.steamstatic.com/store_item_assets/" + format.Replace("${FILENAME}", filename, StringComparison.Ordinal);
+                    }
+                    return string.Empty;
+                }
+
+                return (Resolve("library_capsule_2x", "library_capsule"), Resolve("header_2x", "header"));
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { /* Current Steam asset metadata is optional; keep glyph fallback. */ }
+
+        return (string.Empty, string.Empty);
     }
 
     private async Task<BitmapImage?> LoadFirstAvailableAsync(string[] urls, string cachePath, CancellationToken cancellationToken)
