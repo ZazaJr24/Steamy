@@ -1,4 +1,5 @@
 using System.IO;
+using Steamy.Models;
 
 namespace Steamy.Services;
 
@@ -80,11 +81,13 @@ public sealed class GameLocatorService : IGameLocatorService
 
     private readonly ISteamLibraryService _steamLibrary;
     private readonly IAppDataStore _store;
+    private readonly ILocalDatabase _database;
 
-    public GameLocatorService(ISteamLibraryService steamLibrary, IAppDataStore store)
+    public GameLocatorService(ISteamLibraryService steamLibrary, IAppDataStore store, ILocalDatabase database)
     {
         _steamLibrary = steamLibrary;
         _store = store;
+        _database = database;
     }
 
     public IReadOnlyList<InstalledGameEntry> ListInstalledGames()
@@ -114,6 +117,30 @@ public sealed class GameLocatorService : IGameLocatorService
         {
             if (string.IsNullOrWhiteSpace(game.InstallFolder) || !Directory.Exists(game.InstallFolder)) continue;
             entries.TryAdd(game.InstallFolder, new InstalledGameEntry(game.AppId, game.Name, game.InstallFolder));
+        }
+
+        // Steamy's DepotDownloader can install directly into any chosen folder, so Steam will
+        // not necessarily create an appmanifest for that game. Keep successful local downloads
+        // discoverable from the saved queue metadata as long as their target folder still exists.
+        try
+        {
+            var downloadedGames = _database.LoadDownloadJobsAsync().GetAwaiter().GetResult();
+            foreach (var job in downloadedGames)
+            {
+                if (job.AppId <= 0
+                    || !string.Equals(job.State, DownloadJobState.Completed.ToString(), StringComparison.OrdinalIgnoreCase)
+                    || string.IsNullOrWhiteSpace(job.GameName)
+                    || string.IsNullOrWhiteSpace(job.TargetFolder)
+                    || !Directory.Exists(job.TargetFolder))
+                    continue;
+
+                entries.TryAdd(job.TargetFolder, new InstalledGameEntry(job.AppId, job.GameName, job.TargetFolder));
+            }
+        }
+        catch (Exception)
+        {
+            // Download history is supplementary; a damaged/unavailable local database must not
+            // prevent Steam's appmanifest scan or the explicitly synced local library from working.
         }
 
         return entries.Values

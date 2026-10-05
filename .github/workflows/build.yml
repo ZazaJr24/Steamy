@@ -6,7 +6,7 @@ on:
       version:
         description: 'Version tag (e.g. 0.2.2)'
         required: true
-        default: '0.6.4.2'
+        default: '0.6.4.3'
   push:
     tags:
       - 'v*'
@@ -83,6 +83,19 @@ jobs:
       - name: Add license files
         run: Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/
 
+      - name: Build dark Windows installer
+        shell: pwsh
+        run: |
+          choco install innosetup --version=7.0.2 --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $iscc = @(
+            'C:\Program Files\Inno Setup 7\ISCC.exe',
+            'C:\Program Files (x86)\Inno Setup 7\ISCC.exe'
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) { throw 'Inno Setup 7.0.2 compiler was not found.' }
+          & $iscc "/DAppVersion=${{ steps.ver.outputs.v }}" "/DPublishDir=${{ github.workspace }}\publish" "/O${{ github.workspace }}" scripts/installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Zip release
         run: |
           Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ steps.ver.outputs.v }}.zip
@@ -127,6 +140,7 @@ jobs:
           make_latest: true
           files: |
             Steamy-v${{ steps.ver.outputs.v }}.zip
+            Steamy-v${{ steps.ver.outputs.v }}-Setup.exe
           body_path: release-notes.md
 
       - name: Publish verified update metadata after the release exists

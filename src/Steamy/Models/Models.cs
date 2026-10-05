@@ -596,7 +596,7 @@ public sealed class GameFixItem : ObservableObject
 public sealed class AppSettings : ObservableObject
 {
     private string _language = "System Default";
-    private string _appearance = "Dark";
+    private string _appearance = "System";
     private bool _reduceEffects;
     private bool _dashboardSearch;
     private bool _autoUpdate = true;

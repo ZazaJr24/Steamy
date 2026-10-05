@@ -21,15 +21,15 @@
 
 ## Start playing
 
-1. **[Download Latest](https://github.com/ZazaJr24/Steamy/releases/latest)** and extract the entire ZIP into a folder.
-2. Run **Steamy.exe**. Steam library folders are detected automatically; adjust them in **Settings** if needed.
-3. Open **Games** to browse, or **Downloads** at the bottom left to continue your queue.
+1. **[Download Latest](https://github.com/ZazaJr24/Steamy/releases/latest)** and choose the **Setup** installer or the portable ZIP.
+2. Run Setup to install Steamy for your Windows account, or extract the full ZIP and run **Steamy.exe** for portable use.
+3. Steam library folders are detected automatically; adjust them in **Settings** if needed. Open **Games** to browse, or **Downloads** at the bottom left to continue your queue.
 
-The release is portable and includes the Windows runtime. Use Windows 10 or 11 on a 64-bit PC; no separate .NET installation is needed. Keep the bundled `Tools` folder beside the app.
+Both releases include the Windows runtime. The portable ZIP runs directly from its extracted folder; the Setup installer creates Start menu shortcuts and can optionally add a desktop shortcut. Use Windows 10 or 11 on a 64-bit PC; no separate .NET installation is needed. Keep the bundled `Tools` folder beside the app.
 
 Already using Steamy? Open **Settings → Check now** to get the latest release. If an older build (including 0.4.12) reports GitHub HTTP 403, download and extract the latest ZIP once; 0.5.0 includes a public release-manifest fallback and checks the published SHA-256 before installing. The app can also check automatically at startup. [Release notes](CHANGELOG.md) live in one place, so this page stays focused on the app.
 
-Normal releases use three version numbers, such as **0.6.0**. Optional hotfixes use four, such as **0.6.0.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides one versioned app ZIP and its SHA-256 checksum directly in the release notes.
+Normal releases use three version numbers, such as **0.6.0**. Optional hotfixes use four, such as **0.6.0.1**; Steamy retains the revision and detects newer hotfixes as well as the next regular release. The release page provides a versioned portable ZIP and a dark themed Windows Setup installer. The ZIP's SHA-256 checksum is included directly in the release notes.
 
 ## Inside Steamy
 

@@ -97,9 +97,6 @@
           <ui:NavigationViewItem Content="Games"
                                  Icon="{ui:SymbolIcon Games24}"
                                  TargetPageType="{x:Type pages:LibraryPage}" />
-          <ui:NavigationViewItem Content="Share"
-                                 Icon="{ui:SymbolIcon Share24}"
-                                 TargetPageType="{x:Type pages:SharePage}" />
           <ui:NavigationViewItemSeparator Height="1" Margin="16,8"
                                            Background="{DynamicResource SidebarSeparatorBrush}" BorderThickness="0"
                                            SnapsToDevicePixels="True">
