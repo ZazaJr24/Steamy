@@ -83,14 +83,15 @@ jobs:
       - name: Add license files
         run: Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/
 
-      - name: Build dark Windows installer
+      - name: Build Windows installer
         shell: pwsh
         run: |
-          choco install innosetup --version=7.0.2 --yes --no-progress
+          winget install --id JRSoftware.InnoSetup.7 --exact --source winget --version 7.0.2 --silent --accept-source-agreements --accept-package-agreements
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $iscc = @(
             'C:\Program Files\Inno Setup 7\ISCC.exe',
-            'C:\Program Files (x86)\Inno Setup 7\ISCC.exe'
+            'C:\Program Files (x86)\Inno Setup 7\ISCC.exe',
+            "$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe"
           ) | Where-Object { Test-Path $_ } | Select-Object -First 1
           if (-not $iscc) { throw 'Inno Setup 7.0.2 compiler was not found.' }
           & $iscc "/DAppVersion=${{ steps.ver.outputs.v }}" "/DPublishDir=${{ github.workspace }}\publish" "/O${{ github.workspace }}" scripts/installer.iss
