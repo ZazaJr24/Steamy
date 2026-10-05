@@ -177,7 +177,6 @@ public partial class SettingsPage : Page
         DepotBoxApiKeyBox.Clear();
         ManifestHubApiKeyBox.Clear();
         MirrorTokenBox.Clear();
-        ShareTokenBox.Clear();
         if (IsLoaded && App.Services.GetService<UiTranslationService>() is { } translations)
             _ = translations.ApplyToAsync((DependencyObject?)Window.GetWindow(this) ?? this, ViewModel.Settings.Language);
     }
@@ -269,12 +268,6 @@ public partial class SettingsPage : Page
     {
         if (sender is PasswordBox passwordBox)
             CredentialTyped(passwordBox, "Access token", value => ViewModel.MirrorTokenInput = value);
-    }
-
-    private void ShareTokenBox_PasswordChanged(object sender, RoutedEventArgs e)
-    {
-        if (sender is PasswordBox passwordBox)
-            CredentialTyped(passwordBox, "Dump sharing token", value => ViewModel.ShareTokenInput = value);
     }
 
     private void SteamLibraryBrowseButton_Click(object sender, RoutedEventArgs e)

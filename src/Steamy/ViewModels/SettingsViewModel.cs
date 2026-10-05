@@ -31,7 +31,6 @@ public sealed class SettingsViewModel : ViewModelBase
     private const string DepotBoxApiKeyName = "depotbox-api-key";
     private const string ManifestHubApiKeyName = "manifesthub-api-key";
     private const string MirrorTokenName = FixSource.TokenCredentialName;
-    private const string ShareTokenName = ManifestShareService.TokenCredentialName;
 
     private readonly ISettingsService _settingsService;
     private readonly ISecureCredentialService _credentials;
@@ -90,7 +89,6 @@ public sealed class SettingsViewModel : ViewModelBase
         Settings = _settingsService.Load();
         AttachSettings(Settings);
         SyncNumberFields();
-        _ = RefreshShareTokenStatusAsync();
 
         SaveCommand = new AsyncRelayCommand(() => SaveAsync("Saved by hand."));
         ClearCredentialsCommand = new AsyncRelayCommand(ClearCredentialsAsync);
@@ -166,12 +164,6 @@ public sealed class SettingsViewModel : ViewModelBase
 
     /// <summary>Bound to the password box; only ever written into the encrypted store.</summary>
     public string MirrorTokenInput { get; set; } = string.Empty;
-
-    /// <summary>Fine-grained token that may push dumps into the private dump repository.</summary>
-    public string ShareTokenInput { get; set; } = string.Empty;
-
-    /// <summary>Whether a dump sharing token is stored; never the token itself.</summary>
-    public string ShareCredentialStatus { get; private set; } = "Not configured";
 
     /// <summary>Live state of the resolver the app's HTTP clients currently use.</summary>
     public string StableDnsStatus => StableDnsHandler.Status;
@@ -573,12 +565,6 @@ public sealed class SettingsViewModel : ViewModelBase
             storedSomething = true;
         }
 
-        if (!string.IsNullOrWhiteSpace(ShareTokenInput))
-        {
-            await _credentials.SaveAsync(ShareTokenName, ShareTokenInput.Trim());
-            storedSomething = true;
-        }
-
         if (!storedSomething) return;
 
         SteamApiKeyInput = string.Empty;
@@ -587,20 +573,8 @@ public sealed class SettingsViewModel : ViewModelBase
         DepotBoxApiKeyInput = string.Empty;
         ManifestHubApiKeyInput = string.Empty;
         MirrorTokenInput = string.Empty;
-        ShareTokenInput = string.Empty;
         CredentialInputsCleared?.Invoke(this, EventArgs.Empty);
         await RefreshCredentialStatusAsync();
-        await RefreshShareTokenStatusAsync();
-    }
-
-    /// <summary>Reports only whether a sharing token exists, never the token itself.</summary>
-    public async Task RefreshShareTokenStatusAsync()
-    {
-        string? token = null;
-        try { token = await _credentials.ReadAsync(ShareTokenName); } catch { }
-
-        ShareCredentialStatus = string.IsNullOrWhiteSpace(token) ? "Not configured" : "Stored · encrypted with DPAPI";
-        OnPropertyChanged(nameof(ShareCredentialStatus));
     }
 
     public async Task RefreshCredentialStatusAsync()

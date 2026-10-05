@@ -312,7 +312,7 @@ public partial class App : Application
 
     private static void ApplySavedAppearance()
     {
-        var saved = "Dark";
+        var saved = "System";
         try
         {
             var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "settings.json");

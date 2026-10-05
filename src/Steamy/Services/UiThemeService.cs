@@ -97,7 +97,7 @@ public static class UiThemeService
 
         app.Resources["AppBackgroundBrush"] = _isLight
             ? new SolidColorBrush(Color.FromArgb(0xEA, 0xF4, 0xF6, 0xFA))
-            : new SolidColorBrush(Color.FromRgb(0x00, 0x00, 0x00));
+            : new SolidColorBrush(Color.FromArgb(0xEF, 0x09, 0x09, 0x0B));
         // Keep the palette's translucent sidebar gradient when native backdrops are enabled.
         app.Resources["SidebarBackgroundBrush"] = (_isLight ? LightPalette : DarkPalette)["SidebarBackgroundBrush"];
     }

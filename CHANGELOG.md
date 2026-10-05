@@ -3,6 +3,12 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.4.3
+
+- Follow the Windows appearance by default, restore the soft charcoal Dark theme background and make the Setup wizard adapt between light and dark Windows themes.
+- Publish both the portable Windows ZIP and a per-user Setup installer with Start menu and optional desktop shortcuts.
+- Include completed Steamy DepotDownloader installs in Installed games while their target folders remain available.
+
 ## 0.6.4.2
 
 - Make the Dark theme workspace and first-run backdrop solid black, including when a native window backdrop is selected.

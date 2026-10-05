@@ -86,7 +86,6 @@
           <ComboBoxItem Content="Downloads" Tag="downloads" />
           <ComboBoxItem Content="Connections" Tag="services" />
           <ComboBoxItem Content="Network" Tag="network" />
-          <ComboBoxItem Content="Sharing" Tag="sharing" />
           <ComboBoxItem Content="All settings" Tag="all" />
         </ComboBox>
         <TextBlock x:Name="SectionSummary" Grid.Column="1" Style="{StaticResource CaptionStyle}"
@@ -746,68 +745,6 @@
                          TextWrapping="Wrap" VerticalAlignment="Center" />
             </StackPanel>
           </Border>
-        </StackPanel>
-      </Border>
-
-          </StackPanel>
-          <StackPanel Tag="sharing" controls:EntranceMotion.Delay="0">
-      <!-- ===== Sharing ================================================================== -->
-      <WrapPanel Margin="0,8,0,12">
-        <Border Style="{StaticResource SectionChip}">
-          <ui:SymbolIcon Symbol="Share24" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-        </Border>
-        <TextBlock Text="Sharing" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
-        <TextBlock Text="Your manifests and repository" Style="{StaticResource SectionHint}" />
-      </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
-        <StackPanel>
-          <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
-            <StackPanel Orientation="Horizontal">
-              <ui:SymbolIcon Symbol="Info24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
-                             VerticalAlignment="Top" Margin="0,1,9,0" />
-              <TextBlock Text="Shares are committed to one GitHub repository with a fine-grained token that only has Contents: Read and write on that repository. Keep the repository private: everyone who has access to it can see what was shared."
-                         Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-
-          <Grid Margin="0,0,0,12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="1.1*" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Repository owner" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="GitHub account that owns the share repository." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
-            </StackPanel>
-            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestShareOwner, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="ZazaJr24" />
-          </Grid>
-          <Grid Margin="0,0,0,12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="1.1*" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Repository" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Keep it private so only people with access can see the shares." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
-            </StackPanel>
-            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestShareRepo, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Steamy-Dumps" />
-          </Grid>
-          <Grid Margin="0,0,0,12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="1.1*" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Branch" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Branch the shares are committed to." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
-            </StackPanel>
-            <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.ManifestShareBranch, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="main" />
-          </Grid>
-          <Grid Margin="0,0,0,12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="1.1*" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
-              <TextBlock Text="Sharing token" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="{Binding ShareCredentialStatus}" FontSize="12" Margin="0,3,0,0"
-                         Foreground="{DynamicResource AccentBrush}" />
-              <TextBlock Text="Fine-grained PAT with Contents: Read and write on that repository only. Encrypted with DPAPI, never written to logs or exports."
-                         Style="{StaticResource MutedTextStyle}" FontSize="11.5" Margin="0,4,0,0" TextWrapping="Wrap" />
-            </StackPanel>
-            <PasswordBox x:Name="ShareTokenBox" Style="{StaticResource CredentialBoxStyle}" Grid.Column="1" VerticalAlignment="Center"
-                         PasswordChanged="ShareTokenBox_PasswordChanged" />
-          </Grid>
-          <TextBlock Text="Nothing is uploaded until you press Share on the Share page. Your SteamID and local paths are removed from every pack."
-                     Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
 
