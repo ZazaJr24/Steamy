@@ -1,23 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-07T13:23:39.605864+00:00",
+  "updatedAt": "2026-10-08T13:29:30.429117+00:00",
   "games": [
-    {
-      "appId": 1551980,
-      "name": "Clive Barker's Hellraiser: Revival",
-      "description": "Experience a new chapter in the legendary horror series like never before. Clive Barker's Hellraiser: Revival takes first-person action horror survival to the next level. Wield the powers of the Genesis Configuration puzzle box to survive your bargain with the infamous Pinhead.",
-      "genres": "Action",
-      "publisher": "Saber Interactive",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Oct 8, 2026",
-      "releaseDate": "2026-10-08",
-      "storeUrl": "https://store.steampowered.com/app/1551980/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/fa536cdcd3bbcf5e8074d1c1a10e2c05e08469ec/library_hero_2x.jpg?t=1791195535",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/d1e7111b93b6a8b3eb029908887648348c2c55e6/header_2x.jpg?t=1791195535",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/07b6068f2992ba42c2d48846eea5703b7742293b/library_600x900_2x.jpg?t=1791195535",
-      "releaseTime": "2026-10-08T16:00:00+00:00"
-    },
     {
       "appId": 1215940,
       "name": "Forever Ago",
@@ -29,10 +13,10 @@
       "releaseLabel": "Oct 8, 2026",
       "releaseDate": "2026-10-08",
       "storeUrl": "https://store.steampowered.com/app/1215940/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/5119333db4265f58fae129b41432742c9da0e2af/library_hero_2x.jpg?t=1790790784",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/463f75c014bc0ee1c6daf2ccda036edb28a0bb36/header_2x.jpg?t=1790790784",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/744e274929b880897af4febe86366997c51842aa/library_capsule_2x.jpg?t=1790790784",
-      "releaseTime": "2026-10-08T13:00:00+00:00"
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/5119333db4265f58fae129b41432742c9da0e2af/library_hero_2x.jpg?t=1791465185",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/463f75c014bc0ee1c6daf2ccda036edb28a0bb36/header_2x.jpg?t=1791465185",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/744e274929b880897af4febe86366997c51842aa/library_capsule_2x.jpg?t=1791465185",
+      "releaseTime": null
     },
     {
       "appId": 4231820,
@@ -67,22 +51,6 @@
       "releaseTime": "2026-10-23T05:00:00+00:00"
     },
     {
-      "appId": 3259780,
-      "name": "FINAL FANTASY RESONANCE",
-      "description": "Return to the pixel‑art world of FINAL FANTASY, evolved from its classic roots. Travel with companions bound by fate and call on Visions to aid you in battle to uncover the truth behind a force that threatens to bring everything to ruin.",
-      "genres": "RPG",
-      "publisher": "Square Enix",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Oct 22, 2026",
-      "releaseDate": "2026-10-22",
-      "storeUrl": "https://store.steampowered.com/app/3259780/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/0cb714b00aaac49c450ad1d64c0c3a3cf14e4cfc/library_hero_2x.jpg?t=1788534743",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/710da43babb2043f9f6ad0e50023e31167d94708/header_2x.jpg?t=1788534743",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/21d8a7c692803448c79426fc88910d8658a058a8/library_capsule_2x.jpg?t=1788534743",
-      "releaseTime": "2026-10-22T16:00:00+00:00"
-    },
-    {
       "appId": 4115450,
       "name": "Phantom Blade Zero",
       "description": "S-GAME presents Phantom Blade Zero, a fusion of classic Wuxia storytelling and exhilarating action powered by Unreal Engine 5. You play as Soul, a warrior with only sixty-six days left to live. Fend off assassins, unravel world-ending conspiracies, and defend your values with your life.",
@@ -97,22 +65,6 @@
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/7f882f889630270d3d3fb93825ac6f55b55e7a6c/header_2x.jpg?t=1787142639",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/471e77854910665c03eb9a53ad06f2ac12903acd/library_capsule_2x.jpg?t=1787142639",
       "releaseTime": "2026-10-29T02:00:00+00:00"
-    },
-    {
-      "appId": 4530370,
-      "name": "Football Manager 27",
-      "description": "Flow from the tactics board to the touchline as foundations evolve to deliver greater control, smoother discovery and a more enticing football world. Out from November 10.",
-      "genres": "Simulation · Sports · Strategy",
-      "publisher": "SEGA",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Nov 10, 2026",
-      "releaseDate": "2026-11-10",
-      "storeUrl": "https://store.steampowered.com/app/4530370/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/d38e5bf84f475381c6146e2d54f03d1db5292f10/library_hero_2x.jpg?t=1791379324",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/32b41d18ffaac3d2e1dc1a9c3915538db0ba3fca/header_2x.jpg?t=1791379324",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/7ed4ea902189db0f278ae069ff5bfde4f601de93/library_capsule_2x.jpg?t=1791379324",
-      "releaseTime": "2026-11-10T16:00:00+00:00"
     },
     {
       "appId": 2272360,
@@ -243,6 +195,36 @@
       "releaseTime": null
     },
     {
+      "appId": 1551980,
+      "name": "Clive Barker's Hellraiser: Revival",
+      "description": "Experience a new chapter in the legendary horror series like never before. Clive Barker's Hellraiser: Revival takes first-person action horror survival to the next level. Wield the powers of the Genesis Configuration puzzle box to survive your bargain with the infamous Pinhead.",
+      "genres": "Action",
+      "publisher": "Saber Interactive",
+      "comingSoon": false,
+      "featured": false,
+      "releaseLabel": "Oct 8, 2026",
+      "releaseDate": "2026-10-08",
+      "storeUrl": "https://store.steampowered.com/app/1551980/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/fa536cdcd3bbcf5e8074d1c1a10e2c05e08469ec/library_hero_2x.jpg?t=1791462446",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/d1e7111b93b6a8b3eb029908887648348c2c55e6/header_2x.jpg?t=1791462446",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/07b6068f2992ba42c2d48846eea5703b7742293b/library_600x900_2x.jpg?t=1791462446"
+    },
+    {
+      "appId": 3659460,
+      "name": "Gear.Club Unlimited 3",
+      "description": "The Gear.Club series is back! Customize and set up your favourite cars to race at top speed along the roads of the French Mediterranean coast and Japan. Don't just win – show off your style!",
+      "genres": "Racing · Simulation · Sports",
+      "publisher": "Nacon",
+      "comingSoon": false,
+      "featured": false,
+      "releaseLabel": "Oct 8, 2026",
+      "releaseDate": "2026-10-08",
+      "storeUrl": "https://store.steampowered.com/app/3659460/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3659460/2826629313321c254df77fcd3d753235afd4e68d/library_hero_2x.jpg?t=1791465285",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3659460/abc548ccb868fd880abe4e899b869d5bf8499ad7/header_2x.jpg?t=1791465285",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3659460/3822d16360ab2683ce64f50d3a0029023340f68b/library_capsule_2x.jpg?t=1791465285"
+    },
+    {
       "appId": 4078430,
       "name": "STAR WARS: Galactic Racer™",
       "description": "STAR WARS: Galactic Racer™ is a ​runs-based, ​high-stakes reinvention of racing born in the lawless Outer Rim. With the Empire gone and the galaxy rebuilding, The Galactic League is created: an underground, unsanctioned circuit where syndicates bankroll chaos and champions are forged.",
@@ -253,9 +235,9 @@
       "releaseLabel": "Oct 6, 2026",
       "releaseDate": "2026-10-06",
       "storeUrl": "https://store.steampowered.com/app/4078430/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/541b6180ab006e79bb64ad768ad523ef0207c489/library_hero_2x.jpg?t=1791300714",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/97215eb609882139ce6a28419116be23fcf5ac86/header_2x.jpg?t=1791300714",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/16514821db6559e75c9067285fee5dd198492aee/library_capsule_2x.jpg?t=1791300714"
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/541b6180ab006e79bb64ad768ad523ef0207c489/library_hero_2x.jpg?t=1791388584",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/97215eb609882139ce6a28419116be23fcf5ac86/header_2x.jpg?t=1791388584",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/16514821db6559e75c9067285fee5dd198492aee/library_capsule_2x.jpg?t=1791388584"
     },
     {
       "appId": 3010850,
@@ -268,9 +250,9 @@
       "releaseLabel": "Oct 6, 2026",
       "releaseDate": "2026-10-06",
       "storeUrl": "https://store.steampowered.com/app/3010850/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/b5751ae4302e34a0fdc216f7d23ba07a8d041443/library_hero_2x.jpg?t=1791309192",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header_2x.jpg?t=1791309192",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/f81b268dd5cb697bb6fc73e718f3a57a70657211/library_capsule_2x.jpg?t=1791309192"
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/b5751ae4302e34a0fdc216f7d23ba07a8d041443/library_hero_2x.jpg?t=1791405196",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header_2x.jpg?t=1791405196",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/f81b268dd5cb697bb6fc73e718f3a57a70657211/library_capsule_2x.jpg?t=1791405196"
     },
     {
       "appId": 3159330,
@@ -511,21 +493,6 @@
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/cf8cec802dc47d0f24b75f9eee135e96812e2652/library_hero_2x.jpg?t=1784714077",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/e9047d8ec47ae3d94bb8b464fb0fc9e9972b4ac7/header_2x.jpg?t=1784714077",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/6399de67cce3cecadce7900e03f6e09ff910a235/library_capsule_2x.jpg?t=1784714077"
-    },
-    {
-      "appId": 1174180,
-      "name": "Red Dead Redemption 2",
-      "description": "Arthur Morgan and the Van der Linde Gang are outlaws on the run. With federal agents and bounty hunters massing on their heels, the gang must rob, steal, and fight their way across the rugged heartland in order to survive.",
-      "genres": "Action · Adventure",
-      "publisher": "Rockstar Games",
-      "comingSoon": false,
-      "featured": false,
-      "releaseLabel": "Dec 5, 2019",
-      "releaseDate": "2019-12-05",
-      "storeUrl": "https://store.steampowered.com/app/1174180/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/library_hero_2x.jpg?t=1759502961",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/header.jpg?t=1759502961",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/library_600x900_2x.jpg?t=1759502961"
     }
   ]
 }
