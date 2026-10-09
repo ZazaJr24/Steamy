@@ -1,23 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-08T13:29:30.429117+00:00",
+  "updatedAt": "2026-10-09T13:17:14.925971+00:00",
   "games": [
-    {
-      "appId": 1215940,
-      "name": "Forever Ago",
-      "description": "Following a tragic stroke of fate, Alfred embarks on a journey north in search of redemption in this single-player road trip adventure.",
-      "genres": "Adventure · Indie",
-      "publisher": "Annapurna Interactive",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Oct 8, 2026",
-      "releaseDate": "2026-10-08",
-      "storeUrl": "https://store.steampowered.com/app/1215940/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/5119333db4265f58fae129b41432742c9da0e2af/library_hero_2x.jpg?t=1791465185",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/463f75c014bc0ee1c6daf2ccda036edb28a0bb36/header_2x.jpg?t=1791465185",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1215940/744e274929b880897af4febe86366997c51842aa/library_capsule_2x.jpg?t=1791465185",
-      "releaseTime": null
-    },
     {
       "appId": 4231820,
       "name": "Castlevania: Belmont's Curse",
@@ -67,6 +51,22 @@
       "releaseTime": "2026-10-29T02:00:00+00:00"
     },
     {
+      "appId": 4530370,
+      "name": "Football Manager 27",
+      "description": "Flow from the tactics board to the touchline as foundations evolve to deliver greater control, smoother discovery and a more enticing football world. Out from November 10.",
+      "genres": "Simulation · Sports · Strategy",
+      "publisher": "SEGA",
+      "comingSoon": true,
+      "featured": false,
+      "releaseLabel": "Nov 10, 2026",
+      "releaseDate": "2026-11-10",
+      "storeUrl": "https://store.steampowered.com/app/4530370/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/d38e5bf84f475381c6146e2d54f03d1db5292f10/library_hero_2x.jpg?t=1791379324",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/32b41d18ffaac3d2e1dc1a9c3915538db0ba3fca/header_2x.jpg?t=1791379324",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/7ed4ea902189db0f278ae069ff5bfde4f601de93/library_capsule_2x.jpg?t=1791379324",
+      "releaseTime": "2026-11-10T16:00:00+00:00"
+    },
+    {
       "appId": 2272360,
       "name": "Warhammer 40,000: Dawn of War IV",
       "description": "Return to the RTS series’ roots with deeply satisfying strategy gameplay. Take command of four unique Warhammer 40,000 factions, including the Adeptus Mechanicus in their series debut! Fight through 70+ epic campaign missions, as well as the replayable Last Stand, Skirmish and multiplayer modes.",
@@ -77,9 +77,9 @@
       "releaseLabel": "Dec 3, 2026",
       "releaseDate": "2026-12-03",
       "storeUrl": "https://store.steampowered.com/app/2272360/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/63bb72eb8e7513bc4756bb46d38f046114c33087/library_hero_2x.jpg?t=1790838178",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/f50a309da98ef75cbdae400a7d492e36314ce415/header_2x.jpg?t=1790838178",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/c7dfb77d135e6da1b8a392af39b4272c59b1162a/library_capsule_2x.jpg?t=1790838178",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/63bb72eb8e7513bc4756bb46d38f046114c33087/library_hero_2x.jpg?t=1791475546",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/f50a309da98ef75cbdae400a7d492e36314ce415/header_2x.jpg?t=1791475546",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/c7dfb77d135e6da1b8a392af39b4272c59b1162a/library_capsule_2x.jpg?t=1791475546",
       "releaseTime": "2026-12-03T16:00:00+00:00"
     },
     {
@@ -210,21 +210,6 @@
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551980/07b6068f2992ba42c2d48846eea5703b7742293b/library_600x900_2x.jpg?t=1791462446"
     },
     {
-      "appId": 3659460,
-      "name": "Gear.Club Unlimited 3",
-      "description": "The Gear.Club series is back! Customize and set up your favourite cars to race at top speed along the roads of the French Mediterranean coast and Japan. Don't just win – show off your style!",
-      "genres": "Racing · Simulation · Sports",
-      "publisher": "Nacon",
-      "comingSoon": false,
-      "featured": false,
-      "releaseLabel": "Oct 8, 2026",
-      "releaseDate": "2026-10-08",
-      "storeUrl": "https://store.steampowered.com/app/3659460/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3659460/2826629313321c254df77fcd3d753235afd4e68d/library_hero_2x.jpg?t=1791465285",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3659460/abc548ccb868fd880abe4e899b869d5bf8499ad7/header_2x.jpg?t=1791465285",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3659460/3822d16360ab2683ce64f50d3a0029023340f68b/library_capsule_2x.jpg?t=1791465285"
-    },
-    {
       "appId": 4078430,
       "name": "STAR WARS: Galactic Racer™",
       "description": "STAR WARS: Galactic Racer™ is a ​runs-based, ​high-stakes reinvention of racing born in the lawless Outer Rim. With the Empire gone and the galaxy rebuilding, The Galactic League is created: an underground, unsanctioned circuit where syndicates bankroll chaos and champions are forged.",
@@ -250,9 +235,9 @@
       "releaseLabel": "Oct 6, 2026",
       "releaseDate": "2026-10-06",
       "storeUrl": "https://store.steampowered.com/app/3010850/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/b5751ae4302e34a0fdc216f7d23ba07a8d041443/library_hero_2x.jpg?t=1791405196",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header_2x.jpg?t=1791405196",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/f81b268dd5cb697bb6fc73e718f3a57a70657211/library_capsule_2x.jpg?t=1791405196"
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/b5751ae4302e34a0fdc216f7d23ba07a8d041443/library_hero_2x.jpg?t=1791488050",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header_2x.jpg?t=1791488050",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/f81b268dd5cb697bb6fc73e718f3a57a70657211/library_capsule_2x.jpg?t=1791488050"
     },
     {
       "appId": 3159330,
@@ -340,9 +325,9 @@
       "releaseLabel": "Mar 21, 2024",
       "releaseDate": "2024-03-21",
       "storeUrl": "https://store.steampowered.com/app/2054970/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/library_hero_2x.jpg?t=1788308490",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/header.jpg?t=1788308490",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/library_600x900_2x.jpg?t=1788308490"
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/library_hero_2x.jpg?t=1791504871",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/header.jpg?t=1791504871",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/library_600x900_2x.jpg?t=1791504871"
     },
     {
       "appId": 553850,
@@ -493,6 +478,21 @@
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/cf8cec802dc47d0f24b75f9eee135e96812e2652/library_hero_2x.jpg?t=1784714077",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/e9047d8ec47ae3d94bb8b464fb0fc9e9972b4ac7/header_2x.jpg?t=1784714077",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/6399de67cce3cecadce7900e03f6e09ff910a235/library_capsule_2x.jpg?t=1784714077"
+    },
+    {
+      "appId": 1174180,
+      "name": "Red Dead Redemption 2",
+      "description": "Arthur Morgan and the Van der Linde Gang are outlaws on the run. With federal agents and bounty hunters massing on their heels, the gang must rob, steal, and fight their way across the rugged heartland in order to survive.",
+      "genres": "Action · Adventure",
+      "publisher": "Rockstar Games",
+      "comingSoon": false,
+      "featured": false,
+      "releaseLabel": "Dec 5, 2019",
+      "releaseDate": "2019-12-05",
+      "storeUrl": "https://store.steampowered.com/app/1174180/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/library_hero_2x.jpg?t=1759502961",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/header.jpg?t=1759502961",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/library_600x900_2x.jpg?t=1759502961"
     }
   ]
 }
