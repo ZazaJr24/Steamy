@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-10T12:32:06.282494+00:00",
+  "updatedAt": "2026-10-10T23:17:16.618696+00:00",
   "games": [
     {
       "appId": 4231820,
@@ -65,6 +65,22 @@
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/7f882f889630270d3d3fb93825ac6f55b55e7a6c/header_2x.jpg?t=1787142639",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/471e77854910665c03eb9a53ad06f2ac12903acd/library_capsule_2x.jpg?t=1787142639",
       "releaseTime": "2026-10-29T02:00:00+00:00"
+    },
+    {
+      "appId": 4530370,
+      "name": "Football Manager 27",
+      "description": "Flow from the tactics board to the touchline as foundations evolve to deliver greater control, smoother discovery and a more enticing football world. Out from November 10.",
+      "genres": "Simulation · Sports · Strategy",
+      "publisher": "SEGA",
+      "comingSoon": true,
+      "featured": false,
+      "releaseLabel": "Nov 10, 2026",
+      "releaseDate": "2026-11-10",
+      "storeUrl": "https://store.steampowered.com/app/4530370/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/d38e5bf84f475381c6146e2d54f03d1db5292f10/library_hero_2x.jpg?t=1791379324",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/32b41d18ffaac3d2e1dc1a9c3915538db0ba3fca/header_2x.jpg?t=1791379324",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/7ed4ea902189db0f278ae069ff5bfde4f601de93/library_capsule_2x.jpg?t=1791379324",
+      "releaseTime": "2026-11-10T16:00:00+00:00"
     },
     {
       "appId": 2272360,
