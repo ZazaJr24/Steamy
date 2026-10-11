@@ -31,6 +31,7 @@
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadStorageGuard.cs" Link="Linked\DownloadStorageGuard.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadFailurePolicy.cs" Link="Linked\DownloadFailurePolicy.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\RyuuSecureDownloadService.cs" Link="Linked\RyuuSecureDownloadService.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Tools\GreenLumaDownloadDiscovery.cs" Link="Linked\GreenLumaDownloadDiscovery.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\BundledModCapabilities.cs" Link="Linked\BundledModCapabilities.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\VdfParser.cs" Link="Linked\VdfParser.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ShareModels.cs" Link="Linked\ShareModels.cs" />

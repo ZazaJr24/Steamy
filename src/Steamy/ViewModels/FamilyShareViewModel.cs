@@ -180,16 +180,15 @@ public sealed class FamilyShareViewModel : ViewModelBase
     private async Task TryAutoInstallAsync()
     {
         var downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-        if (!Directory.Exists(downloads)) return;
 
         try
         {
-            // Scan Downloads up to 3 levels deep for DLLInjector.exe
-            // e.g. Downloads\GL\NormalMode\DLLInjector.exe
-            foreach (var f in Directory.EnumerateFiles(downloads, "DLLInjector.exe", SearchOption.AllDirectories))
+            // Downloads may contain slow network mounts or many files. Discover off the UI thread
+            // and cap traversal at three levels so page navigation can render immediately.
+            var candidates = await Task.Run(() => GreenLumaDownloadDiscovery.Scan(downloads));
+
+            if (candidates.InjectorDirectory is { } dir)
             {
-                var dir = Path.GetDirectoryName(f)!;
-                if (!HasInjector(dir)) continue;
                 GlPath = dir;
                 DetectGreenLuma();
                 if (GreenLumaReady)
@@ -200,14 +199,8 @@ public sealed class FamilyShareViewModel : ViewModelBase
                 }
             }
 
-            // Fallback: extract from archive in Downloads
-            var zip = Directory.EnumerateFiles(downloads, "GreenLuma*.zip")
-                .Concat(Directory.EnumerateFiles(downloads, "GreenLuma*.7z"))
-                .Concat(Directory.EnumerateFiles(downloads, "GreenLuma*.rar"))
-                .OrderByDescending(File.GetLastWriteTime)
-                .FirstOrDefault();
-
-            if (zip == null) return;
+            var zip = candidates.ArchivePath;
+            if (zip is null) return;
             ActionStatus = $"Auto-installing from {Path.GetFileName(zip)}…";
             await ExtractGreenLumaAsync(zip);
         }

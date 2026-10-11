@@ -5,6 +5,7 @@ Add a new `## x.y.z` section at the top before tagging.
 
 ## 0.6.4.7
 
+- Keep the Family Share page responsive during GreenLuma auto-detection by scanning Downloads in the background and limiting injector discovery to three directory levels.
 - Replace the permissive Steamy terms with a proprietary license: personal and non-commercial repository forks are permitted for evaluation, while separate app clones, redistribution, and commercial use require written permission. Preserve separate third-party licenses.
 
 ## 0.6.4.6
