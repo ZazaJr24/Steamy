@@ -11,7 +11,7 @@ namespace Steamy.UiTests;
 // Controlled transport fixtures exercise the production parser; these are not live API checks.
 public sealed class ProviderPackageTests
 {
-    private const string Lua = "addappid(480)\naddappid(481,0,\"aabbccddeeff0011\")\nif setManifestid then\nsetManifestid(481,18446744073709551615)\nend";
+    private const string Lua = "addappid(480)\naddappid(481,0,\"aabbccddeeff0011\")\nif addtoken ~= nil then addtoken(480,'2764735786934684318') end\nif type(setManifestid) == 'function' then\nsetManifestid(481,18446744073709551615)\nend";
     [Theory]
     [InlineData(ManifestSource.Hubcap, "zip")]
     [InlineData(ManifestSource.Hubcap, "html-then-zip")]
@@ -26,6 +26,7 @@ public sealed class ProviderPackageTests
         var result = await fixture.Service.DownloadManifestsAsync(source, 480);
         Assert.True(result.Succeeded, result.Message);
         Assert.Contains("setManifestid(481,\"18446744073709551615\")", result.LuaContent);
+        Assert.Contains("addtoken(480,\"2764735786934684318\")", result.LuaContent);
         Assert.DoesNotContain("if ", result.LuaContent);
         Assert.Equal(result.LuaContent, File.ReadAllText(Path.Combine(result.WorkDirectory!, "480.lua")));
         Assert.False(File.Exists(Path.Combine(result.WorkDirectory!, "untrusted.exe")));

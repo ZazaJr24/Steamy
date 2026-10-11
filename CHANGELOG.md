@@ -3,6 +3,11 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.4.5
+
+- Accept `addtoken` access-token metadata and positive `~= nil` / `type(...) == "function"` compatibility guards across provider and local Lua imports. Preserve exact 64-bit values and continue rejecting executable Lua.
+- Give API/auth key fields a visible theme-aware background, border, caret and focus state in Settings and setup.
+
 ## 0.6.4.4
 
 - Apply fixes directly into the selected game folder, without creating an extra archive-named folder. Stage files first and roll back overwritten files if applying fails.
