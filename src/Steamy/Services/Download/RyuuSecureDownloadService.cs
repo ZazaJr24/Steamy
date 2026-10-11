@@ -1,12 +1,12 @@
 using System.IO;
 using System.Net.Http;
-using System.Text;
 
 namespace Steamy.Services;
 
 /// <summary>
 /// Downloads the full Ryuu archive for an app id from
-/// <c>https://generator.ryuu.lol/secure_download?appid=&lt;appid&gt;&amp;auth_code=&lt;key&gt;</c>.
+/// <c>https://generator.ryuu.lol/api/download/{appid}</c> using Ryuu's documented
+/// <c>X-Auth-Key</c> header.
 /// The response is a ZIP containing the game's Lua, manifests and keys. The archive is cached
 /// locally under the application's Ryuu download folder so the same app id is never downloaded
 /// twice in a row. This is the only place that touches the Ryuu secure endpoint; the Game Fixes
@@ -56,7 +56,7 @@ public sealed class RyuuSecureDownloadService : IRyuuSecureDownloadService, IDis
     private readonly bool _ownsHttpClient;
     private readonly string _cacheFolder;
 
-    public RyuuSecureDownloadService(ISettingsService settings, HttpClient? httpClient = null)
+    public RyuuSecureDownloadService(ISettingsService settings, HttpClient? httpClient = null, string? cacheFolder = null)
     {
         _settings = settings;
         _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
@@ -65,10 +65,8 @@ public sealed class RyuuSecureDownloadService : IRyuuSecureDownloadService, IDis
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0 (Ryuu secure download)");
 
-        _cacheFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy",
-            "ryuu-downloads");
+        _cacheFolder = cacheFolder ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "ryuu-downloads");
         TryEnsureFolder(_cacheFolder);
     }
 
@@ -90,11 +88,12 @@ public sealed class RyuuSecureDownloadService : IRyuuSecureDownloadService, IDis
         if (File.Exists(archivePath))
             return new RyuuSecureDownloadResult(true, archivePath, $"Already cached: {archivePath}");
 
-        var url = $"https://generator.ryuu.lol/secure_download?appid={appId}&auth_code={Uri.EscapeDataString(authCode)}";
+        var url = $"https://generator.ryuu.lol/api/download/{appId}";
 
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.TryAddWithoutValidation("X-Auth-Key", authCode);
             using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return new RyuuSecureDownloadResult(false, string.Empty, $"Ryuu returned HTTP {(int)response.StatusCode}.");

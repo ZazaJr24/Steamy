@@ -3,6 +3,10 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.4.6
+
+- Use Ryuu's documented `/api/download/{appid}` endpoint and send the auth key through `X-Auth-Key` instead of the retired `secure_download` query endpoint.
+
 ## 0.6.4.5
 
 - Accept `addtoken` access-token metadata and positive `~= nil` / `type(...) == "function"` compatibility guards across provider and local Lua imports. Preserve exact 64-bit values and continue rejecting executable Lua.
