@@ -9,15 +9,11 @@
       Background="{DynamicResource AppBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-    <Style x:Key="CredentialBoxStyle" TargetType="PasswordBox">
+    <Style x:Key="CredentialBoxStyle" TargetType="PasswordBox" BasedOn="{StaticResource {x:Type PasswordBox}}">
       <Setter Property="MinHeight" Value="38" />
       <Setter Property="Padding" Value="12,6" />
       <Setter Property="FontSize" Value="13" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style x:Key="SettingsCard" TargetType="Border" BasedOn="{StaticResource SurfaceCardStyle}">
       <Setter Property="Background" Value="Transparent" />
