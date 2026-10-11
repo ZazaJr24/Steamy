@@ -3,6 +3,10 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.6.4.7
+
+- Replace the permissive Steamy terms with a proprietary license: personal and non-commercial repository forks are permitted for evaluation, while separate app clones, redistribution, and commercial use require written permission. Preserve separate third-party licenses.
+
 ## 0.6.4.6
 
 - Use Ryuu's documented `/api/download/{appid}` endpoint and send the auth key through `X-Auth-Key` instead of the retired `secure_download` query endpoint.
