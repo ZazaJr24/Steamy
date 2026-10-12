@@ -10,7 +10,8 @@
 <p align="center">
   <a href="https://github.com/ZazaJr24/Steamy/releases/download/v0.7.1.2/Steamy-v0.7.1.2-Setup.exe"><strong>Download Setup · 1.84 MiB</strong></a> &nbsp;·&nbsp;
   <a href="https://github.com/ZazaJr24/Steamy/releases/download/v0.7.1.2/Steamy-v0.7.1.2.zip"><strong>Portable ZIP</strong></a> &nbsp;·&nbsp;
-  <a href="https://github.com/ZazaJr24/Steamy/releases/tag/v0.7.1.2">Release notes</a>
+  <a href="https://github.com/ZazaJr24/Steamy/releases/tag/v0.7.1.2">Release notes</a> &nbsp;·&nbsp;
+  <a href="https://discord.gg/npWpm73z4B">Discord</a>
 </p>
 
 ![Steamy Dashboard](docs/screenshots/dashboard.png)
@@ -53,6 +54,10 @@ dotnet test tests/Steamy.UiTests/Steamy.UiTests.csproj -c Release
 ```
 
 </details>
+
+## Community
+
+Join the [Steamy Discord server](https://discord.gg/npWpm73z4B) for discussion, feedback and update announcements. For bug reports, please use [GitHub Issues](https://github.com/ZazaJr24/Steamy/issues).
 
 ## Credits
 
