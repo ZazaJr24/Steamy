@@ -258,7 +258,7 @@ public sealed partial class PageSmokeTests
         var downloaded = Assert.Single(downloads.Downloads);
         Assert.Equal(ManifestSource.Sushi, downloaded.Plan.Source);
         Assert.Equal("101", Assert.Single(downloaded.Selections).ManifestId);
-        Assert.Equal(Path.Combine(fixtureFolder, "Offline install test"), downloaded.TargetFolder);
+        Assert.Equal(Path.GetFullPath(Path.Combine(fixtureFolder, "Offline install test")), Path.GetFullPath(downloaded.TargetFolder));
         Assert.Equal(Visibility.Collapsed, ((Grid)page.FindName("OverlayGrid")).Visibility);
         Assert.Equal(typeof(DownloadsPage), route);
         }
