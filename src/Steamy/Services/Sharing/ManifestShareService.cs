@@ -158,11 +158,11 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
 
     /// <summary>Where Steamy's manifest sources put the Lua and manifests of a download.</summary>
     private static string ManifestWorkFolder =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "manifest-workdir");
+        Path.Combine(Steamy.Storage.AppDataPaths.Root, "manifest-workdir");
 
     /// <summary>Where the Ryuu/Mod download path keeps the Lua and manifests it fetched.</summary>
     private static string RyuuWorkFolder =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "ryuu-workdir");
+        Path.Combine(Steamy.Storage.AppDataPaths.Root, "ryuu-workdir");
 
     public async Task<ManifestBatchShareResult> ShareManyAsync(IReadOnlyList<ShareCandidate> items,
         IProgress<ShareBatchProgress>? progress = null, CancellationToken cancellationToken = default)
@@ -441,7 +441,7 @@ public sealed class ManifestShareService : IManifestShareService, IDisposable
             if (!string.IsNullOrWhiteSpace(root)) roots.Add(Path.Combine(root.Trim(), "DepotDumps"));
         }
 
-        roots.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "DepotDumps"));
+        roots.Add(Path.Combine(Steamy.Storage.AppDataPaths.Root, "DepotDumps"));
         return roots.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 

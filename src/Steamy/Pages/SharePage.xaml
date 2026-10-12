@@ -8,7 +8,7 @@
       ScrollViewer.CanContentScroll="False"
       UseLayoutRounding="True"
       SnapsToDevicePixels="True"
-      Background="{DynamicResource WorkspaceBackgroundBrush}">
+      Background="{DynamicResource PageBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
     <pages:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />

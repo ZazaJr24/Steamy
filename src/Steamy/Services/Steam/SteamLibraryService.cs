@@ -318,19 +318,22 @@ public sealed class LibrarySyncService : ILibrarySyncService
     private readonly IArtworkService _artwork;
     private readonly ILoggingService _logging;
     private readonly ISettingsService _settings;
+    private readonly IDownloadedGameLibrary? _downloadedLibrary;
 
     public LibrarySyncService(
         IAppDataStore store,
         ISteamLibraryService steamLibrary,
         IArtworkService artwork,
         ILoggingService logging,
-        ISettingsService settings)
+        ISettingsService settings,
+        IDownloadedGameLibrary? downloadedLibrary = null)
     {
         _store = store;
         _steamLibrary = steamLibrary;
         _artwork = artwork;
         _logging = logging;
         _settings = settings;
+        _downloadedLibrary = downloadedLibrary;
     }
 
     // Scan off-thread, then publish collection changes on the caller's UI context.
@@ -339,8 +342,9 @@ public sealed class LibrarySyncService : ILibrarySyncService
         var generation = Interlocked.Increment(ref _scanGeneration);
         var steamRoot = _settings.Load().SteamLibraryPath;
         var result = await Task.Run(() => _steamLibrary.Scan(steamRoot), cancellationToken);
+        var downloaded = await ReadDownloadsAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        if (generation == Volatile.Read(ref _scanGeneration)) CompleteRefresh(result, cancellationToken);
+        if (generation == Volatile.Read(ref _scanGeneration)) CompleteRefresh(result, downloaded, cancellationToken);
         return result;
     }
 
@@ -350,24 +354,33 @@ public sealed class LibrarySyncService : ILibrarySyncService
     {
         Interlocked.Increment(ref _scanGeneration);
         var result = _steamLibrary.Scan(_settings.Load().SteamLibraryPath);
-        CompleteRefresh(result, cancellationToken);
+        var downloaded = ReadDownloadsAsync(cancellationToken).GetAwaiter().GetResult();
+        CompleteRefresh(result, downloaded, cancellationToken);
         return result;
     }
 
-    private void CompleteRefresh(SteamLibraryScanResult result, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<Game>?> ReadDownloadsAsync(CancellationToken token)
+    {
+        if (_downloadedLibrary is null) return Array.Empty<Game>();
+        try { return await Task.Run(() => _downloadedLibrary.ScanAsync(token), token).ConfigureAwait(false); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception e) { _logging.Add(LogLevel.Warning, "LibraryService", $"Local installations could not be read: {e.GetType().Name}."); return null; }
+    }
+
+    private void CompleteRefresh(SteamLibraryScanResult result, IReadOnlyList<Game>? downloaded, CancellationToken cancellationToken)
     {
         if (!result.Succeeded)
         {
             _logging.Add(LogLevel.Warning, "LibraryService", result.Message);
-            return;
         }
-
-        Apply(result.Apps);
+        var steam = result.Succeeded ? result.Apps.Select(GameFactory.FromInstalledApp) : _store.Games.Where(game => !game.IsLocalDownload);
+        var local = downloaded ?? _store.Games.Where(game => game.IsLocalDownload).ToArray();
+        Apply(steam.Concat(local).Where(game => !GameClassification.IsRuntime(game.AppId, game.Name)).DistinctBy(game => game.AppId).ToArray());
         _logging.Add(LogLevel.Info, "LibraryService", result.Message);
         _ = LoadArtworkAsync(cancellationToken);
     }
 
-    private void Apply(IReadOnlyList<InstalledSteamApp> apps)
+    private void Apply(IReadOnlyList<Game> apps)
     {
         var existing = _store.Games.ToDictionary(game => game.AppId);
         var incoming = apps.Select(app => app.AppId).ToHashSet();
@@ -380,11 +393,15 @@ public sealed class LibrarySyncService : ILibrarySyncService
 
         for (var index = 0; index < apps.Count; index++)
         {
-            var app = apps[index];
-            var game = GameFactory.FromInstalledApp(app);
-            if (existing.TryGetValue(app.AppId, out var previous)) game.Selected = previous.Selected;
+            var game = apps[index];
+            if (existing.TryGetValue(game.AppId, out var previous))
+            {
+                game.Selected = previous.Selected;
+                game.HeaderImage = previous.HeaderImage;
+                game.ArtworkImage = previous.ArtworkImage;
+            }
 
-            var currentIndex = IndexOf(app.AppId);
+            var currentIndex = IndexOf(game.AppId);
             if (currentIndex >= 0) _store.Games[currentIndex] = game;
             else _store.Games.Insert(Math.Min(index, _store.Games.Count), game);
         }

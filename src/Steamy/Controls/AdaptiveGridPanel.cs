@@ -50,7 +50,7 @@ public sealed class AdaptiveGridPanel : Panel
         if (double.IsInfinity(width) || width <= 0) width = MinItemWidth * 4 + Spacing * 3;
         var columns = Math.Max(1, (int)((width + Spacing) / (MinItemWidth + Spacing)));
         if (MaxColumns > 0) columns = Math.Min(columns, MaxColumns);
-        var itemWidth = Math.Max(1, Math.Min(MaxItemWidth, Math.Floor((width - Spacing * (columns - 1)) / columns)));
+        var itemWidth = Math.Max(1, Math.Min(MaxItemWidth, (width - Spacing * (columns - 1)) / columns));
         return (columns, itemWidth, Math.Round(itemWidth * CoverRatio + FooterHeight));
     }
 

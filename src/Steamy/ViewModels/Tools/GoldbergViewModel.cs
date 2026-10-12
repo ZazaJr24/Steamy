@@ -25,8 +25,7 @@ public sealed class GoldbergViewModel : ViewModelBase
     private const string ManifestName = ".resonance_gbe.json";
     private const string BackupSuffix = ".gbe_bak";
 
-    private static readonly string EmuRoot = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "gbe_fork");
+    private static readonly string EmuRoot = Path.Combine(Steamy.Storage.AppDataPaths.Root, "gbe_fork");
     private static readonly string EmuDir = Path.Combine(EmuRoot, "current");
     private static readonly string VersionFile = Path.Combine(EmuRoot, "version.txt");
 
@@ -53,8 +52,7 @@ public sealed class GoldbergViewModel : ViewModelBase
     private bool _isApplied;
     private GbeOptions _opt = new();
 
-    private static readonly string OptionsFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "goldberg_options.json");
+    private static readonly string OptionsFile = Path.Combine(Steamy.Storage.AppDataPaths.Root, "goldberg_options.json");
 
     public sealed class GbeOptions
     {
@@ -331,7 +329,7 @@ public sealed class GoldbergViewModel : ViewModelBase
         catch (Exception ex) when (IsVirusBlock(ex))
         {
             DefenderBlocked = true;
-            ActionStatus = $"Windows Defender blocked the emulator files. Add an exclusion for {EmuRoot} in Windows Security yourself, then press Retry.";
+            ActionStatus = $"Windows Defender blocked files in {EmuRoot}. Check the exact detection and file source. Settings → Transparency explains file identification and vendor review; this is not automatically a false positive.";
         }
         catch (Exception ex)
         {
@@ -608,7 +606,7 @@ public sealed class GoldbergViewModel : ViewModelBase
         catch (Exception ex) when (IsVirusBlock(ex))
         {
             DefenderBlocked = true;
-            ActionStatus = "Windows Defender blocked copying the emulator into the game folder. Add an exclusion yourself, then Apply again.";
+            ActionStatus = "Windows Defender blocked copying a file into the game folder. Review the detection and original source before retrying. See Settings → Transparency for file identification and vendor review.";
         }
         catch (Exception ex)
         {
@@ -654,7 +652,7 @@ public sealed class GoldbergViewModel : ViewModelBase
             : null;
         if (tool == null) return null;
 
-        var work = Path.Combine(Path.GetTempPath(), "rt_gbe_interfaces_" + Guid.NewGuid().ToString("N"));
+        var work = Path.Combine(Steamy.Storage.AppDataPaths.CreateTemporaryRoot(), "rt_gbe_interfaces_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(work);
         try
         {

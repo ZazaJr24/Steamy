@@ -9,6 +9,7 @@ public static class MotionPreferences
     static MotionPreferences() => SystemParameters.StaticPropertyChanged += OnSystemPreferenceChanged;
 
     public static bool ReduceEffects { get; private set; }
+    public static bool TrailerPreviewsEnabled { get; private set; } = true;
     public static bool AnimationsEnabled => !ReduceEffects && SystemParameters.ClientAreaAnimation;
     // The gallery is a static snapshot: disabling motion does not disable its blur.
     public static bool BackdropBlurEnabled => !ReduceEffects && !SystemParameters.HighContrast;
@@ -19,6 +20,13 @@ public static class MotionPreferences
     {
         if (ReduceEffects == reduceEffects) return;
         ReduceEffects = reduceEffects;
+        NotifyChanged();
+    }
+
+    public static void ConfigureTrailers(bool enabled)
+    {
+        if (TrailerPreviewsEnabled == enabled) return;
+        TrailerPreviewsEnabled = enabled;
         NotifyChanged();
     }
 

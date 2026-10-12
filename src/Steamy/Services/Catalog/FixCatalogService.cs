@@ -87,9 +87,7 @@ public sealed class FixCatalogService : IFixCatalogService, IDisposable
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
 
-        var directory = cacheDirectory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy",
+        var directory = cacheDirectory ?? Path.Combine(Steamy.Storage.AppDataPaths.Root,
             "fix-catalog");
         Directory.CreateDirectory(directory);
         _cachePath = Path.Combine(directory, "fixes.json");

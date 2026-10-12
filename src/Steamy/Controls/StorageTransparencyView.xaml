@@ -1,0 +1,67 @@
+<UserControl x:Class="Steamy.Controls.StorageTransparencyView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:controls="clr-namespace:Steamy.Controls">
+  <StackPanel>
+    <TextBlock Text="Storage &amp; transparency" Style="{StaticResource SectionHeaderStyle}" FontSize="22" Margin="0,8,0,8" />
+    <TextBlock Text="See where Steamy stores data, when files are created and what changes can affect your PC." Style="{StaticResource BodyTextStyle}" Margin="0,0,0,16" />
+    <Border Background="{DynamicResource GlassSurfaceBrush}" CornerRadius="20" Padding="20" Margin="0,0,0,16">
+      <StackPanel>
+        <TextBlock Text="Your Steamy data folder" Style="{StaticResource SectionHeaderStyle}" />
+        <TextBlock Text="Preferences, credentials, library, playtime, caches, tool downloads and Steamy temporary files share this folder. The default is Roaming. Choose an empty folder to change it." Style="{StaticResource BodyTextStyle}" Margin="0,8,0,12" />
+        <TextBox x:Name="DataFolderInput" MinHeight="38" TextWrapping="Wrap" AutomationProperties.Name="Steamy data folder" />
+        <WrapPanel Margin="0,12,0,0"><ui:Button Content="Browse…" Click="BrowseDataFolder_Click" Margin="0,0,8,8" /><ui:Button Content="Apply on next start" Click="ChangeDataFolder_Click" Margin="0,0,8,8" /><ui:Button x:Name="CancelFolderChange" Content="Cancel change" Click="CancelDataFolder_Click" Margin="0,0,0,8" Visibility="Collapsed" /></WrapPanel>
+        <TextBlock x:Name="DataFolderStatus" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+        <TextBlock Text="The transfer happens after you close Steamy and start it again. Original data is kept as a recovery copy. Game installations, download destinations and the app executable retain their configured locations. A small folder locator stays in Roaming." Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Margin="0,10,0,0" />
+      </StackPanel>
+    </Border>
+    <Border Background="{DynamicResource GlassSurfaceBrush}" CornerRadius="20" Padding="20" Margin="0,0,0,16" controls:SurfaceMotion.RevealOnShow="True">
+      <StackPanel>
+        <Grid><TextBlock Text="Your file locations" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><ui:Button Content="Refresh" Click="Refresh_Click" Margin="0,0,8,0" /><ui:Button Content="Save report" Click="SaveReport_Click" /></StackPanel></Grid>
+        <TextBlock x:Name="SnapshotStatus" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Margin="0,10,0,12" AutomationProperties.LiveSetting="Polite" />
+        <TextBlock Text="This view checks whether listed paths exist. It does not create folders, scan whole drives or read stored keys. The report includes local paths, never file contents or credential values." Style="{StaticResource BodyTextStyle}" Margin="0,0,0,16" />
+        <ItemsControl x:Name="LocationGroups" ItemsSource="{Binding Groups}">
+          <ItemsControl.ItemTemplate><DataTemplate>
+            <Expander Margin="0,0,0,12" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch">
+              <Expander.Header><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" /><TextBlock Text="{Binding Locations.Count, StringFormat='  ·  {0} locations'}" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" /></StackPanel></Expander.Header>
+              <ItemsControl ItemsSource="{Binding Locations}" Margin="0,12,0,0">
+                <ItemsControl.ItemTemplate><DataTemplate>
+                  <Border Padding="16" CornerRadius="14" Background="#0BFFFFFF" Margin="0,0,0,10">
+                    <StackPanel>
+                      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,0,12,0" /><TextBlock Grid.Column="1" Text="{Binding Status}" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" /></Grid>
+                      <TextBox Text="{Binding Path, Mode=OneWay}" IsReadOnly="True" BorderThickness="0" Background="Transparent" Foreground="{DynamicResource AccentBrush}" Padding="0" TextWrapping="Wrap" FontSize="12" Margin="0,10,0,12" AutomationProperties.Name="Storage path" />
+                      <TextBlock Text="{Binding Details}" FontSize="12" LineHeight="21" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <StackPanel Orientation="Horizontal" Margin="0,14,0,0"><ui:Button Content="Open folder" Tag="{Binding Path}" IsEnabled="{Binding Exists}" Click="OpenFolder_Click" Margin="0,0,8,0" /><ui:Button Content="Copy path" Tag="{Binding Path}" Click="CopyPath_Click" /></StackPanel>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Expander>
+          </DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="Built-in storage locations and current configured targets are shown here, including up to 256 game/download destinations. External tools can write additional files in their own directories or selected game folders. This is a current snapshot, not a history of every file write." Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Margin="0,4,0,0" />
+      </StackPanel>
+    </Border>
+    <Border Background="{DynamicResource GlassSurfaceBrush}" CornerRadius="20" Padding="22" Margin="0,0,0,16" controls:SurfaceMotion.RevealOnShow="True">
+      <StackPanel>
+        <TextBlock Text="Background activity &amp; connections" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,12" />
+        <TextBlock x:Name="TrackingStatus" Style="{StaticResource BodyTextStyle}" Margin="0,0,0,12" />
+        <TextBlock Text="Game discovery reads installed-game folders, executable names and Steam manifests. Selecting Scan PC searches additional folders; detection does not install a fix or change game binaries. Starting a selected game launches its configured executable or Steam and records a local launch timestamp." Style="{StaticResource BodyTextStyle}" Margin="0,0,0,12" />
+        <TextBlock Text="Public game information and artwork are requested from Steam. Achievement sync sends your Steam ID and API key to Steam over HTTPS. Optional download providers receive the requests and credentials needed for the service you select. Interface translations send interface text to the translation service when needed. Sharing sends the package you select to the configured repository when you choose Share." Style="{StaticResource BodyTextStyle}" Margin="0,0,0,12" />
+        <TextBlock Text="Optional tools and fixes can install executables or change game/Steam DLLs and configuration. The selected operation and target determine the changes. Cache cleanup does not automatically uninstall those changes; deleting a cache is different from restoring a modified game file." Style="{StaticResource BodyTextStyle}" />
+      </StackPanel>
+    </Border>
+    <Border Background="{DynamicResource GlassSurfaceBrush}" CornerRadius="20" Padding="22" controls:SurfaceMotion.RevealOnShow="True">
+      <StackPanel>
+        <TextBlock Text="Understanding antivirus alerts" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,12" />
+        <TextBlock Text="A false positive means legitimate software was incorrectly detected. A warning alone cannot establish that: it may also identify a real threat or a potentially unwanted application. Steamy does not label a detected file safe just because it is bundled or linked by a tool." Style="{StaticResource BodyTextStyle}" Margin="0,0,0,12" />
+        <TextBlock Text="Some optional tools patch binaries, replace DLLs or inject code into a game/client. Such behavior can resemble malware techniques and may be detected. SmartScreen reputation warnings are also different from a malware verdict. Check the exact file, original release/source and detection name before deciding what happened." Style="{StaticResource BodyTextStyle}" Margin="0,0,0,12" />
+        <TextBlock Text="Use a SHA-256 hash to identify the exact file in a vendor review. A matching hash identifies bytes; it does not prove a file is safe. The inspection below reads your selected file locally without running it or uploading it." Style="{StaticResource BodyTextStyle}" Margin="0,0,0,16" />
+        <WrapPanel><ui:Button x:Name="InspectFileButton" Content="Identify a file · SHA-256" Click="InspectFile_Click" Margin="0,0,8,8" /><ui:Button Content="Microsoft detection criteria ↗" Tag="https://learn.microsoft.com/en-us/defender-xdr/criteria" Click="OfficialLink_Click" Margin="0,0,8,8" /><ui:Button Content="Request Microsoft review ↗" Tag="https://www.microsoft.com/en-us/wdsi/filesubmission" Click="OfficialLink_Click" Margin="0,0,0,8" /></WrapPanel>
+        <TextBox x:Name="InspectionResult" IsReadOnly="True" TextWrapping="Wrap" Background="Transparent" BorderThickness="0" Padding="0" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,8,0,0" AutomationProperties.Name="File identification result" />
+        <TextBlock Text="Review links open the official website. Steamy does not submit your file, change antivirus settings or add an exclusion from this view." Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Margin="0,12,0,0" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

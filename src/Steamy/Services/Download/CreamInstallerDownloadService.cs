@@ -71,9 +71,7 @@ public sealed class CreamInstallerDownloadService : ICreamInstallerDownloadServi
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/0.1 (CreamInstaller downloader)");
         }
 
-        _cacheDirectory = cacheDirectory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy",
+        _cacheDirectory = cacheDirectory ?? Path.Combine(Steamy.Storage.AppDataPaths.Root,
             "CreamInstallerCache");
 
         Directory.CreateDirectory(_cacheDirectory);

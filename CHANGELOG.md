@@ -44,6 +44,18 @@ Steamy 0.7.0 brings the small all-in-one download installer, a more consistent a
 - Correct the artwork result flag: a missing cover is a failure, and an explicitly requested header must also be present before success is reported.
 - Keep card rendering virtualized and retain the soft glow without introducing a live blur or window capture for every card.
 
+### Dashboard, trailers and installed games
+
+- Extend the artwork-derived background into the Dashboard and keep navigation readable above spotlight artwork.
+- Retain the spotlight, upcoming-game covers and animated countdown, with cached metadata and artwork for return visits.
+- Keep trailer previews within their artwork viewport, with playback lifecycle handling when navigation or visibility changes.
+- Preserve readable game logos, rounded artwork clipping and native display scaling for the refreshed game and dashboard surfaces.
+- Add local installed-game scanning and game classification to the library alongside the public Steam catalog.
+- Include completed Steamy downloads in the installed library and retain their recorded installation paths.
+- Support Steam playtime data and the separate local playtime tracker, with matching 0.7.0 tracker packaging.
+- Keep game preferences and activity data separate from game installation files, and expose storage locations without including stored credentials in reports.
+- Explain application data locations in the storage interface and retain the once-per-version acknowledgement flow.
+
 ### Downloads and navigation scrolling
 
 - Fix the UC Online page's navigation embedding so expanded Settings and Backups can scroll down to the restore action.

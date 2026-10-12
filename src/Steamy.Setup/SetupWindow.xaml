@@ -1,0 +1,114 @@
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      x:Name="Root" Background="#101016" TextOptions.TextFormattingMode="Display"
+      TextOptions.TextRenderingMode="ClearType" RenderOptions.ClearTypeHint="Enabled"
+      UseLayoutRounding="True" SnapsToDevicePixels="True" Focusable="True" KeyboardNavigation.TabNavigation="Cycle">
+  <Grid.Resources><FontFamily x:Key="SetupFontFamily">Segoe UI</FontFamily>
+    <SolidColorBrush x:Key="PrimaryText" Color="#F6F4FD"/>
+    <SolidColorBrush x:Key="SecondaryText" Color="#B4B1C4"/>
+    <Style TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryText}"/>
+      <Setter Property="FontFamily" Value="{DynamicResource SetupFontFamily}"/>
+      <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+      <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+    </Style>
+    <Style x:Key="QuietButton" TargetType="Button">
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Foreground" Value="{StaticResource SecondaryText}"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="FontFamily" Value="{DynamicResource SetupFontFamily}"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Padding" Value="12,8"/>
+      <Setter Property="Template"><Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Chrome" CornerRadius="9" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#16FFFFFF"/><Setter Property="Foreground" Value="#FFFFFF"/></Trigger>
+            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#23FFFFFF"/></Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="#D3BEFF"/></Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="#696778"/><Setter Property="Cursor" Value="Arrow"/></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value></Setter>
+    </Style>
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+      <Setter Property="Foreground" Value="#171222"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="BorderBrush" Value="#60FFFFFF"/>
+      <Setter Property="Background"><Setter.Value><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#BFC2FF"/><GradientStop Color="#D1B4F8" Offset="1"/></LinearGradientBrush></Setter.Value></Setter>
+      <Setter Property="Template"><Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Grid RenderTransformOrigin="0.5,0.5">
+            <Grid.RenderTransform><TranslateTransform x:Name="Lift"/></Grid.RenderTransform>
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="12"/>
+            <Border x:Name="Light" Background="White" Opacity="0" CornerRadius="12"/>
+            <Border x:Name="FocusRing" BorderBrush="#E8DBFF" BorderThickness="2" Margin="-4" CornerRadius="15" Visibility="Collapsed"/>
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Grid>
+          <ControlTemplate.Triggers>
+            <MultiTrigger><MultiTrigger.Conditions><Condition Property="IsMouseOver" Value="True"/><Condition Property="Tag" Value="True"/></MultiTrigger.Conditions>
+              <MultiTrigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Light" Storyboard.TargetProperty="Opacity" To="0.16" Duration="0:0:0.12"/><DoubleAnimation Storyboard.TargetName="Lift" Storyboard.TargetProperty="Y" To="-1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard></MultiTrigger.EnterActions>
+              <MultiTrigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Light" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/><DoubleAnimation Storyboard.TargetName="Lift" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard></MultiTrigger.ExitActions>
+            </MultiTrigger>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
+            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Light" Property="Opacity" Value="0.25"/></Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="#747084"/><Setter Property="Background" Value="#302938"/></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value></Setter>
+    </Style>
+  </Grid.Resources>
+  <Grid x:Name="BackdropHost" IsHitTestVisible="False"/>
+  <!-- Text is a separate visual, above the moving light; no blur/raster cache around it. -->
+  <Grid Margin="28,18,24,18" VerticalAlignment="Top" Height="32">
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+      <Image x:Name="HeaderLogo" Width="24" Height="24"/>
+      <TextBlock Text="Steamy" FontSize="15" FontWeight="SemiBold" Margin="9,0,0,0" VerticalAlignment="Center"/>
+    </StackPanel>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button x:Name="LanguageButton" Content="EN ﹀" Style="{StaticResource QuietButton}" Padding="10,6" Margin="0,0,12,0" AutomationProperties.Name="Language"/>
+      <Button x:Name="MinimizeButton" Width="32" Style="{StaticResource QuietButton}" Padding="0" AutomationProperties.Name="Minimize"><Path Data="M 0,0 H 10" Stroke="#AAA5BA" StrokeThickness="1"/></Button>
+      <Button x:Name="CloseButton" Width="32" Style="{StaticResource QuietButton}" Padding="0" AutomationProperties.Name="Close installer"><Path Data="M 0,0 L 8,8 M 8,0 L 0,8" Stroke="#AAA5BA" StrokeThickness="1"/></Button>
+    </StackPanel>
+  </Grid>
+  <Grid x:Name="Hero" VerticalAlignment="Top" Margin="44,105,44,0" Height="108">
+    <Image x:Name="HeroLogo" Width="78" Height="78" HorizontalAlignment="Center" VerticalAlignment="Top" RenderTransformOrigin="0.5,0.5"><Image.RenderTransform><TranslateTransform/></Image.RenderTransform></Image>
+    <TextBlock x:Name="Eyebrow" Text="YOUR LIBRARY, TOGETHER" FontSize="10" FontWeight="SemiBold" Foreground="#ABA1C7" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+  </Grid>
+  <TextBlock x:Name="Heading" Text="One home for your games." FontSize="31" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,234,24,0" TextAlignment="Center"/>
+  <TextBlock x:Name="Description" Text="We’ll get Steamy and its components ready.&#10;You bring the games." FontSize="14" LineHeight="23" TextAlignment="Center" Foreground="#BAB5CC" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="68,293,68,0" TextWrapping="Wrap" MaxHeight="78"/>
+  <Grid x:Name="DownloadPanel" Margin="94,384,94,0" Height="86" VerticalAlignment="Top" Visibility="Collapsed">
+    <Border Height="5" Background="#24D1C6F4" CornerRadius="2.5" VerticalAlignment="Top"/>
+    <Border x:Name="ProgressFill" Width="0" HorizontalAlignment="Left" Height="5" CornerRadius="2.5" VerticalAlignment="Top"><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#9AA7FF"/><GradientStop Color="#E2BDFC" Offset="1"/></LinearGradientBrush></Border.Background></Border>
+    <Border x:Name="ProgressHighlight" HorizontalAlignment="Left" Height="5" Width="40" VerticalAlignment="Top" IsHitTestVisible="False"><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#00FFFFFF"/><GradientStop Color="#70FFFFFF" Offset="0.5"/><GradientStop Color="#00FFFFFF" Offset="1"/></LinearGradientBrush></Border.Background></Border>
+    <TextBlock x:Name="Percentage" Text="39%" FontWeight="SemiBold" FontSize="13" Margin="0,21,0,0" VerticalAlignment="Top"/>
+    <TextBlock x:Name="Amount" Text="19.2 MB / 49.2 MB" FontSize="12" Foreground="#A6A0BA" HorizontalAlignment="Right" Margin="0,22,0,0" VerticalAlignment="Top"/>
+    <TextBlock x:Name="Detail" FontSize="11" Foreground="#9490A6" TextAlignment="Center" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" Margin="0,53,0,0" VerticalAlignment="Top" MaxWidth="520"/>
+  </Grid>
+  <Border x:Name="OptionsPanel" Background="#F51A1822" BorderBrush="#28C0B3DC" BorderThickness="1" CornerRadius="18" Margin="94,283,94,0" VerticalAlignment="Top" Height="158" Visibility="Collapsed">
+    <Grid Margin="20,16">
+      <TextBlock x:Name="FolderLabel" Text="INSTALL LOCATION" FontSize="10" Foreground="#A7A0B9" FontWeight="SemiBold"/>
+      <Grid Margin="0,23,0,0" Height="39" VerticalAlignment="Top"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <TextBlock x:Name="Folder" TextTrimming="CharacterEllipsis" Foreground="#DDD7EA" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0"/>
+        <Button x:Name="FolderButton" Content="Change" Grid.Column="1" Style="{StaticResource QuietButton}" Background="#12FFFFFF"/>
+      </Grid>
+      <CheckBox x:Name="Shortcut" Content="Create a desktop shortcut" FontFamily="{DynamicResource SetupFontFamily}" FontSize="12" Foreground="#C4BCD7" VerticalAlignment="Bottom" Margin="0,0,0,7">
+        <CheckBox.Template><ControlTemplate TargetType="CheckBox"><StackPanel Orientation="Horizontal" Background="Transparent"><Border x:Name="Box" Width="16" Height="16" CornerRadius="4" BorderThickness="1" BorderBrush="#776A89" Background="#24202C" Margin="0,0,10,0"><Path x:Name="Check" Data="M 3,8 L 6,11 L 12,4" Stroke="#21192D" StrokeThickness="1.6" Visibility="Collapsed"/></Border><ContentPresenter VerticalAlignment="Center"/></StackPanel><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Box" Property="Background" Value="#D1B8FA"/><Setter TargetName="Check" Property="Visibility" Value="Visible"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="White"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="#D1B8FA"/></Trigger></ControlTemplate.Triggers></ControlTemplate></CheckBox.Template>
+      </CheckBox>
+    </Grid>
+  </Border>
+  <Button x:Name="Primary" Content="Install Steamy  →" Style="{StaticResource PrimaryButton}" Width="286" Height="47" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,384,0,0"/>
+  <Button x:Name="OptionsButton" Content="Installation options" Style="{StaticResource QuietButton}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,454,0,0"/>
+  <Button x:Name="Cancel" Content="Cancel download" Style="{StaticResource QuietButton}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,477,0,0" Visibility="Collapsed"/>
+  <Border x:Name="Languages" Width="145" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,60,92,0" Background="#FA24202F" BorderBrush="#30BCABD1" BorderThickness="1" CornerRadius="12" Padding="5" Visibility="Collapsed">
+    <StackPanel><Button x:Name="English" Content="English" Style="{StaticResource QuietButton}"/><Button x:Name="German" Content="Deutsch" Style="{StaticResource QuietButton}"/></StackPanel>
+  </Border>
+</Grid>
+
+
+

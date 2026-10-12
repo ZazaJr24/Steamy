@@ -13,11 +13,11 @@ public sealed record CleanupResult(long FreedBytes, int DeletedFiles, IReadOnlyL
 /// <para>
 /// Locations (all inside the user profile, nothing machine-wide):
 /// <list type="bullet">
-/// <item><c>%LOCALAPPDATA%\Steamy\artwork</c> — cached store art</item>
-/// <item><c>%LOCALAPPDATA%\Steamy\ryuu-workdir</c> — Lua + depot manifests per app</item>
-/// <item><c>%LOCALAPPDATA%\Steamy\ryuu-downloads</c> — cached Ryuu archives</item>
-/// <item><c>%LOCALAPPDATA%\Steamy\tools</c> — downloaded DepotDownloaderMod</item>
-/// <item><c>%LOCALAPPDATA%\Steamy\updates</c> — downloaded update packages</item>
+/// <item><c>[configured Steamy data folder]\artwork</c> — cached store art</item>
+/// <item><c>[configured Steamy data folder]\ryuu-workdir</c> — Lua + depot manifests per app</item>
+/// <item><c>[configured Steamy data folder]\ryuu-downloads</c> — cached Ryuu archives</item>
+/// <item><c>[configured Steamy data folder]\tools</c> — downloaded DepotDownloaderMod</item>
+/// <item><c>[configured Steamy data folder]\updates</c> — downloaded update packages</item>
 /// </list>
 /// </para>
 /// </summary>
@@ -26,8 +26,7 @@ public sealed class CacheTempService
     /// <summary>The tool download is expensive to fetch again, so it is only cleared on request.</summary>
     public const string ToolsFolderName = "tools";
 
-    public static string Root => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy");
+    public static string Root => Steamy.Storage.AppDataPaths.Root;
 
     public static string ArtworkCache => Path.Combine(Root, "artwork");
     public static string ManifestWorkDir => Path.Combine(Root, "ryuu-workdir");
@@ -40,7 +39,7 @@ public sealed class CacheTempService
         var configured = settings.Load();
         var root = !string.IsNullOrWhiteSpace(configured.ManifestDumpFolder) ? configured.ManifestDumpFolder
             : !string.IsNullOrWhiteSpace(configured.DownloadFolder) ? configured.DownloadFolder
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy");
+            : Steamy.Storage.AppDataPaths.Root;
         return Path.Combine(root, "DepotDumps");
     }
 

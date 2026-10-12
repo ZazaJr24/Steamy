@@ -19,7 +19,7 @@ public sealed class FreeManifestCatalogService : IFreeManifestCatalogService, ID
     private readonly HttpClient _client = new(StableDnsHandler.Create()) { Timeout = TimeSpan.FromSeconds(12) };
     private readonly SemaphoreSlim _gate = new(1);
     private readonly Dictionary<string, (DateTimeOffset At, FreeManifestIndex Index)> _memory = new();
-    private readonly string _directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "source-indexes");
+    private readonly string _directory = Path.Combine(Steamy.Storage.AppDataPaths.Root, "source-indexes");
 
     public FreeManifestCatalogService() => _client.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
 

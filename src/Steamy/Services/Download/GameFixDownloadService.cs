@@ -112,9 +112,7 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
         }
         else
         {
-            _downloadFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Steamy",
+            _downloadFolder = Path.Combine(Steamy.Storage.AppDataPaths.Root,
                 "game-fix-downloads");
             TryEnsureFolder(_downloadFolder);
         }
@@ -282,7 +280,7 @@ public sealed class GameFixDownloadService : IGameFixDownloadService, IDisposabl
     private static async Task<GameFixApplyResult> ExtractIntoAsync(string archivePath, string targetFolder,
         IProgress<string>? progress, CancellationToken cancellationToken)
     {
-        var stagingRoot = Path.Combine(Path.GetTempPath(), $"SteamyFix-{Guid.NewGuid():N}");
+        var stagingRoot = Path.Combine(Steamy.Storage.AppDataPaths.CreateTemporaryRoot(), $"SteamyFix-{Guid.NewGuid():N}");
         var backupRoot = Path.Combine(stagingRoot, "originals");
         var replacedFiles = new List<(string Destination, string? Backup)>();
         try

@@ -66,8 +66,7 @@ public sealed class GitHubUpdateService : IUpdateService, IDisposable
         _ownsHttp = http is null;
         _http = http ?? new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(30) };
         _installDirectory = installDirectory ?? AppContext.BaseDirectory;
-        _workDirectory = workDirectory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "updates");
+        _workDirectory = workDirectory ?? Path.Combine(Steamy.Storage.AppDataPaths.Root, "updates");
         _latestReleaseUri = latestReleaseUri ?? new Uri($"https://api.github.com/repos/{Repository}/releases/latest");
         CurrentVersion = Normalize(currentVersion ?? Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0));
     }

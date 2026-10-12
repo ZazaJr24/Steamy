@@ -1,0 +1,22 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Original Steamy mark as geometry: no bitmap thresholding or resampling. -->
+  <DrawingImage x:Key="SteamyBrandImage">
+    <DrawingImage.Drawing>
+      <DrawingGroup>
+        <GeometryDrawing Geometry="M 58,0 H 198 C 230,0 256,26 256,58 V 198 C 256,230 230,256 198,256 H 58 C 26,256 0,230 0,198 V 58 C 0,26 26,0 58,0 Z">
+          <GeometryDrawing.Brush>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+              <GradientStop Color="#57C5F5" Offset="0"/>
+              <GradientStop Color="#6577EF" Offset="0.48"/>
+              <GradientStop Color="#9957F5" Offset="1"/>
+            </LinearGradientBrush>
+          </GeometryDrawing.Brush>
+        </GeometryDrawing>
+        <GeometryDrawing Geometry="M 86,69 C 47,119 117,120 86,164 M 128,51 C 91,111 158,117 128,164 M 170,69 C 132,119 202,120 170,164 M 69,201 H 188">
+          <GeometryDrawing.Pen><Pen Brush="#FAFCFF" Thickness="19" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/></GeometryDrawing.Pen>
+        </GeometryDrawing>
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+</ResourceDictionary>

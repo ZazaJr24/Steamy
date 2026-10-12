@@ -19,7 +19,7 @@ public sealed class ShareHistoryStore
     public ShareHistoryStore(string path) => _path = path;
 
     public static string DefaultPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "share-history.json");
+        Path.Combine(Steamy.Storage.AppDataPaths.Root, "share-history.json");
 
     public ShareHistoryEntry? Find(string target, string fingerprint)
     {

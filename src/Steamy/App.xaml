@@ -9,6 +9,7 @@
         <ui:ControlsDictionary />
         <ResourceDictionary Source="Resources/Themes/Dark.xaml" />
         <ResourceDictionary Source="Resources/Styles.xaml" />
+        <ResourceDictionary Source="Resources/Shell.xaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>

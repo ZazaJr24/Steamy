@@ -99,7 +99,7 @@ public sealed class GameActivityStoreTests
                 {"appId":730,"openedAt":"2020-02-01T00:00:00Z"},
                 {"appId":730,"openedAt":"2020-03-01T00:00:00Z"},
                 {"appId":570,"openedAt":"2999-01-01T00:00:00Z"},
-                {"appId":-1,"openedAt":"2020-03-01T00:00:00Z"},
+                {"appId":0,"openedAt":"2020-03-01T00:00:00Z"},
                 {"appId":570,"openedAt":123}]}
             """);
         var snapshot = await new JsonGameActivityService(path).GetAsync();
@@ -114,8 +114,18 @@ public sealed class GameActivityStoreTests
         using var folder = new TempFolder();
         var store = new JsonGameActivityService(Path.Combine(folder.Path, "activity.json"));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.ToggleFavoriteAsync(0));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.RecordLaunchAsync(-1));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.RecordLaunchAsync(0));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.RecordLaunchAsync(730, DateTimeOffset.UtcNow.AddDays(1)));
         Assert.Equal(GameActivitySnapshot.Empty, await store.GetAsync());
+    }
+
+    [Fact]
+    public async Task LocalGameLaunchesPersistWithoutRequiringASteamAppId()
+    {
+        using var folder = new TempFolder();
+        var path = Path.Combine(folder.Path, "activity.json");
+        var store = new JsonGameActivityService(path);
+        await store.RecordLaunchAsync(-42);
+        Assert.Equal(-42, Assert.Single((await new JsonGameActivityService(path).GetAsync()).Launches).AppId);
     }
 }

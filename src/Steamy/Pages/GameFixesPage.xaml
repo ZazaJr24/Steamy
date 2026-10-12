@@ -5,7 +5,7 @@
       xmlns:controls="clr-namespace:Steamy.Controls"
       PreviewKeyDown="Page_PreviewKeyDown"
       ScrollViewer.CanContentScroll="False"
-      Background="{DynamicResource WorkspaceBackgroundBrush}">
+      Background="{DynamicResource PageBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <Style x:Key="FixBadge" TargetType="Border">

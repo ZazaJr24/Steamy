@@ -68,9 +68,7 @@ public sealed class DenuvoGeneratorDownloadService : IDenuvoGeneratorDownloadSer
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/0.1 (Denuvo generator downloader)");
         }
 
-        _cacheDirectory = cacheDirectory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy",
+        _cacheDirectory = cacheDirectory ?? Path.Combine(Steamy.Storage.AppDataPaths.Root,
             "DenuvoGeneratorCache");
 
         Directory.CreateDirectory(_cacheDirectory);

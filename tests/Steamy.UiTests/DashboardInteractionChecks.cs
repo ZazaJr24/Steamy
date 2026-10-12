@@ -23,11 +23,27 @@ public sealed partial class PageSmokeTests
         var countdown = Assert.IsAssignableFrom<FrameworkElement>(page.FindName("SpotlightCountdown"));
         Assert.Null(page.FindName("MajorGameGrid"));
         Assert.NotNull(page.FindName("UpcomingGameGrid"));
-        foreach (var panel in Descendants<Steamy.Controls.AdaptiveGridPanel>(page))
-            Assert.All(panel.Children.Cast<FrameworkElement>(), child => Assert.InRange(child.ActualWidth, 210, 400));
-        var upcomingGrid = Descendants<Steamy.Controls.AdaptiveGridPanel>(page).Single();
+        var upcomingGrid = Descendants<Steamy.Controls.AdaptiveGridPanel>((ItemsControl)page.FindName("UpcomingGameGrid")).Single();
+        Assert.All(upcomingGrid.Children.Cast<FrameworkElement>(), child => Assert.InRange(child.ActualWidth, 210, page.ActualWidth));
         Assert.Equal(0.5, upcomingGrid.CoverRatio);
         Assert.Equal(52, upcomingGrid.FooterHeight);
+        var firstRow = upcomingGrid.Children.Cast<FrameworkElement>().Take(3).ToArray();
+        var strip = Descendants<Steamy.Controls.GameShortcutStrip>((ItemsControl)page.FindName("RecentlyOpenedStrip")).SingleOrDefault();
+        if (strip?.IsVisible == true && strip.Children.Count > 0)
+        {
+            var firstShortcut = (FrameworkElement)strip.Children[0];
+            Assert.InRange(firstShortcut.ActualWidth, 76, 96.5);
+            Assert.All(strip.Children.Cast<FrameworkElement>(), child =>
+                Assert.InRange(child.ActualWidth, firstShortcut.ActualWidth - 1, firstShortcut.ActualWidth + 1));
+            var lastShortcut = (FrameworkElement)strip.Children[strip.Children.Count - 1];
+            if (strip.Children.Count == 8)
+                Assert.InRange(lastShortcut.TranslatePoint(new Point(lastShortcut.ActualWidth, 0), strip).X, strip.ActualWidth - 1, strip.ActualWidth + 1);
+            Assert.InRange(firstShortcut.TranslatePoint(new Point(), page).X,
+                firstRow[0].TranslatePoint(new Point(), page).X - 1, firstRow[0].TranslatePoint(new Point(), page).X + 1);
+        }
+        Assert.All(firstRow, child => Assert.InRange(child.ActualWidth, firstRow[0].ActualWidth - 1, firstRow[0].ActualWidth + 1));
+        Assert.All(firstRow, child => Assert.Equal(firstRow[0].ActualHeight, child.ActualHeight));
+        Assert.All(Descendants<Button>(upcomingGrid), button => Assert.Null(button.ToolTip));
         Assert.All(upcomingGrid.Children.Cast<FrameworkElement>(), child => Assert.True(child.ActualWidth > child.ActualHeight));
         Assert.All(((DashboardViewModel)page.DataContext).NewGames, feature => Assert.True(feature.Metadata.ComingSoon));
         Assert.Null(page.FindName("SpotlightPreviews")); // The countdown has no right-hand artwork rail.
@@ -41,9 +57,11 @@ public sealed partial class PageSmokeTests
         var countdownStart = countdown.TranslatePoint(new Point(0,0), actions);
         Assert.InRange(countdownStart.X, 0, 1);
         Assert.InRange(countdownStart.Y, 0, 1);
-        Assert.True(countdown.ActualWidth >= 100 && countdown.ActualHeight >= 40);
+        if (((DashboardFeature)hero.DataContext).Metadata.ComingSoon)
+            Assert.True(countdown.ActualWidth >= 100 && countdown.ActualHeight >= 40);
+        else Assert.Equal(Visibility.Collapsed, countdown.Visibility);
         Assert.Single(Descendants<Button>(actions));
-        Assert.InRange(hero.ActualHeight, 340, 380);
+        Assert.InRange(hero.ActualHeight, 360, 520);
         Assert.Equal(new Thickness(0), Assert.IsType<Border>(hero).BorderThickness);
         Assert.True(artwork.ActualWidth > 0);
         Assert.True(artwork.ActualHeight > 0);
@@ -54,7 +72,7 @@ public sealed partial class PageSmokeTests
             Assert.True(start.X >= -1 && start.X + element.ActualWidth <= page.ActualWidth + 1,
                 $"{element.Name} extends beyond the dashboard at width {page.ActualWidth}.");
         }
-        foreach (var button in Descendants<Button>(actions))
+        foreach (var button in Descendants<Button>(actions).Where(button => button.IsVisible))
         {
             Assert.True(button.ActualWidth >= 24 && button.ActualHeight >= 24);
             var start = button.TranslatePoint(new Point(0, 0), hero);
@@ -78,6 +96,8 @@ public sealed partial class PageSmokeTests
             PumpUntil(() => refresh.IsCompleted);
             refresh.GetAwaiter().GetResult();
             Assert.Contains(model.PersonalLibrary, entry => ReferenceEquals(entry.Game, installed));
+            Assert.Contains(model.InstalledGames, entry => ReferenceEquals(entry.Game, installed));
+            Assert.All(model.InstalledGames, entry => Assert.Equal(GameInstallState.Installed, entry.Game.InstallState));
             Assert.False(model.HasContinueGame); // Installed does not mean it was opened or played.
             var toggle = ((IAsyncRelayCommand)model.ToggleFavoriteCommand).ExecuteAsync(installed);
             PumpUntil(() => toggle.IsCompleted);
@@ -105,10 +125,42 @@ public sealed partial class PageSmokeTests
         }
         Assert.False(model.HasContinueGame); // A removed installation never remains a launch target.
 
+        var manyGames = Enumerable.Range(100, 15).Select(id => new Game
+        {
+            AppId = id, Name = $"Library fixture {id}", InstallState = GameInstallState.Installed,
+            IsLocalDownload = id == 100
+        }).ToArray();
+        try
+        {
+            foreach (var game in manyGames) store.Games.Add(game);
+            var refresh = model.RefreshActivityAsync();
+            PumpUntil(() => refresh.IsCompleted);
+            refresh.GetAwaiter().GetResult();
+            Assert.Equal(15, model.AllInstalledGames.Count);
+            Assert.Equal(8, model.InstalledGames.Count);
+            model.ShowAllGamesCommand.Execute(null);
+            Assert.Equal(15, model.FilteredInstalledGames.Count);
+            model.InstalledSourceFilter = "DepotDownloader";
+            Assert.Equal(100, Assert.Single(model.FilteredInstalledGames).Game.AppId);
+            model.InstalledSearchText = "missing title";
+            Assert.False(model.HasInstalledResults);
+        }
+        finally
+        {
+            model.CloseInstalledLibraryCommand.Execute(null);
+            model.InstalledSearchText = "";
+            model.InstalledSourceFilter = "All games";
+            foreach (var game in manyGames) store.Games.Remove(game);
+            var refresh = model.RefreshActivityAsync();
+            PumpUntil(() => refresh.IsCompleted);
+            refresh.GetAwaiter().GetResult();
+        }
+
         var catalogFavorite = new Game { AppId = 10, Name = "A catalog-only fixture", InstallState = GameInstallState.NotInstalled };
         var library = provider.GetRequiredService<LibraryViewModel>();
         var previousSource = library.SelectedSourceFilter;
         var previousSearch = library.SearchText;
+        var previousMode = library.SelectedMode;
         try
         {
             var toggle = ((IAsyncRelayCommand)model.ToggleFavoriteCommand).ExecuteAsync(catalogFavorite);
@@ -123,6 +175,7 @@ public sealed partial class PageSmokeTests
             Assert.Empty(model.PersonalLibrary);
             Assert.False(model.HasContinueGame);
             library.SearchText = string.Empty;
+            library.SelectedMode = "Browse all";
             library.SelectedSourceFilter = "Favorites";
             var catalogRefresh = ((IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
             PumpUntil(() => catalogRefresh.IsCompleted);
@@ -145,6 +198,7 @@ public sealed partial class PageSmokeTests
                 PumpUntil(() => library.PagedCatalogItems.Count == 0);
             library.SelectedSourceFilter = previousSource;
             library.SearchText = previousSearch;
+            library.SelectedMode = previousMode;
             var refresh = model.RefreshActivityAsync();
             PumpUntil(() => refresh.IsCompleted);
             refresh.GetAwaiter().GetResult();

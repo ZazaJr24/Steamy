@@ -42,8 +42,7 @@ public static class BundledModCapabilities
             "Release", "net9.0", "DepotDownloaderMod.exe");
         if (File.Exists(bundled) && SupportsOwnFork(bundled)) return bundled;
 
-        var appDataTools = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy", "tools", "DepotDownloaderMod");
+        var appDataTools = Path.Combine(Steamy.Storage.AppDataPaths.Root, "tools", "DepotDownloaderMod");
         try
         {
             return Directory.Exists(appDataTools)

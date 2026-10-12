@@ -19,7 +19,7 @@
   </UserControl.Resources>
 
   <Border Width="420" CornerRadius="24" Padding="30,32,30,26"
-          Background="{DynamicResource SurfaceElevatedBrush}"
+          Background="{DynamicResource DialogSurfaceBrush}"
           RenderTransformOrigin="0.5,0.5">
     <Border.Effect>
       <DropShadowEffect BlurRadius="48" ShadowDepth="12" Opacity="0.6" Color="Black" />

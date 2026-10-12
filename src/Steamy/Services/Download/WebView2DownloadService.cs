@@ -18,16 +18,12 @@ public sealed class WebView2DownloadService : IDisposable
     {
         if (_initialized) return;
 
-        _downloadFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy",
+        _downloadFolder = Path.Combine(Steamy.Storage.AppDataPaths.Root,
             "game-fix-downloads");
         Directory.CreateDirectory(_downloadFolder);
 
         _environment = await CoreWebView2Environment.CreateAsync(
-            userDataFolder: Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Steamy",
+            userDataFolder: Path.Combine(Steamy.Storage.AppDataPaths.Root,
                 "WebView2Cache"));
 
         _webView = new WebView2();

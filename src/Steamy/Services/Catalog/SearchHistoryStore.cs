@@ -12,8 +12,7 @@ public sealed class SearchHistoryStore
     private readonly SemaphoreSlim _gate = new(1, 1);
     private List<string>? _queries;
 
-    public SearchHistoryStore(string? path = null) => _path = path ?? Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "search-history.json");
+    public SearchHistoryStore(string? path = null) => _path = path ?? Path.Combine(Steamy.Storage.AppDataPaths.Root, "search-history.json");
 
     public Task<IReadOnlyList<string>> GetAsync() => Task.Run(async () =>
     {

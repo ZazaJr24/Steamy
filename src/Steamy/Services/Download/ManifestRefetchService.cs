@@ -24,7 +24,7 @@ public sealed class ManifestRefetchService : IManifestRefetchService
         if (job.AppId <= 0 || string.IsNullOrWhiteSpace(job.DownloadMode)
             || !job.DownloadMode.Contains("Mod", StringComparison.OrdinalIgnoreCase)) return Task.FromResult(true);
 
-        var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "ryuu-workdir");
+        var root = Path.Combine(Steamy.Storage.AppDataPaths.Root, "ryuu-workdir");
         if (!string.IsNullOrWhiteSpace(job.TargetFolder) && Path.IsPathFullyQualified(job.TargetFolder))
         {
             var session = DepotResumeStateStore.SessionDirectory(root, job.AppId, job.TargetFolder);

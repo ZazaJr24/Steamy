@@ -27,9 +27,7 @@ public sealed class HubcapCatalogService : IHubcapCatalogService, IDisposable
         _httpClient = new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromSeconds(15) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
 
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy", "hubcap-catalog");
+        var dir = Path.Combine(Steamy.Storage.AppDataPaths.Root, "hubcap-catalog");
         Directory.CreateDirectory(dir);
         _cachePath = Path.Combine(dir, "games.json");
     }

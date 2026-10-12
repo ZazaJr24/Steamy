@@ -24,7 +24,7 @@ public sealed class JsonGameActivityService(string? path = null, TimeProvider? t
     private const int MaximumFileBytes = 512 * 1024;
     private const int MaximumFavorites = 2000;
     private const int MaximumLaunches = 512;
-    private readonly string _path = path ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "game-activity.json");
+    private readonly string _path = path ?? Path.Combine(Steamy.Storage.AppDataPaths.Root, "game-activity.json");
     private readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private GameActivitySnapshot? _snapshot;
@@ -63,7 +63,7 @@ public sealed class JsonGameActivityService(string? path = null, TimeProvider? t
 
     public async Task RecordLaunchAsync(int appId, DateTimeOffset? launchedAt = null, CancellationToken cancellationToken = default)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(appId);
+        if (appId == 0) throw new ArgumentOutOfRangeException(nameof(appId));
         var timestamp = (launchedAt ?? _clock.GetUtcNow()).ToUniversalTime();
         if (timestamp <= DateTimeOffset.UnixEpoch || timestamp > _clock.GetUtcNow().AddMinutes(5))
             throw new ArgumentOutOfRangeException(nameof(launchedAt), "The launch date must describe a past or current request.");
@@ -104,7 +104,7 @@ public sealed class JsonGameActivityService(string? path = null, TimeProvider? t
             var launches = new List<GameLaunch>();
             if (root.TryGetProperty("launches", out var savedLaunches) && savedLaunches.ValueKind == JsonValueKind.Array)
                 foreach (var value in savedLaunches.EnumerateArray().Take(MaximumLaunches))
-                    if (value.ValueKind == JsonValueKind.Object && value.TryGetProperty("appId", out var idElement) && idElement.ValueKind == JsonValueKind.Number && idElement.TryGetInt32(out var id) && id > 0
+                    if (value.ValueKind == JsonValueKind.Object && value.TryGetProperty("appId", out var idElement) && idElement.ValueKind == JsonValueKind.Number && idElement.TryGetInt32(out var id) && id != 0
                         && value.TryGetProperty("openedAt", out var dateElement) && dateElement.ValueKind == JsonValueKind.String && dateElement.TryGetDateTimeOffset(out var date)
                         && date > DateTimeOffset.UnixEpoch && date <= _clock.GetUtcNow().AddMinutes(5))
                         launches.Add(new GameLaunch(id, date.ToUniversalTime()));

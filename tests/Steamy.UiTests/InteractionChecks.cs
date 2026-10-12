@@ -179,7 +179,7 @@ public sealed partial class PageSmokeTests
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
         backgroundGrid.Children.Add(marker);
         window.UpdateLayout();
-        card.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); // The same action works for Enter/Space.
+        page.OpenDownloadSetup(model.PagedCatalogItems[0]); // Exercise the download drawer after the separate game details page.
         window.UpdateLayout();
         Assert.Equal(originalPosition, card.TranslatePoint(new Point(0, 0), page));
         Assert.Equal(originalWidth, card.ActualWidth);
@@ -211,7 +211,7 @@ public sealed partial class PageSmokeTests
         backgroundGrid.Children.Remove(marker);
         Assert.True(overlay.IsKeyboardFocusWithin);
         Assert.Equal(0, page.DownloadWizardStep);
-        Assert.True(((FrameworkElement)page.FindName("SourceStepPanel")).IsVisible);
+        Assert.True(((FrameworkElement)page.FindName("MethodStepPanel")).IsVisible);
         page.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(page)!, 0, Key.Escape)
         { RoutedEvent = Keyboard.PreviewKeyDownEvent });
         PumpUntil(() => overlay.Visibility == Visibility.Collapsed);
@@ -221,14 +221,17 @@ public sealed partial class PageSmokeTests
         Assert.True(card.IsKeyboardFocused);
 
         _phase = "Open separate download setup " + theme;
-        card.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        page.OpenDownloadSetup(model.PagedCatalogItems[0]);
         CheckWizardStage(page, 0);
         Assert.Equal(MotionPreferences.BackdropBlurEnabled ? Visibility.Visible : Visibility.Collapsed, snapshot.Visibility);
+        page.SelectInstallMethod(GameInstallMethod.DepotDownloader);
         AwaitWizardStep(page);
         CheckWizardStage(page, 1);
-        Assert.NotEmpty(page.DownloadDepotChoices);
         AwaitWizardStep(page);
         CheckWizardStage(page, 2);
+        Assert.NotEmpty(page.DownloadDepotChoices);
+        AwaitWizardStep(page);
+        CheckWizardStage(page, 3);
         var store = provider.GetRequiredService<IAppDataStore>();
         var settings = provider.GetRequiredService<ISettingsService>().Load();
         var standardJob = new DownloadJob { AppId = model.PagedCatalogItems[0].AppId, DownloadMode = "DepotDownloader", State = DownloadJobState.Paused,
@@ -250,7 +253,7 @@ public sealed partial class PageSmokeTests
         try
         {
             MotionPreferences.Configure(true);
-            card.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            page.OpenDownloadSetup(model.PagedCatalogItems[0]);
             Assert.Equal(Visibility.Visible, overlay.Visibility);
             Assert.Null(snapshot.Source); // Reduced effects never allocate a blurred gallery bitmap.
             Assert.Equal(Visibility.Collapsed, snapshot.Visibility);

@@ -56,6 +56,7 @@ jobs:
       - name: Test release commit
         env:
           STEAMY_UI_ARTIFACTS: ${{ github.workspace }}/artifacts/ui
+          STEAMY_UI_LIBRARY_INSTALL_OFFSCREEN_ONLY: '1'
         run: |
           python -m unittest discover -s scripts -p 'test_*.py'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

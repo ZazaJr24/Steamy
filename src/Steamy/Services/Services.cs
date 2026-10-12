@@ -156,7 +156,7 @@ public sealed class JsonSettingsService : ISettingsService
     private readonly SemaphoreSlim _writeGate = new(1);
     private AppSettings? _cached;
 
-    public JsonSettingsService(string? path = null) => _path = path ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "settings.json");
+    public JsonSettingsService(string? path = null) => _path = path ?? Path.Combine(Steamy.Storage.AppDataPaths.Root, "settings.json");
 
     public AppSettings Load()
     {
@@ -253,7 +253,7 @@ public interface ISecureCredentialService
 
 public sealed class DpapiCredentialService : ISecureCredentialService
 {
-    private readonly string _directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "credentials");
+    private readonly string _directory = Path.Combine(Steamy.Storage.AppDataPaths.Root, "credentials");
 
     public async Task SaveAsync(string key, string value, CancellationToken cancellationToken = default)
     {

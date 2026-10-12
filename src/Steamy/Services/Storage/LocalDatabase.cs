@@ -61,8 +61,7 @@ public sealed class SqliteLocalDatabase : ILocalDatabase, ILogBatchDatabase, IDo
     private readonly object _initializeLock = new();
     private bool _initialized;
 
-    public SqliteLocalDatabase(string? databasePath = null) => _databasePath = databasePath ?? Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "content-manager.db");
+    public SqliteLocalDatabase(string? databasePath = null) => _databasePath = databasePath ?? Path.Combine(Steamy.Storage.AppDataPaths.Root, "content-manager.db");
 
     public void Initialize()
     {

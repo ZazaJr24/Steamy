@@ -4,7 +4,7 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:vm="clr-namespace:Steamy.ViewModels"
       ScrollViewer.CanContentScroll="False"
-      Background="{DynamicResource WorkspaceBackgroundBrush}">
+      Background="{DynamicResource PageBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolVis" />
     <Style x:Key="SectionLabel" TargetType="TextBlock">
@@ -130,7 +130,7 @@
           <StackPanel>
             <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}">
               <Run FontWeight="SemiBold" Text="Windows Defender blocked the emulator."/>
-              <Run Text="Emulator DLLs are often flagged as unwanted software. Add an exclusion for the folder below in Windows Security, then retry."/>
+              <Run Text="Check the exact detection and original file source before retrying. A blocked file is not automatically a false positive. Settings → Transparency explains SHA-256 identification and official vendor review."/>
             </TextBlock>
             <TextBlock Text="{Binding EmuFolder}" FontFamily="Consolas" FontSize="11" Margin="0,6,0,0"
                        Foreground="{DynamicResource TextSecondaryBrush}"/>

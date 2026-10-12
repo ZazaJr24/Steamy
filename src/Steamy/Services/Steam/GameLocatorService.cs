@@ -75,7 +75,7 @@ public sealed class GameLocatorService : IGameLocatorService
     {
         "unins", "setup", "install", "vcredist", "dxsetup", "dxwebsetup", "directx",
         "crashpad", "crashreport", "crashhandler", "unitycrashhandler", "createdump",
-        "pbsetup", "pbweb", "eac", "easyanticheat", "battleye", "report", "errorreport",
+        "pbsetup", "pbweb", "easyanticheat", "battleye", "crashreport", "errorreport",
         "updater", "updatehelper", "steamless", "depotdownloader", "manifest", "cmd", "console"
     };
 
@@ -222,6 +222,7 @@ public sealed class GameLocatorService : IGameLocatorService
         IEnumerable<string> files;
         try
         {
+            if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) return;
             files = Directory.EnumerateFiles(directory, "*.exe", SearchOption.TopDirectoryOnly);
         }
         catch (Exception)
@@ -239,6 +240,7 @@ public sealed class GameLocatorService : IGameLocatorService
             long size;
             try
             {
+                if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0) continue;
                 size = new FileInfo(file).Length;
             }
             catch (Exception)

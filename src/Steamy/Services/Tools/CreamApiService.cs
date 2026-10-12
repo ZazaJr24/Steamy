@@ -42,9 +42,7 @@ public sealed class CreamApiService : ICreamApiService, IDisposable
     public CreamApiService(ILoggingService logging)
     {
         _logging = logging;
-        _baseCacheDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy");
+        _baseCacheDir = Steamy.Storage.AppDataPaths.Root;
 
         Directory.CreateDirectory(CreamApiCacheDir);
         Directory.CreateDirectory(SmokeApiCacheDir);

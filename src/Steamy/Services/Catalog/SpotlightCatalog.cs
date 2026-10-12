@@ -20,6 +20,7 @@ public sealed record SpotlightGame
     public string HeroUrl { get; init; } = string.Empty;
     public string HeaderUrl { get; init; } = string.Empty;
     public string PortraitUrl { get; init; } = string.Empty;
+    public string LogoUrl { get; init; } = string.Empty;
 }
 
 public sealed record SpotlightSnapshot(DateTimeOffset UpdatedAt, IReadOnlyList<SpotlightGame> Games)
@@ -54,7 +55,7 @@ public sealed class SpotlightCatalogService : ISpotlightService, IDisposable
     {
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         _ownsHttp = httpClient is null;
-        _cachePath = cachePath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "spotlight.json");
+        _cachePath = cachePath ?? Path.Combine(Steamy.Storage.AppDataPaths.Root, "spotlight.json");
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
         _cached = bundled ?? LoadBundled();
         try
@@ -159,6 +160,7 @@ public sealed class SpotlightCatalogService : ISpotlightService, IDisposable
                 || game.Genres is null || game.Genres.Length > 250 || game.ReleaseLabel is null || game.ReleaseLabel.Length > 100
                 || game.StoreUrl != $"https://store.steampowered.com/app/{game.AppId}/"
                 || !IsArtworkUrl(game.HeroUrl) || !IsArtworkUrl(game.HeaderUrl)
+                || (!string.IsNullOrEmpty(game.LogoUrl) && !IsArtworkUrl(game.LogoUrl))
                 || (!string.IsNullOrEmpty(game.PortraitUrl) && !IsArtworkUrl(game.PortraitUrl)))
                 throw new InvalidDataException("Invalid spotlight game metadata.");
             games.Add(game);

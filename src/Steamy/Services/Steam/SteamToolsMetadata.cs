@@ -18,24 +18,11 @@ public static class SteamToolsMetadata
     private static readonly TimeSpan Timeout = TimeSpan.FromMilliseconds(250);
     private static readonly Regex Comments = new(@"--\[(=*)\[.*?\]\1\]|--[^\r\n]*", RegexOptions.Singleline, Timeout);
     private static readonly Regex Statements = new(
-        """
-        \G\s*(?:
-            (?<call>(?<name>addappid|setManifestid|addtoken)\s*\((?<args>[^)]*)\))
-            | if\s+(?<guard>
-                (?:addappid|setManifestid|addtoken)(?:\s*~=\s*nil)?
-                | type\s*\(\s*(?:addappid|setManifestid|addtoken)\s*\)\s*==\s*(?<quote>["'])function\k<quote>
-              )\s+then\b
-            | (?<end>end\b)
-            | (?<separator>;)
-        )
-        """,
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.IgnorePatternWhitespace, Timeout);
+        @"\G\s*(?:(?<call>(?<name>addappid|setManifestid)\s*\((?<args>[^)]*)\))|if\s+(?<guard>addappid|setManifestid)\s+then\b|(?<end>end\b)|(?<separator>;))",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, Timeout);
     private static readonly Regex Add = new("^\\s*(\\d+)\\s*(?:,\\s*(\\d+)\\s*(?:,\\s*(?<quote>[\"'])([a-fA-F0-9]{8,128})\\k<quote>\\s*)?)?$", RegexOptions.None, Timeout);
     private static readonly Regex Manifest = new(
         "^\\s*(\\d+)\\s*,\\s*(?:(?<quote>[\"'])(?<manifest>\\d+)\\k<quote>|(?<manifest>\\d+))\\s*(?:,\\s*(?<size>\\d+)\\s*)?$",
-        RegexOptions.None, Timeout);
-    private static readonly Regex Token = new(
-        "^\\s*(\\d+)\\s*,\\s*(?:(?<quote>[\"'])(?<token>\\d+)\\k<quote>|(?<token>\\d+))\\s*$",
         RegexOptions.None, Timeout);
     private static readonly UTF8Encoding Utf8 = new(false, true);
 
@@ -51,8 +38,7 @@ public static class SteamToolsMetadata
         foreach (Match call in calls)
         {
             var isAdd = call.Groups["name"].Value.Equals("addappid", StringComparison.OrdinalIgnoreCase);
-            var isToken = call.Groups["name"].Value.Equals("addtoken", StringComparison.OrdinalIgnoreCase);
-            var args = (isAdd ? Add : isToken ? Token : Manifest).Match(call.Groups["args"].Value);
+            var args = (isAdd ? Add : Manifest).Match(call.Groups["args"].Value);
             if (!args.Success || !int.TryParse(args.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var id) || id <= 0)
                 throw new InvalidDataException("The Lua metadata has an invalid app or depot ID.");
             if (isAdd)
@@ -66,14 +52,6 @@ public static class SteamToolsMetadata
                 if (flag is not null && !uint.TryParse(flag, out _)) throw new InvalidDataException("Invalid addappid flag.");
                 output.AppendLine(flag is null ? $"addappid({id})" : args.Groups[3].Success
                     ? $"addappid({id},{flag},\"{args.Groups[3].Value}\")" : $"addappid({id},{flag})");
-            }
-            else if (isToken)
-            {
-                // Access tokens are decimal UInt64 metadata supported by BetterSteamTools.
-                // Retain the exact digits; never evaluate Lua or include token values in errors.
-                if (!ulong.TryParse(args.Groups["token"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out _))
-                    throw new InvalidDataException("Invalid app access token.");
-                output.AppendLine($"addtoken({id},\"{args.Groups["token"].Value}\")");
             }
             else
             {
@@ -104,7 +82,7 @@ public static class SteamToolsMetadata
             var statement = Statements.Match(active, position);
             if (!statement.Success && active.AsSpan(position).Trim().IsEmpty) break;
             if (!statement.Success || statement.Index != position || ++statements > DownloadPreparationReader.MaximumEntries * 4)
-                throw new InvalidDataException("The file contains unsupported Lua code. Select addappid/addtoken/setManifestid metadata.");
+                throw new InvalidDataException("The file contains unsupported Lua code. Select addappid/setManifestid metadata.");
             position += statement.Length;
             if (statement.Groups["guard"].Success)
             {
@@ -123,7 +101,7 @@ public static class SteamToolsMetadata
             }
         }
         if (depth != 0) throw new InvalidDataException("Lua metadata has an unclosed compatibility guard.");
-        if (calls.Count == 0) throw new InvalidDataException("The file contains no addappid/addtoken/setManifestid metadata.");
+        if (calls.Count == 0) throw new InvalidDataException("The file contains no addappid/setManifestid metadata.");
         return calls;
     }
 
@@ -173,7 +151,7 @@ public static class SteamToolsMetadata
             {
                 // Decode in one pass, including solid archives. Reuse the ZIP metadata reader so
                 // selection, validation and the final atomic Steam write behave identically.
-                var temporary = Path.Combine(Path.GetTempPath(), "Steamy-metadata-" + Guid.NewGuid().ToString("N") + ".zip");
+                var temporary = Path.Combine(Steamy.Storage.AppDataPaths.CreateTemporaryRoot(), "Steamy-metadata-" + Guid.NewGuid().ToString("N") + ".zip");
                 try
                 {
                     await Task.Run(() => NormalizeArchive(path, temporary, token), token);
@@ -204,7 +182,7 @@ public static class SteamToolsMetadata
                     if (appId is { } selected && !available.Contains(selected)) throw new InvalidDataException("This bundle does not contain the selected game.");
                     foreach (var id in available.Where(id => appId is null || id == appId))
                     {
-                        var owned = Path.Combine(Path.GetTempPath(), "Steamy-bst-" + Guid.NewGuid().ToString("N"));
+                        var owned = Path.Combine(Steamy.Storage.AppDataPaths.CreateTemporaryRoot(), "Steamy-bst-" + Guid.NewGuid().ToString("N"));
                         try
                         {
                             var import = await LocalManifestPackage.ImportAsync(path, id, owned, token);

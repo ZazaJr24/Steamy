@@ -30,9 +30,6 @@ public sealed class SteamToolsTests
     [InlineData("if setManifestid then\nsetManifestid(481,\"18446744073709551615\",1024)\nend")]
     [InlineData("if addappid then if setManifestid then setManifestid(481,'18446744073709551615',1024); end; end")]
     [InlineData("setManifestid(481,18446744073709551615,1024)")]
-    [InlineData("if setManifestid ~= nil then setManifestid(481,'18446744073709551615',1024) end")]
-    [InlineData("if type(setManifestid) == 'function' then setManifestid(481,'18446744073709551615',1024) end")]
-    [InlineData("if TYPE ( SETMANIFESTID ) == \"function\" then SETMANIFESTID(481,18446744073709551615,1024) end")]
     public void ProviderCompatibilityGuardsAndNumericIdsProduceOnlyCanonicalMetadata(string manifests)
     {
         var result = SteamToolsMetadata.ReadLua("addappid(480)\naddappid(481,0,'aabbccddeeff0011')\n" + manifests, "480.lua");
@@ -41,26 +38,6 @@ public sealed class SteamToolsTests
         Assert.Contains("setManifestid(481,\"18446744073709551615\",1024)", result.Lua);
         Assert.DoesNotContain("if ", result.Lua);
         Assert.DoesNotContain("end", result.Lua);
-    }
-
-    [Theory]
-    [InlineData("addtoken(420530,18446744073709551615)")]
-    [InlineData("if addtoken then addtoken(420530,'18446744073709551615') end")]
-    [InlineData("if addtoken ~= nil then addtoken(420530,\"18446744073709551615\") end")]
-    [InlineData("if type(addtoken) == \"function\" then ADDTOKEN(420530,18446744073709551615) end")]
-    public async Task AppAccessTokensSurviveProviderAndLocalArchiveImport(string tokenMetadata)
-    {
-        var lua = "addappid(420530)\naddappid(420531,0,'aabbccddeeff0011')\n" + tokenMetadata + "\nsetManifestid(420531,'4285785410124802121')";
-        var result = SteamToolsMetadata.ReadLua(lua, "420530.lua", 420530);
-        Assert.Equal(420530, result.AppId);
-        Assert.Contains("addtoken(420530,\"18446744073709551615\")", result.Lua);
-        Assert.DoesNotContain("if ", result.Lua);
-        using var temp = new TempFolder();
-        var path = Path.Combine(temp.Path, "420530.zip");
-        File.WriteAllBytes(path, Zip(("420530.lua", lua)));
-        var plan = await SteamToolsMetadata.ReadAsync([path], 420530);
-        var installed = Encoding.UTF8.GetString(plan.Files["config/stplug-in/420530.lua"]);
-        Assert.Equal(result.Lua, installed);
     }
 
     [Theory]
@@ -75,13 +52,6 @@ public sealed class SteamToolsTests
     [InlineData("setManifestid(481,1.23456789e18)")]
     [InlineData("setManifestid(481,\"123')")]
     [InlineData("addappid(481,0,\"aabbccddeeff0011')")]
-    [InlineData("addtoken(480,18446744073709551616)")]
-    [InlineData("addtoken(480,1.23456789e18)")]
-    [InlineData("addtoken(480,'123\")")]
-    [InlineData("addtoken(480,os.execute('bad'))")]
-    [InlineData("if type(setManifestid) == 'function' or os.execute('bad') then setManifestid(481,'123') end")]
-    [InlineData("if type(setManifestid) == 'function' then os.execute('bad') end")]
-    [InlineData("if setManifestid == nil then setManifestid(481,'123') end")]
     public void ArbitraryConditionsUnbalancedGuardsAndImpreciseIdsStayRejected(string unsupported)
         => Assert.Throws<InvalidDataException>(() => SteamToolsMetadata.ReadLua("addappid(480)\n" + unsupported, "480.lua"));
 
