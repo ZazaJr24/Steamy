@@ -119,7 +119,27 @@ jobs:
             Write-Host "Removed obsolete standalone asset $oldAssetName"
           }
 
+      - name: Preserve already published release files
+        id: existing
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.ver.outputs.v }}
+        run: |
+          $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json' }
+          $url = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/tags/v$env:RELEASE_VERSION"
+          try {
+            $release = Invoke-RestMethod -Uri $url -Headers $headers
+          } catch {
+            if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
+            $release = $null
+          }
+          $published = $null -ne $release -and -not $release.draft -and $null -ne $release.published_at
+          "published=$($published.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          if ($published) { Write-Host 'Published release retained. Its download files and update checksums will not be replaced by this build.' }
+
       - name: Create Release
+        if: steps.existing.outputs.published != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.v }}
@@ -132,6 +152,7 @@ jobs:
           body_path: release-notes.md
 
       - name: Publish verified update metadata after the release exists
+        if: steps.existing.outputs.published != 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python scripts/publish_update_manifest.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip' --app-archive 'Steamy-v${{ steps.ver.outputs.v }}-app.zip'

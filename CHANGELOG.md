@@ -14,6 +14,8 @@ Fix the local **Your package** picker closing the installation sheet immediately
 - Add offscreen regression checks for package selection, cancellation, stray mouse releases and normal backdrop dismissal on the game-page installation sheet.
 - Check the supplied Space Marine 2 package as App ID 2183900 with four manifests; no Lua execution or changes to real Steam files are needed.
 - Keep the small download setup, matching app payload and portable package at version 0.7.1.
+- Preserve already published release files when the tag workflow runs again, preventing temporary download 404s and mismatched update checksums.
+- Reconcile both update manifests with the final GitHub assets and verify the real 0.7.0-to-0.7.1 updater download, checksum and installation in an isolated test folder.
 
 ## 0.7.0
 
