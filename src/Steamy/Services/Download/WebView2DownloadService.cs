@@ -24,7 +24,7 @@ public sealed class WebView2DownloadService : IDisposable
 
         _environment = await CoreWebView2Environment.CreateAsync(
             userDataFolder: Path.Combine(Steamy.Storage.AppDataPaths.Root,
-                "WebView2Cache"));
+                "WebView2Cache"), options: new CoreWebView2EnvironmentOptions { Language = "en-US" });
 
         _webView = new WebView2();
         await _webView.EnsureCoreWebView2Async(_environment);

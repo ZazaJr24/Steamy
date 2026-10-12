@@ -18,10 +18,20 @@ public sealed class TrailerPreview : Grid
     public ImageSource? Poster { get => (ImageSource?)GetValue(PosterProperty); set => SetValue(PosterProperty, value); }
     private static WeakReference<TrailerPreview>? _active;
     private readonly Image _poster = new() { Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
+    private readonly Button _soundButton = new()
+    {
+        Content = "Unmute", ToolTip = "Unmute trailer", Visibility = Visibility.Collapsed,
+        HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(8), Padding = new Thickness(9, 5, 9, 5), FontSize = 11,
+        Background = new SolidColorBrush(Color.FromArgb(220, 25, 29, 35)),
+        Foreground = Brushes.White, BorderThickness = new Thickness(0)
+    };
     private readonly DispatcherTimer _loop = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private CancellationTokenSource? _hover;
     private CancellationTokenSource? _fallbackHover;
     private MediaElement? _player;
+    private MediaElement? _audioPlayer;
+    private Task<Uri?>? _audioRequest;
     private HdrTrailerPlayer? _hdrPlayer;
     private FrameworkElement? _owner;
     private Window? _window;
@@ -30,8 +40,22 @@ public sealed class TrailerPreview : Grid
 
     public TrailerPreview()
     {
-        IsHitTestVisible = false;
+        IsHitTestVisible = true;
+        _poster.IsHitTestVisible = false;
         Children.Add(_poster);
+        Panel.SetZIndex(_soundButton, 2);
+        Children.Add(_soundButton);
+        _soundButton.Click += async (_, args) =>
+        {
+            args.Handled = true;
+            if (_player is not { } player) return;
+            player.IsMuted = !player.IsMuted;
+            player.Volume = player.IsMuted ? 0 : 1;
+            _soundButton.Content = player.IsMuted ? "Unmute" : "Mute";
+            _soundButton.ToolTip = player.IsMuted ? "Unmute trailer" : "Mute trailer";
+            if (_audioPlayer is { } audio) audio.IsMuted = player.IsMuted;
+            if (!player.IsMuted) await StartAudioAsync();
+        };
         RoundedClip.SetRadius(this, 14);
         Loaded += Attach;
         Unloaded += Detach;
@@ -44,6 +68,7 @@ public sealed class TrailerPreview : Grid
             {
                 player.SpeedRatio = 1;
                 player.Position = TimeSpan.FromSeconds(3);
+                if (_audioPlayer is { } audio) audio.Position = player.Position;
                 player.Play();
             }
         };
@@ -90,8 +115,8 @@ public sealed class TrailerPreview : Grid
 
     private void Enter(object sender, MouseEventArgs args) => BeginPreview();
     private void Leave(object sender, MouseEventArgs args) => StopPreview();
-    private void FocusEntered(object sender, KeyboardFocusChangedEventArgs args) => BeginPreview();
-    private void FocusLeft(object sender, KeyboardFocusChangedEventArgs args) { if (_owner?.IsMouseOver != true) StopPreview(); }
+    private void FocusEntered(object sender, KeyboardFocusChangedEventArgs args) { if (ReferenceEquals(args.OriginalSource, _owner)) BeginPreview(); }
+    private void FocusLeft(object sender, KeyboardFocusChangedEventArgs args) { if (_owner?.IsMouseOver != true && _owner?.IsKeyboardFocusWithin != true) StopPreview(); }
     private void Deactivated(object? sender, EventArgs args) => StopPreview();
     private void CardClicked(object sender, RoutedEventArgs args) => StopPreview();
     private static bool PreviewsEnabled => MotionPreferences.TrailerPreviewsEnabled && MotionPreferences.AnimationsEnabled;
@@ -117,6 +142,17 @@ public sealed class TrailerPreview : Grid
                 var hdr = new HdrTrailerPlayer();
                 _hdrPlayer = hdr;
                 FitPlayer();
+                hdr.PreviewActivated += (_, _) =>
+                {
+                    if (_owner is Button button)
+                    {
+                        var command = button.Command;
+                        var parameter = button.CommandParameter;
+                        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, button));
+                        if (command?.CanExecute(parameter) == true) command.Execute(parameter);
+                    }
+                };
+                hdr.SoundRequested += async (_, _) => await StartAudioAsync();
                 hdr.FallbackRequested += (_, _) => _ = StartSdrFallbackAsync(service, hover);
                 Children.Add(hdr);
                 try { await hdr.StartAsync(video.Source, token); }
@@ -165,6 +201,33 @@ public sealed class TrailerPreview : Grid
             player.Play();
     }
 
+    private async Task StartAudioAsync()
+    {
+        var hover = _hover;
+        if (hover is null) return;
+        try
+        {
+            _audioRequest ??= App.Services.GetRequiredService<ITrailerPreviewService>().GetAudioPreviewAsync(AppId, hover.Token);
+            var source = await _audioRequest;
+            if (source is null || !ReferenceEquals(hover, _hover) || hover.IsCancellationRequested) return;
+            if (_hdrPlayer is { } hdr) { await hdr.SetAudioSourceAsync(source); return; }
+            if (_player is not { } video || _audioPlayer is not null) return;
+            var audio = _audioPlayer = new MediaElement
+            {
+                LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Close,
+                Width = 1, Height = 1, Opacity = 0, IsHitTestVisible = false, Volume = 1, IsMuted = video.IsMuted
+            };
+            audio.MediaOpened += (_, _) =>
+            {
+                if (ReferenceEquals(_audioPlayer, audio) && _player is { } playing)
+                { audio.Position = playing.Position; audio.IsMuted = playing.IsMuted; audio.Play(); }
+            };
+            Children.Add(audio); audio.Source = source; audio.Play();
+        }
+        catch (OperationCanceledException) { }
+        catch { _audioRequest = null; }
+    }
+
     private void FitPlayer()
     {
         // Media's natural dimensions must never participate in the card's layout.
@@ -191,6 +254,9 @@ public sealed class TrailerPreview : Grid
         player.SpeedRatio = 1;
         player.Position = TimeSpan.FromSeconds(3);
         player.Opacity = 1;
+        _soundButton.Content = "Unmute";
+        _soundButton.ToolTip = "Unmute trailer";
+        _soundButton.Visibility = Visibility.Visible;
         player.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)) { FillBehavior = FillBehavior.Stop });
         player.Play();
         _loop.Start();
@@ -208,6 +274,12 @@ public sealed class TrailerPreview : Grid
 
     internal void StopPreview()
     {
+        _soundButton.Visibility = Visibility.Collapsed;
+        _audioRequest = null;
+        if (_audioPlayer is { } audio)
+        {
+            _audioPlayer = null; audio.Stop(); audio.Close(); audio.Source = null; Children.Remove(audio);
+        }
         CloseHdrPlayer();
         _hover?.Cancel();
         _hover?.Dispose();

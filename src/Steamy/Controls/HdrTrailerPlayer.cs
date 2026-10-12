@@ -11,20 +11,22 @@ public sealed class HdrTrailerPlayer : WebView2
     private static Task<CoreWebView2Environment>? _environment;
     private bool _closed;
     public event EventHandler? VideoReady;
+    public event EventHandler? PreviewActivated;
+    public event EventHandler? SoundRequested;
     public event EventHandler? FallbackRequested;
     public bool IsPlaying { get; private set; }
 
     public HdrTrailerPlayer()
     {
-        // Disabled native child windows pass pointer input to the WPF card beneath them.
-        IsEnabled = false; IsHitTestVisible = false; Focusable = false;
+        // Native controls handle sound and forward card activation to WPF.
+        IsEnabled = true; IsHitTestVisible = true; Focusable = false;
         DefaultBackgroundColor = System.Drawing.Color.Transparent;
     }
 
     public async Task StartAsync(Uri source, CancellationToken cancellationToken)
     {
         if (!source.IsFile) throw new ArgumentException("HDR previews must come from the bounded local trailer cache.", nameof(source));
-        _environment ??= CoreWebView2Environment.CreateAsync(null, Path.Combine(Steamy.Storage.AppDataPaths.Root, "TrailerBrowser"));
+        _environment ??= CoreWebView2Environment.CreateAsync(null, Path.Combine(Steamy.Storage.AppDataPaths.Root, "TrailerBrowser"), new CoreWebView2EnvironmentOptions { Language = "en-US" });
         var environment = await _environment.WaitAsync(cancellationToken);
         if (_closed) return;
         await EnsureCoreWebView2Async(environment);
@@ -53,6 +55,8 @@ public sealed class HdrTrailerPlayer : WebView2
             if (_closed) return;
             var message = args.TryGetWebMessageAsString();
             if (message == "ready") { IsPlaying = true; VideoReady?.Invoke(this, EventArgs.Empty); }
+            else if (message == "sound") SoundRequested?.Invoke(this, EventArgs.Empty);
+            else if (message == "open") PreviewActivated?.Invoke(this, EventArgs.Empty);
             else if (message == "fallback") RequestFallback();
         };
         core.SetVirtualHostNameToFolderMapping("steamy-trailer.invalid", Path.GetDirectoryName(source.LocalPath)!, CoreWebView2HostResourceAccessKind.DenyCors);
@@ -60,11 +64,14 @@ public sealed class HdrTrailerPlayer : WebView2
         // Chromium chooses the display color space and decoder. Never force a color profile,
         // convert SDR to HDR, or disable hardware acceleration to manufacture an HDR label.
         core.NavigateToString($$"""
-            <!doctype html><html><head><meta name="color-scheme" content="dark">
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; media-src https://steamy-trailer.invalid; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
-            <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;pointer-events:none}video{width:100%;height:100%;object-fit:cover;border-radius:14px;opacity:0}</style></head>
-            <body><video muted autoplay playsinline></video><script>
+            <!doctype html><html lang="en"><head><meta name="color-scheme" content="dark">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; media-src https://steamy-trailer.invalid https://steamy-audio.invalid; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+            <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;cursor:pointer}video{width:100%;height:100%;object-fit:cover;border-radius:14px;opacity:0}button{position:absolute;top:8px;right:8px;padding:5px 9px;border:0;border-radius:5px;background:#191d23dd;color:white;font:11px Segoe UI;cursor:pointer}button:focus-visible{outline:2px solid #9bbbff}</style></head>
+            <body><video muted autoplay playsinline></video><audio muted></audio><button type="button" title="Unmute trailer" aria-label="Unmute trailer">Unmute</button><script>
             const v=document.querySelector('video'), hdr=matchMedia('(dynamic-range: high)');
+            const a=document.querySelector('audio'), sound=document.querySelector('button');
+            sound.addEventListener('click',e=>{e.stopPropagation();v.muted=!v.muted;a.muted=v.muted;if(!v.muted){chrome.webview.postMessage('sound');if(a.src){a.currentTime=v.currentTime;a.play().catch(()=>{})} }sound.textContent=v.muted?'Unmute':'Mute';sound.setAttribute('aria-label',v.muted?'Unmute trailer':'Mute trailer');sound.title=sound.getAttribute('aria-label')});
+            document.addEventListener('click',()=>chrome.webview.postMessage('open'));
             const fallback=()=>chrome.webview.postMessage('fallback');
             if(!hdr.matches) fallback();
             else {
@@ -72,12 +79,20 @@ public sealed class HdrTrailerPlayer : WebView2
               v.src={{url}};v.playbackRate=1;
               v.addEventListener('error',fallback);
               v.addEventListener('loadeddata',()=>{v.currentTime=3;v.style.opacity=1;chrome.webview.postMessage('ready');v.play().catch(fallback)},{once:true});
-              v.addEventListener('timeupdate',()=>{if(v.currentTime>=21)v.currentTime=3});
+              v.addEventListener('timeupdate',()=>{if(v.currentTime>=21)v.currentTime=3;if(a.src&&Math.abs(a.currentTime-v.currentTime)>.7)a.currentTime=v.currentTime});
               v.addEventListener('ended',()=>{v.currentTime=0;v.play().catch(fallback)});
             }
             </script></body></html>
             """);
         _ = WatchForReadyAsync(cancellationToken);
+    }
+
+    public async Task SetAudioSourceAsync(Uri source)
+    {
+        if (_closed || !source.IsFile || CoreWebView2 is null) return;
+        CoreWebView2.SetVirtualHostNameToFolderMapping("steamy-audio.invalid", Path.GetDirectoryName(source.LocalPath)!, CoreWebView2HostResourceAccessKind.DenyCors);
+        var url = JsonSerializer.Serialize("https://steamy-audio.invalid/" + Uri.EscapeDataString(Path.GetFileName(source.LocalPath)));
+        await CoreWebView2.ExecuteScriptAsync($"a.src={url};a.addEventListener('loadeddata',()=>{{a.currentTime=v.currentTime;a.muted=v.muted;if(!v.muted)a.play().catch(()=>{{}})}},{{once:true}});");
     }
 
     private async Task WatchForReadyAsync(CancellationToken cancellationToken)

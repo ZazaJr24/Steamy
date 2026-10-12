@@ -433,12 +433,20 @@
        so neither the page's own ScrollViewer nor the host can scroll and mouse wheel plus
        keyboard scrolling do nothing at all. Every page therefore opts out explicitly with
        ScrollViewer.CanContentScroll="False" and uses this host for its scrolling. -->
+  <Style TargetType="ScrollViewer" BasedOn="{StaticResource {x:Type ScrollViewer}}">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+  </Style>
   <Style x:Key="PageScrollHostStyle" TargetType="ScrollViewer" BasedOn="{StaticResource {x:Type ScrollViewer}}">
     <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
     <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
     <Setter Property="CanContentScroll" Value="False" />
     <Setter Property="Focusable" Value="False" />
     <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="PanningMode" Value="VerticalOnly" />
   </Style>
 

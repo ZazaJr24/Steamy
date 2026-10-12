@@ -28,7 +28,7 @@
   <Grid Margin="36,28,36,24">
 
     <!-- ═══════════ Left: controls ═══════════ -->
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
+    <ScrollViewer Style="{StaticResource PageScrollHostStyle}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
       <StackPanel MaxWidth="760">
 
         <!-- Header -->

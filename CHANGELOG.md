@@ -3,6 +3,21 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.7.1.2
+
+- Cover the entire window with first-run overlays instead of cutting the navigation bar in half; keep window controls available.
+- Keep navigation above the Tools/Fixes popup dimmer so switching categories works directly.
+- Report connection failures with English error categories instead of localized Windows exception messages or server reason phrases.
+- Set embedded browser controls to English regardless of the Windows display language.
+- Add an English Unmute / Mute control to trailer previews; each new preview starts muted. Cache and synchronize the matching Steam DASH audio on demand.
+
+- Remove the large scroll-container outlines visible in the supplied recording when interacting with tool pages.
+- Use the common page scroll host for GreenLuma and Goldberg instead of bare theme scroll viewers.
+- Remove border and focus-adornment chrome from scroll containers throughout the app while retaining button and input focus indicators.
+- Keep wheel, touch and programmatic scrolling intact; verify that a long page can still reach its final content.
+- Retain the English interface, separate Tools/Fixes menus, All Games return behavior and other 0.7.1.1 fixes.
+- Publish matching 0.7.1.2 small setup, app payload and portable packages after the separate 0.7.1.1 release.
+
 ## 0.7.1.1
 
 - Separate Tools and Fixes menu contents. Switching between them opens the requested menu; its navigation highlight follows the selected category.

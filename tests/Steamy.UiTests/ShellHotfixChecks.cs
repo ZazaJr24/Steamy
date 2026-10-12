@@ -15,6 +15,21 @@ public sealed partial class PageSmokeTests
     private static void CheckEnglishShellAndNoticeOffscreen(IServiceProvider provider)
     {
         Assert.Equal("English", new AppSettings().Language);
+        var pageScroll = new ScrollViewer
+        {
+            Style = (Style)Application.Current.FindResource("PageScrollHostStyle"),
+            Content = new StackPanel { Height = 1200 },
+            Margin = new Thickness(36, 28, 36, 24)
+        };
+        var scrollRoot = new Grid(); scrollRoot.Children.Add(pageScroll);
+        scrollRoot.Measure(new Size(1280, 720)); scrollRoot.Arrange(new Rect(0, 0, 1280, 720)); scrollRoot.UpdateLayout();
+        Assert.Equal(new Thickness(0), pageScroll.BorderThickness);
+        Assert.Null(pageScroll.FocusVisualStyle);
+        Assert.False(pageScroll.Focusable);
+        Assert.False(pageScroll.IsTabStop);
+        Assert.True(pageScroll.ScrollableHeight > 400);
+        pageScroll.ScrollToEnd(); scrollRoot.UpdateLayout();
+        Assert.True(pageScroll.VerticalOffset > 400);
         Assert.Equal("en-US", UiLanguageCatalog.ResolveCultureName("System Default"));
         var job = new DownloadJob { State = DownloadJobState.Downloading, EtaSeconds = 75 };
         Assert.Equal("Queue", job.DeckSection);
@@ -48,6 +63,15 @@ public sealed partial class PageSmokeTests
         navigation.Detach();
 
         var window = new MainWindow();
+        var overlayLayer = (Grid)window.FindName("OverlayLayer");
+        var navbar = (Grid)window.FindName("PersistentNavigation");
+        var menuLayer = (Grid)window.FindName("ToolsMenuLayer");
+        var titlebar = (FrameworkElement)window.FindName("WindowTitleBar");
+        Assert.Equal(0, Grid.GetRow(overlayLayer));
+        Assert.Equal(2, Grid.GetRowSpan(overlayLayer));
+        Assert.True(Panel.GetZIndex(titlebar) > Panel.GetZIndex(overlayLayer));
+        Assert.True(Panel.GetZIndex(navbar) > Panel.GetZIndex(menuLayer));
+        Assert.True(Panel.GetZIndex(navbar) < Panel.GetZIndex(overlayLayer));
         var root = (FrameworkElement)window.Content;
         void Layout(Size size)
         {
@@ -80,6 +104,17 @@ public sealed partial class PageSmokeTests
         {
             Layout(size);
             var overlay = (Grid)window.FindName("OverlayLayer");
+            Assert.Equal(root.ActualHeight, overlay.ActualHeight, 1);
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS") is { } directory)
+            {
+                System.IO.Directory.CreateDirectory(directory);
+                var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                bitmap.Render(root);
+                var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+                using var output = System.IO.File.Create(System.IO.Path.Combine(directory, $"welcome-full-window-{size.Width:0}.png"));
+                encoder.Save(output);
+            }
             Assert.True(notice.ActualHeight <= overlay.ActualHeight + 1);
             var button = (Button)notice.FindName("ContinueButton");
             var bounds = button.TransformToAncestor(notice).TransformBounds(new Rect(button.RenderSize));

@@ -5,9 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PlayTimeTracker</AssemblyName>
-    <Version>0.7.1.1</Version>
-    <FileVersion>0.7.1.1</FileVersion>
-    <AssemblyVersion>0.7.1.1</AssemblyVersion>
+    <Version>0.7.1.2</Version>
+    <FileVersion>0.7.1.2</FileVersion>
+    <AssemblyVersion>0.7.1.2</AssemblyVersion>
     <Product>Steamy PlayTimeTracker</Product>
     <Description>Local background game runtime tracker for Steamy</Description>
     <ApplicationIcon>../Steamy/Resources/Brand/steamy.ico</ApplicationIcon>

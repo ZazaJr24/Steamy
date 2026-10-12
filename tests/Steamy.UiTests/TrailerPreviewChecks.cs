@@ -33,10 +33,25 @@ public sealed partial class PageSmokeTests
             Assert.NotNull(preview.Player);
             Assert.True(preview.Player.NaturalVideoWidth>0,"The native decoder must open the cached trailer.");
             Assert.True(preview.Player.Position.TotalSeconds>3,"Trailer playback must advance past its opening frame.");
+            var sound = preview.Children.OfType<Button>().Single();
+            Assert.Equal("Unmute", sound.Content);
+            Assert.Equal(Visibility.Visible, sound.Visibility);
+            Assert.True(preview.Player.IsMuted);
+            sound.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, sound));
+            Assert.False(preview.Player.IsMuted);
+            PumpDispatcher(TimeSpan.FromMilliseconds(250));
+            var audio = preview.Children.OfType<MediaElement>().Single(element => element != preview.Player);
+            Assert.False(audio.IsMuted);
+            Assert.Equal("Mute", sound.Content);
+            sound.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, sound));
+            Assert.True(preview.Player.IsMuted);
+            Assert.True(audio.IsMuted);
+            Assert.Equal("Unmute", sound.Content);
             Assert.Equal(480,preview.ActualWidth);
             Assert.Equal(270,preview.ActualHeight);
             preview.StopPreview();
             Assert.Null(preview.Player);
+            Assert.Equal(Visibility.Collapsed, sound.Visibility);
         }
         finally
         {
@@ -50,6 +65,7 @@ public sealed partial class PageSmokeTests
         public int Requests;
         public bool Missing;
         public TaskCompletionSource<Uri?>? Pending;
+        public Task<Uri?> GetAudioPreviewAsync(int appId, CancellationToken cancellationToken = default) => GetPreviewAsync(appId, cancellationToken);
         public Task<Uri?> GetPreviewAsync(int appId, CancellationToken cancellationToken = default)
         {
             Requests++;

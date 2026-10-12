@@ -12,6 +12,7 @@ namespace Steamy.Services;
 public interface ITrailerPreviewService
 {
     Task<Uri?> GetPreviewAsync(int appId, CancellationToken cancellationToken = default);
+    Task<Uri?> GetAudioPreviewAsync(int appId, CancellationToken cancellationToken = default) => Task.FromResult<Uri?>(null);
     async Task<TrailerVideo?> GetVideoPreviewAsync(int appId, CancellationToken cancellationToken = default)
     {
         var uri = await GetPreviewAsync(appId, cancellationToken).ConfigureAwait(false);
@@ -31,6 +32,7 @@ public sealed class TrailerPreviewService : ITrailerPreviewService, IDisposable
     private readonly CancellationTokenSource _lifetime = new();
     private readonly ConcurrentDictionary<int, Lazy<Task<Uri?>>> _requests = new();
     private readonly ConcurrentDictionary<int, Lazy<Task<Uri?>>> _hdrRequests = new();
+    private readonly ConcurrentDictionary<int, Lazy<Task<Uri?>>> _audioRequests = new();
     private const int MaxPreviewBytes = 12 * 1024 * 1024;
 
     public TrailerPreviewService(HttpClient? httpClient = null, string? cacheDirectory = null)
@@ -48,6 +50,15 @@ public sealed class TrailerPreviewService : ITrailerPreviewService, IDisposable
         var result = await request.Value.WaitAsync(cancellationToken).ConfigureAwait(false);
         // Optional CDN failures can be retried on a later deliberate hover.
         if (result is null) _requests.TryRemove(new KeyValuePair<int, Lazy<Task<Uri?>>>(appId, request));
+        return result;
+    }
+
+    public async Task<Uri?> GetAudioPreviewAsync(int appId, CancellationToken cancellationToken = default)
+    {
+        if (appId <= 0) return null;
+        var request = _audioRequests.GetOrAdd(appId, id => new Lazy<Task<Uri?>>(() => LoadAsync(id, audio: true)));
+        var result = await request.Value.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (result is null) _audioRequests.TryRemove(new KeyValuePair<int, Lazy<Task<Uri?>>>(appId, request));
         return result;
     }
 
@@ -106,9 +117,9 @@ public sealed class TrailerPreviewService : ITrailerPreviewService, IDisposable
         return null;
     }
 
-    private async Task<Uri?> LoadAsync(int appId)
+    private async Task<Uri?> LoadAsync(int appId, bool audio = false)
     {
-        var path = Path.Combine(_cacheDirectory, $"{appId}-preview-v2.mp4");
+        var path = Path.Combine(_cacheDirectory, audio ? $"{appId}-audio-v1.mp4" : $"{appId}-preview-v2.mp4");
         var temp = path + ".tmp";
         var entered = false;
         try
@@ -128,7 +139,7 @@ public sealed class TrailerPreviewService : ITrailerPreviewService, IDisposable
                 if (movie.TryGetProperty("dash_h264", out var dash) && TrySteamUri(dash.GetString(), out var manifest))
                 {
                     var bytes = await ReadBoundedAsync(manifest!, 256 * 1024).ConfigureAwait(false);
-                    var segments = GetSegments(bytes, manifest!);
+                    var segments = audio ? GetAudioSegments(bytes, manifest!) : GetSegments(bytes, manifest!);
                     if (segments.Count == 0) continue;
                     Directory.CreateDirectory(_cacheDirectory);
                     await using (var output = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true))
@@ -142,7 +153,7 @@ public sealed class TrailerPreviewService : ITrailerPreviewService, IDisposable
                     File.Move(temp, path, overwrite: true);
                     return new Uri(Path.GetFullPath(path));
                 }
-                if (movie.TryGetProperty("mp4", out var mp4) && mp4.ValueKind == JsonValueKind.Object
+                if (!audio && movie.TryGetProperty("mp4", out var mp4) && mp4.ValueKind == JsonValueKind.Object
                     && mp4.TryGetProperty("480", out var legacy) && TrySteamUri(legacy.GetString(), out var direct)) return direct;
             }
         }
@@ -169,6 +180,8 @@ public sealed class TrailerPreviewService : ITrailerPreviewService, IDisposable
     public static IReadOnlyList<Uri> GetSegments(byte[] bytes, Uri manifest) => GetSegmentsCore(bytes, manifest, false);
     public static IReadOnlyList<Uri> GetHdrSegments(byte[] bytes, Uri manifest) => GetSegmentsCore(bytes, manifest, true);
 
+    public static IReadOnlyList<Uri> GetAudioSegments(byte[] bytes, Uri manifest) => GetSegmentsCore(bytes, manifest, false, audio: true);
+
     private static bool IsHdrAv1(XElement representation)
     {
         var codec = ((string?)representation.Attribute("codecs"))?.Split('.') ?? [];
@@ -179,17 +192,17 @@ public sealed class TrailerPreviewService : ITrailerPreviewService, IDisposable
                 && ((string?)e.Attribute("value")) is "16" or "18");
     }
 
-    private static IReadOnlyList<Uri> GetSegmentsCore(byte[] bytes, Uri manifest, bool hdr)
+    private static IReadOnlyList<Uri> GetSegmentsCore(byte[] bytes, Uri manifest, bool hdr, bool audio = false)
     {
         using var input = new MemoryStream(bytes);
         using var reader = XmlReader.Create(input, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 256 * 1024 });
         var document = XDocument.Load(reader);
         XNamespace ns = "urn:mpeg:dash:schema:mpd:2011";
         var representation = document.Descendants(ns + "Representation")
-            .Where(element => ((string?)element.Attribute("mimeType")) == "video/mp4"
-                && (hdr ? IsHdrAv1(element) : ((string?)element.Attribute("codecs"))?.StartsWith("avc1", StringComparison.Ordinal) == true)
-                && int.TryParse((string?)element.Attribute("height"), out var height) && height >= 240 && height <= (hdr ? 2160 : 720))
-            .OrderBy(element => Math.Abs((int)element.Attribute("height")! - (hdr ? 720 : 360))).FirstOrDefault();
+            .Where(element => ((string?)element.Attribute("mimeType") ?? (string?)element.Parent?.Attribute("mimeType")) == (audio ? "audio/mp4" : "video/mp4")
+                && (audio || ((hdr ? IsHdrAv1(element) : ((string?)element.Attribute("codecs"))?.StartsWith("avc1", StringComparison.Ordinal) == true)
+                && int.TryParse((string?)element.Attribute("height"), out var height) && height >= 240 && height <= (hdr ? 2160 : 720))))
+            .OrderBy(element => audio ? ((int?)element.Attribute("bandwidth") ?? 0) : Math.Abs((int)element.Attribute("height")! - (hdr ? 720 : 360))).FirstOrDefault();
         var template = representation?.Element(ns + "SegmentTemplate") ?? representation?.Parent?.Element(ns + "SegmentTemplate");
         var id = (string?)representation?.Attribute("id");
         if (template is null || id is null || !Regex.IsMatch(id, "^[A-Za-z0-9_-]{1,32}$")) return Array.Empty<Uri>();

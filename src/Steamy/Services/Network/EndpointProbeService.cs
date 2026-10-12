@@ -55,7 +55,7 @@ public sealed class HttpEndpointProbeService : IEndpointProbeService
 
             // Any HTTP answer proves the endpoint is reachable; the status itself is reported
             // unchanged so a 401 or 403 is not silently turned into a success.
-            var message = $"{uri.Host} answered with HTTP {(int)response.StatusCode} ({response.ReasonPhrase}).";
+            var message = $"{uri.Host} answered with HTTP {(int)response.StatusCode}.";
             return new EndpointProbeResult(true, (int)response.StatusCode, stopwatch.ElapsedMilliseconds, message);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -70,7 +70,7 @@ public sealed class HttpEndpointProbeService : IEndpointProbeService
         catch (HttpRequestException exception)
         {
             stopwatch.Stop();
-            return new EndpointProbeResult(false, null, stopwatch.ElapsedMilliseconds, $"{uri.Host} could not be reached ({exception.Message}).");
+            return new EndpointProbeResult(false, null, stopwatch.ElapsedMilliseconds, $"{uri.Host} could not be reached ({exception.HttpRequestError}).");
         }
         catch (Exception exception)
         {

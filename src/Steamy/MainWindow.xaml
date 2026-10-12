@@ -86,7 +86,7 @@
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
 
-    <ui:TitleBar x:Name="WindowTitleBar" Grid.Row="0" Panel.ZIndex="5" Width="180" HorizontalAlignment="Right"
+    <ui:TitleBar x:Name="WindowTitleBar" Grid.Row="0" Panel.ZIndex="9" Width="180" HorizontalAlignment="Right"
                  shell:WindowChrome.IsHitTestVisibleInChrome="True"
                  Title=""
                  Height="34"
@@ -185,7 +185,7 @@
       </ui:NavigationView>
     </Grid>
 
-    <Grid x:Name="PersistentNavigation" Grid.RowSpan="2" Panel.ZIndex="3" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" Height="40" Width="600" controls:RoundedClip.Radius="20" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+    <Grid x:Name="PersistentNavigation" Grid.RowSpan="2" Panel.ZIndex="5" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" Height="40" Width="600" controls:RoundedClip.Radius="20" shell:WindowChrome.IsHitTestVisibleInChrome="True">
       <Grid.ContextMenu><ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}"><MenuItem Header="{Binding SpotlightPlaybackLabel}" Command="{Binding ToggleSpotlightCommand}" /><MenuItem Header="Refresh spotlight" Command="{Binding RefreshCommand}" /></ContextMenu></Grid.ContextMenu>
       <controls:ShellBackdropView IsPageBackdrop="{Binding IsPageBackdrop, ElementName=WorkspaceBackdrop}" IsGlass="True" PreferSharpArtwork="True" IncludePageContent="True" UseLiquidRefraction="False" GlassBlurIntensity="0.006" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}" />
       <Border x:Name="NavigationSheen" CornerRadius="20" IsHitTestVisible="False">
@@ -245,7 +245,7 @@
     </Grid>
 
     <!-- Dimmed layer for cards shown on top of the app, e.g. the update prompt -->
-    <Grid x:Name="OverlayLayer" Grid.Row="1" Panel.ZIndex="6" Visibility="Collapsed" Background="{DynamicResource ScrimBrush}" Opacity="0">
+    <Grid x:Name="OverlayLayer" Grid.Row="0" Grid.RowSpan="2" Panel.ZIndex="6" Visibility="Collapsed" Background="{DynamicResource ScrimBrush}" Opacity="0">
       <controls:ShellBackdropView x:Name="SetupBackdrop" IsPageBackdrop="True" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}" Visibility="Collapsed" />
       <ContentControl x:Name="OverlayHost" HorizontalAlignment="Center" VerticalAlignment="Center" Focusable="False" />
     </Grid>

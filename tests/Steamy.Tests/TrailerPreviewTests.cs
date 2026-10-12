@@ -59,6 +59,21 @@ public sealed class TrailerPreviewTests
         """);
 
     [Fact]
+    public void AudioPreviewUsesTheMatchingBoundedOfficialSegments()
+    {
+        var xml = Encoding.UTF8.GetString(Mpd()).Replace("</Period>", """
+            <AdaptationSet mimeType="audio/mp4"><Representation id="audio" codecs="mp4a.40.2" bandwidth="128000">
+            <SegmentTemplate initialization="audio/init-$RepresentationID$.m4s" media="audio/chunk-$Number$.m4s" duration="3" />
+            </Representation></AdaptationSet></Period>
+            """);
+        var segments = TrailerPreviewService.GetAudioSegments(Encoding.UTF8.GetBytes(xml), Manifest);
+        Assert.Equal(4, segments.Count);
+        Assert.EndsWith("audio/init-audio.m4s", segments[0].AbsoluteUri);
+        Assert.EndsWith("audio/chunk-3.m4s", segments[^1].AbsoluteUri);
+        Assert.Empty(TrailerPreviewService.GetAudioSegments(Encoding.UTF8.GetBytes(xml.Replace("audio/chunk-", "https://example.org/chunk-")), Manifest));
+    }
+
+    [Fact]
     public void AdaptiveSteamTrailerUses480pAndOnlyThePreviewSegments()
     {
         var segments = TrailerPreviewService.GetSegments(Mpd(), Manifest);

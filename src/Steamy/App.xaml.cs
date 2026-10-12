@@ -348,12 +348,12 @@ public partial class App : Application
             try
             {
                 culture = string.IsNullOrWhiteSpace(cultureName)
-                    ? CultureInfo.InstalledUICulture
+                    ? CultureInfo.GetCultureInfo("en-US")
                     : new CultureInfo(cultureName);
             }
             catch (CultureNotFoundException)
             {
-                culture = CultureInfo.InstalledUICulture;
+                culture = CultureInfo.GetCultureInfo("en-US");
             }
             CultureInfo.DefaultThreadCurrentUICulture = culture;
             CultureInfo.DefaultThreadCurrentCulture = culture;
@@ -365,6 +365,7 @@ public partial class App : Application
 
     private static void ApplySavedCulture()
     {
+        ApplyCulture("English");
         try
         {
             var path = Path.Combine(Steamy.Storage.AppDataPaths.Root, "settings.json");
