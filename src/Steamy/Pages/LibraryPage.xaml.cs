@@ -39,6 +39,8 @@ public partial class LibraryPage : Page
     private IInputElement? _previousFocus;
     private int _overlayRevision;
     private bool _overlayClosing;
+    private bool _localPackagePickerOpen;
+    private int _dimmerPressRevision = -1;
     private bool _resumingExisting;
     private DownloadJob? _resumeJob;
     private int _wizardStep;
@@ -583,9 +585,35 @@ public partial class LibraryPage : Page
 
     private void BrowseLocalPackage_Click(object sender, RoutedEventArgs args)
     {
+        args.Handled = true;
         if (_wizardBusy || _resumingExisting || _downloadRunning) return;
-        var dialog = new OpenFileDialog { Title = "Select your metadata package", Filter = "Metadata packages (*.zip;*.lua)|*.zip;*.lua", CheckFileExists = true };
-        if (dialog.ShowDialog(Window.GetWindow(this)) == true) SetLocalPackage(dialog.FileName);
+        ChooseLocalPackage(owner =>
+        {
+            var dialog = new OpenFileDialog { Title = "Select your metadata package", Filter = "Metadata packages (*.zip;*.lua)|*.zip;*.lua", CheckFileExists = true };
+            return dialog.ShowDialog(owner) == true ? dialog.FileName : null;
+        });
+    }
+
+    public void ChooseLocalPackage(Func<Window?, string?> picker)
+    {
+        if (_localPackagePickerOpen || _wizardBusy || _resumingExisting || _downloadRunning) return;
+        var revision = _overlayRevision;
+        _localPackagePickerOpen = true;
+        _dimmerPressRevision = -1;
+        try
+        {
+            var path = picker(Window.GetWindow(DialogPanel));
+            if (revision == _overlayRevision && !string.IsNullOrWhiteSpace(path)) SetLocalPackage(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            if (revision == _overlayRevision) OverlayStatus.Text = "Could not select the package: " + exception.Message;
+        }
+        finally
+        {
+            _localPackagePickerOpen = false;
+            _dimmerPressRevision = -1;
+        }
     }
 
     private void SetLocalPackage(string path)
@@ -706,12 +734,26 @@ public partial class LibraryPage : Page
         if (!result.Succeeded) throw new InvalidDataException(result.Message);
     }
 
-    private void Overlay_Close(object sender, MouseButtonEventArgs e) => CloseOverlay();
+    private void Overlay_Press(object sender, MouseButtonEventArgs e)
+    {
+        _dimmerPressRevision = !_localPackagePickerOpen && e.ChangedButton == MouseButton.Left && ReferenceEquals(e.OriginalSource, sender)
+            ? _overlayRevision : -1;
+        e.Handled = true;
+    }
+
+    private void Overlay_Close(object sender, MouseButtonEventArgs e)
+    {
+        var dismiss = !_localPackagePickerOpen && e.ChangedButton == MouseButton.Left && ReferenceEquals(e.OriginalSource, sender)
+            && _dimmerPressRevision == _overlayRevision;
+        _dimmerPressRevision = -1;
+        e.Handled = true;
+        if (dismiss) CloseOverlay();
+    }
     private void OverlayCloseButton_Click(object sender, RoutedEventArgs e) => CloseOverlay();
 
     public async void CloseOverlay()
     {
-        if (_overlayClosing || OverlayGrid.Visibility != Visibility.Visible) return;
+        if (_localPackagePickerOpen || _overlayClosing || OverlayGrid.Visibility != Visibility.Visible) return;
         _overlayClosing = true;
         var revision = ++_overlayRevision;
         _availabilityCts?.Cancel();

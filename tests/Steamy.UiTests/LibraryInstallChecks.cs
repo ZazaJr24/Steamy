@@ -144,6 +144,33 @@ public sealed partial class PageSmokeTests
         Assert.Equal("Next", next.Content);
         page.SelectDownloadSource(ManifestSource.Local);
         Assert.False(next.IsEnabled); // A local package is required before the next step.
+        var dimmer = (Border)page.FindName("DialogDimmer");
+        void ReleaseDimmer() => dimmer.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+        { RoutedEvent = UIElement.MouseLeftButtonUpEvent });
+        page.ChooseLocalPackage(_ =>
+        {
+            page.CloseOverlay();
+            ReleaseDimmer();
+            Assert.True(details.IsInstallationOpen);
+            return Path.Combine(Path.GetTempPath(), "2183900.zip");
+        });
+        ReleaseDimmer(); // Returning from the native picker is not a backdrop click.
+        Assert.True(details.IsInstallationOpen);
+        Assert.Equal(Visibility.Visible, ((Grid)page.FindName("OverlayGrid")).Visibility);
+        Assert.Equal("2183900.zip", ((TextBlock)page.FindName("LocalPackageName")).Text);
+        Assert.Equal(1, page.DownloadWizardStep);
+        Assert.True(next.IsEnabled);
+        page.ChooseLocalPackage(_ => null);
+        Assert.True(details.IsInstallationOpen);
+        Assert.Equal("2183900.zip", ((TextBlock)page.FindName("LocalPackageName")).Text);
+        var outsideClickSheet = new LibraryPage(installationOnly: true);
+        outsideClickSheet.OpenDownloadSetup(new SteamCatalogItem { AppId = 2183900, Name = "Space Marine 2" });
+        var outsideDimmer = (Border)outsideClickSheet.FindName("DialogDimmer");
+        outsideDimmer.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+        { RoutedEvent = UIElement.MouseLeftButtonDownEvent });
+        outsideDimmer.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+        { RoutedEvent = UIElement.MouseLeftButtonUpEvent });
+        Assert.Equal(Visibility.Collapsed, ((Grid)outsideClickSheet.FindName("OverlayGrid")).Visibility);
         page.SelectDownloadSource(ManifestSource.Sushi);
         PumpUntil(() => next.IsEnabled);
         downloads.PrepareOverride = (_, _, _) => Task.FromResult(new GameDownloadPreparation(false, "Hubcap: The file contains unsupported Lua code. Select addappid/setManifestid metadata."));

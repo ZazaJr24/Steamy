@@ -3,6 +3,18 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.7.1
+
+Fix the local **Your package** picker closing the installation sheet immediately after selecting a ZIP or Lua file.
+
+- Keep the installation sheet open while Windows owns the file picker and retain the selected package when returning.
+- Resolve the picker owner from the visible installation panel.
+- Close the backdrop only after a complete press-and-release on that backdrop; a mouse release after the native dialog or a drag from inside the form cannot dismiss it.
+- Keep the previous selection and current step when cancelling the file picker. Display picker errors inline.
+- Add offscreen regression checks for package selection, cancellation, stray mouse releases and normal backdrop dismissal on the game-page installation sheet.
+- Check the supplied Space Marine 2 package as App ID 2183900 with four manifests; no Lua execution or changes to real Steam files are needed.
+- Keep the small download setup, matching app payload and portable package at version 0.7.1.
+
 ## 0.7.0
 
 Steamy 0.7.0 brings the small all-in-one download installer, a more consistent artwork-driven interface, the original-script DepotBox import and a large set of responsiveness and state fixes. The app, playtime tracker, installer metadata and release packages all use version 0.7.0.

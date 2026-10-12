@@ -8,16 +8,17 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ZazaJr24/Steamy/releases/download/v0.7.0/Steamy-v0.7.0-Setup.exe"><strong>Download Setup · 1.84 MiB</strong></a> &nbsp;·&nbsp;
-  <a href="https://github.com/ZazaJr24/Steamy/releases/download/v0.7.0/Steamy-v0.7.0.zip"><strong>Portable ZIP</strong></a> &nbsp;·&nbsp;
-  <a href="https://github.com/ZazaJr24/Steamy/releases/tag/v0.7.0">Release notes</a>
+  <a href="https://github.com/ZazaJr24/Steamy/releases/download/v0.7.1/Steamy-v0.7.1-Setup.exe"><strong>Download Setup · 1.84 MiB</strong></a> &nbsp;·&nbsp;
+  <a href="https://github.com/ZazaJr24/Steamy/releases/download/v0.7.1/Steamy-v0.7.1.zip"><strong>Portable ZIP</strong></a> &nbsp;·&nbsp;
+  <a href="https://github.com/ZazaJr24/Steamy/releases/tag/v0.7.1">Release notes</a>
 </p>
 
 ![Steamy Dashboard](docs/screenshots/dashboard.png)
 
-## What's new in 0.7.0
+## What's new in 0.7.1
 
-- Artwork ambient, softer fades and a consistent glass interface.
+- Fix the local ZIP/Lua picker closing the installation menu. Selecting or cancelling a file now keeps the game page and installation steps open.
+- Retain the 0.7.0 artwork ambient, fades and glass interface.
 - Faster browsing and search, with cached game artwork.
 - Game details and installation steps for **Steamy** or **Steam**.
 - Clearer download progress, queue controls and scrolling fixes.

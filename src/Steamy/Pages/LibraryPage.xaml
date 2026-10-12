@@ -248,7 +248,7 @@
     </Image>
     <!-- One installation step at a time; the footer stays visible while the content scrolls. -->
     <Grid x:Name="OverlayGrid" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle" KeyboardNavigation.ControlTabNavigation="Cycle">
-      <Border x:Name="DialogDimmer" Background="#55070B12" MouseLeftButtonUp="Overlay_Close" />
+      <Border x:Name="DialogDimmer" Background="#55070B12" MouseLeftButtonDown="Overlay_Press" MouseLeftButtonUp="Overlay_Close" />
       <controls:ArtworkHalo Source="{Binding Source, ElementName=OverlayCover}" IsActive="True" Spread="28" Intensity="0.24"
                             Width="{Binding ActualWidth, ElementName=DialogPanel}" Height="{Binding ActualHeight, ElementName=DialogPanel}"
                             HorizontalAlignment="Center" VerticalAlignment="Center" />
