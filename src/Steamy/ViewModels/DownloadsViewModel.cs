@@ -34,9 +34,9 @@ public sealed class DownloadsViewModel : ViewModelBase
     public bool HasHeroLogo => HeroLogo is not null;
     private string _deckClock = DateTime.Now.ToString("HH:mm");
     public string DeckClock { get => _deckClock; private set => SetProperty(ref _deckClock, value); }
-    public string DeckQueueHeading => $"Warteschlange ({QueueJobs.Count(job => !job.IsTerminal)})";
-    public string DeckAutomationLabel => Settings.AutoResume ? "AUTOMATISCHES FORTSETZEN AKTIVIERT" : "AUTOMATISCHES FORTSETZEN DEAKTIVIERT";
-    public string DeckActionLabel => HeroJob?.IsPaused == true ? "DOWNLOAD FORTSETZEN" : "DOWNLOAD PAUSIEREN";
+    public string DeckQueueHeading => $"Queue ({QueueJobs.Count(job => !job.IsTerminal)})";
+    public string DeckAutomationLabel => Settings.AutoResume ? "AUTO-RESUME ENABLED" : "AUTO-RESUME DISABLED";
+    public string DeckActionLabel => HeroJob?.IsPaused == true ? "RESUME DOWNLOAD" : "PAUSE DOWNLOAD";
     public ICommand NavigateSettingsCommand => new RelayCommand(() => Navigation.Navigate<SettingsPage>());
     public DownloadsViewModel(IAppDataStore s, INavigationService n, ILoggingService l, IDownloadManager m, IRyuuGameDownloadService ryuu, ISettingsService settings, IArtworkService? artwork = null) : base(s,n,l)
     {

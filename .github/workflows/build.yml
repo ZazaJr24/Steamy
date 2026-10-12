@@ -7,7 +7,7 @@ on:
         description: 'Version tag (e.g. 0.2.2)'
         required: true
         type: string
-        default: '0.7.1'
+        default: '0.7.1.1'
   push:
     tags:
       - 'v*'

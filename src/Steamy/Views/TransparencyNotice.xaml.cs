@@ -9,11 +9,26 @@ public partial class TransparencyNotice : UserControl
     public static string CurrentAcknowledgement => BuildStamp.Version + ":transparency-2";
     private readonly ISettingsService _settings;
     private bool _read;
+    private bool? _compact;
     public event EventHandler? Completed;
     public TransparencyNotice(ISettingsService settings)
     {
         _settings = settings; InitializeComponent();
+        SizeChanged += (_, _) => UpdateLayoutMode();
         Loaded += (_, _) => { NoticeScroll.UpdateLayout(); UpdateReadState(); };
+    }
+    private void UpdateLayoutMode()
+    {
+        var compact = ActualHeight > 0 && ActualHeight < 460;
+        if (_compact == compact) return;
+        _compact = compact;
+        NoticeFrame.Padding = new Thickness(compact ? 12 : 20);
+        NoticeFrame.Margin = new Thickness(compact ? 8 : 12);
+        NoticeHeader.Margin = new Thickness(0, 0, 0, compact ? 12 : 24);
+        NoticeTitle.FontSize = compact ? 21 : 27;
+        NoticeSubtitle.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        NoticeFooter.Margin = new Thickness(0, compact ? 8 : 20, 0, 0);
+        NoticeFooterButtons.Margin = new Thickness(0, compact ? 8 : 18, 0, 0);
     }
     private void NoticeScroll_Changed(object sender, ScrollChangedEventArgs e) => UpdateReadState();
     private void UpdateReadState()

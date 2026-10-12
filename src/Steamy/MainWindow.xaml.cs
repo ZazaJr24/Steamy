@@ -45,6 +45,7 @@ public partial class MainWindow : FluentWindow
     private IInputElement? _toolsPreviousFocus;
     private Effect? _toolsPreviousEffect;
     private bool _toolsWorkspaceEnabled;
+    private int _toolsPreviousSelection;
     private bool _closingAfterNotes, _waitingForNotes;
     internal bool IsToolsMenuOpen => ToolsMenuLayer.Visibility == Visibility.Visible;
     internal Controls.DashboardBackdropView? DashboardSurface { get; private set; }
@@ -54,6 +55,7 @@ public partial class MainWindow : FluentWindow
     public MainWindow()
     {
         InitializeComponent();
+        OverlayLayer.SizeChanged += (_, _) => ConstrainOverlay();
         _paneDescriptor.AddValueChanged(RootNavigation, PaneAppearanceChanged);
         _shellDownloads = new ViewModels.ShellDownloadViewModel(App.Services.GetRequiredService<IAppDataStore>(), App.Services.GetRequiredService<IArtworkService>());
         ShellQuickDownloadsButton.DataContext = _shellDownloads;
@@ -73,7 +75,7 @@ public partial class MainWindow : FluentWindow
             WorkspaceBackdrop.IsPageBackdrop = args.Page is not Pages.DashboardPage;
             UpdateCaptionForeground();
             Controls.PillMotion.SetSelectedIndex(ShellPillItems, args.Page is Pages.DashboardPage ? 0 : args.Page is Pages.LibraryPage or Pages.GameDetailsPage ? 1
-                : args.Page is Pages.DownloadsPage ? 2 : args.Page is Pages.SettingsPage ? 7
+                : args.Page is Pages.DownloadsPage ? 2 : args.Page is Pages.SettingsPage ? 6
                 : args.Page is Pages.GameFixesPage or Pages.HypervisorFixesPage ? 4 : 3);
             RootNavigation.IsPaneOpen = false;
             if (args.Page is FrameworkElement page)
@@ -136,7 +138,7 @@ public partial class MainWindow : FluentWindow
         };
         Activated += (_, _) => ApplyFrameAppearance();
         StateChanged += (_, _) => ApplyFrameAppearance();
-        SizeChanged += (_, _) => { PersistentNavigation.Width = Math.Clamp(ActualWidth * 0.40 + 36, 496, 636); Dispatcher.BeginInvoke(new Action(UpdateCaptionForeground)); };
+        SizeChanged += (_, _) => { PersistentNavigation.Width = Math.Clamp(ActualWidth * 0.40 + 36, 536, 680); Dispatcher.BeginInvoke(new Action(UpdateCaptionForeground)); };
         Deactivated += (_, _) => CloseToolsMenu();
         Closing += SaveNotesBeforeClose;
 
@@ -168,11 +170,16 @@ public partial class MainWindow : FluentWindow
 
     internal void ToggleToolsMenu(bool fixes = false)
     {
-        if (IsToolsMenuOpen) { CloseToolsMenu(); return; }
+        if (IsToolsMenuOpen && (FixesMenuSection.Visibility == Visibility.Visible) == fixes) { CloseToolsMenu(); return; }
+        if (IsToolsMenuOpen) CloseToolsMenu(restoreFocus: false);
+        FixesMenuSection.Visibility = fixes ? Visibility.Visible : Visibility.Collapsed;
+        ToolsMenuSection.Visibility = fixes ? Visibility.Collapsed : Visibility.Visible;
         RootNavigation.IsPaneOpen = false;
         _toolsPreviousFocus = Keyboard.FocusedElement;
         _toolsPreviousEffect = WorkspaceLayer.Effect;
         _toolsWorkspaceEnabled = WorkspaceLayer.IsEnabled;
+        _toolsPreviousSelection = Controls.PillMotion.GetSelectedIndex(ShellPillItems);
+        Controls.PillMotion.SetSelectedIndex(ShellPillItems, fixes ? 4 : 3);
         if (Controls.MotionPreferences.BackdropBlurEnabled)
         {
             var blur = new BlurEffect { Radius = 12, RenderingBias = RenderingBias.Performance };
@@ -192,6 +199,7 @@ public partial class MainWindow : FluentWindow
         ToolsMenuLayer.Visibility = Visibility.Collapsed;
         WorkspaceLayer.Effect = _toolsPreviousEffect;
         WorkspaceLayer.IsEnabled = _toolsWorkspaceEnabled;
+        Controls.PillMotion.SetSelectedIndex(ShellPillItems, _toolsPreviousSelection);
         if (restoreFocus && _toolsPreviousFocus is not null) Keyboard.Focus(_toolsPreviousFocus);
         _toolsPreviousFocus = null;
         _toolsPreviousEffect = null;
@@ -352,8 +360,7 @@ public partial class MainWindow : FluentWindow
         CloseToolsMenu(restoreFocus: false);
         OverlayHost.Content = content;
         SetupBackdrop.Visibility = content is FirstRunSetup or TransparencyNotice ? Visibility.Visible : Visibility.Collapsed;
-        if (content is FrameworkElement panel && content is FirstRunSetup)
-        { panel.MaxWidth = Math.Max(0, ActualWidth - 40); panel.MaxHeight = Math.Max(0, ActualHeight - 64); }
+        ConstrainOverlay();
         // Keep onboarding readable with a stable theme surface.
         if (content is FirstRunSetup or TransparencyNotice)
             OverlayLayer.SetResourceReference(System.Windows.Controls.Panel.BackgroundProperty, "WorkspaceBackgroundBrush");
@@ -361,6 +368,16 @@ public partial class MainWindow : FluentWindow
             OverlayLayer.SetResourceReference(System.Windows.Controls.Panel.BackgroundProperty, "ScrimBrush");
         OverlayLayer.Visibility = Visibility.Visible;
         OverlayLayer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)));
+    }
+
+    private void ConstrainOverlay()
+    {
+        if (OverlayHost.Content is not FrameworkElement panel || panel is not (FirstRunSetup or TransparencyNotice)) return;
+        var root = Content as FrameworkElement;
+        var width = OverlayLayer.ActualWidth > 0 ? OverlayLayer.ActualWidth : root?.ActualWidth ?? ActualWidth;
+        var height = OverlayLayer.ActualHeight > 0 ? OverlayLayer.ActualHeight : Math.Max(0, (root?.ActualHeight ?? ActualHeight) - 48);
+        panel.MaxWidth = Math.Max(0, width - 24);
+        panel.MaxHeight = Math.Max(0, height - 24);
     }
 
     public void HideOverlay()

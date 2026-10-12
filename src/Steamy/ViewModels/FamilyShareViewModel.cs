@@ -213,7 +213,7 @@ public sealed class FamilyShareViewModel : ViewModelBase
 
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "GreenLuma Archiv auswählen",
+            Title = "Choose GreenLuma archive",
             Filter = "Archives (*.zip;*.7z;*.rar)|*.zip;*.7z;*.rar|All files|*.*",
             InitialDirectory = Directory.Exists(downloads) ? downloads : null
         };
@@ -293,7 +293,7 @@ public sealed class FamilyShareViewModel : ViewModelBase
     {
         var dlg = new OpenFolderDialog
         {
-            Title = "GreenLuma Ordner auswählen",
+            Title = "Choose GreenLuma folder",
             Multiselect = false
         };
         if (dlg.ShowDialog() == true)

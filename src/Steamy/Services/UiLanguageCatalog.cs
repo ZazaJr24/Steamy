@@ -107,7 +107,7 @@ public static class UiLanguageCatalog
     public static string ResolveCultureName(string? selection)
     {
         if (string.IsNullOrWhiteSpace(selection) || selection.Equals("System Default", StringComparison.OrdinalIgnoreCase))
-            return string.Empty;
+            return "en-US";
         if (selection.Equals("Deutsch", StringComparison.OrdinalIgnoreCase)) return "de-DE";
         if (selection.Equals("English", StringComparison.OrdinalIgnoreCase)) return "en-US";
         var separator = selection.IndexOf('·');

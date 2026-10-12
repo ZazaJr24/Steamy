@@ -20,11 +20,11 @@
       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel>
         <TextBlock Text="ZazaHub" Style="{StaticResource PageTitleStyle}" Margin="0"/>
-        <TextBlock Text="Download-Repository — nur verfügbare Spiele mit DepotDownloaderMOD."
+        <TextBlock Text="Download repository — available games with DepotDownloaderMOD only."
                    Style="{StaticResource PageSubtitleStyle}" Margin="0,4,0,0"/>
       </StackPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-        <ui:Button Content="Aktualisieren" Command="{Binding RefreshCommand}" Appearance="Secondary"/>
+        <ui:Button Content="Refresh" Command="{Binding RefreshCommand}" Appearance="Secondary"/>
         <ui:ProgressRing Width="24" Height="24" IsIndeterminate="{Binding IsRefreshing}"
                          Visibility="{Binding IsRefreshing, Converter={StaticResource BooleanToVisibilityConverter}}"
                          Margin="10,0,0,0"/>

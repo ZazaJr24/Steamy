@@ -131,6 +131,7 @@ public sealed partial class PageSmokeTests
                     model.SearchText="";
                     PumpUntil(()=>model.PagedCatalogItems.Count==catalogSize);
                     CheckLibraryInstallStepsOffscreen(library, provider, wizardDownloads);
+                    CheckEnglishShellAndNoticeOffscreen(provider);
                     Assert.DoesNotContain(bindingLog.Lines,line=>line.Contains("Error:",StringComparison.OrdinalIgnoreCase));
                 }
                 finally { releaseGate.TrySetResult(); OfflineServiceProxy.ReleaseMetadataGate=null; library.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent)); }

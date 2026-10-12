@@ -605,7 +605,7 @@ public sealed class GameFixItem : ObservableObject
 
 public sealed class AppSettings : ObservableObject
 {
-    private string _language = "System Default";
+    private string _language = "English";
     private string _appearance = "System";
     private bool _reduceEffects;
     private bool _autoplayTrailers = true;

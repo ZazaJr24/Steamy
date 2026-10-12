@@ -3,6 +3,19 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.7.1.1
+
+- Separate Tools and Fixes menu contents. Switching between them opens the requested menu; its navigation highlight follows the selected category.
+- Use English for download actions, history, queue headings, progress, transfer status, ETA, tool pickers and the download repository page.
+- Default new profiles and the automatic language selection to English instead of inheriting the Windows display language. Explicit language selections remain available.
+- Constrain both first-run setup and the welcome notice to the available overlay space, including after resizing.
+- Allow the notice body to shrink and scroll; wrap the heading and acknowledgement text so Continue and Close remain reachable in smaller windows.
+- Keep the 0.7.1 local package picker fix and immutable published update files.
+- Remove the redundant search shortcut from the top navigation; game search remains on the Games page.
+- Increase the top bar and label sizes, retain native vector icons and pixel-aligned text, and avoid scaling navigation labels on hover.
+- Verify the two menu categories, their selected highlight, and visible welcome actions at 1280×800, 660×520 and 420×400 without desktop control.
+- Package the app, tracker, small download setup and portable archive as 0.7.1.1.
+
 ## 0.7.1
 
 Fix the local **Your package** picker closing the installation sheet immediately after selecting a ZIP or Lua file.

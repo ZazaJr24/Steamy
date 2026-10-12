@@ -17,7 +17,7 @@ public sealed partial class PageSmokeTests
         setup.Arrange(new Rect(0, 0, 800, 700));
         setup.UpdateLayout();
 
-        Assert.Equal("System Default", Assert.IsType<ComboBox>(setup.FindName("LanguageSelector")).SelectedItem);
+        Assert.Equal("en-US · English", Assert.IsType<ComboBox>(setup.FindName("LanguageSelector")).SelectedItem);
         Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(setup.FindName("GameScanStep")).Visibility);
         Assert.Equal(Visibility.Collapsed, Assert.IsType<StackPanel>(setup.FindName("LanguageStep")).Visibility);
         Assert.Equal(0, scanner.Requests); // Known-library discovery does not force a whole-PC scan.

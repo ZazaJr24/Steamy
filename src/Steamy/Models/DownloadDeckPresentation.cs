@@ -57,7 +57,7 @@ public sealed partial class DownloadJob
         : DownloadFormat.Bytes(bytes);
 
     [JsonIgnore] public double SessionPeakBytesPerSecond { get { lock (_rateHistoryGate) return _sessionPeak; } }
-    [JsonIgnore] public string DeckSection => IsTerminal ? "Verlauf" : "Warteschlange";
+    [JsonIgnore] public string DeckSection => IsTerminal ? "History" : "Queue";
     [JsonIgnore] public string DeckNetworkRate => IsActive ? FormatBitrate(BytesPerSecond) : "—";
     [JsonIgnore] public string DeckDiskRate => !IsActive || string.IsNullOrWhiteSpace(DiskSpeed) ? "—"
         : DownloadFormat.TryParseSize(DiskSpeed) is > 0 and var rate ? FormatBitrate(rate) : "0.0 Mbit/s";
@@ -67,23 +67,23 @@ public sealed partial class DownloadJob
         : InstallationBytes > 0 ? Math.Clamp(ContentBytes * 100d / InstallationBytes, 0, 100) : 0;
     [JsonIgnore] public bool DeckTransferIndeterminate => IsActive && Phase != "finalizing" && TransferTotalBytes is not > 0;
     [JsonIgnore] public bool DeckContentIndeterminate => IsActive && InstallationBytes <= 0 && Phase is "checking" or "finalizing";
-    [JsonIgnore] public string DeckTransferLabel => IsPaused ? "Download pausiert"
-        : State == DownloadJobState.Preparing ? "Download wird vorbereitet …"
-        : State == DownloadJobState.Completed ? "Daten heruntergeladen"
-        : State == DownloadJobState.Failed ? "Download fehlgeschlagen" : "Daten werden heruntergeladen …";
+    [JsonIgnore] public string DeckTransferLabel => IsPaused ? "Download paused"
+        : State == DownloadJobState.Preparing ? "Preparing download…"
+        : State == DownloadJobState.Completed ? "Data downloaded"
+        : State == DownloadJobState.Failed ? "Download failed" : "Downloading data…";
     [JsonIgnore] public string DeckContentLabel => (Phase == "checking" || State == DownloadJobState.Verifying
-        ? "Vorhandene Dateien werden überprüft …" : State == DownloadJobState.Completed ? "Dateien aktualisiert" : "Dateien werden aktualisiert …")
+        ? "Checking existing files…" : State == DownloadJobState.Completed ? "Files updated" : "Updating files…")
         + (CurrentDepotDetail.StartsWith("Depot ", StringComparison.Ordinal) ? " · " + CurrentDepotDetail.Split('·')[0].Trim() : "");
     [JsonIgnore] public string DeckContentCaption => InstallationBytes > 0 || State == DownloadJobState.Completed
         ? DeckContentProgress.ToString("0", CultureInfo.CurrentCulture) + " %"
-        : DeckContentIndeterminate ? "Wird ermittelt …" : "—";
+        : DeckContentIndeterminate ? "Calculating…" : "—";
     [JsonIgnore] public string DeckTransferSummary => TransferTotalBytes is > 0
         ? $"{Size(TransferredBytes)} / {Size(TransferTotalBytes.Value)}"
-        : TransferredBytes > 0 ? Size(TransferredBytes) + " heruntergeladen" : SizeSummary;
+        : TransferredBytes > 0 ? Size(TransferredBytes) + " downloaded" : SizeSummary;
     [JsonIgnore] public string DeckQueueSize => TransferTotalBytes is > 0 ? Size(TransferTotalBytes.Value)
         : InstallationBytes > 0 ? "~" + Size(InstallationBytes) : TotalSize;
-    [JsonIgnore] public string DeckRemaining => IsPaused ? "Pausiert" : !IsActive ? "—"
+    [JsonIgnore] public string DeckRemaining => IsPaused ? "Paused" : !IsActive ? "—"
         : EtaSeconds is { } seconds && double.IsFinite(seconds) && seconds >= 0 && seconds < 3_600_000
-            ? $"Ca. {(int)(seconds / 60)}:{(int)(seconds % 60):00} verbleibend"
-            : string.IsNullOrWhiteSpace(Eta) ? "Verbleibende Zeit wird ermittelt …" : $"Ca. {Eta} verbleibend";
+            ? $"About {(int)(seconds / 60)}:{(int)(seconds % 60):00} remaining"
+            : string.IsNullOrWhiteSpace(Eta) ? "Calculating remaining time…" : $"About {Eta} remaining";
 }
