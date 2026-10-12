@@ -45,6 +45,7 @@ jobs:
       - name: Test
         env:
           STEAMY_UI_ARTIFACTS: ${{ github.workspace }}/artifacts/ui
+          STEAMY_UI_LIBRARY_INSTALL_OFFSCREEN_ONLY: '1'
         run: dotnet test Steamy.sln -c Release --no-build --logger "console;verbosity=normal" --logger trx --results-directory artifacts/test-results
 
       - name: Report test failures
