@@ -34,6 +34,7 @@ public sealed class GameDetailsViewModel : ViewModelBase
     private bool _isPlaying, _achievementsAvailable, _achievementsBusy;
     private int _selectedTab;
     private bool _returnToLibrary;
+    private Action? _restoreDashboard;
     private readonly HashSet<DownloadJob> _watchedDownloads = [];
     private bool _watchingDownloads;
     private DownloadJob? _download;
@@ -82,7 +83,11 @@ public sealed class GameDetailsViewModel : ViewModelBase
         PlayCommand = new AsyncRelayCommand(LaunchAsync, () => IsInstalled && !IsPlaying);
         SaveCommand = new AsyncRelayCommand(FlushAsync);
         RefreshAchievementsCommand = new AsyncRelayCommand(RefreshAchievementsAsync, () => Game is not null && !AchievementsBusy);
-        BackCommand = new RelayCommand(() => { if (_returnToLibrary) Navigation.Navigate<LibraryPage>(); else Navigation.Navigate<DashboardPage>(); });
+        BackCommand = new RelayCommand(() =>
+        {
+            if (_returnToLibrary) Navigation.Navigate<LibraryPage>();
+            else { _restoreDashboard?.Invoke(); Navigation.Navigate<DashboardPage>(); }
+        });
         OpenFolderCommand = new RelayCommand(() => OpenExternal(Game?.InstallFolder), () => !string.IsNullOrWhiteSpace(Game?.InstallFolder));
         OpenSteamCommand = new RelayCommand(() => OpenExternal($"steam://nav/games/details/{Game?.AppId}"), () => Game?.AppId > 0);
         OpenCommunityCommand = new RelayCommand(() => OpenExternal($"https://steamcommunity.com/app/{Game?.AppId}"), () => Game?.AppId > 0);
@@ -153,14 +158,14 @@ public sealed class GameDetailsViewModel : ViewModelBase
     public ICommand OpenSettingsCommand { get; }
     public ICommand SelectTabCommand { get; }
 
-    public void SelectGame(Game game, bool returnToLibrary = false)
+    public void SelectGame(Game game, bool returnToLibrary = false, Action? restoreDashboard = null)
     {
         CatalogGame = null;
         _ = FlushAsync();
         _load?.Cancel(); _load?.Dispose(); _load = null;
         _revision++; _preferencesLoaded = false; _dirty = false;
         OnPropertyChanged(nameof(CanEditPreferences));
-        Game = game; _returnToLibrary = returnToLibrary;
+        Game = game; _returnToLibrary = returnToLibrary; _restoreDashboard = restoreDashboard;
         WatchDownloads();
         HeroArtwork = game.HeaderImage ?? game.ArtworkImage; LogoArtwork = null;
         Notes = ""; LaunchArguments = ""; LaunchExecutable = ""; SaveStatus = ""; LaunchStatus = ""; LastPlayedCaption = "LAST PLAYED";

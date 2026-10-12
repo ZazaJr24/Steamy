@@ -14,6 +14,8 @@ Add a new `## x.y.z` section at the top before tagging.
 - Remove the redundant search shortcut from the top navigation; game search remains on the Games page.
 - Increase the top bar and label sizes, retain native vector icons and pixel-aligned text, and avoid scaling navigation labels on hover.
 - Verify the two menu categories, their selected highlight, and visible welcome actions at 1280×800, 660×520 and 420×400 without desktop control.
+- Restore the installed All Games view when returning from a game opened there, retaining its search and source filter. Games opened directly from Home still return to Home.
+- Use a shared icon-only information button for Steamless, activation and the other tool pages, keeping their help actions and keyboard access.
 - Package the app, tracker, small download setup and portable archive as 0.7.1.1.
 
 ## 0.7.1

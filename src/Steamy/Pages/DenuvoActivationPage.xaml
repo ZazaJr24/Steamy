@@ -21,7 +21,7 @@
       <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
         <TextBlock Text="Denuvo Activation" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-        <ui:Button x:Name="ActivationHelpButton" Grid.Column="1" Appearance="Transparent"
+        <ui:Button Style="{StaticResource BareInfoButton}" x:Name="ActivationHelpButton" Grid.Column="1" Appearance="Transparent"
                    Icon="{ui:SymbolIcon Info24}" Width="40" Height="40" VerticalAlignment="Center"
                    Click="ActivationHelp_Click" ToolTip="Denuvo activation information"
                    AutomationProperties.Name="Denuvo activation information" />

@@ -6,6 +6,7 @@ using Steamy.Models;
 using Steamy.Pages;
 using Steamy.Services;
 using Steamy.Views;
+using Steamy.ViewModels;
 
 namespace Steamy.UiTests;
 
@@ -20,6 +21,31 @@ public sealed partial class PageSmokeTests
         Assert.Contains("remaining", job.DeckRemaining);
         job.State = DownloadJobState.Completed;
         Assert.Equal("History", job.DeckSection);
+
+        var dashboard = provider.GetRequiredService<DashboardViewModel>();
+        var details = provider.GetRequiredService<GameDetailsViewModel>();
+        var navigation = provider.GetRequiredService<INavigationService>();
+        Type? route = null;
+        navigation.Attach(page => route = page);
+        var game = new Game { AppId = 1593500, Name = "God of War", InstallState = GameInstallState.Installed };
+        dashboard.ShowAllGamesCommand.Execute(null);
+        dashboard.InstalledSearchText = "War";
+        dashboard.InstalledSourceFilter = "Steam";
+        dashboard.OpenGameCommand.Execute(game);
+        Assert.Equal(typeof(GameDetailsPage), route);
+        Assert.False(dashboard.IsInstalledLibraryOpen);
+        details.BackCommand.Execute(null);
+        Assert.Equal(typeof(DashboardPage), route);
+        Assert.True(dashboard.IsInstalledLibraryOpen);
+        Assert.Equal("War", dashboard.InstalledSearchText);
+        Assert.Equal("Steam", dashboard.InstalledSourceFilter);
+        dashboard.CloseInstalledLibraryCommand.Execute(null);
+        dashboard.OpenGameCommand.Execute(game);
+        details.BackCommand.Execute(null);
+        Assert.False(dashboard.IsInstalledLibraryOpen);
+        dashboard.InstalledSearchText = "";
+        dashboard.InstalledSourceFilter = "All games";
+        navigation.Detach();
 
         var window = new MainWindow();
         var root = (FrameworkElement)window.Content;

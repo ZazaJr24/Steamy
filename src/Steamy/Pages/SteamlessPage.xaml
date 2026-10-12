@@ -42,8 +42,8 @@
           <TextBlock Text="Choose your game executable, then run Steamless. Your original stays backed up."
                      Style="{StaticResource PageSubtitleStyle}" />
         </StackPanel>
-        <ui:Button Grid.Column="2"
-                   Content="ⓘ"
+        <ui:Button Style="{StaticResource BareInfoButton}" Grid.Column="2"
+                   Icon="{ui:SymbolIcon Info24}"
                    Command="{Binding ToggleInfoCommand}"
                    Appearance="Secondary"
                    Width="34"

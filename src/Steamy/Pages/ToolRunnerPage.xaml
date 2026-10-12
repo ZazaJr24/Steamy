@@ -21,11 +21,10 @@
           <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleStyle}" />
           <TextBlock Text="{Binding Subtitle}" Style="{StaticResource PageSubtitleStyle}" />
         </StackPanel>
-        <ui:Button Grid.Column="1"
+        <ui:Button Style="{StaticResource BareInfoButton}" Grid.Column="1"
                    Icon="{ui:SymbolIcon Info24}"
                    Command="{Binding ToggleInfoCommand}"
                    Appearance="Secondary"
-                   Style="{StaticResource IconButtonStyle}"
                    ToolTip="Show tool information"
                    VerticalAlignment="Center" />
       </Grid>

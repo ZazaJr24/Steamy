@@ -611,8 +611,10 @@ public sealed class DashboardViewModel : ViewModelBase
         OpenGameCommand = new RelayCommand<Game>(game =>
         {
             if (game is null) return;
+            var returnToAllGames = IsInstalledLibraryOpen;
             IsInstalledLibraryOpen = false;
-            App.Services.GetRequiredService<GameDetailsViewModel>().SelectGame(game);
+            App.Services.GetRequiredService<GameDetailsViewModel>().SelectGame(game,
+                restoreDashboard: returnToAllGames ? () => IsInstalledLibraryOpen = true : null);
             Navigation.Navigate<GameDetailsPage>();
         }, CanPlayGame);
         _depotCheck = depotCheck;

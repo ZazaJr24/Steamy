@@ -9,6 +9,26 @@
   </ResourceDictionary.MergedDictionaries>
   <FontFamily x:Key="SteamyFontFamily">/Steamy;component/Resources/Fonts/#Google Sans</FontFamily>
   <FontFamily x:Key="ContentControlThemeFontFamily">/Steamy;component/Resources/Fonts/#Google Sans</FontFamily>
+  <Style x:Key="BareInfoButton" TargetType="ui:Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Opacity" Value="0.8" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource GalleryKeyboardFocus}" />
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ui:Button">
+      <Grid Background="Transparent" UseLayoutRounding="True" SnapsToDevicePixels="True">
+        <ContentPresenter Content="{TemplateBinding Icon}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </Grid>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="1" /></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="Opacity" Value="1" /></Trigger>
+        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4" /></Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource SteamyFontFamily}" />
     <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
