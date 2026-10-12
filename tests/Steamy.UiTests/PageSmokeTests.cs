@@ -396,6 +396,21 @@ public sealed partial class PageSmokeTests
                     }
                     if (page is SettingsPage settings)
                     {
+                        var categories = Assert.IsType<ComboBox>(settings.FindName("CategorySelector"));
+                        categories.SelectedItem = categories.Items.Cast<ComboBoxItem>().Single(item => Equals(item.Tag, "services"));
+                        settings.Measure(new Size(settings.Width, settings.Height));
+                        settings.Arrange(new Rect(0, 0, settings.Width, settings.Height));
+                        settings.UpdateLayout();
+                        foreach (var name in new[] { "SteamApiKeyBox", "RyuuAuthKeyBox", "HubcapApiKeyBox", "DepotBoxApiKeyBox", "ManifestHubApiKeyBox", "MirrorTokenBox" })
+                        {
+                            var box = Assert.IsType<PasswordBox>(settings.FindName(name));
+                            Assert.Equal(((SolidColorBrush)settings.FindResource("SolidSurfaceBrush")).Color, Assert.IsType<SolidColorBrush>(box.Background).Color);
+                            Assert.Equal(((SolidColorBrush)settings.FindResource("BorderStrongBrush")).Color, Assert.IsType<SolidColorBrush>(box.BorderBrush).Color);
+                            Assert.True(((SolidColorBrush)box.Background).Color.A > 0);
+                            Assert.True(((SolidColorBrush)box.BorderBrush).Color.A > 0);
+                            Assert.True(box.ActualWidth >= 160);
+                            Assert.True(box.ActualHeight >= 36);
+                        }
                         var search = Assert.IsAssignableFrom<TextBox>(settings.FindName("SettingsSearch"));
                         search.Text = "resume";
                         PumpDispatcher(TimeSpan.FromMilliseconds(250));

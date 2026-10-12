@@ -1,6 +1,6 @@
 # Third-party notices
 
-Steamy' own code is licensed under the Steamy License (see `LICENSE`).
+Steamy's original code is licensed under the Steamy Proprietary Software License (see `LICENSE`).
 The components below are not covered by that license; each keeps its own terms.
 
 ## Bundled in the release

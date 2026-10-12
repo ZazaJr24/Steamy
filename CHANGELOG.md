@@ -92,24 +92,19 @@ Steamy 0.7.0 brings the small all-in-one download installer, a more consistent a
 - Verify release versions, archive hashes, extraction bounds, rejection of another app version, portable WPF runtime preservation and installer size.
 - Live provider credentials, real multiplayer and end-to-end Microsoft runtime installation remain separate from the isolated regression tests; this release does not claim every possible provider/game combination is tested.
 
+## 0.6.4.7
+
+- Move GreenLuma installer discovery off the UI thread and cap Downloads traversal at three levels to avoid long pauses when that folder is large or slow.
+- Replace the permissive Steamy terms with a proprietary license: personal and non-commercial repository forks are permitted for evaluation, while separate app clones, redistribution, and commercial use require written permission. Preserve separate third-party licenses.
+
+## 0.6.4.6
+
+- Use Ryuu's documented `/api/download/{appid}` endpoint and send the auth key through `X-Auth-Key` instead of the retired `secure_download` query endpoint.
+
 ## 0.6.4.5
 
-- Make the shell download shortcut smaller and rounder with a matching glass surface, a 160 ms hover lift/scale, a soft highlight and a short press animation. Preserve the separate progress line and reduced-motion preferences.
-- Keep the Steamy menu and centered top navigation visible on Downloads. Place the live progress line below the shell's game icon and use larger download/pause icons.
-- Simplify the game grid to larger 2:3 covers with separate titles/genres, underlined library tabs and blue hover/focus outlines; remove nested tile frames.
-- Rebuild Downloads in the Steam Deck layout: a full-width artwork banner and official logo, blue network bars with a green measured average, session peak and write-I/O metrics, independent blue transfer and green content progress, landscape queue rows and a fixed footer.
-- Add keyboard and XInput download navigation, a focused options/recovery panel, state-aware queue actions and virtualized grouped history. Retain a bounded network history when leaving Downloads; unknown totals remain unknown.
-- Reduce settings frames and use understated install step indicators. Use wide drive rows with free space aligned right and a green final install action.
-- Add a live game download shortcut to the right of the shell, independent of page filters. Use clearer glass surfaces, a stationary Steamy gradient and settings categories in a keyboard-accessible sidebar.
-- Ask for DepotDownloader or BetterSteamTools before installation. Guide direct downloads through source, depot versions and drive/folder selection; guide Steam metadata through its verified backend and client folder.
-- Redesign Games with spacious covers, separate readable titles, library tabs and a fixed pager. Use native pixel scrolling and create controls only for visible rows.
-- Open every catalog game in the Big Picture detail page, with artwork, game information and a green Install button leading to the DepotDownloader source and folder choices.
-- Shorten first-run setup to four steps with installed-game discovery first and optional advanced download preferences. Refresh the once-per-version explanation.
-- Use shared vector branding, ClearType/display text formatting and high-quality artwork scaling throughout the main shell.
-- Add a native WPF animated download installer under 2 MB, with fluid Steamy light fields and embedded Google Sans fonts. Download and verify the app, install Microsoft .NET Desktop and WebView2 only when missing, and preserve the previous application on updates.
-- Include the verified DepotDownloader fork in app packages. Ship a complete portable ZIP with private .NET runtimes for both Steamy and its playtime tracker.
-- Preserve the app's WPF runtime when packaging the tracker, fixing a crash before the portable app opens.
-- Keep legacy update metadata compatible and publish separate verified installer payload metadata.
+- Accept `addtoken` access-token metadata and positive `~= nil` / `type(...) == "function"` compatibility guards across provider and local Lua imports. Preserve exact 64-bit values and continue rejecting executable Lua.
+- Give API/auth key fields a visible theme-aware background, border, caret and focus state in Settings and setup.
 
 ## 0.6.4.4
 

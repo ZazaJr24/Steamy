@@ -236,4 +236,6 @@ Steam store metadata and game artwork are provided by Steam and the respective p
 
 ## License
 
-Steamy's own code uses the [Steamy License](LICENSE). Sharing and forking are welcome; rebranding or commercial redistribution requires permission. Third-party components retain their own terms: see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Both documents are included in each release.
+Steamy's original code, interface, assets, and documentation are proprietary to ZazaJr24. The [Steamy Proprietary Software License](LICENSE) allows personal, non-commercial use and private or public repository forks, including source changes within the fork for evaluation. A fork does not authorize making a separate app clone, copying protected parts into another product, publishing a release or binaries, or commercial use; those activities require written permission. The license does not claim ownership of general ideas or independently developed functionality.
+
+Third-party components retain their own licenses, which may grant separate rights; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). The license and third-party notices are included with each release. This revision applies to copies distributed with it and does not retroactively replace terms that accompanied earlier copies.

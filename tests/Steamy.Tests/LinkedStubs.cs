@@ -27,4 +27,16 @@ namespace Steamy.Services
     {
         public static HttpMessageHandler Create() => new HttpClientHandler();
     }
+
+    public interface ISettingsService
+    {
+        Steamy.Models.AppSettings Load();
+        Task SaveAsync(Steamy.Models.AppSettings settings, CancellationToken cancellationToken = default);
+        Task ResetAsync(CancellationToken cancellationToken = default);
+    }
+}
+
+namespace Steamy.Models
+{
+    public sealed class AppSettings { }
 }
