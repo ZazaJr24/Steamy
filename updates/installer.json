@@ -1,0 +1,14 @@
+{
+  "tag_name": "v0.7.0",
+  "draft": false,
+  "prerelease": false,
+  "published_at": "2026-10-12T13:46:08Z",
+  "assets": [
+    {
+      "name": "Steamy-v0.7.0-app.zip",
+      "browser_download_url": "https://github.com/ZazaJr24/Steamy/releases/download/v0.7.0/Steamy-v0.7.0-app.zip",
+      "size": 51718040,
+      "digest": "sha256:cff85160e0863ea0be4e809dc9c50764ed4e1d80bdd2e41f7904920751508599"
+    }
+  ]
+}
