@@ -4,6 +4,26 @@
                     xmlns:models="clr-namespace:Steamy.Models"
                     xmlns:controls="clr-namespace:Steamy.Controls">
 
+  <ResourceDictionary.MergedDictionaries>
+    <ResourceDictionary Source="Brand/Brand.xaml" />
+  </ResourceDictionary.MergedDictionaries>
+  <FontFamily x:Key="SteamyFontFamily">/Steamy;component/Resources/Fonts/#Google Sans</FontFamily>
+  <FontFamily x:Key="ContentControlThemeFontFamily">/Steamy;component/Resources/Fonts/#Google Sans</FontFamily>
+  <Style TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource SteamyFontFamily}" />
+    <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+    <Setter Property="TextOptions.TextRenderingMode" Value="Auto" />
+    <Setter Property="UseLayoutRounding" Value="True" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+  </Style>
+  <Style TargetType="Control">
+    <Setter Property="FontFamily" Value="{DynamicResource SteamyFontFamily}" />
+    <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+    <Setter Property="TextOptions.TextRenderingMode" Value="Auto" />
+    <Setter Property="UseLayoutRounding" Value="True" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+  </Style>
+
   <!-- Smooth motion presets shared by hover effects, dialogs and overlays. A short duration
        with a cubic ease reads as "smooth" without feeling laggy; OnFinished releases the
        composition resources as soon as the animation completes. -->
@@ -113,7 +133,7 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="CornerRadius" Value="{DynamicResource SurfaceCornerRadius}" />
     <Setter Property="Padding" Value="18,14" />
     <Setter Property="Margin" Value="0,0,0,14" />
   </Style>
@@ -121,7 +141,7 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="CornerRadius" Value="{DynamicResource SurfaceCornerRadius}" />
     <Setter Property="Padding" Value="10" />
     <Setter Property="Margin" Value="0,0,0,14" />
   </Style>
@@ -129,7 +149,7 @@
     <Setter Property="Background" Value="{DynamicResource SolidSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="CornerRadius" Value="{DynamicResource SurfaceCornerRadius}" />
     <Setter Property="Padding" Value="16" />
     <Setter Property="Effect">
       <Setter.Value>
@@ -311,19 +331,6 @@
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="Padding" Value="10,6" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
-    <Setter Property="Background" Value="{DynamicResource SolidSurfaceBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Style.Triggers>
-      <Trigger Property="IsMouseOver" Value="True">
-        <Setter Property="BorderBrush" Value="{DynamicResource AccentStrongBrush}" />
-      </Trigger>
-      <Trigger Property="IsKeyboardFocusWithin" Value="True">
-        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-      </Trigger>
-    </Style.Triggers>
   </Style>
   <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
     <Setter Property="FontSize" Value="12.5" />
@@ -349,7 +356,7 @@
     <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="CornerRadius" Value="{DynamicResource SurfaceCornerRadius}" />
     <Setter Property="Padding" Value="16" />
   </Style>
 
@@ -402,20 +409,23 @@
     <Setter Property="PanningMode" Value="VerticalOnly" />
   </Style>
 
-  <!-- Dashboard owns one native scroll presenter. Reserve the scrollbar column so
-       showing/hovering the bar cannot change card widths or rebuild the content viewport. -->
+  <!-- Overlay the scrollbar on the artwork: no separate unpainted strip, and hovering
+       never changes the viewport width. Keep the handle below the window buttons. -->
   <Style x:Key="DashboardScrollHostStyle" TargetType="ScrollViewer" BasedOn="{StaticResource PageScrollHostStyle}">
     <Setter Property="Template"><Setter.Value>
       <ControlTemplate TargetType="ScrollViewer">
-        <Grid Background="{TemplateBinding Background}">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="16" /></Grid.ColumnDefinitions>
-          <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Grid.Column="0"
+        <Grid Background="{TemplateBinding Background}" ClipToBounds="True">
+          <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" ClipToBounds="False"
                                   Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                                   CanContentScroll="{TemplateBinding CanContentScroll}" Margin="{TemplateBinding Padding}" />
-          <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Orientation="Vertical"
+          <ScrollBar x:Name="PART_VerticalScrollBar" HorizontalAlignment="Right" Width="12" Margin="0,58,4,8" Orientation="Vertical" Background="Transparent"
                      Minimum="0" Maximum="{TemplateBinding ScrollableHeight}" Value="{TemplateBinding VerticalOffset}"
-                     ViewportSize="{TemplateBinding ViewportHeight}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+                     ViewportSize="{TemplateBinding ViewportHeight}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" Opacity="0" />
         </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="PART_VerticalScrollBar" Property="Opacity" Value="0.5" /></Trigger>
+          <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="PART_VerticalScrollBar" Property="Opacity" Value="0.5" /></Trigger>
+        </ControlTemplate.Triggers>
       </ControlTemplate>
     </Setter.Value></Setter>
   </Style>
@@ -628,7 +638,7 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="CornerRadius" Value="{DynamicResource SurfaceCornerRadius}" />
     <Setter Property="Padding" Value="20" />
     <Setter Property="SnapsToDevicePixels" Value="True" />
   </Style>

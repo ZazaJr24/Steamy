@@ -8,9 +8,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Steamy</RootNamespace>
     <AssemblyName>Steamy</AssemblyName>
-    <Version>0.6.4.5</Version>
-    <FileVersion>0.6.4.5</FileVersion>
-    <AssemblyVersion>0.6.4.5</AssemblyVersion>
+    <Version>0.7.0</Version>
+    <FileVersion>0.7.0</FileVersion>
+    <AssemblyVersion>0.7.0</AssemblyVersion>
     <Product>Steamy</Product>
     <Company>ZazaJr24</Company>
     <Authors>ZazaJr24</Authors>
@@ -18,10 +18,32 @@
     <Copyright>Copyright (c) 2026 ZazaJr24 · Steamy License</Copyright>
     <RepositoryUrl>https://github.com/ZazaJr24/Steamy</RepositoryUrl>
     <ApplicationIcon>Resources\Brand\steamy.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <Deterministic>true</Deterministic>
     <Platforms>AnyCPU</Platforms>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <None Update="tool-preparation-capabilities.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="ThirdParty\UcOnline\LICENSE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="ThirdParty\UcOnline\SOURCE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Steamy.UiTests" />
+    <ProjectReference Include="..\PlayTimeTracker\PlayTimeTracker.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <Target Name="CopyPlayTimeTracker" AfterTargets="Build;Publish">
+    <MSBuild Projects="$(MSBuildProjectDirectory)\..\PlayTimeTracker\PlayTimeTracker.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration)">
+      <Output TaskParameter="TargetOutputs" ItemName="TrackerAssembly" />
+    </MSBuild>
+    <ItemGroup>
+      <TrackerFiles Include="@(TrackerAssembly->'%(RootDir)%(Directory)PlayTimeTracker.exe');@(TrackerAssembly->'%(RootDir)%(Directory)PlayTimeTracker.dll');@(TrackerAssembly->'%(RootDir)%(Directory)PlayTimeTracker.deps.json');@(TrackerAssembly->'%(RootDir)%(Directory)PlayTimeTracker.runtimeconfig.json')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(TrackerFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(TrackerFiles)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" Condition="'$(PublishDir)' != '' and Exists('$(PublishDir)')" />
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
@@ -35,9 +57,18 @@
 
   <!-- Images used from XAML go in as WPF resources so they can be referenced by pack URI. -->
   <ItemGroup>
+    <Resource Include="Resources\Fonts\GoogleSans-Regular.ttf" />
+    <Resource Include="Resources\Fonts\GoogleSans-Medium.ttf" />
+    <Resource Include="Resources\Fonts\GoogleSans-SemiBold.ttf" />
+    <Resource Include="Resources\Fonts\GoogleSans-Bold.ttf" />
+    <None Update="Resources\Fonts\OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Resource Include="Resources\steamless.png" />
     <Resource Include="Resources\Brand\steamy-256.png" />
     <Resource Include="Resources\Brand\steamy.ico" />
+    <Resource Include="Resources\LiquidGlass\GlassyEffect.ps" />
+    <Resource Include="Resources\LiquidGlass\ClearGlass.ps" />
+    <None Update="Resources\LiquidGlass\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="Resources\LiquidGlass\UPSTREAM-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

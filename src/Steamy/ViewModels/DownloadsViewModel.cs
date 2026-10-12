@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Windows.Media;
 using Microsoft.Win32;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -24,9 +25,23 @@ namespace Steamy.ViewModels;
 public sealed class DownloadsViewModel : ViewModelBase
 {
     private readonly IDownloadManager _manager; private readonly IRyuuGameDownloadService _ryuu; private readonly ISettingsService _settings; private string _search = ""; private string _filter = "All downloads";
-    public DownloadsViewModel(IAppDataStore s, INavigationService n, ILoggingService l, IDownloadManager m, IRyuuGameDownloadService ryuu, ISettingsService settings) : base(s,n,l)
+    private readonly IArtworkService? _artwork;
+    private CancellationTokenSource? _artworkLoad;
+    private bool _pageVisible;
+    private ImageSource? _heroArtwork, _heroLogo;
+    public ImageSource? HeroArtwork { get => _heroArtwork; private set => SetProperty(ref _heroArtwork, value); }
+    public ImageSource? HeroLogo { get => _heroLogo; private set { if (SetProperty(ref _heroLogo, value)) OnPropertyChanged(nameof(HasHeroLogo)); } }
+    public bool HasHeroLogo => HeroLogo is not null;
+    private string _deckClock = DateTime.Now.ToString("HH:mm");
+    public string DeckClock { get => _deckClock; private set => SetProperty(ref _deckClock, value); }
+    public string DeckQueueHeading => $"Warteschlange ({QueueJobs.Count(job => !job.IsTerminal)})";
+    public string DeckAutomationLabel => Settings.AutoResume ? "AUTOMATISCHES FORTSETZEN AKTIVIERT" : "AUTOMATISCHES FORTSETZEN DEAKTIVIERT";
+    public string DeckActionLabel => HeroJob?.IsPaused == true ? "DOWNLOAD FORTSETZEN" : "DOWNLOAD PAUSIEREN";
+    public ICommand NavigateSettingsCommand => new RelayCommand(() => Navigation.Navigate<SettingsPage>());
+    public DownloadsViewModel(IAppDataStore s, INavigationService n, ILoggingService l, IDownloadManager m, IRyuuGameDownloadService ryuu, ISettingsService settings, IArtworkService? artwork = null) : base(s,n,l)
     {
-        _manager=m; _ryuu=ryuu; _settings=settings; Settings=settings.Load(); Jobs=s.Downloads;
+        _manager=m; _ryuu=ryuu; _settings=settings; _artwork=artwork; Settings=settings.Load(); Jobs=s.Downloads;
+        Settings.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(AppSettings.AutoResume)) OnPropertyChanged(nameof(DeckAutomationLabel)); };
         foreach (var job in Jobs) Watch(job);
         Jobs.CollectionChanged += OnJobsChanged;
         _liveTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(500) };
@@ -60,15 +75,43 @@ public sealed class DownloadsViewModel : ViewModelBase
     /// <summary>Samples twice per second while the Downloads page is visible.</summary>
     public void StartLiveStats()
     {
+        _pageVisible = true;
+        _ = LoadHeroArtworkAsync();
         UpdateLiveStats();
         _liveTimer.Start();
     }
 
-    public void StopLiveStats() => _liveTimer.Stop();
+    public void StopLiveStats()
+    {
+        _liveTimer.Stop(); _pageVisible = false;
+        _artworkLoad?.Cancel(); _artworkLoad?.Dispose(); _artworkLoad = null;
+    }
+
+    private async Task LoadHeroArtworkAsync()
+    {
+        _artworkLoad?.Cancel(); _artworkLoad?.Dispose(); _artworkLoad = null;
+        if (!_pageVisible || _artwork is null || HeroJob is not { } job) return;
+        _artworkLoad = new CancellationTokenSource();
+        var token = _artworkLoad.Token;
+        try
+        {
+            var game = Store.Games.FirstOrDefault(item => item.AppId == job.AppId) ?? new Game { AppId = job.AppId, Name = job.GameName };
+            var hero = _artwork.LoadHeroAsync(job.AppId, token);
+            var logo = _artwork.LoadGameLogoAsync(game, token);
+            await Task.WhenAll(hero, logo);
+            if (token.IsCancellationRequested || !ReferenceEquals(HeroJob, job) || !_pageVisible) return;
+            HeroArtwork = hero.Result;
+            HeroLogo = Controls.GameLogoLayout.Trim(logo.Result);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception exception) when (exception is IOException or HttpRequestException) { }
+    }
 
     // Labels refresh twice a second without rebuilding the queue rows.
     private void UpdateLiveStats()
     {
+        DeckClock = DateTime.Now.ToString("HH:mm");
+        OnPropertyChanged(nameof(DeckActionLabel));
         foreach (var job in Jobs.Where(job => job.IsActive)) job.RefreshElapsed();
         var active = Jobs.Where(job => job.IsActive).ToList();
 
@@ -143,8 +186,11 @@ public sealed class DownloadsViewModel : ViewModelBase
         private set
         {
             if (!SetProperty(ref _heroJob, value)) return;
+            HeroArtwork = null; HeroLogo = null;
+            _ = LoadHeroArtworkAsync();
             OnPropertyChanged(nameof(HasHeroJob));
             OnPropertyChanged(nameof(ShowIdleHero));
+            OnPropertyChanged(nameof(DeckActionLabel));
         }
     }
     public bool HasHeroJob => HeroJob is not null;
@@ -179,6 +225,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     public AppSettings Settings { get; private set; }
     public ObservableCollection<DownloadJob> Jobs { get; }
     public ObservableCollection<DownloadJob> FilteredJobs { get; } = new();
+    public ObservableCollection<DownloadJob> QueueJobs { get; } = new();
     public string[] Filters { get; } = { "All downloads", "Active", "Queued", "Paused", "Completed", "Failed", "Cancelled" };
     public string SearchText { get=>_search; set { if(SetProperty(ref _search,value)) RefreshFilter(); } }
     public string SelectedFilter { get=>_filter; set { if(SetProperty(ref _filter,value)) RefreshFilter(); } }
@@ -205,7 +252,7 @@ public sealed class DownloadsViewModel : ViewModelBase
     private int _pendingQueueEdits;
     private bool _isQueueRunning;
     public bool IsQueueRunning { get => _isQueueRunning; private set => SetProperty(ref _isQueueRunning, value); }
-    private string _queueStatus = "Priority and order apply when the next slot opens.";
+    private string _queueStatus = "";
     public string QueueStatus { get => _queueStatus; private set => SetProperty(ref _queueStatus, value); }
     private string _parallelJobsText = "2", _connectionsText = "16", _rateLimitText = "0";
     private string _transferSettingsHint = "Applies to the next start or resume. The bundled Mod speed cap is per game; 0 is unlimited.";
@@ -368,6 +415,13 @@ public sealed class DownloadsViewModel : ViewModelBase
         await queueStore.SaveAsync(job);
     }
     public ICommand PauseCommand => new AsyncRelayCommand<DownloadJob>(job => RunDownloadActionAsync(job, () => _manager.PauseAsync(job!)));
+    public ICommand ContinueCommand => new AsyncRelayCommand<DownloadJob>(job => RunDownloadActionAsync(job, () => job?.State switch
+    {
+        DownloadJobState.Paused => ResumeAsync(job),
+        DownloadJobState.Failed => RetryJobAsync(job),
+        DownloadJobState.Queued => StartAsync(job),
+        _ => Task.CompletedTask
+    }));
     public ICommand ResumeCommand => new AsyncRelayCommand<DownloadJob>(job => RunDownloadActionAsync(job, () => ResumeAsync(job)));
     public ICommand CancelCommand => new AsyncRelayCommand<DownloadJob>(job => RunDownloadActionAsync(job, () => _manager.CancelAsync(job!)));
     public ICommand RetryCommand => new AsyncRelayCommand<DownloadJob>(job => RunDownloadActionAsync(job, () => RetryJobAsync(job)));
@@ -587,5 +641,7 @@ public sealed class DownloadsViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasActiveFilters));
         OnPropertyChanged(nameof(EmptyStateMessage));
         UpdateSections();
+        DownloadPresentation.Synchronize(QueueJobs, desired.Where(job => !ReferenceEquals(job, HeroJob)).ToList());
+        OnPropertyChanged(nameof(DeckQueueHeading));
     }
 }

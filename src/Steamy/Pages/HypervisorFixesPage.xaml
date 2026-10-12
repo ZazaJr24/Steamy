@@ -3,7 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:controls="clr-namespace:Steamy.Controls"
-      Background="{DynamicResource WorkspaceBackgroundBrush}">
+      Background="{DynamicResource PageBackgroundBrush}">
   <Grid Margin="32,26,32,32">
     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
     <StackPanel controls:EntranceMotion.Delay="0">
@@ -16,8 +16,8 @@
         <Border Width="68" Height="68" CornerRadius="22" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Center" Margin="0,0,0,24">
           <ui:SymbolIcon Symbol="Shield24" FontSize="30" Foreground="{DynamicResource AccentBrush}" />
         </Border>
-        <TextBlock Text="Coming soon" FontSize="32" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" />
-        <TextBlock Text="We're preparing this space. Hypervisor compatibility fixes will appear here in a future update."
+        <TextBlock Text="Coming in version 0.8.0." FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" />
+        <TextBlock Text="Hypervisor compatibility fixes are being prepared."
                    Style="{StaticResource PageSubtitleStyle}" TextAlignment="Center" Margin="0,12,0,0" MaxWidth="390" />
         <TextBlock Text="No changes are applied to your system from this page."
                    Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,24,0,0" />

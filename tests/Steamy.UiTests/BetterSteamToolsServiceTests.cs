@@ -161,14 +161,48 @@ public sealed class BetterSteamToolsServiceTests
         public Task SaveAsync(AppSettings settings, CancellationToken token = default) => Task.CompletedTask;
         public Task ResetAsync(CancellationToken token = default) => Task.CompletedTask;
     }
-    private sealed class Source(string root) : IManifestSourceService
+    [Fact]
+    public async Task DepotBoxOriginalScriptReachesTheSteamFolderWithoutBeingCanonicalized()
     {
+        var root = Path.Combine(Path.GetTempPath(), "steamy-bst-script-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "steam.exe"), "fixture only; never executed");
+            var payload = SteamToolsBackend.Official104.Keys.ToDictionary(name => name, _ => System.Text.Encoding.UTF8.GetBytes("MZoffline fixture; never executed"));
+            foreach (var item in payload) File.WriteAllBytes(Path.Combine(root, item.Key), item.Value);
+            Directory.CreateDirectory(Path.Combine(root, "config"));
+            File.WriteAllBytes(Path.Combine(root, SteamToolsBackend.ReceiptPath), SteamToolsBackend.CreateReceipt("test", payload));
+            var source = new Source(root, originalScript: true);
+            var service = new BetterSteamToolsService(new Settings(), source);
+            var result = await service.AddFromSourceAsync(root, 480, ManifestSource.DepotBox);
+            Assert.True(result.Succeeded, result.Message);
+            Assert.Equal(0, source.ParserDownloads);
+            Assert.Equal(480, Assert.Single(result.AppIds));
+            Assert.Equal(Source.Script, File.ReadAllText(Path.Combine(root, "config/stplug-in/480.lua")));
+            Assert.Equal("source manifest", File.ReadAllText(Path.Combine(root, "depotcache/481_123.manifest")));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    private sealed class Source(string root, bool originalScript = false) : IManifestSourceService
+    {
+        public const string Script = "local game = 480\nlocal function register()\naddappid(game)\nend\nregister()\n";
+        public int ParserDownloads { get; private set; }
         public List<ManifestSource> Checked { get; } = [];
-        public IReadOnlyList<ManifestSourceInfo> Sources => [new(ManifestSource.Sushi,"Sushi","","",false),new(ManifestSource.Zaza,"Zaza","","",false),new(ManifestSource.Hubcap,"Hubcap","","",true)];
+        public IReadOnlyList<ManifestSourceInfo> Sources => [new(ManifestSource.Sushi,"Sushi","","",false),new(ManifestSource.Zaza,"Zaza","","",false),new(ManifestSource.Hubcap,"Hubcap","","",true),new(ManifestSource.DepotBox,"DepotBox","","",true)];
         public Task<ManifestAvailability> CheckAvailabilityAsync(ManifestSource source, int appId, CancellationToken token = default)
-        { Checked.Add(source); return Task.FromResult(new ManifestAvailability(source == ManifestSource.Zaza,true,source == ManifestSource.Hubcap ? "No API key configured" : "Availability checked")); }
+        { Checked.Add(source); return Task.FromResult(new ManifestAvailability(source == ManifestSource.Zaza || originalScript && source == ManifestSource.DepotBox,true,source == ManifestSource.Hubcap ? "No API key configured" : "Availability checked")); }
+        public Task<ManifestDownloadResult> DownloadSteamClientPackageAsync(ManifestSource source, int appId, IProgress<string>? progress = null, CancellationToken token = default)
+        {
+            if (!originalScript) return DownloadManifestsAsync(source, appId, progress, token);
+            var folder = Path.Combine(root, "provider-work"); Directory.CreateDirectory(folder);
+            File.WriteAllText(Path.Combine(folder, "481_123.manifest"), "source manifest");
+            return Task.FromResult(new ManifestDownloadResult(true, "Downloaded", Script, folder, IsSteamClientScript: true));
+        }
         public Task<ManifestDownloadResult> DownloadManifestsAsync(ManifestSource source, int appId, IProgress<string>? progress = null, CancellationToken token = default)
         {
+            ParserDownloads++;
             var folder = Path.Combine(root,"provider-work"); Directory.CreateDirectory(folder);
             File.WriteAllText(Path.Combine(folder,"481_123.manifest"),"source manifest");
             return Task.FromResult(new ManifestDownloadResult(true,"Downloaded","addappid(480)\naddappid(481,0,\"aabbccddeeff0011\")\nsetManifestid(481,\"123\")",folder));

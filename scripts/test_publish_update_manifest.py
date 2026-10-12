@@ -43,3 +43,25 @@ class UpdateManifestTests(unittest.TestCase):
             return {'tag_name': 'v0.4.17'}
         self.assertIn('Skipped', publish(api, {'tag_name': 'v0.4.16'}))
         self.assertEqual(calls, ['/releases/latest'])
+
+    def test_installer_manifest_verifies_separate_payload_without_changing_legacy_path(self):
+        with tempfile.TemporaryDirectory() as folder:
+            archive = Path(folder) / 'Steamy-v0.7.0-app.zip'
+            archive.write_bytes(b'framework dependent fixture')
+            release = {'tag_name': 'v0.7.0', 'draft': False, 'prerelease': False,
+                       'published_at': '2026-10-09T10:00:00Z', 'assets': [{
+                       'name': archive.name, 'size': archive.stat().st_size,
+                       'browser_download_url': 'https://github.com/ZazaJr24/Steamy/releases/download/v0.7.0/' + archive.name,
+                       'digest': 'sha256:' + hashlib.sha256(archive.read_bytes()).hexdigest()}]}
+            description = manifest(release, archive, 'ZazaJr24/Steamy', app_payload=True)
+            with self.assertRaises(ValueError): manifest(release, archive, 'ZazaJr24/Steamy')
+            repo = Repository()
+            def api(method, path, data=None):
+                if path == '/releases/latest': return {'tag_name': 'v0.7.0'}
+                return repo(method, path, data)
+            publish(api, description, 'updates/installer.json')
+            current = repo.trees[repo.commits[repo.head]['tree']['sha']]
+            self.assertIn('updates/installer.json', current)
+            self.assertNotIn('updates/latest.json', current)
+            archive.write_bytes(b'changed payload')
+            with self.assertRaises(ValueError): manifest(release, archive, 'ZazaJr24/Steamy', app_payload=True)

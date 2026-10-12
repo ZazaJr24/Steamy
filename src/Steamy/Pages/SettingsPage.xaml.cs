@@ -55,12 +55,21 @@ public partial class SettingsPage : Page
         if (args.PropertyName == nameof(SettingsViewModel.Settings)) ObserveMotionSettings();
     }
 
+    private void ScanInstalledGames_Click(object sender, RoutedEventArgs args)
+    {
+        App.Services.GetRequiredService<INavigationService>().Navigate<DashboardPage>();
+        var dashboard = App.Services.GetRequiredService<DashboardViewModel>();
+        dashboard.ShowAllGamesCommand.Execute(null);
+        dashboard.ScanPcCommand.Execute(null);
+    }
+
     private void ObserveMotionSettings()
     {
         if (_motionSettings is not null) _motionSettings.PropertyChanged -= MotionSettings_PropertyChanged;
         _motionSettings = ViewModel.Settings;
         _motionSettings.PropertyChanged += MotionSettings_PropertyChanged;
         MotionPreferences.Configure(_motionSettings.ReduceEffects);
+        MotionPreferences.ConfigureTrailers(_motionSettings.AutoplayTrailers);
     }
 
     private void MotionSettings_PropertyChanged(object? sender, PropertyChangedEventArgs args)
@@ -69,6 +78,8 @@ public partial class SettingsPage : Page
             App.Services.GetRequiredService<DashboardViewModel>().RefreshSearchPreference();
         if (args.PropertyName == nameof(AppSettings.ReduceEffects))
             MotionPreferences.Configure(ViewModel.Settings.ReduceEffects);
+        if (args.PropertyName == nameof(AppSettings.AutoplayTrailers))
+            MotionPreferences.ConfigureTrailers(ViewModel.Settings.AutoplayTrailers);
     }
 
     private void Settings_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -97,7 +108,7 @@ public partial class SettingsPage : Page
     private void CategorySelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         _searchTimer.Stop();
-        if (CategorySelector.SelectedItem is ComboBoxItem { Tag: string category }) _selectedCategory = category;
+        if (CategorySelector.SelectedItem is ListBoxItem { Tag: string category }) _selectedCategory = category;
         FilterSections();
     }
 
@@ -133,6 +144,8 @@ public partial class SettingsPage : Page
     {
         // Checked/TextChanged also fire while InitializeComponent is still building the page.
         if (SectionsPanel is null || SettingsSearch is null || SectionSummary is null) return;
+        CategoryTitle.Text = !string.IsNullOrWhiteSpace(SettingsSearch.Text) ? "Search results"
+            : _selectedCategory switch { "downloads" => "Downloads", "services" => "Connections", "network" => "Network", "transparency" => "Data & privacy", "all" => "All settings", _ => "General" };
         var words = SettingsSearch.Text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var count = 0;
         var changed = false;
@@ -193,6 +206,7 @@ public partial class SettingsPage : Page
     /// </summary>
     private void CredentialTyped(PasswordBox box, string what, Action<string> assign)
     {
+        using (var secret = box.SecurePassword) box.Tag = secret.Length > 0 ? "Filled" : "Empty";
         if (string.IsNullOrWhiteSpace(box.Password)) return;
 
         assign(box.Password);
@@ -207,6 +221,7 @@ public partial class SettingsPage : Page
 
         ViewModel.Settings.Appearance = selection;
         UiThemeService.Apply(selection);
+        UiThemeService.ConfigureBackground(ViewModel.Settings);
     }
 
     private void BackdropComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

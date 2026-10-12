@@ -1,0 +1,229 @@
+<Page x:Class="Steamy.Pages.GameDetailsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:Steamy.Controls"
+      Background="#090B0E" FontFamily="Segoe UI" TextOptions.TextFormattingMode="Display" ScrollViewer.CanContentScroll="False" UseLayoutRounding="True" SnapsToDevicePixels="True">
+  <Page.Resources>
+    <BooleanToVisibilityConverter x:Key="VisibleWhen" />
+    <Style x:Key="DetailGlass" TargetType="Border">
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Background" Value="#0AFFFFFF" />
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="20" />
+      <Setter Property="controls:SurfaceMotion.RevealOnShow" Value="True" />
+    </Style>
+    <Style x:Key="DetailButton" TargetType="Button">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="Background" Value="#0FFFFFFF" />
+      <Setter Property="Padding" Value="16,11" /><Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}" />
+      <Setter Property="controls:CardMotion.IsEnabled" Value="True" /><Setter Property="controls:CardMotion.HoverScale" Value="1" /><Setter Property="controls:CardMotion.HoverLift" Value="-1" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="Face" CornerRadius="10" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" BorderBrush="#18FFFFFF" BorderThickness="1">
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Face" Property="BorderBrush" Value="#60FFFFFF" /></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Face" Property="Opacity" Value="0.5" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="DetailTab" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /><Setter Property="FontSize" Value="13" />
+      <Setter Property="Padding" Value="12,11" /><Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}" />
+      <Setter Property="controls:CardMotion.IsEnabled" Value="True" /><Setter Property="controls:CardMotion.HoverScale" Value="1.025" /><Setter Property="controls:CardMotion.HoverLift" Value="-1" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+        <Border x:Name="Face" CornerRadius="18" Background="Transparent" Padding="{TemplateBinding Padding}">
+          <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" />
+        </Border><ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Face" Property="Background" Value="#14FFFFFF" /></Trigger>
+          <Trigger Property="IsChecked" Value="True"><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="DetailHeading" TargetType="TextBlock"><Setter Property="FontSize" Value="20" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /></Style>
+    <Style x:Key="DetailCaption" TargetType="TextBlock"><Setter Property="FontSize" Value="11" /><Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" /><Setter Property="Margin" Value="0,0,0,8" /></Style>
+  </Page.Resources>
+  <Grid>
+  <ScrollViewer x:Name="DetailsScroll" Style="{StaticResource PageScrollHostStyle}" HorizontalScrollBarVisibility="Disabled" ScrollChanged="DetailsScroll_Changed">
+    <Grid x:Name="DetailsScene" Background="{DynamicResource GameDetailsBackgroundBrush}">
+      <Border x:Name="GameDetailsWarmGradient" IsHitTestVisible="False" Background="{DynamicResource GameDetailsGradientBrush}" />
+    <StackPanel>
+      <Grid x:Name="GameHero" Height="390" ClipToBounds="True">
+        <Grid x:Name="HeroArtworkFade">
+          <Grid.OpacityMask><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="White" /><GradientStop Color="White" Offset="0.46" /><GradientStop Color="#C0FFFFFF" Offset="0.65" /><GradientStop Color="#50FFFFFF" Offset="0.82" /><GradientStop Color="#10FFFFFF" Offset="0.94" /><GradientStop Color="Transparent" Offset="1" /></LinearGradientBrush></Grid.OpacityMask>
+        <Grid x:Name="HeroScene" RenderTransformOrigin="0.5,0.5">
+          <Grid.RenderTransform><TransformGroup><ScaleTransform x:Name="HeroZoom" /><TranslateTransform x:Name="HeroParallax" /></TransformGroup></Grid.RenderTransform>
+        <Border Background="{Binding Game.CoverColor}" />
+        <Image x:Name="HeroImage" Source="{Binding HeroArtwork}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
+        <Border><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#40040810" Offset="0" /><GradientStop Color="#00040810" Offset="0.3" /><GradientStop Color="#20040810" Offset="0.8" /><GradientStop Color="#70040810" Offset="1" /></LinearGradientBrush></Border.Background></Border>
+        <Border><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#60040810" Offset="0" /><GradientStop Color="#00040810" Offset="0.7" /></LinearGradientBrush></Border.Background></Border>
+        </Grid>
+        </Grid>
+        <Button x:Name="BackButton" Style="{StaticResource DetailButton}" Command="{Binding BackCommand}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="36,70,0,0" Foreground="White" Background="#28040810" AutomationProperties.Name="Back to your games">
+          <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="ArrowLeft24" FontSize="16" Margin="0,0,9,0" /><TextBlock Text="Your games" FontSize="12" /></StackPanel>
+        </Button>
+        <StackPanel x:Name="HeroIdentity" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="40,0,40,34" MaxWidth="600" controls:SurfaceMotion.RevealOnShow="True">
+          <Image x:Name="GameLogo" Source="{Binding LogoArtwork}" Stretch="Uniform" Width="320" MaxHeight="118" HorizontalAlignment="Left" RenderOptions.BitmapScalingMode="HighQuality" Visibility="{Binding HasLogo, Converter={StaticResource VisibleWhen}}" />
+          <TextBlock x:Name="GameTitle" Text="{Binding Name}" FontSize="42" FontWeight="SemiBold" Foreground="White" TextWrapping="Wrap" MaxHeight="132" TextTrimming="CharacterEllipsis">
+            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Visible" /><Style.Triggers><DataTrigger Binding="{Binding HasLogo}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+          </TextBlock>
+        </StackPanel>
+      </Grid>
+      <Grid>
+      <StackPanel Margin="36,0,36,36" MaxWidth="1480" HorizontalAlignment="Stretch">
+        <Border x:Name="GameActionBar" Background="Transparent" Padding="0,16" controls:SurfaceMotion.RevealOnShow="True">
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="192" /><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="1.4*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="48" /><ColumnDefinition Width="48" /></Grid.ColumnDefinitions>
+            <Button x:Name="PlayButton" Style="{StaticResource DetailButton}" Command="{Binding PlayCommand}" Foreground="White" Height="56" Margin="0,0,24,0" AutomationProperties.Name="Start game" Visibility="{Binding IsInstalled, Converter={StaticResource VisibleWhen}}">
+              <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#62B5FF" /><GradientStop Color="#367EEB" Offset="1" /></LinearGradientBrush></Button.Background>
+              <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Play24" FontSize="21" Margin="0,0,10,0" /><TextBlock Text="{Binding PlayLabel}" FontSize="18" FontWeight="SemiBold" /></StackPanel>
+            </Button>
+            <Button x:Name="InstallButton" Click="Install_Click" Foreground="White" Height="48" Margin="0,0,24,0" Visibility="{Binding CanInstall, Converter={StaticResource VisibleWhen}}" AutomationProperties.Name="{Binding InstallLabel}">
+              <Button.Style><Style TargetType="Button" BasedOn="{StaticResource DetailButton}"><Setter Property="Background" Value="#259A60"/><Style.Triggers><DataTrigger Binding="{Binding HasDownload}" Value="True"><Setter Property="Background" Value="#38404B"/></DataTrigger></Style.Triggers></Style></Button.Style>
+              <Grid MinWidth="120">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2"><ui:SymbolIcon Symbol="ArrowDownload24" FontSize="17" Margin="0,0,8,0"/><TextBlock Text="{Binding InstallLabel}" FontSize="15" FontWeight="SemiBold"/></StackPanel>
+                <controls:SmoothProgressBar SmoothValue="{Binding Download.Progress}" IsIndeterminate="{Binding Download.IsProgressIndeterminate}" Maximum="100" Height="3" Margin="-8,0,-8,-8" VerticalAlignment="Bottom" Foreground="#66C0F4" Background="#35FFFFFF" Style="{StaticResource JobProgressBar}" Visibility="{Binding HasDownload, Converter={StaticResource VisibleWhen}}"/>
+              </Grid>
+            </Button>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,12,0"><TextBlock Text="PLAY TIME" Style="{StaticResource DetailCaption}" /><TextBlock x:Name="PlayTimeText" Text="{Binding PlayTimeLabel}" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" /></StackPanel>
+            <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,16,0"><TextBlock Text="{Binding LastPlayedCaption}" Style="{StaticResource DetailCaption}" /><TextBlock Text="{Binding LastPlayedLabel}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" /></StackPanel>
+            <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,12,0"><TextBlock Text="{Binding SourceCaption}" Style="{StaticResource DetailCaption}" /><TextBlock Text="{Binding SourceLabel}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" /></StackPanel>
+            <Button Grid.Column="4" Style="{StaticResource DetailButton}" Command="{Binding OpenFolderCommand}" Padding="11" Width="40" Height="40" AutomationProperties.Name="Open installation folder"><ui:SymbolIcon Symbol="Folder24" FontSize="18" /></Button>
+            <Button Grid.Column="5" Style="{StaticResource DetailButton}" Command="{Binding SelectTabCommand}" CommandParameter="3" Padding="11" Width="40" Height="40" AutomationProperties.Name="Launch options"><ui:SymbolIcon Symbol="Settings24" FontSize="18" /></Button>
+          </Grid>
+        </Border>
+        <TextBlock Text="{Binding LaunchStatus}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,4,0"><TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding LaunchStatus}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+        <Border Padding="3" CornerRadius="12" Background="#08FFFFFF" HorizontalAlignment="Left" Margin="0,12,0,30" Width="500">
+          <Grid x:Name="TabRail" SizeChanged="TabRail_SizeChanged">
+            <Border x:Name="TabIndicator" CornerRadius="9" Background="#15FFFFFF" BorderThickness="0" HorizontalAlignment="Left" IsHitTestVisible="False"><Border.RenderTransform><TranslateTransform x:Name="TabSlide" /></Border.RenderTransform></Border>
+          <UniformGrid Columns="4">
+            <RadioButton Content="Overview" GroupName="GameTabs" Style="{StaticResource DetailTab}" IsChecked="{Binding IsOverview, Mode=OneWay}" Command="{Binding SelectTabCommand}" CommandParameter="0" />
+            <RadioButton Content="Achievements" GroupName="GameTabs" Style="{StaticResource DetailTab}" IsChecked="{Binding IsAchievements, Mode=OneWay}" Command="{Binding SelectTabCommand}" CommandParameter="1" />
+            <RadioButton Content="Notes" GroupName="GameTabs" Style="{StaticResource DetailTab}" IsChecked="{Binding IsNotes, Mode=OneWay}" Command="{Binding SelectTabCommand}" CommandParameter="2" />
+            <RadioButton Content="Launch options" GroupName="GameTabs" Style="{StaticResource DetailTab}" IsChecked="{Binding IsLaunchOptions, Mode=OneWay}" Command="{Binding SelectTabCommand}" CommandParameter="3" />
+          </UniformGrid>
+          </Grid>
+        </Border>
+        <StackPanel x:Name="OverviewPanel" Visibility="{Binding IsOverview, Converter={StaticResource VisibleWhen}}" controls:SurfaceMotion.RevealOnShow="True">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="1.8*" /><ColumnDefinition Width="36" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+          <Border Padding="4,8,12,0">
+            <StackPanel>
+              <TextBlock Text="About this game" Style="{StaticResource DetailHeading}" FontSize="23" Margin="0,0,0,14" />
+              <TextBlock Text="{Binding Description}" FontSize="14" LineHeight="24" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,22" />
+              <UniformGrid Columns="2" Margin="0,0,0,22">
+                <StackPanel Margin="0,0,16,0"><TextBlock Text="DEVELOPER" Style="{StaticResource DetailCaption}" /><TextBlock Text="{Binding Developer}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" /></StackPanel>
+                <StackPanel><TextBlock Text="PUBLISHER" Style="{StaticResource DetailCaption}" /><TextBlock Text="{Binding Publisher}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" /></StackPanel>
+              </UniformGrid>
+              <StackPanel Orientation="Horizontal" Visibility="{Binding IsSteamGame, Converter={StaticResource VisibleWhen}}"><Button Content="Open in Steam" Style="{StaticResource DetailButton}" Command="{Binding OpenSteamCommand}" Margin="0,0,10,0" /><Button Content="Community" Style="{StaticResource DetailButton}" Command="{Binding OpenCommunityCommand}" /></StackPanel>
+            </StackPanel>
+          </Border>
+          <StackPanel Grid.Column="2">
+            <Border Style="{StaticResource DetailGlass}" Padding="20" Margin="0,0,0,14">
+              <StackPanel>
+                <Grid><TextBlock Text="Achievements" Style="{StaticResource DetailHeading}" FontSize="17" VerticalAlignment="Center" /><Button Content="›" AutomationProperties.Name="View achievements" Style="{StaticResource DetailButton}" Padding="10,5" HorizontalAlignment="Right" Command="{Binding SelectTabCommand}" CommandParameter="1" /></Grid>
+                <TextBlock Text="{Binding AchievementSummary}" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,16,0,12" />
+                <ProgressBar Value="{Binding AchievementPercent, Mode=OneWay}" Maximum="100" Height="5" Foreground="#82B9F2" Background="#16FFFFFF" Visibility="{Binding AchievementsAvailable, Converter={StaticResource VisibleWhen}}" />
+                <TextBlock Text="{Binding AchievementStatus}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,14,0,0" />
+              </StackPanel>
+            </Border>
+            <Button Style="{StaticResource DetailButton}" Command="{Binding SelectTabCommand}" CommandParameter="2" HorizontalContentAlignment="Stretch" Padding="18,14" Background="#08FFFFFF"><StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Note24" FontSize="18" Margin="0,0,12,0" /><TextBlock Text="Your notes" FontSize="13" /><TextBlock Text="  ›" Margin="16,0,0,0" /></StackPanel></Button>
+          </StackPanel>
+        </Grid>
+        <StackPanel Margin="4,30,4,0">
+          <TextBlock Text="Game information" Style="{StaticResource DetailHeading}" FontSize="23" />
+          <TextBlock Text="{Binding InfoStatus}" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,8,0,22" />
+          <UniformGrid Columns="2" Margin="0,0,0,22" Visibility="{Binding IsSteamGame, Converter={StaticResource VisibleWhen}}">
+            <StackPanel Margin="0,0,24,18"><TextBlock Text="RELEASE DATE" Style="{StaticResource DetailCaption}" /><TextBlock Text="{Binding ReleaseDate}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" /></StackPanel>
+            <StackPanel Margin="0,0,0,18"><TextBlock Text="GENRES" Style="{StaticResource DetailCaption}" /><TextBlock Text="{Binding Genres}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" /></StackPanel>
+            <StackPanel Margin="0,0,24,0"><TextBlock Text="LANGUAGES" Style="{StaticResource DetailCaption}" /><TextBlock Text="{Binding Languages}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" LineHeight="21" /></StackPanel>
+            <StackPanel><TextBlock Text="FEATURES" Style="{StaticResource DetailCaption}" /><TextBlock Text="{Binding Features}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" LineHeight="21" /></StackPanel>
+          </UniformGrid>
+          <StackPanel Margin="0,8,0,30" Visibility="{Binding HasScreenshots, Converter={StaticResource VisibleWhen}}">
+            <TextBlock Text="Screenshots" Style="{StaticResource DetailHeading}" Margin="0,0,0,16" />
+            <ItemsControl x:Name="ScreenshotGallery" ItemsSource="{Binding Screenshots}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <Button Tag="{Binding Full}" Click="OpenLink_Click" Style="{StaticResource DetailButton}" Padding="0" Margin="0,0,12,12" Background="Transparent" AutomationProperties.Name="Open game screenshot">
+                  <Border CornerRadius="14" controls:RoundedClip.Radius="14" ClipToBounds="True"><Image Source="{Binding Thumbnail}" Stretch="UniformToFill" Height="150" RenderOptions.BitmapScalingMode="HighQuality" /></Border>
+                </Button>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <StackPanel Margin="0,0,0,30" Visibility="{Binding HasNews, Converter={StaticResource VisibleWhen}}">
+            <TextBlock Text="Latest updates" Style="{StaticResource DetailHeading}" Margin="0,0,0,16" />
+            <ItemsControl x:Name="NewsList" ItemsSource="{Binding News}">
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <Border Style="{StaticResource DetailGlass}" Margin="0,0,0,12" Padding="22,18">
+                  <StackPanel>
+                    <TextBlock Text="{Binding DateLabel}" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,8" />
+                    <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Summary}" FontSize="13" LineHeight="22" MaxHeight="88" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,14" />
+                    <Button Content="Read update ↗" Tag="{Binding Link}" Click="OpenLink_Click" Style="{StaticResource DetailButton}" Padding="12,7" HorizontalAlignment="Left" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <StackPanel Margin="0,0,0,30" Visibility="{Binding HasFullDescription, Converter={StaticResource VisibleWhen}}">
+            <TextBlock Text="Discover the game" Style="{StaticResource DetailHeading}" Margin="0,0,0,16" />
+            <TextBlock Text="{Binding FullDescription}" FontSize="14" LineHeight="25" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+          </StackPanel>
+          <Border Style="{StaticResource DetailGlass}" Margin="0,0,0,28" Visibility="{Binding HasRequirements, Converter={StaticResource VisibleWhen}}">
+            <StackPanel><TextBlock Text="System requirements" Style="{StaticResource DetailHeading}" Margin="0,0,0,16" /><TextBlock Text="{Binding SystemRequirements}" FontSize="13" LineHeight="23" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" /></StackPanel>
+          </Border>
+          <TextBlock Text="ON THIS PC" Style="{StaticResource DetailCaption}" />
+          <TextBlock Text="{Binding InstallationLabel}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10" />
+          <TextBlock Text="{Binding LaunchTarget}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextTertiaryBrush}" />
+        </StackPanel>
+        </StackPanel>
+        <Border x:Name="AchievementsPanel" Style="{StaticResource DetailGlass}" Visibility="{Binding IsAchievements, Converter={StaticResource VisibleWhen}}">
+          <StackPanel>
+            <Grid><TextBlock Text="Achievements" Style="{StaticResource DetailHeading}" /><Button Content="Refresh" HorizontalAlignment="Right" Command="{Binding RefreshAchievementsCommand}" Style="{StaticResource DetailButton}" /></Grid>
+            <TextBlock Text="{Binding AchievementSummary}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,14,0,8" />
+            <ProgressBar Value="{Binding AchievementPercent, Mode=OneWay}" Maximum="100" Height="5" Foreground="#82B9F2" Background="#16FFFFFF" Visibility="{Binding AchievementsAvailable, Converter={StaticResource VisibleWhen}}" />
+            <TextBlock Text="{Binding AchievementStatus}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,14,0,18" />
+            <ListBox x:Name="AchievementList" ItemsSource="{Binding Achievements}" MaxHeight="440" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+              <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,10" /></Style></ListBox.ItemContainerStyle>
+              <ListBox.ItemTemplate><DataTemplate><Border CornerRadius="18" Background="#10FFFFFF" Padding="16"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="64" /><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
+                <Border Width="52" Height="52" CornerRadius="12" Background="#18FFFFFF" controls:RoundedClip.Radius="12"><Grid><ui:SymbolIcon Symbol="Trophy24" FontSize="24" Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" /><Image Source="{Binding IconUri}" Stretch="UniformToFill" /></Grid></Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,16,0"><TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" /><TextBlock Text="{Binding Description}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0" /></StackPanel>
+                <TextBlock Grid.Column="2" Text="{Binding StateLabel}" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+              </Grid></Border></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+            <StackPanel Visibility="{Binding IsSteamGame, Converter={StaticResource VisibleWhen}}" Margin="0,14,0,0">
+              <TextBlock Text="Connect Steam achievements" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <TextBlock Text="Uses your Steam ID from Settings. Your API key is saved securely on this PC." FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,8,0,14" />
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><PasswordBox x:Name="SteamApiKey" MaxLength="32" Height="38" VerticalContentAlignment="Center" AutomationProperties.Name="Steam Web API key" /><Button Grid.Column="1" Content="Connect" Click="ConnectSteam_Click" Style="{StaticResource DetailButton}" Margin="10,0,0,0" /><Button Grid.Column="2" Content="Profile settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource DetailButton}" Margin="10,0,0,0" /></Grid>
+              <Button Content="Get a Steam Web API key ↗" Click="GetSteamKey_Click" Style="{StaticResource DetailButton}" HorizontalAlignment="Left" Margin="0,12,0,0" Padding="0,8" Background="Transparent" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+        <Border x:Name="NotesPanel" Style="{StaticResource DetailGlass}" Visibility="{Binding IsNotes, Converter={StaticResource VisibleWhen}}">
+          <StackPanel><TextBlock Text="Your notes" Style="{StaticResource DetailHeading}" /><TextBlock Text="Just for this game. Saved automatically on this PC." Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,18" />
+            <TextBox x:Name="GameNotes" IsEnabled="{Binding CanEditPreferences}" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="270" MaxLength="32000" Padding="18" FontSize="14" AutomationProperties.Name="Game notes" />
+            <Grid Margin="0,16,0,0"><TextBlock Text="{Binding SaveStatus}" VerticalAlignment="Center" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" /><Button Content="Save notes" Command="{Binding SaveCommand}" Style="{StaticResource DetailButton}" HorizontalAlignment="Right" /></Grid>
+          </StackPanel>
+        </Border>
+        <Border x:Name="LaunchOptionsPanel" Style="{StaticResource DetailGlass}" Visibility="{Binding IsLaunchOptions, Converter={StaticResource VisibleWhen}}">
+          <StackPanel><TextBlock Text="Launch options" Style="{StaticResource DetailHeading}" /><TextBlock Text="Additional arguments for this game" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,14,0,10" />
+            <TextBox x:Name="LaunchArgumentsBox" IsEnabled="{Binding CanEditPreferences}" Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}" MaxLength="2048" Padding="14" AutomationProperties.Name="Game launch arguments" />
+            <TextBlock Text="Only use options supported by the game, for example -windowed." FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,10,0,24" />
+            <TextBlock Text="STARTUP" Style="{StaticResource DetailCaption}" /><TextBlock Text="{Binding LaunchTarget}" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20" />
+            <StackPanel Orientation="Horizontal" Visibility="{Binding IsLocalGame, Converter={StaticResource VisibleWhen}}" IsEnabled="{Binding CanEditPreferences}" Margin="0,0,0,20"><Button Content="Choose executable" Click="ChooseExecutable_Click" Style="{StaticResource DetailButton}" Margin="0,0,10,0" /><Button Content="Use detected executable" Click="ResetExecutable_Click" Style="{StaticResource DetailButton}" /></StackPanel>
+            <TextBlock Text="INSTALLATION" Style="{StaticResource DetailCaption}" /><TextBlock Text="{Binding InstallationLabel}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,24" />
+            <Grid><TextBlock Text="{Binding SaveStatus}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextTertiaryBrush}" /><Button Content="Save options" Command="{Binding SaveCommand}" Style="{StaticResource DetailButton}" HorizontalAlignment="Right" /></Grid>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+      </Grid>
+    </StackPanel>
+    </Grid>
+  </ScrollViewer>
+  <Grid x:Name="InstallationHost" Visibility="Collapsed" Panel.ZIndex="10" />
+  </Grid>
+</Page>

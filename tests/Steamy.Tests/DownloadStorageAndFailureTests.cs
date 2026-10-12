@@ -4,6 +4,18 @@ namespace Steamy.Tests;
 
 public sealed class DownloadStorageAndFailureTests
 {
+    [Theory]
+    [InlineData("HTTP 503 service unavailable", true)]
+    [InlineData("Connection reset downloading chunk", true)]
+    [InlineData("No download or verification activity for 3 minutes", true)]
+    [InlineData("Connection timeout; invalid depot key", false)]
+    [InlineData("Disk full; failed to download chunk", false)]
+    [InlineData("Manifest not found", false)]
+    [InlineData("Unknown tool failure", false)]
+    [InlineData("", false)]
+    public void AutomaticRetryOnlyAcceptsTransientFailures(string output, bool expected) =>
+        Assert.Equal(expected, DownloadFailurePolicy.IsTransient(output));
+
     [Fact]
     public void AFullDriveCannotStartEvenWhenTheSourceDoesNotKnowTheSize()
     {

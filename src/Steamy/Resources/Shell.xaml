@@ -1,0 +1,84 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+                    xmlns:controls="clr-namespace:Steamy.Controls">
+  <ControlTemplate x:Key="GlassNavigationTemplate" TargetType="ui:NavigationView">
+    <Grid Background="Transparent">
+      <Grid x:Name="PageHost" Margin="0,64,0,0">
+        <ui:NavigationViewContentPresenter x:Name="PART_NavigationViewContentPresenter" Background="Transparent" BorderThickness="0" Padding="0"
+                                           Transition="{TemplateBinding Transition}" />
+        <ContentPresenter Content="{TemplateBinding ContentOverlay}" />
+      </Grid>
+      <ToggleButton x:Name="PaneDismiss" Panel.ZIndex="1" IsTabStop="False" Focusable="False"
+                    IsChecked="{Binding IsPaneOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                    AutomationProperties.Name="Close navigation">
+        <ToggleButton.Template><ControlTemplate TargetType="ToggleButton"><Border Background="#30000000" /></ControlTemplate></ToggleButton.Template>
+      </ToggleButton>
+      <Border x:Name="PaneShadow" Panel.ZIndex="2" HorizontalAlignment="Left" Width="{TemplateBinding OpenPaneLength}" Margin="12" CornerRadius="24" Background="{DynamicResource SidebarBackgroundBrush}" IsHitTestVisible="False">
+        <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="5" Opacity="0.22" Color="#000000" /></Border.Effect>
+      </Border>
+      <Grid x:Name="PaneGrid" Panel.ZIndex="3" HorizontalAlignment="Left" Width="{TemplateBinding OpenPaneLength}" Margin="12" controls:RoundedClip.Radius="24" controls:SurfaceMotion.RevealOnShow="True" KeyboardNavigation.TabNavigation="Cycle">
+        <controls:ShellBackdropView IsGlass="True" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}" FadeColor="{DynamicResource WorkspaceColor}" />
+        <Border CornerRadius="24" Background="{DynamicResource SidebarBackgroundBrush}" BorderThickness="0">
+          <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <Grid Height="88">
+              <ui:Button x:Name="PART_BackButton" Visibility="Collapsed" />
+              <ui:Button x:Name="PART_AutoSuggestBoxSymbolButton" Visibility="Collapsed" />
+            </Grid>
+            <ScrollViewer x:Name="PART_ScrollViewer" Grid.Row="1" Style="{StaticResource PageScrollHostStyle}" Padding="8,0" VerticalScrollBarVisibility="Auto">
+              <ItemsControl x:Name="PART_MenuItemsItemsControl" ItemsSource="{Binding MenuItems, RelativeSource={RelativeSource TemplatedParent}}" />
+            </ScrollViewer>
+            <StackPanel Grid.Row="2" Margin="8,8,8,0">
+              <ItemsControl x:Name="PART_FooterMenuItemsItemsControl" ItemsSource="{Binding FooterMenuItems, RelativeSource={RelativeSource TemplatedParent}}" />
+              <ContentPresenter Content="{TemplateBinding PaneFooter}" />
+            </StackPanel>
+          </Grid>
+        </Border>
+      </Grid>
+      <Grid x:Name="HeaderBar" Panel.ZIndex="4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,10,0,0" Height="34">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+        <ContentPresenter x:Name="DrawerHeader" Content="{TemplateBinding PaneHeader}" Visibility="Collapsed" VerticalAlignment="Center" Margin="0,0,8,0" />
+      <Grid x:Name="MenuLauncher" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Height="34" controls:RoundedClip.Radius="17"
+            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+        <controls:ShellBackdropView IsGlass="True" PreferSharpArtwork="True" GlassBlurIntensity="0.025" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}">
+          <controls:ShellBackdropView.Style><Style TargetType="controls:ShellBackdropView">
+            <Setter Property="IsPageBackdrop" Value="True" />
+            <Style.Triggers><DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Value="Home"><Setter Property="IsPageBackdrop" Value="False" /></DataTrigger></Style.Triggers>
+          </Style></controls:ShellBackdropView.Style>
+        </controls:ShellBackdropView>
+        <Border x:Name="LauncherSurface" Background="{DynamicResource LauncherBackgroundBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="17" Padding="3">
+          <StackPanel Orientation="Horizontal">
+            <StackPanel x:Name="LauncherBrand" Orientation="Horizontal" VerticalAlignment="Center" Margin="3,0,8,0" IsHitTestVisible="False">
+              <Image Source="{StaticResource SteamyBrandImage}" Width="24" Height="24" />
+              <TextBlock Text="Steamy" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource LauncherForegroundBrush}" Margin="7,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <ui:Button x:Name="PART_ToggleButton" Icon="{ui:SymbolIcon Navigation24}" Width="24" Height="24" Padding="5" Appearance="Transparent"
+                       Foreground="{DynamicResource LauncherForegroundBrush}" ToolTip="Open or close navigation" AutomationProperties.Name="Open or close navigation" />
+          </StackPanel>
+        </Border>
+      </Grid>
+      </Grid>
+    </Grid>
+    <ControlTemplate.Triggers>
+      <Trigger Property="Tag" Value="Home">
+        <Setter TargetName="PageHost" Property="Margin" Value="0" />
+      </Trigger>
+      <Trigger Property="IsPaneOpen" Value="False">
+        <Setter TargetName="PaneGrid" Property="Visibility" Value="Collapsed" />
+        <Setter TargetName="PaneShadow" Property="Visibility" Value="Collapsed" />
+        <Setter TargetName="PaneDismiss" Property="Visibility" Value="Collapsed" />
+      </Trigger>
+      <Trigger Property="IsPaneOpen" Value="True">
+        <Setter TargetName="PageHost" Property="IsEnabled" Value="False" />
+        <Setter TargetName="LauncherBrand" Property="Visibility" Value="Collapsed" />
+        <Setter TargetName="HeaderBar" Property="Width" Value="{Binding OpenPaneLength, RelativeSource={RelativeSource TemplatedParent}}" />
+        <Setter TargetName="HeaderBar" Property="Height" Value="88" />
+        <Setter TargetName="HeaderBar" Property="Margin" Value="12,12,0,0" />
+        <Setter TargetName="DrawerHeader" Property="Visibility" Value="Visible" />
+        <Setter TargetName="MenuLauncher" Property="Margin" Value="0,0,16,0" />
+      </Trigger>
+    </ControlTemplate.Triggers>
+  </ControlTemplate>
+</ResourceDictionary>

@@ -11,38 +11,38 @@ public sealed partial class PageSmokeTests
     private static void CheckFirstRunSetup()
     {
         var settings = new FirstRunMemorySettings();
-        var setup = new FirstRunSetup(settings, downloaderSetup: new ReadyDownloaderFixture());
+        var scanner = new ReadyScannerFixture();
+        var setup = new FirstRunSetup(settings, downloaderSetup: new ReadyDownloaderFixture(), gameScanner: scanner);
         setup.Measure(new Size(800, 700));
         setup.Arrange(new Rect(0, 0, 800, 700));
         setup.UpdateLayout();
 
         Assert.Equal("System Default", Assert.IsType<ComboBox>(setup.FindName("LanguageSelector")).SelectedItem);
+        Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(setup.FindName("GameScanStep")).Visibility);
+        Assert.Equal(Visibility.Collapsed, Assert.IsType<StackPanel>(setup.FindName("LanguageStep")).Visibility);
+        Assert.Equal(0, scanner.Requests); // Known-library discovery does not force a whole-PC scan.
+        ClickButton(setup, "ScanGamesButton");
+        Assert.Equal(1, scanner.Requests);
+        Assert.Contains("1 games found", Assert.IsType<TextBlock>(setup.FindName("GameScanStatus")).Text);
+        ClickButton(setup, "NextButton");
         Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(setup.FindName("LanguageStep")).Visibility);
-        Assert.Equal(Visibility.Collapsed, Assert.IsType<StackPanel>(setup.FindName("AppearanceStep")).Visibility);
-
         var languageSelector = Assert.IsType<ComboBox>(setup.FindName("LanguageSelector"));
         var germanLanguage = Assert.IsType<string>(languageSelector.Items.Cast<string>().First(item => item.StartsWith("de-DE", StringComparison.Ordinal)));
         languageSelector.SelectedItem = germanLanguage;
-        ClickButton(setup, "NextButton");
         Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(setup.FindName("AppearanceStep")).Visibility);
-
-        var lightAppearance = Assert.IsType<RadioButton>(setup.FindName("LightAppearance"));
-        lightAppearance.IsChecked = true;
-        ClickButton(setup, "NextButton");
-        Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(setup.FindName("ApiKeysStep")).Visibility);
+        ((RadioButton)setup.FindName("LightAppearance")).IsChecked = true;
+        var trailers = (Wpf.Ui.Controls.ToggleSwitch)setup.FindName("TrailerPreviewsToggle");
+        Assert.True(trailers.IsChecked); trailers.IsChecked = false;
+        var backgrounds = (Steamy.Controls.BackgroundOptions)setup.FindName("SetupBackgroundPreferences");
+        ((Wpf.Ui.Controls.ToggleSwitch)backgrounds.FindName("AmbientToggle")).IsChecked = false;
+        ((TextBox)backgrounds.FindName("ColorHex")).Text = "#314A72";
         ClickButton(setup, "NextButton");
         Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(setup.FindName("FoldersStep")).Visibility);
-        Assert.Equal(SteamLibraryService.FindSteamRoot() ?? string.Empty,
-            Assert.IsType<TextBox>(setup.FindName("SteamFolderText")).Text);
-        ClickButton(setup, "NextButton");
-        Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(setup.FindName("DownloadsStep")).Visibility);
-
+        var advanced = (Expander)setup.FindName("AdvancedPreferences"); advanced.IsExpanded = true;
         ((TextBox)setup.FindName("ParallelJobsText")!).Text = "4";
         ((TextBox)setup.FindName("ConnectionsText")!).Text = "32";
         ((TextBox)setup.FindName("SpeedLimitText")!).Text = "120";
         ((TextBox)setup.FindName("RetryCountText")!).Text = "5";
-        ClickButton(setup, "NextButton");
-        Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(setup.FindName("RecoveryStep")).Visibility);
         ClickButton(setup, "NextButton");
         PumpUntil(() => Assert.IsType<StackPanel>(setup.FindName("ReadyStep")).Visibility == Visibility.Visible);
         Assert.Equal(0, settings.SaveCount);
@@ -51,6 +51,11 @@ public sealed partial class PageSmokeTests
         PumpUntil(() => settings.SaveCount == 1);
         Assert.Equal(germanLanguage, settings.Load().Language);
         Assert.Equal("Light", settings.Load().Appearance);
+        Assert.False(settings.Load().AutoplayTrailers);
+        Assert.False(settings.Load().AmbientEnabled);
+        Assert.Equal("#314A72", settings.Load().BackgroundColor);
+        Assert.False(UiThemeService.AmbientEnabled);
+        Assert.False(Steamy.Controls.MotionPreferences.TrailerPreviewsEnabled);
         Assert.Equal(4, settings.Load().ParallelDownloads);
         Assert.Equal(32, settings.Load().DownloadConnections);
         Assert.Equal(120, settings.Load().DownloadRateLimitMiB);
@@ -68,6 +73,8 @@ public sealed partial class PageSmokeTests
         slide.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty, null);
         App.ApplyCulture("System Default");
         UiThemeService.Apply("Dark");
+        UiThemeService.ConfigureBackground(new AppSettings());
+        Steamy.Controls.MotionPreferences.ConfigureTrailers(true);
     }
 
     private static void ClickButton(FirstRunSetup setup, string name)
@@ -101,5 +108,15 @@ public sealed partial class PageSmokeTests
             IProgress<string>? progress = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<RyuuGameDownloadResult> ResumeDownloadAsync(int appId, string targetFolder,
             IProgress<string>? progress = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
+    private sealed class ReadyScannerFixture : IPcGameScanService
+    {
+        public int Requests;
+        public Task<GameScanResult> ScanAsync(IProgress<GameScanProgress>? progress = null, CancellationToken token = default, IReadOnlyList<string>? roots = null)
+        {
+            Requests++;
+            return Task.FromResult(new GameScanResult([new(42, "Fixture game", @"C:\Games\Fixture")], 23, 1, false));
+        }
     }
 }

@@ -13,8 +13,6 @@ public partial class DenuvoActivationPage : Page
 {
     public DenuvoActivationPage()
     {
-        Resources.Add("CountVis", new CountToVisibilityConverter());
-        Resources.Add("StringVis", new StringToVisibilityConverter());
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<DenuvoActivationViewModel>();
         Loaded += (_, _) => _ = ViewModel.EnsureToolDownloadedAsync();
@@ -53,7 +51,7 @@ public partial class DenuvoActivationPage : Page
     }
 }
 
-internal sealed class CountToVisibilityConverter : IValueConverter
+public sealed class CountToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         => value is int n && n > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -62,7 +60,7 @@ internal sealed class CountToVisibilityConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
-internal sealed class StringToVisibilityConverter : IValueConverter
+public sealed class StringToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         => value is string s && !string.IsNullOrWhiteSpace(s) ? Visibility.Visible : Visibility.Collapsed;

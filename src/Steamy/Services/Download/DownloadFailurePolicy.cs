@@ -8,6 +8,10 @@ public sealed class DownloadQueuePersistenceException(string message, Exception 
 
 public static class DownloadFailurePolicy
 {
+    public static bool IsTransient(string? output) => CanRetry(output) && !string.IsNullOrWhiteSpace(output)
+        && new[] { "connection timeout", "connection timed out", "connection reset", "connection interrupted", "network unreachable", "temporarily unavailable", "service unavailable", "HTTP 429", "HTTP 502", "HTTP 503", "HTTP 504", "failed to download chunk", "no download or verification activity" }
+            .Any(marker => output.Contains(marker, StringComparison.OrdinalIgnoreCase));
+
     public static bool CanRetry(string? output)
     {
         var detail = output ?? string.Empty;

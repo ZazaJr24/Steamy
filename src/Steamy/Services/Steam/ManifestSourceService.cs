@@ -19,7 +19,8 @@ public sealed record ManifestDownloadResult(
     bool Succeeded,
     string Message,
     string? LuaContent = null,
-    string? WorkDirectory = null);
+    string? WorkDirectory = null,
+    bool IsSteamClientScript = false);
 
 /// <summary>
 /// The answer to "can this source deliver this app?".
@@ -43,6 +44,10 @@ public interface IManifestSourceService
         int appId,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default);
+
+    Task<ManifestDownloadResult> DownloadSteamClientPackageAsync(
+        ManifestSource source, int appId, IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
+        DownloadManifestsAsync(source, appId, progress, cancellationToken);
 }
 
 public sealed class ManifestSourceService : IManifestSourceService, IDisposable
@@ -87,9 +92,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         _httpClient = httpClient ?? CreateSourceClient();
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
 
-        _workFolder = workFolder ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy",
+        _workFolder = workFolder ?? Path.Combine(Steamy.Storage.AppDataPaths.Root,
             "manifest-workdir");
     }
 
@@ -185,6 +188,15 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             ManifestSource.Sushi => await DownloadFromSushiAsync(appId, progress, cancellationToken),
             _ => new ManifestDownloadResult(false, $"Unknown source: {source}")
         };
+    }
+
+    public Task<ManifestDownloadResult> DownloadSteamClientPackageAsync(
+        ManifestSource source, int appId, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+    {
+        if (appId <= 0) return Task.FromResult(new ManifestDownloadResult(false, "Choose a valid app ID."));
+        return source == ManifestSource.DepotBox
+            ? DownloadFromDepotBoxAsync(appId, progress, cancellationToken, forSteamClient: true)
+            : DownloadManifestsAsync(source, appId, progress, cancellationToken);
     }
 
     private async Task<ManifestDownloadResult> DownloadFromSushiAsync(int appId, IProgress<string>? progress, CancellationToken token)
@@ -499,7 +511,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     }
 
     private async Task<ManifestDownloadResult> WithProviderPackageAsync(string provider, int appId,
-        CancellationToken ct, Func<string, Task<ManifestDownloadResult>> download)
+        CancellationToken ct, Func<string, Task<ManifestDownloadResult>> download, bool forSteamClient = false)
     {
         var directory = NewPackageDirectory(provider.ToLowerInvariant(), appId);
         var keep = false;
@@ -509,18 +521,23 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             Directory.CreateDirectory(directory);
             var result = await download(directory);
             if (!result.Succeeded) return result;
-            var lua = SteamToolsMetadata.ReadLua(result.LuaContent ?? "", $"{appId}.lua", appId).Lua;
+            var lua = forSteamClient ? SteamClientPackage.ValidateScript(result.LuaContent ?? "")
+                : SteamToolsMetadata.ReadLua(result.LuaContent ?? "", $"{appId}.lua", appId).Lua;
             var files = Directory.EnumerateFiles(directory).Where(path => Path.GetExtension(path).Equals(".manifest", StringComparison.OrdinalIgnoreCase)).ToArray();
             var luaPath = Path.Combine(directory, $"{appId}.lua");
             await File.WriteAllTextAsync(luaPath, lua, ct);
-            var plan = await SteamToolsMetadata.ReadAsync(files.Append(luaPath).ToArray(), appId, ct);
-            var catalog = DownloadPreparationReader.Read(lua);
-            foreach (var manifest in plan.Files.Keys.Where(name => name.StartsWith("depotcache/", StringComparison.Ordinal)))
-                if (!catalog.Depots.Any(depot => depot.Versions.Any(version => manifest.EndsWith($"/{depot.DepotId}_{version.ManifestId}.manifest", StringComparison.OrdinalIgnoreCase))))
-                    throw new InvalidDataException("The archive contains a manifest that does not match its Lua metadata.");
+            if (forSteamClient) await SteamClientPackage.ReadAsync(appId, lua, files, ct);
+            else
+            {
+                var plan = await SteamToolsMetadata.ReadAsync(files.Append(luaPath).ToArray(), appId, ct);
+                var catalog = DownloadPreparationReader.Read(lua);
+                foreach (var manifest in plan.Files.Keys.Where(name => name.StartsWith("depotcache/", StringComparison.Ordinal)))
+                    if (!catalog.Depots.Any(depot => depot.Versions.Any(version => manifest.EndsWith($"/{depot.DepotId}_{version.ManifestId}.manifest", StringComparison.OrdinalIgnoreCase))))
+                        throw new InvalidDataException("The archive contains a manifest that does not match its Lua metadata.");
+            }
             ct.ThrowIfCancellationRequested();
             keep = true;
-            return result with { LuaContent = lua, WorkDirectory = directory };
+            return result with { LuaContent = lua, WorkDirectory = directory, IsSteamClientScript = forSteamClient };
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (OperationCanceledException) { return new(false, $"{provider} timed out. Retry later; no metadata was installed."); }
@@ -536,7 +553,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     }
 
     private Task<ManifestDownloadResult> DownloadFromDepotBoxAsync(
-        int appId, IProgress<string>? progress, CancellationToken ct) =>
+        int appId, IProgress<string>? progress, CancellationToken ct, bool forSteamClient = false) =>
         WithProviderPackageAsync("DepotBox", appId, ct, async appWorkDir =>
     {
         var key = await ResolveDepotBoxKeyAsync();
@@ -560,7 +577,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             {
                 var bytes = await ReadPayloadAsync(resp.Content, 128L * 1024 * 1024, ct);
                 var contentType = resp.Content.Headers.ContentType?.MediaType ?? string.Empty;
-                var unpacked = await HandleDepotBoxPayloadAsync(appWorkDir, appId, bytes, contentType, ct);
+                var unpacked = await HandleDepotBoxPayloadAsync(appWorkDir, appId, bytes, contentType, ct, forSteamClient);
                 if (unpacked.Succeeded) return unpacked;
                 packageError = unpacked.Message;
             }
@@ -604,7 +621,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
 
             var contentType = resp.Content.Headers.ContentType?.MediaType ?? string.Empty;
             var bytes = await ReadPayloadAsync(resp.Content, 128L * 1024 * 1024, ct);
-            var result = await HandleDepotBoxPayloadAsync(appWorkDir, appId, bytes, contentType, ct);
+            var result = await HandleDepotBoxPayloadAsync(appWorkDir, appId, bytes, contentType, ct, forSteamClient);
             return result.Succeeded ? result : new ManifestDownloadResult(false, packageError ?? result.Message);
         }
         catch (OperationCanceledException) { throw; }
@@ -612,7 +629,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         {
             return new ManifestDownloadResult(false, packageError ?? $"DepotBox download failed: {ex.Message}");
         }
-    });
+    }, forSteamClient);
 
     private static bool IsZipArchive(byte[] bytes)
         => bytes.Length > 3 && bytes[0] == (byte)'P' && bytes[1] == (byte)'K';
@@ -665,7 +682,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
 
     /// <summary>Turns a DepotBox payload (zip archive or plain Lua text) into a download result.</summary>
     private async Task<ManifestDownloadResult> HandleDepotBoxPayloadAsync(
-        string appWorkDir, int appId, byte[] bytes, string contentType, CancellationToken ct)
+        string appWorkDir, int appId, byte[] bytes, string contentType, CancellationToken ct, bool forSteamClient = false)
     {
         if (bytes.Length == 0)
             return new ManifestDownloadResult(false, "DepotBox returned empty content.");
@@ -691,13 +708,14 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
                 return new ManifestDownloadResult(false, $"DepotBox archive could not be unpacked: {ex.Message}");
             }
 
-            luaContent = FindLuaInWorkDir(appWorkDir, appId) ?? luaContent;
+            luaContent = forSteamClient ? await SteamClientPackage.ReadScriptAsync(appWorkDir, appId, ct)
+                : FindLuaInWorkDir(appWorkDir, appId) ?? luaContent;
             if (luaContent is null)
                 return new ManifestDownloadResult(false, $"No Lua script found in DepotBox archive for App {appId}.");
 
             try
             {
-                luaContent = NormalizeDepotBoxLua(appId, luaContent);
+                luaContent = forSteamClient ? SteamClientPackage.ValidateScript(luaContent) : NormalizeDepotBoxLua(appId, luaContent);
                 await File.WriteAllTextAsync(Path.Combine(appWorkDir, $"{appId}.lua"), luaContent, ct);
             }
             catch (InvalidDataException ex)
@@ -713,7 +731,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         if (bytes.Length > DownloadPreparationReader.MaximumLuaCharacters)
             return new(false, "DepotBox Lua content exceeds the size limit.");
         string luaText;
-        try { luaText = new System.Text.UTF8Encoding(false, true).GetString(bytes).TrimStart('\uFEFF').Trim(); }
+        try { luaText = new System.Text.UTF8Encoding(false, true).GetString(bytes); if (!forSteamClient) luaText = luaText.TrimStart('\uFEFF').Trim(); }
         catch (System.Text.DecoderFallbackException)
         { return new(false, "DepotBox returned a binary file instead of a ZIP package or Lua metadata."); }
         if (luaText.StartsWith('<') || contentType.Contains("html", StringComparison.OrdinalIgnoreCase))
@@ -722,18 +740,18 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             return new ManifestDownloadResult(false,
                 ExtractApiErrorMessage(luaText, $"DepotBox returned unexpected content for App {appId}."));
 
-        return await SaveDepotBoxLuaAsync(appWorkDir, appId, luaText, ct);
+        return await SaveDepotBoxLuaAsync(appWorkDir, appId, luaText, ct, forSteamClient);
     }
 
     private async Task<ManifestDownloadResult> SaveDepotBoxLuaAsync(
-        string appWorkDir, int appId, string luaText, CancellationToken ct)
+        string appWorkDir, int appId, string luaText, CancellationToken ct, bool forSteamClient = false)
     {
         if (string.IsNullOrWhiteSpace(luaText))
             return new ManifestDownloadResult(false, "DepotBox returned empty content.");
 
         try
         {
-            luaText = NormalizeDepotBoxLua(appId, luaText);
+            luaText = forSteamClient ? SteamClientPackage.ValidateScript(luaText) : NormalizeDepotBoxLua(appId, luaText);
         }
         catch (InvalidDataException ex)
         {

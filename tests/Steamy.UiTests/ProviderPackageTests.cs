@@ -11,7 +11,46 @@ namespace Steamy.UiTests;
 // Controlled transport fixtures exercise the production parser; these are not live API checks.
 public sealed class ProviderPackageTests
 {
-    private const string Lua = "addappid(480)\naddappid(481,0,\"aabbccddeeff0011\")\nif addtoken ~= nil then addtoken(480,'2764735786934684318') end\nif type(setManifestid) == 'function' then\nsetManifestid(481,18446744073709551615)\nend";
+    private const string Lua = "addappid(480)\naddappid(481,0,\"aabbccddeeff0011\")\nif setManifestid then\nsetManifestid(481,18446744073709551615)\nend";
+    private const string ProviderScript = "-- DepotBox wrapper\nlocal depot = 481\nlocal function configure()\n  addappid(480)\n  addappid(depot,0,\"aabbccddeeff0011\")\n  setManifestid(depot,\"18446744073709551615\")\nend\nconfigure()\n";
+
+    [Theory]
+    [InlineData("script-zip")]
+    [InlineData("script-lua-only")]
+    public async Task DepotBoxSteamClientPreservesOriginalLuaWithoutParsingIt(string scenario)
+    {
+        using var fixture = new Fixture(ManifestSource.DepotBox, scenario);
+        var result = await fixture.Service.DownloadSteamClientPackageAsync(ManifestSource.DepotBox, 480);
+        Assert.True(result.Succeeded, result.Message);
+        Assert.True(result.IsSteamClientScript);
+        Assert.Equal(ProviderScript, result.LuaContent);
+        Assert.Equal(Encoding.UTF8.GetBytes(ProviderScript), File.ReadAllBytes(Path.Combine(result.WorkDirectory!, "480.lua")));
+        Assert.Throws<InvalidDataException>(() => SteamToolsMetadata.ReadLua(ProviderScript, "480.lua", 480));
+    }
+
+    [Fact]
+    public async Task DepotBoxDirectDownloadStillRequiresReadableDepotMetadata()
+    {
+        using var fixture = new Fixture(ManifestSource.DepotBox, "script-zip");
+        var result = await fixture.Service.DownloadManifestsAsync(ManifestSource.DepotBox, 480);
+        Assert.False(result.Succeeded);
+        Assert.False(result.IsSteamClientScript);
+        Assert.Null(result.WorkDirectory);
+    }
+
+    [Theory]
+    [InlineData("html")]
+    [InlineData("invalid-utf8")]
+    [InlineData("corrupt")]
+    [InlineData("script-wrong-name")]
+    public async Task SteamClientPackagesStillRejectBadTransportAndWrongArchiveNames(string scenario)
+    {
+        using var fixture = new Fixture(ManifestSource.DepotBox, scenario);
+        var result = await fixture.Service.DownloadSteamClientPackageAsync(ManifestSource.DepotBox, 480);
+        Assert.False(result.Succeeded);
+        Assert.Null(result.WorkDirectory);
+        Assert.Empty(Directory.EnumerateDirectories(fixture.Root, "pack-*", SearchOption.AllDirectories));
+    }
     [Theory]
     [InlineData(ManifestSource.Hubcap, "zip")]
     [InlineData(ManifestSource.Hubcap, "html-then-zip")]
@@ -26,7 +65,6 @@ public sealed class ProviderPackageTests
         var result = await fixture.Service.DownloadManifestsAsync(source, 480);
         Assert.True(result.Succeeded, result.Message);
         Assert.Contains("setManifestid(481,\"18446744073709551615\")", result.LuaContent);
-        Assert.Contains("addtoken(480,\"2764735786934684318\")", result.LuaContent);
         Assert.DoesNotContain("if ", result.LuaContent);
         Assert.Equal(result.LuaContent, File.ReadAllText(Path.Combine(result.WorkDirectory!, "480.lua")));
         Assert.False(File.Exists(Path.Combine(result.WorkDirectory!, "untrusted.exe")));
@@ -121,19 +159,19 @@ public sealed class ProviderPackageTests
             Assert.Equal(source == ManifestSource.Hubcap ? "hubcapmanifest.com" : "depotbox.org", request.RequestUri!.Host);
             Assert.Equal("fixture-key", request.Headers.GetValues("X-API-Key").Single());
             var luaEndpoint = request.RequestUri.AbsolutePath.Contains("lua", StringComparison.Ordinal);
-            if (scenario == "http" || scenario == "lua-only" && !luaEndpoint)
+            if (scenario == "http" || scenario.EndsWith("lua-only", StringComparison.Ordinal) && !luaEndpoint || scenario == "script-wrong-name" && luaEndpoint)
                 return Task.FromResult(new HttpResponseMessage(scenario == "http" ? (HttpStatusCode)status : HttpStatusCode.NotFound));
             byte[] bytes;
             if (scenario == "corrupt-then-lua" && !luaEndpoint || scenario == "corrupt") bytes = [80,75,3,4,0];
             else if (scenario.StartsWith("html") && (scenario == "html" || luaEndpoint)) bytes = Encoding.UTF8.GetBytes("<html>Login required</html>");
             else if (scenario.StartsWith("invalid-utf8") && (scenario == "invalid-utf8" || luaEndpoint)) bytes = [0xC3,0x28];
-            else if (luaEndpoint) bytes = Encoding.UTF8.GetBytes(scenario == "wrong-app" ? "addappid(999)" : Lua);
+            else if (luaEndpoint) bytes = Encoding.UTF8.GetBytes(scenario == "wrong-app" ? "addappid(999)" : scenario.StartsWith("script", StringComparison.Ordinal) ? ProviderScript : Lua);
             else
             {
                 using var output = new MemoryStream();
                 using (var archive = new ZipArchive(output, ZipArchiveMode.Create, true))
                 {
-                    using (var writer = new StreamWriter(archive.CreateEntry("480.lua").Open())) writer.Write(scenario == "wrong-app" ? "addappid(999)" : Lua);
+                    using (var writer = new StreamWriter(archive.CreateEntry(scenario == "script-wrong-name" ? "999.lua" : "480.lua").Open())) writer.Write(scenario == "wrong-app" ? "addappid(999)" : scenario.StartsWith("script", StringComparison.Ordinal) ? ProviderScript : Lua);
                     using (var writer = new StreamWriter(archive.CreateEntry(scenario == "mismatched-manifest" ? "999_123.manifest" : "481_18446744073709551615.manifest").Open())) writer.Write("fixture manifest");
                 }
                 bytes = output.ToArray();

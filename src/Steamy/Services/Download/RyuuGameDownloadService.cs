@@ -84,9 +84,7 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
         _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(5) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
 
-        var appData = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy");
+        var appData = Steamy.Storage.AppDataPaths.Root;
         _workFolder = workFolder ?? Path.Combine(appData, "ryuu-workdir");
         _fallbackToolsFolder = workFolder is null ? Path.Combine(appData, "tools", "DepotDownloaderMod") : Path.Combine(workFolder, "tools");
     }
@@ -572,16 +570,27 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
                 foreach (var arg in args)
                     startInfo.ArgumentList.Add(arg);
 
-                using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-                if (!process.Start())
+                (int exitCode, List<string> stdoutLines, long depotBytesDownloaded) = (-1, new(), 0);
+                for (var attempt = 0; attempt < 3; attempt++)
                 {
-                    failedDepots.Add($"Depot {depot.DepotId}: failed to start DepotDownloaderMod");
-                    continue;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    // A stalled attempt writes its graceful stop signal. The process has
+                    // exited before retrying, so the replacement must not inherit that signal.
+                    if (attempt > 0 && stopSignalPath is not null && File.Exists(stopSignalPath)) File.Delete(stopSignalPath);
+                    using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+                    if (!process.Start())
+                    {
+                        stdoutLines = new() { "Failed to start DepotDownloaderMod" };
+                        break;
+                    }
+                    (exitCode, stdoutLines, depotBytesDownloaded) = await RunProcessWithWatchdogAsync(
+                        process, depot.DepotId, index + 1, depots.Count, completedDepotsBytes, Path.GetFullPath(targetFolder),
+                        progress, cancellationToken, stopSignalPath);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (exitCode == 0 || attempt == 2 || !DownloadFailurePolicy.IsTransient(string.Join('\n', stdoutLines))) break;
+                    progress?.Report($"Connection interrupted — retrying depot {depot.DepotId} ({attempt + 1}/2). Existing files and the selected manifest are retained.");
+                    await Task.Delay(TimeSpan.FromSeconds(2 << attempt), cancellationToken).ConfigureAwait(false);
                 }
-
-                var (exitCode, stdoutLines, depotBytesDownloaded) = await RunProcessWithWatchdogAsync(
-                    process, depot.DepotId, index + 1, depots.Count, completedDepotsBytes, Path.GetFullPath(targetFolder),
-                    progress, cancellationToken, stopSignalPath);
 
                 cancellationToken.ThrowIfCancellationRequested();
                 var totalLine = stdoutLines.LastOrDefault(l => l.StartsWith("Total downloaded:", StringComparison.Ordinal));
@@ -843,6 +852,8 @@ public sealed class RyuuGameDownloadService : IRyuuGameDownloadService, IDisposa
     {
         ct.ThrowIfCancellationRequested();
         string? exePath = null;
+        var packaged = Path.Combine(AppContext.BaseDirectory, "Tools", "DepotDownloaderMod", "DepotDownloaderMod.exe");
+        if (BundledModCapabilities.SupportsOwnFork(packaged)) return packaged;
         var fallbackDir = _fallbackToolsFolder;
         if (Directory.Exists(fallbackDir))
         {
@@ -939,7 +950,8 @@ public static class GameDownloadProgressMessage
             snapshot?.Phase ?? "finalizing", (snapshot?.TotalBytes ?? 0).ToString(CultureInfo.InvariantCulture),
             (snapshot?.ContentBytes ?? 0).ToString(CultureInfo.InvariantCulture),
             snapshot?.TransferTotalBytes?.ToString(CultureInfo.InvariantCulture) ?? "",
-            (snapshot?.ReusedBytes ?? 0).ToString(CultureInfo.InvariantCulture));
+            (snapshot?.ReusedBytes ?? 0).ToString(CultureInfo.InvariantCulture),
+            snapshot?.DiskBytesPerSecond?.ToString("0", CultureInfo.InvariantCulture) ?? string.Empty);
 
     /// <summary>Applies a progress message to the job. Returns false for plain status text.</summary>
     public static bool TryApply(Models.DownloadJob job, string message)
@@ -983,6 +995,8 @@ public static class GameDownloadProgressMessage
             && double.IsFinite(parsedRate) && parsedRate >= 0 ? parsedRate : 0;
         job.BytesPerSecond = rate;
         job.Speed = parts[7];
+        job.DiskSpeed = parts.Length >= 19 && double.TryParse(parts[18], NumberStyles.Float, CultureInfo.InvariantCulture, out var diskRate)
+            && double.IsFinite(diskRate) && diskRate >= 0 ? DownloadFormat.Speed(diskRate) : string.Empty;
         job.Eta = parts[8].Length > 0 && count > 1 ? $"{parts[8]} · this depot" : parts[8];
         job.EtaSeconds = count <= 1 && parts.Length >= 12 && double.TryParse(parts[11], NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)
             && double.IsFinite(seconds) && seconds >= 0 ? seconds : null;

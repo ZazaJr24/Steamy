@@ -50,6 +50,9 @@ public sealed class Game : UiObservableObject
     public string CoverColor { get; init; } = "#242833";
     public string CoverGlyph { get; init; } = "◆";
     public string InstallFolder { get; init; } = string.Empty;
+    public bool IsLocalDownload { get; init; }
+    public string InstallationSource { get; init; } = "";
+    public string LaunchExecutable { get; init; } = string.Empty;
     public string Size { get; init; } = string.Empty;
     public long SizeOnDiskBytes { get; init; }
     public GameInstallState InstallState { get; init; }
@@ -113,7 +116,7 @@ public sealed class Game : UiObservableObject
     };
 }
 
-public sealed class DownloadJob : UiObservableObject
+public sealed partial class DownloadJob : UiObservableObject
 {
     private DownloadJobState _state;
     private double _progress;
@@ -225,8 +228,9 @@ public sealed class DownloadJob : UiObservableObject
     public string DiskSpeed
     {
         get => _diskSpeed;
-        set => SetProperty(ref _diskSpeed, value);
+        set { if (SetProperty(ref _diskSpeed, value)) OnPropertyChanged(nameof(DiskSpeedDisplay)); }
     }
+    public string DiskSpeedDisplay => IsActive && !string.IsNullOrWhiteSpace(DiskSpeed) ? DiskSpeed : "—";
 
     public string Eta
     {
@@ -244,7 +248,12 @@ public sealed class DownloadJob : UiObservableObject
     public double BytesPerSecond
     {
         get => _bytesPerSecond;
-        set => SetProperty(ref _bytesPerSecond, value);
+        set
+        {
+            var measured = double.IsFinite(value) ? Math.Max(0, value) : 0;
+            RecordTransferRate(measured);
+            SetProperty(ref _bytesPerSecond, measured);
+        }
     }
 
     public double? EtaSeconds
@@ -341,6 +350,7 @@ public sealed class DownloadJob : UiObservableObject
                 OnPropertyChanged(nameof(PhaseLabel));
                 OnPropertyChanged(nameof(RemainingDisplay));
                 OnPropertyChanged(nameof(TransferSpeedDisplay));
+                OnPropertyChanged(nameof(DiskSpeedDisplay));
                 OnPropertyChanged(nameof(ElapsedDisplay));
                 OnPropertyChanged(nameof(StateLabel));
                 OnPropertyChanged(nameof(IsActive));
@@ -598,6 +608,10 @@ public sealed class AppSettings : ObservableObject
     private string _language = "System Default";
     private string _appearance = "System";
     private bool _reduceEffects;
+    private bool _autoplayTrailers = true;
+    private bool _ambientEnabled = true;
+    private string _backgroundColor = "#09090B";
+    private bool _trackPlayTime = true;
     private bool _dashboardSearch;
     private bool _autoUpdate = true;
     private bool _notifications = true;
@@ -712,6 +726,12 @@ public sealed class AppSettings : ObservableObject
     public bool UseLancache { get => _useLancache; set => SetProperty(ref _useLancache, value); }
     public bool DashboardSearch { get => _dashboardSearch; set => SetProperty(ref _dashboardSearch, value); }
     public bool ReduceEffects { get => _reduceEffects; set => SetProperty(ref _reduceEffects, value); }
+    public bool AutoplayTrailers { get => _autoplayTrailers; set => SetProperty(ref _autoplayTrailers, value); }
+    public bool AmbientEnabled { get => _ambientEnabled; set => SetProperty(ref _ambientEnabled, value); }
+    public string BackgroundColor { get => _backgroundColor; set => SetProperty(ref _backgroundColor, value); }
+    public bool TrackPlayTime { get => _trackPlayTime; set => SetProperty(ref _trackPlayTime, value); }
+    public string TransparencyAcknowledgement { get; set; } = "";
+    public bool? FirstRunCompleted { get; set; }
     public int RetryCount { get => _retryCount; set => SetProperty(ref _retryCount, value); }
     public int TimeoutSeconds { get => _timeoutSeconds; set => SetProperty(ref _timeoutSeconds, value); }
     public bool VerifyAfterDownload { get => _verifyAfterDownload; set => SetProperty(ref _verifyAfterDownload, value); }

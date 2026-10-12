@@ -19,21 +19,21 @@ public sealed class DepotBoxImportTests
           setManifestid(481,18446744073709551615,1024)
         end
         """;
+    private const string WrappedLua = "local function configure()\n" + Lua + "\nend\nconfigure()\n";
 
     [Theory]
     [InlineData("zip")]
     [InlineData("octet-lua")]
     [InlineData("fallback-lua")]
-    public async Task DepotBoxSourceAddsCanonicalMetadataToVerifiedBackend(string response)
+    [InlineData("wrapped-lua")]
+    public async Task DepotBoxSourcePreservesOriginalScriptInVerifiedBackend(string response)
     {
         using var fixture = new Fixture(response);
         var result = await fixture.Backend.AddFromSourceAsync(fixture.Root, 480, ManifestSource.DepotBox);
         Assert.True(result.Succeeded, result.Message);
         Assert.Equal(480, Assert.Single(result.AppIds));
         var installed = File.ReadAllText(Path.Combine(fixture.Root, "config/stplug-in/480.lua"));
-        Assert.Contains("setManifestid(481,\"18446744073709551615\",1024)", installed);
-        Assert.DoesNotContain("if ", installed);
-        Assert.DoesNotContain("os.", installed);
+        Assert.Equal(response == "wrapped-lua" ? WrappedLua : Lua, installed);
         Assert.Equal(response == "zip" ? 1 : 0, result.ManifestCount);
         if (response == "zip")
             Assert.Equal("depot fixture", File.ReadAllText(Path.Combine(fixture.Root, "depotcache/481_18446744073709551615.manifest")));
@@ -44,8 +44,7 @@ public sealed class DepotBoxImportTests
     [Theory]
     [InlineData("html", "web page")]
     [InlineData("unauthorized", "HTTP 401")]
-    [InlineData("unsafe-lua", "unsupported Lua")]
-    public async Task FailedOrUnsafeProviderResponseNeverAddsAGame(string response, string message)
+    public async Task FailedProviderResponseNeverAddsAGame(string response, string message)
     {
         using var fixture = new Fixture(response);
         var result = await fixture.Backend.AddFromSourceAsync(fixture.Root, 480, ManifestSource.DepotBox);
@@ -127,7 +126,7 @@ public sealed class DepotBoxImportTests
                 bytes = stream.ToArray();
             }
             else bytes = Encoding.UTF8.GetBytes(response == "html" ? "<html>Browser verification required</html>"
-                : response == "unsafe-lua" ? Lua + "\nos.execute('never run')" : Lua);
+                : response == "wrapped-lua" ? WrappedLua : Lua);
             var payload = new ByteArrayContent(bytes);
             payload.Headers.ContentType = new MediaTypeHeaderValue(response == "html" ? "text/html" : "application/octet-stream");
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = payload });

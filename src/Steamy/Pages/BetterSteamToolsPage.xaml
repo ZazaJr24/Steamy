@@ -3,7 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       ScrollViewer.CanContentScroll="False"
-      Background="{DynamicResource AppBackgroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
+      Background="{DynamicResource PageBackgroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
     <Style x:Key="ToolHint" TargetType="TextBlock">
@@ -19,10 +19,10 @@
         <StackPanel>
           <ToggleButton Content="{TemplateBinding Header}" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
                         Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}" Cursor="Hand"
-                        FocusVisualStyle="{StaticResource GalleryKeyboardFocus}" HorizontalContentAlignment="Left">
+                        FocusVisualStyle="{StaticResource GalleryKeyboardFocus}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
             <ToggleButton.Template><ControlTemplate TargetType="ToggleButton">
               <Border Background="Transparent" Padding="0,10">
-                <StackPanel Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                   <Path x:Name="Arrow" Data="M 1,1 L 5,5 L 1,9" Width="10" Height="10" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.2" Margin="0,0,8,0" VerticalAlignment="Center" />
                   <ContentPresenter VerticalAlignment="Center" />
                 </StackPanel>
@@ -38,14 +38,14 @@
       </ControlTemplate></Setter.Value></Setter>
     </Style>
   </Page.Resources>
-  <Grid Background="{DynamicResource AppBackgroundBrush}">
+  <Grid Background="Transparent">
     <Grid.RowDefinitions><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
     <ScrollViewer x:Name="ToolScrollHost" Style="{StaticResource PageScrollHostStyle}" Padding="28,28,28,24">
-      <StackPanel MaxWidth="780" HorizontalAlignment="Stretch">
+      <StackPanel x:Name="ToolContent" MaxWidth="780" HorizontalAlignment="Stretch">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
           <TextBlock Text="BetterSteamTools" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-          <TextBlock Grid.Column="1" Text="{Binding ConnectionLabel}" Style="{StaticResource ToolHint}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock x:Name="ConnectionHint" Grid.Column="1" Text="{Binding ConnectionLabel}" Style="{StaticResource ToolHint}" FontSize="11" VerticalAlignment="Center" Visibility="{Binding BackendSetupRequired, Converter={StaticResource BoolToVis}}" />
         </Grid>
         <Border x:Name="BackendSetupNotice" Margin="0,18,0,0" Padding="16" CornerRadius="12" Background="{DynamicResource SurfaceBrush}"
                 Visibility="{Binding BackendSetupRequired, Converter={StaticResource BoolToVis}}">
@@ -84,10 +84,10 @@
               </ui:TextBox>
               <ui:Button x:Name="AddGameButton" Grid.Column="1" Content="Add to Steam" Icon="{ui:SymbolIcon Add24}" Command="{Binding AddGameCommand}" Appearance="Primary" Margin="10,0,0,0" MinWidth="140" Padding="14,8" AutomationProperties.Name="Add game to Steam" />
             </Grid>
-            <TextBlock Text="Source" Style="{StaticResource ToolHint}" Margin="0,14,0,6" />
-            <ComboBox x:Name="SourcePicker" ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}" DisplayMemberPath="Label" IsEnabled="{Binding IsIdle}"
+            <TextBlock x:Name="SourceLabel" Text="Source" Style="{StaticResource ToolHint}" TextAlignment="Left" Margin="0,14,0,6" />
+            <ComboBox x:Name="SourcePicker" ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}" DisplayMemberPath="Label" IsEnabled="{Binding IsIdle}" HorizontalContentAlignment="Left"
                       ToolTip="Automatic checks available sources. Sushi and Zaza are free; API providers use your Settings credentials." AutomationProperties.Name="Game metadata source" />
-            <WrapPanel Margin="0,10,0,0">
+            <WrapPanel Margin="0,10,0,0" HorizontalAlignment="Left">
               <ui:Button Content="Source settings" Command="{Binding OpenSettingsCommand}" Appearance="Transparent" FontSize="11" Margin="0,0,8,0" />
               <ui:Button Content="Browse games" Command="{Binding OpenGamesCommand}" Appearance="Transparent" FontSize="11" />
             </WrapPanel>
@@ -97,7 +97,7 @@
         <Expander x:Name="SteamSetupExpander" Header="Steam setup" Style="{StaticResource ToolOptions}" Margin="0,6,0,0">
           <Border x:Name="SteamConnectionPanel" Padding="0,12,0,12">
             <StackPanel>
-              <TextBlock Text="{Binding BackendLabel}" Style="{StaticResource ToolHint}" Margin="0,0,0,10" />
+              <TextBlock Text="{Binding BackendLabel}" Style="{StaticResource ToolHint}" Margin="0,0,0,10" Visibility="{Binding BackendSetupRequired, Converter={StaticResource BoolToVis}}" />
               <Grid IsEnabled="{Binding IsIdle}">
                 <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <ui:TextBox x:Name="SteamFolderBox" Text="{Binding SteamRoot, UpdateSourceTrigger=LostFocus}" PlaceholderText="Steam folder containing steam.exe" LostKeyboardFocus="SteamRoot_LostFocus" AutomationProperties.Name="Steam installation folder" />

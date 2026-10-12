@@ -6,19 +6,37 @@
       PreviewKeyDown="Settings_PreviewKeyDown"
       ScrollViewer.CanContentScroll="False"
       UseLayoutRounding="True" SnapsToDevicePixels="True"
-      Background="{DynamicResource AppBackgroundBrush}">
+      TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="Auto" RenderOptions.ClearTypeHint="Auto"
+      Background="{DynamicResource PageBackgroundBrush}">
   <Page.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-    <Style x:Key="CredentialBoxStyle" TargetType="PasswordBox" BasedOn="{StaticResource {x:Type PasswordBox}}">
-      <Setter Property="MinHeight" Value="38" />
-      <Setter Property="Padding" Value="12,6" />
-      <Setter Property="FontSize" Value="13" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Style x:Key="CredentialBoxStyle" TargetType="PasswordBox">
+      <Setter Property="MinHeight" Value="44"/>
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource TextTertiaryBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Tag" Value="Empty"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="PasswordBox">
+        <Border x:Name="Field" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9">
+          <Grid>
+            <ScrollViewer x:Name="PART_ContentHost" Margin="12,8" VerticalAlignment="Center"/>
+            <TextBlock x:Name="Placeholder" Text="Key eingeben …" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" Margin="12,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+          </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="Tag" Value="Filled"><Setter TargetName="Placeholder" Property="Visibility" Value="Collapsed"/></Trigger>
+          <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Placeholder" Property="Visibility" Value="Collapsed"/><Setter TargetName="Field" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Field" Property="Opacity" Value="0.5"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
     </Style>
     <Style x:Key="SettingsCard" TargetType="Border" BasedOn="{StaticResource SurfaceCardStyle}">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0,0,0,1" />
-      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="BorderThickness" Value="1" />
       <Style.Triggers>
         <Trigger Property="IsKeyboardFocusWithin" Value="True">
           <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -32,7 +50,7 @@
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style x:Key="SectionHeading" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="16" /><Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="19" /><Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
@@ -53,47 +71,70 @@
     <Style x:Key="TestButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
       <Setter Property="Appearance" Value="Secondary" /><Setter Property="CornerRadius" Value="10" />
     </Style>
+    <Style x:Key="SettingsCategoryItem" TargetType="ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="20,20" />
+      <Setter Property="Margin" Value="0,2" /><Setter Property="FontSize" Value="18" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+        <Border x:Name="Chrome" Padding="{TemplateBinding Padding}" CornerRadius="5" Background="Transparent" BorderBrush="Transparent" BorderThickness="1">
+          <ContentPresenter VerticalAlignment="Center" />
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource CardHoverGlassBrush}" /></Trigger>
+          <Trigger Property="IsSelected" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource GlassSurfaceBrush}" /><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /><Setter Property="FontWeight" Value="SemiBold" /></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource DownloadAccentBrush}" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
   </Page.Resources>
 
-  <Grid Margin="28,22,28,16" MaxWidth="1120">
+  <Grid Margin="38,24,32,16" HorizontalAlignment="Stretch" MaxWidth="1480">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="264" /><ColumnDefinition Width="32" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
       <RowDefinition Height="*" /><RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
-    <StackPanel Margin="0,0,0,18">
-      <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" />
-      <TextBlock Text="Personalize Steamy and manage downloads, connections, and privacy." Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" />
-    </StackPanel>
-
-    <StackPanel Grid.Row="1">
-      <Grid Margin="0,0,0,12">
-        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+    <Grid Grid.ColumnSpan="3" Margin="0,0,0,24">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+      <StackPanel>
+        <TextBlock Text="Settings" FontSize="32" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+      </StackPanel>
+      <Grid Grid.Column="1" VerticalAlignment="Center">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="280" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
         <ui:TextBox x:Name="SettingsSearch" PlaceholderText="Search settings…"
                     Icon="{ui:SymbolIcon Search24}" TextChanged="SettingsSearch_TextChanged"
                     AutomationProperties.Name="Search all settings" Margin="0,0,10,0" />
         <ui:Button Grid.Column="1" Content="Export" Icon="{ui:SymbolIcon Document24}" Click="ExportButton_Click"
                    Appearance="Secondary" ToolTip="Export settings as JSON. Credentials are excluded." />
       </Grid>
-      <Grid Margin="0,0,0,10">
-        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-        <ComboBox x:Name="CategorySelector" Width="180" MinHeight="34" SelectedIndex="0"
-                  SelectionChanged="CategorySelector_SelectionChanged" AutomationProperties.Name="Settings category">
-          <ComboBoxItem Content="General" Tag="general" />
-          <ComboBoxItem Content="Downloads" Tag="downloads" />
-          <ComboBoxItem Content="Connections" Tag="services" />
-          <ComboBoxItem Content="Network" Tag="network" />
-          <ComboBoxItem Content="All settings" Tag="all" />
-        </ComboBox>
-        <TextBlock x:Name="SectionSummary" Grid.Column="1" Style="{StaticResource CaptionStyle}"
-                   Margin="12,0,0,0" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+    </Grid>
+
+    <Border Grid.Row="1" Grid.RowSpan="2" Background="{DynamicResource GlassSurfaceBrush}" BorderThickness="0" CornerRadius="14" Padding="8,12">
+      <Grid><Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <ListBox x:Name="CategorySelector" SelectedIndex="0" SelectionChanged="CategorySelector_SelectionChanged"
+                 AutomationProperties.Name="Settings category" Background="Transparent" BorderThickness="0" Padding="0" ItemContainerStyle="{StaticResource SettingsCategoryItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBoxItem Tag="general" AutomationProperties.Name="General"><StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Settings24" FontSize="24" Margin="0,0,18,0" /><TextBlock Text="General" VerticalAlignment="Center" /></StackPanel></ListBoxItem>
+          <ListBoxItem Tag="downloads" AutomationProperties.Name="Downloads"><StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="ArrowDownload24" FontSize="24" Margin="0,0,18,0" /><TextBlock Text="Downloads" VerticalAlignment="Center" /></StackPanel></ListBoxItem>
+          <ListBoxItem Tag="services" AutomationProperties.Name="Connections"><StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="PlugConnected24" FontSize="24" Margin="0,0,18,0" /><TextBlock Text="Connections" VerticalAlignment="Center" /></StackPanel></ListBoxItem>
+          <ListBoxItem Tag="network" AutomationProperties.Name="Network"><StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Globe24" FontSize="24" Margin="0,0,18,0" /><TextBlock Text="Network" VerticalAlignment="Center" /></StackPanel></ListBoxItem>
+          <ListBoxItem Tag="transparency" AutomationProperties.Name="Data and privacy"><StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Shield24" FontSize="24" Margin="0,0,18,0" /><TextBlock Text="Data &amp; privacy" VerticalAlignment="Center" /></StackPanel></ListBoxItem>
+          <ListBoxItem Tag="all" AutomationProperties.Name="All settings"><StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Grid24" FontSize="24" Margin="0,0,18,0" /><TextBlock Text="All settings" VerticalAlignment="Center" /></StackPanel></ListBoxItem>
+        </ListBox>
+
       </Grid>
+    </Border>
+    <StackPanel Grid.Row="1" Grid.Column="2" Margin="2,4,0,14">
+      <TextBlock x:Name="CategoryTitle" Text="General" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+      <TextBlock x:Name="SectionSummary" Style="{StaticResource CaptionStyle}" Margin="0,4,0,0" AutomationProperties.LiveSetting="Polite" />
     </StackPanel>
 
-    <Grid Grid.Row="2">
+    <Grid Grid.Row="2" Grid.Column="2">
       <ScrollViewer x:Name="SettingsScrollViewer" Style="{StaticResource PageScrollHostStyle}"
-                    controls:SmoothScroll.Enabled="True"
+                    controls:SmoothScroll.Enabled="False"
                     HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="0,0,4,20">
         <StackPanel x:Name="SectionsPanel">
+          <controls:StorageTransparencyView x:Name="TransparencyView" Tag="transparency" />
           <Border Tag="services" Style="{StaticResource SettingsCard}" Margin="0,0,0,16">
             <StackPanel>
               <TextBlock Text="Free manifest sources" Style="{StaticResource SectionHeading}" />
@@ -110,7 +151,7 @@
         <TextBlock Text="Appearance" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
         <TextBlock Text="Theme, backdrop and language" Style="{StaticResource SectionHint}" />
       </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
@@ -123,6 +164,7 @@
               </StackPanel></Grid>
             <ComboBox Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Appearances}" SelectedItem="{Binding Settings.Appearance}" SelectionChanged="AppearanceComboBox_SelectionChanged" />
           </Grid>
+          <controls:BackgroundOptions x:Name="BackgroundPreferences" Settings="{Binding Settings}" Margin="41,0,0,20" />
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
             <Grid Margin="0,0,20,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Border Style="{StaticResource RowIcon}">
@@ -141,6 +183,26 @@
               <ui:ToggleSwitch x:Name="DashboardSearchToggle" Grid.Column="1" IsChecked="{Binding Settings.DashboardSearch, Mode=TwoWay}" AutomationProperties.Name="Dashboard search" />
             </Grid>
           </Border>
+          <Grid Margin="0,0,0,18">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="41,0,24,0">
+              <TextBlock Text="Playtime tracking" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Track running installed games locally. Continues after Steamy closes; switching this off stops the background tracker."
+                         Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+            <ui:ToggleSwitch x:Name="PlayTimeTrackingToggle" Grid.Column="1" IsChecked="{Binding Settings.TrackPlayTime, Mode=TwoWay}"
+                             AutomationProperties.Name="Playtime tracking" VerticalAlignment="Center" />
+          </Grid>
+          <Grid Margin="0,0,0,18">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="41,0,24,0">
+              <TextBlock Text="Trailer previews" Style="{StaticResource CardTitleStyle}" />
+              <TextBlock Text="Play muted trailers when hovering over upcoming games."
+                         Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+            <ui:ToggleSwitch x:Name="TrailerPreviewsToggle" Grid.Column="1" IsChecked="{Binding Settings.AutoplayTrailers, Mode=TwoWay}"
+                             AutomationProperties.Name="Trailer previews" VerticalAlignment="Center" />
+          </Grid>
           <Grid Margin="0,0,0,18">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel Margin="41,0,24,0">
@@ -192,7 +254,7 @@
         <TextBlock Text="Steam connection" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
         <TextBlock Text="API key, SteamID64 and endpoint" Style="{StaticResource SectionHint}" />
       </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
@@ -245,7 +307,7 @@
         <TextBlock Text="Ryuu Generator" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
         <TextBlock Text="Base URL and auth key" Style="{StaticResource SectionHint}" />
       </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
@@ -264,7 +326,7 @@
                 <TextBlock Text="Auth key" Style="{StaticResource CardTitleStyle}" />
                 <TextBlock Text="{Binding RyuuCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
               </StackPanel></Grid>
-            <PasswordBox x:Name="RyuuAuthKeyBox" Style="{StaticResource CredentialBoxStyle}" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="RyuuAuthKeyBox_PasswordChanged" />
+            <PasswordBox x:Name="RyuuAuthKeyBox" AutomationProperties.Name="Ryuu auth key" ToolTip="Auth key eingeben" Style="{StaticResource CredentialBoxStyle}" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="RyuuAuthKeyBox_PasswordChanged" />
           </Grid>
           <TextBlock Text="Stored separately, never written into logs or exports. Empty means: keep the current key."
                      Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="41,0,0,14" />
@@ -289,7 +351,7 @@
         <TextBlock Text="Fixes source" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
         <TextBlock Text="fixes.json catalog and archives" Style="{StaticResource SectionHint}" />
       </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
             <StackPanel Orientation="Horizontal">
@@ -341,7 +403,7 @@
         <TextBlock Text="Hubcap Manifest" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
         <TextBlock Text="Games, Lua and depot manifests" Style="{StaticResource SectionHint}" />
       </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
             <StackPanel Orientation="Horizontal">
@@ -410,7 +472,7 @@
         <TextBlock Text="DepotBox" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
         <TextBlock Text="Lua plus depot manifests in one package" Style="{StaticResource SectionHint}" />
       </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
             <StackPanel Orientation="Horizontal">
@@ -464,7 +526,7 @@
         <TextBlock Text="ManifestHub" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
         <TextBlock Text="Free exact depot manifests" Style="{StaticResource SectionHint}" />
       </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
             <StackPanel Orientation="Horizontal">
@@ -501,9 +563,14 @@
         <TextBlock Text="DepotDownloader &amp; downloads" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
         <TextBlock Text="Paths, queue limits and transfer options" Style="{StaticResource SectionHint}" />
       </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <TextBlock Text="FOLDERS &amp; ENGINE" Style="{StaticResource SettingsGroupLabel}" />
+          <Grid Margin="0,0,0,18">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0"><TextBlock Text="Find installed games" Style="{StaticResource CardTitleStyle}" /><TextBlock Text="Search all local drives, with progress and cancellation." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" /></StackPanel>
+            <ui:Button Grid.Column="1" Content="Scan PC" Click="ScanInstalledGames_Click" Appearance="Secondary" />
+          </Grid>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
@@ -560,7 +627,7 @@
 
         </StackPanel>
       </Border>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <TextBlock Text="TRANSFER CONTROLS" Style="{StaticResource SettingsGroupLabel}" />
           <Grid Margin="0,0,0,14">
@@ -620,7 +687,7 @@
 
         </StackPanel>
       </Border>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <TextBlock Text="VERIFY &amp; RECOVERY" Style="{StaticResource SettingsGroupLabel}" />
           <Grid Margin="0,0,0,12">
@@ -690,7 +757,7 @@
         <TextBlock Text="App DNS" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
         <TextBlock Text="Encrypted resolver used by the app only" Style="{StaticResource SectionHint}" />
       </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <Border Style="{StaticResource InfoPanelStyle}" CornerRadius="14" Margin="0,0,0,14">
             <StackPanel Orientation="Horizontal">
@@ -755,7 +822,7 @@
         <TextBlock Text="Quality of life and security" Style="{StaticResource SectionHeading}" Margin="10,0,0,0" />
         <TextBlock Text="Updates, notifications and logs" Style="{StaticResource SectionHint}" />
       </WrapPanel>
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="12,16" Margin="0,0,0,10">
+      <Border Style="{StaticResource SettingsCard}" Padding="12,16" Margin="0,0,0,10">
         <StackPanel>
           <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -809,7 +876,7 @@
         </StackPanel>
       </Border>
 
-      <Border Style="{StaticResource SettingsCard}" CornerRadius="0" Padding="16,14" Margin="0,0,0,8">
+      <Border Style="{StaticResource SettingsCard}" Padding="16,14" Margin="0,0,0,8">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
           <Grid VerticalAlignment="Center" Margin="0,0,12,0">
@@ -842,8 +909,8 @@
       </StackPanel>
     </Grid>
 
-    <Border Grid.Row="3" Background="Transparent" BorderBrush="{DynamicResource BorderSubtleBrush}"
-            BorderThickness="0,1,0,0" CornerRadius="0" Padding="4,12" Margin="0,10,0,0">
+    <Border Grid.Row="3" Grid.ColumnSpan="3" Background="Transparent" BorderBrush="{DynamicResource BorderSubtleBrush}"
+            BorderThickness="0,1,0,0" Padding="0,14,0,0" Margin="0,14,0,0">
       <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
         <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">

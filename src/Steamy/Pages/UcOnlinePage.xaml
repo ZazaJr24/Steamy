@@ -1,0 +1,47 @@
+<Page x:Class="Steamy.Pages.UcOnlinePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      ScrollViewer.CanContentScroll="False" Background="{DynamicResource WorkspaceBackgroundBrush}">
+  <Page.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Steamy;component/Resources/ToolPageStyles.xaml"/></ResourceDictionary.MergedDictionaries><BooleanToVisibilityConverter x:Key="BoolVis"/></ResourceDictionary></Page.Resources>
+  <ScrollViewer x:Name="ToolScroll" Style="{StaticResource PageScrollHostStyle}" Padding="28,28,28,24" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel MaxWidth="780" HorizontalAlignment="Stretch">
+      <TextBlock Text="UC Online" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+      <TextBlock Text="Select your game. Configure online play in one place." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,6,0,24"/>
+      <Border Background="{DynamicResource GlassSurfaceBrush}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="22" AllowDrop="True" DragOver="Folder_DragOver" Drop="Folder_Drop">
+        <StackPanel>
+          <TextBlock Text="Game folder" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,14"/>
+          <Grid IsEnabled="{Binding CanEdit}"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <ui:TextBox Text="{Binding Folder, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Drop a game folder or choose one…"/>
+            <ui:Button Grid.Column="1" Content="Choose folder" Click="Folder_Click" Appearance="Secondary" Margin="10,0,0,0"/>
+          </Grid>
+          <ui:Button Content="Inspect game" Command="{Binding InspectCommand}" Appearance="Secondary" HorizontalAlignment="Left" Margin="0,14,0,0"/>
+          <TextBlock Text="{Binding Executable}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,14,0,0" ToolTip="{Binding Executable}"/>
+        </StackPanel>
+      </Border>
+      <Grid Margin="0,20,0,20" IsEnabled="{Binding CanEdit}"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="Game App ID" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,7"/><ui:TextBox Text="{Binding AppId, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="The game's Steam App ID"/></StackPanel>
+        <StackPanel Grid.Column="2"><TextBlock Text="Network App ID" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,7"/><ui:TextBox Text="{Binding NetworkAppId, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="480"/></StackPanel>
+      </Grid>
+      <ComboBox ItemsSource="{Binding Matches}" SelectedItem="{Binding SelectedMatch}" Margin="0,0,0,16" ToolTip="Steam matches for this game folder"><ComboBox.Style><Style TargetType="ComboBox"><Style.Triggers><DataTrigger Binding="{Binding Matches.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></ComboBox.Style></ComboBox>
+      <Expander Header="Settings" IsEnabled="{Binding CanEdit}" Margin="0,0,0,16">
+        <StackPanel Margin="0,14,0,4">
+          <Grid Margin="0,0,0,16"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ui:TextBox Text="{Binding Executable}" PlaceholderText="Detected game executable"/><ui:Button Grid.Column="1" Content="Choose .exe" Click="Executable_Click" Appearance="Secondary" Margin="10,0,0,0"/></Grid>
+          <StackPanel x:Name="OptionsFields"/>
+          <TextBlock Text="Backend app IDs and keys come from your own project. Steam must be running when you later start the game." Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,12,0,0"/>
+        </StackPanel>
+      </Expander>
+      <Border Background="{DynamicResource GlassSurfaceBrush}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="0,0,0,16">
+        <StackPanel><TextBlock Text="{Binding Status}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" TextWrapping="Wrap"/><ProgressBar IsIndeterminate="True" Height="3" Margin="0,12,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BoolVis}}"/><TextBlock Text="{Binding Review}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" LineHeight="20" TextWrapping="Wrap" Margin="0,12,0,0"/></StackPanel>
+      </Border>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,22">
+        <ui:Button Content="Cancel" Command="{Binding CancelCommand}" Appearance="Secondary" Margin="0,0,8,0" Visibility="{Binding IsBusy, Converter={StaticResource BoolVis}}"/>
+        <ui:Button Content="Review files" Command="{Binding ReviewCommand}" Appearance="Secondary" Margin="0,0,8,0"/>
+        <ui:Button Content="Install UC Online" Command="{Binding ApplyCommand}" Appearance="Primary"/>
+      </StackPanel>
+      <Expander Header="Backups and restore">
+        <StackPanel Margin="0,12,0,0"><ComboBox ItemsSource="{Binding Backups}" SelectedItem="{Binding SelectedBackup}" DisplayMemberPath="CreatedAt"/><ui:Button Content="Restore original files" Command="{Binding RestoreCommand}" Appearance="Secondary" HorizontalAlignment="Left" Margin="0,12,0,0"/></StackPanel>
+      </Expander>
+    </StackPanel>
+  </ScrollViewer>
+</Page>

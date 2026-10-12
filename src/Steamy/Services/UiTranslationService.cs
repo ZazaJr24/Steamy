@@ -25,7 +25,7 @@ public sealed class UiTranslationService
     private readonly ISettingsService _settings;
     private readonly SemaphoreSlim _cacheGate = new(1, 1);
     private readonly ConcurrentDictionary<string, string> _cache = new(StringComparer.Ordinal);
-    private readonly string _cachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy", "ui-translations.json");
+    private readonly string _cachePath = Path.Combine(Steamy.Storage.AppDataPaths.Root, "ui-translations.json");
     private bool _cacheLoaded;
     private bool _pageHandlerRegistered;
 
@@ -105,7 +105,7 @@ public sealed class UiTranslationService
     private static HttpClient CreateHttpClient(bool useProxy)
     {
         var client = new HttpClient(new HttpClientHandler { UseProxy = useProxy }) { Timeout = TimeSpan.FromSeconds(8) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Steamy/0.6.4");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Steamy/0.7.0");
         return client;
     }
 

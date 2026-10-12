@@ -6,8 +6,7 @@ on:
       version:
         description: 'Version tag (e.g. 0.2.2)'
         required: true
-        type: string
-        default: '0.6.4.5'
+        default: '0.7.0'
   push:
     tags:
       - 'v*'
@@ -45,10 +44,12 @@ jobs:
       - name: Validate release version
         shell: pwsh
         run: |
-          [xml]$project = Get-Content src/Steamy/Steamy.csproj
           $version = '${{ steps.ver.outputs.v }}'
-          foreach ($field in @('Version', 'FileVersion', 'AssemblyVersion')) {
-            if ($project.Project.PropertyGroup.$field -ne $version) { throw "Release version must match project $field" }
+          foreach ($path in @('src/Steamy/Steamy.csproj', 'src/PlayTimeTracker/PlayTimeTracker.csproj')) {
+            [xml]$project = Get-Content $path
+            foreach ($field in @('Version', 'FileVersion', 'AssemblyVersion')) {
+              if ($project.Project.PropertyGroup.$field -ne $version) { throw "Release version must match $path $field" }
+            }
           }
 
       - name: Test release commit
@@ -70,37 +71,19 @@ jobs:
             artifacts/ui/
           if-no-files-found: error
 
-      - name: Publish self-contained
-        run: |
-          dotnet publish src/Steamy/Steamy.csproj `
-            -c Release `
-            -r win-x64 `
-            --self-contained `
-            -p:PublishSingleFile=true `
-            -p:EnableCompressionInSingleFile=true `
-            -p:Version=${{ steps.ver.outputs.v }} `
-            -o publish
-
-      - name: Add license files
-        run: Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/
-
-      - name: Build Windows installer
+      - name: Package portable app and small download installer
         shell: pwsh
         run: |
-          winget install --id JRSoftware.InnoSetup.7 --exact --source winget --version 7.0.2 --silent --accept-source-agreements --accept-package-agreements
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $iscc = @(
-            'C:\Program Files\Inno Setup 7\ISCC.exe',
-            'C:\Program Files (x86)\Inno Setup 7\ISCC.exe',
-            "$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe"
-          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $iscc) { throw 'Inno Setup 7.0.2 compiler was not found.' }
-          & $iscc "/DAppVersion=${{ steps.ver.outputs.v }}" "/DPublishDir=${{ github.workspace }}\publish" "/O${{ github.workspace }}" scripts/installer.iss
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Zip release
-        run: |
-          Compress-Archive -Path publish/* -DestinationPath Steamy-v${{ steps.ver.outputs.v }}.zip
+          ./scripts/package-distribution.ps1 -OutputDirectory distribution
+          Copy-Item distribution/Steamy-*.zip, distribution/Steamy-v*-Setup.exe .
+          $checks = Join-Path $pwd 'distribution/installer-checks.txt'
+          $process = Start-Process -FilePath distribution/Steamy-Setup.exe -ArgumentList @('--self-test', $checks) -WindowStyle Hidden -Wait -PassThru
+          Get-Content $checks
+          if ($process.ExitCode -ne 0) { throw 'Installer checks failed.' }
+          $uiChecks = Join-Path $pwd 'distribution/installer-ui-checks.txt'
+          $process = Start-Process -FilePath distribution/Steamy-Setup.exe -ArgumentList @('--ui-test', $uiChecks) -WindowStyle Hidden -Wait -PassThru
+          Get-Content $uiChecks
+          if ($process.ExitCode -ne 0) { throw 'Installer interface checks failed.' }
 
       - name: Release notes and SHA-256 from the packaged ZIP
         run: python scripts/release_notes.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip' --output release-notes.md
@@ -142,10 +125,11 @@ jobs:
           make_latest: true
           files: |
             Steamy-v${{ steps.ver.outputs.v }}.zip
+            Steamy-v${{ steps.ver.outputs.v }}-app.zip
             Steamy-v${{ steps.ver.outputs.v }}-Setup.exe
           body_path: release-notes.md
 
       - name: Publish verified update metadata after the release exists
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python scripts/publish_update_manifest.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip'
+        run: python scripts/publish_update_manifest.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip' --app-archive 'Steamy-v${{ steps.ver.outputs.v }}-app.zip'

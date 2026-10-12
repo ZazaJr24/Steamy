@@ -18,8 +18,13 @@ using Steamy.ViewModels;
 
 namespace Steamy.Pages;
 
+public enum GameInstallMethod { DepotDownloader, BetterSteamTools }
+
 public partial class LibraryPage : Page
 {
+    private readonly bool _installationOnly;
+    public bool IsInstallationOnly => _installationOnly;
+    public event EventHandler? InstallationClosed;
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> ReservedTargets = new(StringComparer.OrdinalIgnoreCase);
     private SteamCatalogItem? _selectedItem;
     private ManifestSource _selectedSource = ManifestSource.Sushi;
@@ -37,8 +42,13 @@ public partial class LibraryPage : Page
     private bool _resumingExisting;
     private DownloadJob? _resumeJob;
     private int _wizardStep;
+    private GameInstallMethod? _installMethod;
+    private CancellationTokenSource? _steamToolsCts;
+    private BetterSteamToolsViewModel? _steamToolsModel;
+    private int _driveRevision;
     private bool _showingDownloadSetup;
     private bool _wizardBusy;
+    private bool _sheetInstalling;
     private bool _sourceUnavailable;
     private string? _localPackagePath;
     private PreparedGameDownload? _preparedDownload;
@@ -46,6 +56,8 @@ public partial class LibraryPage : Page
     private readonly ObservableCollection<DownloadDepotChoice> _depotChoices = new();
     private int _locationRevision;
     private bool _batchDepotSelection;
+    private bool _locationChecking;
+    private bool _locationHasEnoughSpace = true;
     public int DownloadWizardStep => _showingDownloadSetup ? _wizardStep : -1;
     public IReadOnlyList<DownloadDepotChoice> DownloadDepotChoices => _depotChoices;
     private readonly System.Windows.Threading.DispatcherTimer _backdropResizeTimer = new(System.Windows.Threading.DispatcherPriority.Background)
@@ -66,36 +78,78 @@ public partial class LibraryPage : Page
     /// the binding first activates. The page owns its own converter so the NSFW scope checkbox can bind
     /// directly without surprising the application at startup.
     /// </summary>
-    public LibraryPage()
+    public LibraryPage() : this(false) { }
+
+    // Reuse the installation form in a game page without loading or showing the catalogue.
+    public LibraryPage(bool installationOnly)
     {
+        _installationOnly = installationOnly;
         InitializeComponent();
         DepotChoices.ItemsSource = _depotChoices;
         DataContext = App.Services.GetRequiredService<LibraryViewModel>();
         Loaded += (_, _) =>
         {
+            if (_installationOnly) return;
             var model = (LibraryViewModel)DataContext;
+            model.PagedCatalogItems.CollectionChanged -= GalleryItemsChanged;
+            model.PagedCatalogItems.CollectionChanged += GalleryItemsChanged;
+            AttachLibraryAmbient();
             if (model.RequestedDownload is not { } requested) return;
             model.RequestedDownload = null;
             OpenDownloadSetup(requested);
         };
-        _ = ((LibraryViewModel)DataContext).OnNavigatedToAsync();
-        Unloaded += (_, _) => ResetOverlay();
+        if (!_installationOnly) _ = ((LibraryViewModel)DataContext).OnNavigatedToAsync();
+        Unloaded += (_, _) =>
+        {
+            if (!_installationOnly)
+            {
+                ((LibraryViewModel)DataContext).PagedCatalogItems.CollectionChanged -= GalleryItemsChanged;
+                DetachLibraryAmbient();
+            }
+            ResetOverlay();
+        };
         _backdropResizeTimer.Tick += (_, _) =>
         {
             _backdropResizeTimer.Stop();
             if (OverlayGrid.Visibility == Visibility.Visible) CaptureBackdrop();
         };
-        DialogPanel.SizeChanged += (_, _) => DialogPanel.Clip = new RectangleGeometry(new Rect(DialogPanel.RenderSize), 16, 16);
+        DialogPanel.SizeChanged += (_, _) => DialogPanel.Clip = new RectangleGeometry(new Rect(DialogPanel.RenderSize), 18, 18);
+        if (_installationOnly)
+        {
+            Background = LibraryScene.Background = Brushes.Transparent;
+            MainContentGrid.Visibility = Visibility.Collapsed;
+            Resources["TextPrimaryBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush : Brushes.White;
+            Resources["TextSecondaryBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush : new SolidColorBrush(Color.FromRgb(196, 196, 196));
+            Resources["TextTertiaryBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush : new SolidColorBrush(Color.FromRgb(153, 153, 153));
+            Resources["DialogSurfaceBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowBrush : new SolidColorBrush(Color.FromRgb(20, 22, 26));
+        }
         SizeChanged += (_, _) =>
         {
             DialogPanel.MaxWidth = Math.Max(0, ActualWidth - 32);
             DialogPanel.MaxHeight = Math.Max(0, ActualHeight - 32);
+            DialogPanel.MinHeight = Math.Min(400, DialogPanel.MaxHeight);
+            var compact = ActualHeight < 540;
+            MethodDepotDownloader.MinHeight = MethodBetterSteamTools.MinHeight = compact ? 96 : 110;
+            MethodDepotDownloader.Padding = MethodBetterSteamTools.Padding = compact ? new Thickness(16, 15, 16, 15) : new Thickness(20);
+            SetupArtwork.Height = compact ? 54 : 68;
+            SetupHeader.Margin = compact ? new Thickness(28, 18, 28, 14) : new Thickness(28, 24, 28, 20);
+            WizardHeader.Margin = new Thickness(0, 0, 0, compact ? 12 : 20);
             if (OverlayGrid.Visibility == Visibility.Visible)
             {
                 _backdropResizeTimer.Stop();
                 _backdropResizeTimer.Start();
             }
         };
+    }
+
+    private void GalleryItemsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs args)
+    {
+        WatchLibraryAmbientArtwork();
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            if (LibraryGallery.IsLoaded && LibraryGallery.Template.FindName("GalleryScroll", LibraryGallery) is ScrollViewer scroll)
+                scroll.ScrollToTop();
+        }));
     }
 
     private void GameCard_Click(object sender, RoutedEventArgs e)
@@ -120,28 +174,56 @@ public partial class LibraryPage : Page
         OpenGameDetails(item);
     }
 
-    public void OpenGameDetails(SteamCatalogItem item) => OpenGame(item, setup: true);
+    private void GameDetailsMenu_Click(object sender, RoutedEventArgs args)
+    {
+        if (sender is MenuItem { Tag: SteamCatalogItem item }) OpenGameDetails(item);
+    }
+
+    private void InstallGameMenu_Click(object sender, RoutedEventArgs args)
+    {
+        if (sender is MenuItem { Tag: SteamCatalogItem item }) OpenDownloadSetup(item);
+    }
+
+    public void OpenGameDetails(SteamCatalogItem item)
+    {
+        var model = App.Services.GetRequiredService<GameDetailsViewModel>();
+        var installed = App.Services.GetRequiredService<IAppDataStore>().Games.FirstOrDefault(game => game.AppId == item.AppId && game.InstallState == GameInstallState.Installed);
+        if (installed is not null) model.SelectGame(installed, returnToLibrary: true);
+        else model.SelectCatalogGame(item);
+        App.Services.GetRequiredService<INavigationService>().Navigate<GameDetailsPage>();
+    }
     public void OpenDownloadSetup(SteamCatalogItem item) => OpenGame(item, setup: true);
 
     private void OpenGame(SteamCatalogItem item, bool setup)
     {
         if (_overlayClosing || _downloadRunning) return;
+        _steamToolsCts?.Cancel();
         ResetPreparedDownload();
         _localPackagePath = null;
         LocalPackageName.Text = "No package selected";
         LocalPackagePanel.Visibility = Visibility.Collapsed;
         _showingDownloadSetup = setup;
+        _sheetInstalling = false;
         ConfigureOverlayLayout();
         SourceStepPanel.IsEnabled = true;
         _selectedItem = item;
+        _installMethod = null;
+        SourceOptions.IsExpanded = DepotOptions.IsExpanded = false;
+        InstallationFormScroll.ScrollToTop();
+        SetOptionState(MethodDepotDownloader, false);
+        SetOptionState(MethodBetterSteamTools, false);
+        _steamToolsModel = App.Services.GetRequiredService<BetterSteamToolsViewModel>();
+        _steamToolsModel.PropertyChanged -= SteamToolsModelChanged;
+        _steamToolsModel.PropertyChanged += SteamToolsModelChanged;
+        SteamToolsStepPanel.DataContext = _steamToolsModel;
         _selectedSource = ManifestSource.Sushi;
 
         OverlayTitle.Text = item.Name;
-        OverlayAppId.Text = $"App {item.AppId}";
+        OverlayAppId.Text = $"DepotDownloader · App {item.AppId}";
         _downloadCompleted = false;
-        PlayButton.Visibility = App.Services.GetRequiredService<IAppDataStore>().Games.Any(game => game.AppId == item.AppId && game.InstallState == GameInstallState.Installed)
+        PlayButton.Visibility = !setup && App.Services.GetRequiredService<IAppDataStore>().Games.Any(game => game.AppId == item.AppId && game.InstallState == GameInstallState.Installed)
             ? Visibility.Visible : Visibility.Collapsed;
-        GameInstallInfo.Text = PlayButton.Visibility == Visibility.Visible ? "Installed in your Steam library." : "Not installed in your Steam library.";
+        GameInstallInfo.Text = PlayButton.Visibility == Visibility.Visible ? "Installed on this PC." : "Not installed on this PC.";
         OverlayStatus.Text = "";
 
         OverlayCover.Source = item.HeaderImage ?? item.ArtworkImage;
@@ -161,7 +243,6 @@ public partial class LibraryPage : Page
 
         _availabilityCts?.Cancel();
         _sourceUnavailable = false;
-        if (setup) _ = CheckSourceAvailabilityAsync(_selectedSource, item.AppId);
 
         var settings = App.Services.GetRequiredService<ISettingsService>().Load();
         _downloadPath = string.IsNullOrWhiteSpace(settings.DownloadFolder)
@@ -185,6 +266,7 @@ public partial class LibraryPage : Page
         _resumeJob = resumable;
         if (resumable is not null)
         {
+            _installMethod = GameInstallMethod.DepotDownloader;
             _availabilityCts?.Cancel();
             foreach (var name in Enum.GetNames<ManifestSource>())
                 if (resumable.DownloadMode.Contains(name, StringComparison.OrdinalIgnoreCase)
@@ -199,7 +281,7 @@ public partial class LibraryPage : Page
             SourceAvailabilityText.Text = $"Resume uses the saved {_selectedSource} manifests and existing files.";
             SourceAvailabilityText.Foreground = TertiaryText;
         }
-        SetWizardStep(resumable is null ? 0 : 2);
+        SetWizardStep(resumable is null ? 0 : 3);
         if (resumable is not null && setup)
         {
             OverlayStatus.Text = $"Resume retains the original {_selectedSource} source, depot versions and game folder.";
@@ -213,17 +295,18 @@ public partial class LibraryPage : Page
     {
         DownloadBody.Visibility = Visibility.Visible;
         DownloadFooter.Visibility = Visibility.Visible;
-        DialogPanel.Width = 580;
         DialogPanel.HorizontalAlignment = HorizontalAlignment.Center;
         DialogPanel.VerticalAlignment = VerticalAlignment.Center;
         DialogPanel.Margin = new Thickness(16);
         DialogPanel.BorderThickness = new Thickness(1);
         DialogPanel.CornerRadius = new CornerRadius(16);
-        DialogPanel.SetResourceReference(Border.BackgroundProperty, "GameDialogSurfaceBrush");
+        DialogPanel.Width = 740;
+        DialogPanel.SetResourceReference(Border.BackgroundProperty, "DialogSurfaceBrush");
         DialogPanel.MaxWidth = Math.Max(0, ActualWidth - 32);
         DialogPanel.MaxHeight = Math.Max(0, ActualHeight - 32);
-        DetailHeader.Visibility = Visibility.Visible;
-        SetupHeader.Visibility = Visibility.Collapsed;
+        DialogPanel.MinHeight = Math.Min(400, DialogPanel.MaxHeight);
+        DetailHeader.Visibility = Visibility.Collapsed;
+        SetupHeader.Visibility = Visibility.Visible;
         DialogDimmer.Visibility = Visibility.Visible;
         GameInfoPanel.Visibility = Visibility.Visible;
         WizardHeader.Visibility = Visibility.Visible;
@@ -268,17 +351,28 @@ public partial class LibraryPage : Page
 
     private async void PlayButton_Click(object sender, RoutedEventArgs args)
     {
-        if (_selectedItem is not { } item || !App.Services.GetRequiredService<IAppDataStore>().Games
-            .Any(game => game.AppId == item.AppId && game.InstallState == GameInstallState.Installed)) return;
+        if (_selectedItem is not { } item) return;
+        var game = App.Services.GetRequiredService<IAppDataStore>().Games
+            .FirstOrDefault(game => game.AppId == item.AppId && game.InstallState == GameInstallState.Installed);
+        if (game is null) return;
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo($"steam://rungameid/{item.AppId}") { UseShellExecute = true });
+            if (game.IsLocalDownload && !File.Exists(game.LaunchExecutable))
+            {
+                if (Directory.Exists(game.InstallFolder)) System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(game.InstallFolder) { UseShellExecute = true });
+                OverlayStatus.Text = "No game executable found. Opened the installation folder.";
+                return;
+            }
+            var start = game.IsLocalDownload
+                ? new System.Diagnostics.ProcessStartInfo(game.LaunchExecutable) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(game.LaunchExecutable)! }
+                : new System.Diagnostics.ProcessStartInfo($"steam://rungameid/{item.AppId}") { UseShellExecute = true };
+            System.Diagnostics.Process.Start(start);
             await App.Services.GetRequiredService<IGameActivityService>().RecordLaunchAsync(item.AppId);
-            if (ReferenceEquals(_selectedItem, item)) OverlayStatus.Text = "Launch requested in Steam.";
+            if (ReferenceEquals(_selectedItem, item)) OverlayStatus.Text = game.IsLocalDownload ? "Game launch requested." : "Launch requested in Steam.";
         }
         catch (Exception exception)
         {
-            if (ReferenceEquals(_selectedItem, item)) OverlayStatus.Text = $"Could not open Steam: {exception.Message}";
+            if (ReferenceEquals(_selectedItem, item)) OverlayStatus.Text = $"Could not launch the game: {exception.Message}";
         }
     }
 
@@ -288,7 +382,8 @@ public partial class LibraryPage : Page
         ResetPreparedDownload();
         _resumingExisting = false;
         _resumeJob = null;
-        SelectDownloadSource(_selectedSource);
+        _installMethod = null;
+        SetWizardStep(0);
         OverlayStatus.Text = "Choose source and depot versions again. Existing files remain in place; choose another folder to keep the saved job separate.";
     }
 
@@ -298,7 +393,10 @@ public partial class LibraryPage : Page
         {
             var image = await App.Services.GetRequiredService<IArtworkService>().LoadHeroAsync(item.AppId, cancellation.Token);
             if (!cancellation.IsCancellationRequested && ReferenceEquals(_selectedItem, item) && image is not null)
+            {
                 OverlayCover.Source = image;
+                UpdateInstallationSurface();
+            }
         }
         catch (OperationCanceledException) { }
         catch { /* The already loaded cover remains available offline. */ }
@@ -311,8 +409,9 @@ public partial class LibraryPage : Page
 
     private void CaptureBackdrop()
     {
+        if (_installationOnly) return;
         // A frozen half-resolution snapshot avoids re-blurring the gallery for every live update.
-        MainContentGrid.Visibility = Visibility.Visible;
+        MainContentGrid.Visibility = _installationOnly ? Visibility.Collapsed : Visibility.Visible;
         MainContentGrid.Opacity = 1;
         MainContentGrid.IsEnabled = true;
         if (MainContentGrid.ActualWidth > 0 && MainContentGrid.ActualHeight > 0 && Steamy.Controls.MotionPreferences.BackdropBlurEnabled)
@@ -345,10 +444,32 @@ public partial class LibraryPage : Page
         CaptureBackdrop();
         MainContentGrid.IsHitTestVisible = false;
         MainContentGrid.IsEnabled = false;
-        MainContentGrid.Visibility = Visibility.Visible;
+        MainContentGrid.Visibility = _installationOnly ? Visibility.Collapsed : Visibility.Visible;
         OverlayGrid.Visibility = Visibility.Visible;
+        UpdateInstallationSurface();
         Animate(OverlayGrid, OpacityProperty, 0, 1);
-        DialogCloseButton.Focus();
+        Animate(DialogScale, ScaleTransform.ScaleXProperty, .94, 1);
+        Animate(DialogScale, ScaleTransform.ScaleYProperty, .94, 1);
+        Animate(DialogOffset, TranslateTransform.YProperty, 14, 0);
+        (_showingDownloadSetup ? SetupCloseButton : DialogCloseButton).Focus();
+    }
+
+    private void UpdateInstallationSurface()
+    {
+        if (UiThemeService.IsHighContrastActive || !UiThemeService.AmbientEnabled)
+        {
+            DialogPanel.SetResourceReference(Border.BackgroundProperty, "DialogSurfaceBrush");
+            return;
+        }
+        var palette = ArtworkPalette.FromImage(OverlayCover.Source);
+        var area = new RectangleGeometry(new Rect(0, 0, 1, 1));
+        var drawing = new DrawingGroup();
+        drawing.Children.Add(new GeometryDrawing(new SolidColorBrush(Color.FromArgb(230, 20, 22, 26)), null, area));
+        var tint = new LinearGradientBrush(Color.FromArgb(42, palette.Left.R, palette.Left.G, palette.Left.B), Color.FromArgb(28, palette.Right.R, palette.Right.G, palette.Right.B), 30);
+        drawing.Children.Add(new GeometryDrawing(tint, null, area));
+        var brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
+        brush.Freeze();
+        DialogPanel.Background = brush;
     }
 
     private void Animate(DependencyObject target, DependencyProperty property, double from, double to)
@@ -397,9 +518,34 @@ public partial class LibraryPage : Page
             SelectDownloadSource(source);
     }
 
+    private void InstallMethod_Click(object sender, RoutedEventArgs args)
+    {
+        if (sender is FrameworkElement { Tag: string name } && Enum.TryParse<GameInstallMethod>(name, out var method))
+            SelectInstallMethod(method);
+    }
+
+    public void SelectInstallMethod(GameInstallMethod method)
+    {
+        if (_resumingExisting || _downloadRunning || _wizardBusy || !Enum.IsDefined(method)) return;
+        if (_installMethod != method) ResetPreparedDownload();
+        _installMethod = method;
+        _downloadCompleted = false;
+        SetOptionState(MethodDepotDownloader, method == GameInstallMethod.DepotDownloader);
+        SetOptionState(MethodBetterSteamTools, method == GameInstallMethod.BetterSteamTools);
+        OverlayAppId.Text = $"{method} · App {_selectedItem?.AppId}";
+        SetWizardStep(0);
+        if (method == GameInstallMethod.DepotDownloader)
+        {
+            ConfigureDownloadLocation(_downloadPath);
+            _ = LoadInstallDrivesAsync();
+        }
+        else _steamToolsModel?.RefreshDetection();
+    }
+
     public void SelectDownloadSource(ManifestSource source)
     {
-        if (_resumingExisting || _downloadRunning)
+        if (_installMethod is null) { OverlayStatus.Text = "Choose an installation method first."; return; }
+        if (_resumingExisting || _downloadRunning || (_wizardBusy && _installMethod == GameInstallMethod.BetterSteamTools))
         {
             OverlayStatus.Text = "Continue with the original source and saved manifests. Manage this job in Downloads.";
             return;
@@ -408,7 +554,7 @@ public partial class LibraryPage : Page
         if (_selectedSource != source) ResetPreparedDownload();
         _selectedSource = source;
         _sourceUnavailable = false;
-        SetWizardStep(0);
+        SetWizardStep(1);
         SetOptionState(SourceRyuu, source == ManifestSource.Ryuu);
         SetOptionState(SourceZaza, source == ManifestSource.Zaza);
         SetOptionState(SourceHubcap, source == ManifestSource.Hubcap);
@@ -416,11 +562,11 @@ public partial class LibraryPage : Page
         SetOptionState(SourceSushi, source == ManifestSource.Sushi);
         SetOptionState(SourceLocal, source == ManifestSource.Local);
         LocalPackagePanel.Visibility = source == ManifestSource.Local ? Visibility.Visible : Visibility.Collapsed;
+        if (source == ManifestSource.Local) SourceOptions.IsExpanded = true;
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
         {
-            if (_selectedSource != source || _wizardStep != 0) return;
-            if (source == ManifestSource.Local) SourceStepPanel.ScrollToEnd();
-            else SourceStepPanel.ScrollToTop();
+            if (_selectedSource != source || _wizardStep != 1) return;
+            if (source == ManifestSource.Local) LocalPackagePanel.BringIntoView();
         }));
         OverlayStatus.Text = "";
 
@@ -570,6 +716,8 @@ public partial class LibraryPage : Page
         var revision = ++_overlayRevision;
         _availabilityCts?.Cancel();
         _artworkCts?.Cancel();
+        _steamToolsCts?.Cancel();
+        _driveRevision++;
         _preparationCts?.Cancel();
         if (!_showingDownloadSetup && Steamy.Controls.MotionPreferences.AnimationsEnabled)
         {
@@ -584,12 +732,19 @@ public partial class LibraryPage : Page
         if (focus is UIElement { IsVisible: true, IsEnabled: true }) Keyboard.Focus(focus);
     }
 
+    public void DismissInstallation() => ResetOverlay();
+
     private void ResetOverlay()
     {
+        var wasOpen = OverlayGrid.Visibility == Visibility.Visible;
         _backdropResizeTimer.Stop();
         _overlayRevision++;
+        _sheetInstalling = false;
         _availabilityCts?.Cancel();
         _artworkCts?.Cancel();
+        _steamToolsCts?.Cancel();
+        _driveRevision++;
+        if (_steamToolsModel is not null) _steamToolsModel.PropertyChanged -= SteamToolsModelChanged;
         _locationRevision++;
         if (!_downloadRunning) ResetPreparedDownload();
         else
@@ -613,7 +768,7 @@ public partial class LibraryPage : Page
         BackdropImage.Visibility = Visibility.Collapsed;
         BackdropImage.Source = null;
         OverlayCover.Source = null;
-        MainContentGrid.Visibility = Visibility.Visible;
+        MainContentGrid.Visibility = _installationOnly ? Visibility.Collapsed : Visibility.Visible;
         MainContentGrid.Opacity = 1;
         MainContentGrid.IsHitTestVisible = true;
         MainContentGrid.IsEnabled = true;
@@ -622,47 +777,96 @@ public partial class LibraryPage : Page
         _resumingExisting = false;
         _resumeJob = null;
         _overlayClosing = false;
+        if (wasOpen) InstallationClosed?.Invoke(this, EventArgs.Empty);
     }
 
     private bool _downloadRunning;
 
     private void SetWizardStep(int step)
     {
-        _wizardStep = Math.Clamp(step, 0, 2);
-        SourceStepPanel.Visibility = _showingDownloadSetup && step == 0 ? Visibility.Visible : Visibility.Collapsed;
-        DepotStepPanel.Visibility = _showingDownloadSetup && step == 1 ? Visibility.Visible : Visibility.Collapsed;
-        LocationStepPanel.Visibility = _showingDownloadSetup && step == 2 ? Visibility.Visible : Visibility.Collapsed;
-        WizardStepText.Text = step switch { 0 => "Source", 1 => "Depots", _ => _resumingExisting ? "Resume download" : "Location" };
-        WizardTrailText.Text = _resumingExisting ? "Original source · saved depot versions · existing files" : "Source  →  Depots & version  →  Location";
-        if (step == 2) ConfigureDownloadLocation(_downloadPath);
+        step = _wizardStep = Math.Clamp(step, 0, 3);
+        InstallationFormScroll.ScrollToTop();
+        var steam = _installMethod == GameInstallMethod.BetterSteamTools;
+        var selected = _showingDownloadSetup && _installMethod is not null;
+        MethodStepPanel.Visibility = _showingDownloadSetup && step == 0 && !_resumingExisting ? Visibility.Visible : Visibility.Collapsed;
+        SourceOptions.Visibility = SourceStepPanel.Visibility = selected && step == 1 && !_resumingExisting ? Visibility.Visible : Visibility.Collapsed;
+        SourceOptions.IsExpanded = step == 1;
+        DepotOptions.Visibility = DepotStepPanel.Visibility = selected && step == 2 && !steam && !_resumingExisting ? Visibility.Visible : Visibility.Collapsed;
+        DepotOptions.IsExpanded = step == 2;
+        LocationStepPanel.Visibility = selected && step == 3 && !steam ? Visibility.Visible : Visibility.Collapsed;
+        SteamToolsStepPanel.Visibility = selected && step == 2 && steam ? Visibility.Visible : Visibility.Collapsed;
+        WizardSteps.Visibility = _showingDownloadSetup && step > 0 && !_resumingExisting ? Visibility.Visible : Visibility.Collapsed;
+        SourceOptions.Header = $"Download source · {_selectedSource}";
+        WizardStepText.Text = _resumingExisting ? "Resume download" : step switch
+        { 0 => "Where do you want to install?", 1 => "Choose a download source", 2 when steam => "Ready to add to Steam", 2 => "Choose the game files", _ => "Choose an installation folder" };
+        WizardTrailText.Text = _resumingExisting ? "Your saved source, versions and existing files are retained."
+            : step switch { 0 => "Download with Steamy, or let your Steam client manage the installation.",
+                1 => "Select the source for this game.", 2 when steam => "Check your Steam setup, then add the game to your client.",
+                2 => "Review the selected files and versions before continuing.", _ => "Choose a drive and review available space before starting." };
+        WizardSteps.Columns = steam ? 3 : 4;
+        DepotStepMarker.Visibility = steam ? Visibility.Collapsed : Visibility.Visible;
+        ((TextBlock)LocationStepMarker.Child).Text = steam ? "3 · Steam" : "4 · Location";
+        foreach (var (marker, index) in new[] { (MethodStepMarker, 0), (SourceStepMarker, 1), (DepotStepMarker, 2), (LocationStepMarker, steam ? 2 : 3) })
+        {
+            marker.CornerRadius = new CornerRadius(8);
+            marker.BorderThickness = new Thickness(0);
+            if (index == step) marker.SetResourceReference(Border.BackgroundProperty, "AccentSoftBrush");
+            else marker.Background = Brushes.Transparent;
+            ((TextBlock)marker.Child).SetResourceReference(TextBlock.ForegroundProperty, index <= step ? "TextPrimaryBrush" : "TextTertiaryBrush");
+            ((TextBlock)marker.Child).FontWeight = index == step ? FontWeights.SemiBold : FontWeights.Normal;
+        }
+        if (step == 3 && !steam) { ConfigureDownloadLocation(_downloadPath); _ = LoadInstallDrivesAsync(); }
+        if (step == 2 && steam) App.Services.GetRequiredService<BetterSteamToolsViewModel>().RefreshDetection();
         UpdateWizardControls();
-        if (_showingDownloadSetup) Steamy.Controls.EntranceMotion.Reveal(step == 0 ? SourceStepPanel : step == 1 ? DepotStepPanel : LocationStepPanel);
+        // Only the dialog entrance animates; preparing metadata must not move the form.
     }
 
     private void UpdateWizardControls()
     {
-        WizardBusyBar.Visibility = _wizardBusy ? Visibility.Visible : Visibility.Collapsed;
-        BackButton.Visibility = _showingDownloadSetup && _wizardStep > 0 && !_resumingExisting ? Visibility.Visible : Visibility.Collapsed;
+        WizardBusyBar.Visibility = _wizardBusy || _sheetInstalling ? Visibility.Visible : Visibility.Collapsed;
+        BackButton.Visibility = _showingDownloadSetup && _wizardStep > 0 && !_resumingExisting && !_downloadCompleted ? Visibility.Visible : Visibility.Collapsed;
         BackButton.IsEnabled = !_downloadRunning && !_wizardBusy;
         NewSelectionButton.Visibility = _showingDownloadSetup && _resumingExisting ? Visibility.Visible : Visibility.Collapsed;
         NewSelectionButton.IsEnabled = !_downloadRunning && !_wizardBusy;
-        var canChangeSource = !_downloadRunning && !_resumingExisting && !_wizardBusy;
+        var canChangeSource = !_downloadRunning && !_resumingExisting && !_wizardBusy && !_sheetInstalling;
+        MethodStepPanel.IsEnabled = canChangeSource;
+        SteamToolsStepPanel.IsEnabled = !_wizardBusy && !_sheetInstalling;
         SourceStepPanel.IsEnabled = canChangeSource;
         // The source page can be collapsed/unrealized during Resume. Keep each
         // control's state explicit rather than relying on a hidden scroll parent's coercion.
         SourceLocal.IsEnabled = BrowseLocalPackage.IsEnabled = SourceSushi.IsEnabled = SourceZaza.IsEnabled = SourceRyuu.IsEnabled = SourceHubcap.IsEnabled = SourceDepotBox.IsEnabled = canChangeSource;
-        DepotStepPanel.IsEnabled = !_downloadRunning && !_wizardBusy;
-        LocationBrowseButton.IsEnabled = !_downloadRunning && !_resumingExisting;
-        StartButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = _showingDownloadSetup && _wizardStep < 2 && !_resumingExisting
-            ? Wpf.Ui.Controls.SymbolRegular.ChevronRight24 : Wpf.Ui.Controls.SymbolRegular.ArrowDownload24 };
-        StartButton.Content = !_showingDownloadSetup ? (_resumingExisting ? "Resume download" : "Download") : _downloadCompleted ? "Completed" : _wizardBusy ? "Loading depots…" : _resumingExisting ? "Resume download" : _wizardStep == 2 ? "Download" : "Next";
-        StartButton.IsEnabled = !_downloadCompleted && !_downloadRunning && !_wizardBusy && (!_showingDownloadSetup || _resumingExisting
-            || (_wizardStep == 0 ? !_sourceUnavailable && (_selectedSource != ManifestSource.Local || !string.IsNullOrWhiteSpace(_localPackagePath)) : _wizardStep == 1 ? ValidDepotSelection() : ValidDepotSelection() && ValidLocation(_downloadPath)));
+        DepotStepPanel.IsEnabled = !_downloadRunning && !_wizardBusy && !_sheetInstalling;
+        InstallDriveChoices.IsEnabled = !_downloadRunning && !_resumingExisting && !_wizardBusy && !_sheetInstalling;
+        LocationBrowseButton.IsEnabled = !_downloadRunning && !_resumingExisting && !_sheetInstalling;
+        var steam = _installMethod == GameInstallMethod.BetterSteamTools;
+        StartButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = steam && _downloadCompleted ? Wpf.Ui.Controls.SymbolRegular.Open24
+            : !_resumingExisting && _wizardStep < (steam ? 2 : 3) ? Wpf.Ui.Controls.SymbolRegular.ChevronRight24
+            : Wpf.Ui.Controls.SymbolRegular.ArrowDownload24 };
+        StartButton.Content = steam && _downloadCompleted ? "Open in Steam" : _downloadCompleted ? "Completed" : _wizardBusy ? steam ? "Adding game…" : "Loading depots…"
+            : _resumingExisting ? "Resume download" : _wizardStep < (steam ? 2 : 3) ? "Next" : steam ? "Add to Steam" : "Install game";
+        StartButton.IsEnabled = (!_downloadCompleted || steam) && !_downloadRunning && !_wizardBusy && !_sheetInstalling && (!_showingDownloadSetup || _resumingExisting
+            || (_wizardStep == 0 ? _installMethod is not null : _wizardStep == 1 ? !_sourceUnavailable && (_selectedSource != ManifestSource.Local || !string.IsNullOrWhiteSpace(_localPackagePath))
+                : steam ? App.Services.GetRequiredService<BetterSteamToolsViewModel>().SteamDetected : _wizardStep == 2 ? ValidDepotSelection() : ValidDepotSelection() && ValidLocation(_downloadPath) && !_locationChecking && _locationHasEnoughSpace));
+        if (_showingDownloadSetup && _installMethod is not null && !_wizardBusy && !_downloadCompleted)
+        {
+            StartButton.SetResourceReference(Control.BackgroundProperty, "DownloadAccentBrush");
+            StartButton.Foreground = Brushes.White;
+        }
+        else
+        {
+            StartButton.ClearValue(Control.BackgroundProperty);
+            StartButton.ClearValue(Control.ForegroundProperty);
+        }
         var selected = _depotChoices.Where(choice => choice.IsSelected).ToArray();
         var knownBytes = SelectedSizeBytes();
-        DepotSelectionSummary.Text = $"{selected.Length} of {_depotChoices.Count} depots selected"
+        InstallSizeText.Text = knownBytes is { } installSize ? DownloadFormat.Bytes(installSize) : "";
+        DepotOptions.Header = _depotChoices.Count == 0 ? "Files and versions · Automatic" : $"Files and versions · {selected.Length} selected";
+        DepotSelectionSummary.Text = _depotChoices.Count == 0 ? "Available files are selected automatically when you install. You can review or change them here."
+            : $"{selected.Length} of {_depotChoices.Count} depots selected"
             + (knownBytes is { } bytes ? $" · {DownloadFormat.Bytes(bytes)} reported size" : " · size unavailable");
-        if (!_resumingExisting) LocationSelectionText.Text = $"{_selectedSource} · {selected.Length} selected depot{(selected.Length == 1 ? "" : "s")} · selected versions";
+        if (!_resumingExisting) LocationSelectionText.Text = _preparedDownload is null
+            ? "Download size is checked before starting."
+            : $"{_selectedSource} · {selected.Length} selected depot{(selected.Length == 1 ? "" : "s")}" + (knownBytes is { } size ? $" · {DownloadFormat.Bytes(size)} selected" : " · Size not supplied");
     }
 
     private bool ValidDepotSelection() => _preparedDownload is not null && _depotChoices.Any(choice => choice.IsSelected)
@@ -684,6 +888,7 @@ public partial class LibraryPage : Page
 
     public void ConfigureDownloadLocation(string baseFolder)
     {
+        _driveRevision++;
         if (_resumingExisting && _resumeJob is not null)
             baseFolder = Path.GetDirectoryName(_resumeJob.TargetFolder) ?? _downloadPath;
         _downloadPath = baseFolder;
@@ -691,6 +896,8 @@ public partial class LibraryPage : Page
         DownloadPathText.Foreground = ValidLocation(baseFolder) ? PrimaryText : TertiaryText;
         DownloadTargetText.Text = _resumeJob?.TargetFolder ?? (_selectedItem is null || !ValidLocation(baseFolder)
             ? "Choose an absolute folder path." : TargetFolderFor(_selectedItem, App.Services.GetRequiredService<ISettingsService>().Load(), baseFolder));
+        if (InstallDriveChoices.ItemsSource is IEnumerable<InstallDriveChoice> choices && ValidLocation(baseFolder))
+            InstallDriveChoices.ItemsSource = choices.Select(choice => choice with { IsSelected = string.Equals(Path.GetPathRoot(choice.Folder), Path.GetPathRoot(baseFolder), StringComparison.OrdinalIgnoreCase) }).ToArray();
         UpdateWizardControls();
         _ = UpdateLocationSpaceAsync();
     }
@@ -699,13 +906,23 @@ public partial class LibraryPage : Page
     {
         var revision = ++_locationRevision;
         var target = DownloadTargetText.Text;
-        if (!ValidLocation(_downloadPath)) { LocationSpaceText.Text = "Choose a valid folder before starting."; return; }
+        _locationChecking = false;
+        _locationHasEnoughSpace = true;
+        if (!ValidLocation(_downloadPath)) { LocationSpaceText.Text = "Choose a valid folder before starting."; UpdateWizardControls(); return; }
+        _locationChecking = true;
         LocationSpaceText.Text = "Checking available space…";
+        LocationSpaceText.SetResourceReference(TextBlock.ForegroundProperty, "TextTertiaryBrush");
+        UpdateWizardControls();
         var space = await Task.Run(() => AvailableBytes(target));
         if (revision != _locationRevision) return;
         var required = SelectedSizeBytes();
+        _locationChecking = false;
+        _locationHasEnoughSpace = _resumingExisting || space is null || required is null || space >= required;
         LocationSpaceText.Text = space is { } bytes ? $"{DownloadFormat.Bytes(bytes)} free on the target drive"
-            + (required is { } size ? $" · {DownloadFormat.Bytes(size)} selected" : " · download size not supplied") : "Available space could not be checked.";
+            + (required is { } size ? $" · {DownloadFormat.Bytes(size)} selected" : " · download size not supplied")
+            + (!_locationHasEnoughSpace ? " · Choose a drive with more free space." : "") : "Available space could not be checked.";
+        LocationSpaceText.SetResourceReference(TextBlock.ForegroundProperty, _locationHasEnoughSpace ? "TextTertiaryBrush" : "WarningBrush");
+        UpdateWizardControls();
     }
 
     private static long? AvailableBytes(string folder)
@@ -719,11 +936,108 @@ public partial class LibraryPage : Page
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
     }
 
+    public sealed record InstallDriveChoice(string Label, string Folder, long FreeBytes, long? RequiredBytes)
+    {
+        public bool IsSelected { get; init; }
+        public bool HasEnoughSpace => RequiredBytes is null || FreeBytes >= RequiredBytes;
+        public string SpaceLabel => $"{DownloadFormat.Bytes(FreeBytes)} free";
+        public string AvailabilityLabel => HasEnoughSpace ? "Ready to install" : "Not enough space";
+        public string Description => $"{Label} · {SpaceLabel} · {Folder}";
+    }
+
+    private async Task LoadInstallDrivesAsync()
+    {
+        var revision = ++_driveRevision;
+        var folder = _downloadPath;
+        var required = SelectedSizeBytes();
+        var drives = await Task.Run(() =>
+        {
+            var choices = new List<InstallDriveChoice>();
+            foreach (var drive in DriveInfo.GetDrives())
+            {
+                try
+                {
+                    if (drive.DriveType != DriveType.Fixed || !drive.IsReady) continue;
+                    var root = drive.RootDirectory.FullName;
+                    var current = ValidLocation(folder) && string.Equals(Path.GetPathRoot(folder), root, StringComparison.OrdinalIgnoreCase);
+                    var label = string.IsNullOrWhiteSpace(drive.VolumeLabel) ? "Local disk" : drive.VolumeLabel;
+                    choices.Add(new($"{label} ({root.TrimEnd('\\')})", current ? folder : Path.Combine(root, "SteamGames"), drive.AvailableFreeSpace, required) { IsSelected = current });
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+            }
+            return choices.OrderByDescending(drive => string.Equals(drive.Folder, folder, StringComparison.OrdinalIgnoreCase)).Take(8).ToArray();
+        });
+        if (revision == _driveRevision && _installMethod == GameInstallMethod.DepotDownloader && OverlayGrid.Visibility == Visibility.Visible)
+            InstallDriveChoices.ItemsSource = drives;
+    }
+
+    private void InstallDrive_Click(object sender, RoutedEventArgs args)
+    {
+        if (_resumingExisting || _downloadRunning || _wizardBusy) return;
+        if (sender is FrameworkElement { Tag: string folder }) ConfigureDownloadLocation(folder);
+    }
+
+    private void SteamToolsModelChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (_showingDownloadSetup && _installMethod == GameInstallMethod.BetterSteamTools && args.PropertyName is nameof(BetterSteamToolsViewModel.SteamDetected) or nameof(BetterSteamToolsViewModel.SteamRoot))
+            UpdateWizardControls();
+    }
+
+    private void OpenSteamInstall()
+    {
+        if (_selectedItem is not { } game) return;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo($"steam://install/{game.AppId}") { UseShellExecute = true }); }
+        catch (Exception exception) { OverlayStatus.Text = "Could not open Steam: " + exception.Message; }
+    }
+
+    private async Task AddSelectedGameToSteamAsync()
+    {
+        if (_selectedItem is not { } game || _steamToolsModel is not { } model || model.IsBusy) return;
+        var service = App.Services.GetRequiredService<IBetterSteamToolsService>();
+        var root = model.SteamRoot;
+        if (!service.Detect(root).SteamDetected) { OverlayStatus.Text = "Select the Steam folder containing steam.exe."; return; }
+        var source = _selectedSource;
+        var package = _localPackagePath;
+        var revision = _overlayRevision;
+        _steamToolsCts?.Cancel();
+        using var cancellation = new CancellationTokenSource();
+        _steamToolsCts = cancellation;
+        _wizardBusy = true;
+        UpdateWizardControls();
+        bool Current() => revision == _overlayRevision && ReferenceEquals(game, _selectedItem) && !cancellation.IsCancellationRequested;
+        var progress = new Progress<string>(message => { if (Current()) OverlayStatus.Text = message; });
+        try
+        {
+            if (!service.Detect(root).BackendInstalled)
+            {
+                OverlayStatus.Text = "Preparing BetterSteamTools…";
+                var installed = await service.InstallBackendAsync(root, progress, cancellation.Token);
+                cancellation.Token.ThrowIfCancellationRequested();
+                if (!installed.Succeeded) { if (Current()) OverlayStatus.Text = installed.Message; return; }
+                if (!service.Detect(root).BackendInstalled) { if (Current()) OverlayStatus.Text = "BetterSteamTools could not be verified. Try again before adding the game."; return; }
+            }
+            var result = source == ManifestSource.Local
+                ? await service.ImportAsync(root, [package!], game.AppId, cancellation.Token)
+                : await service.AddFromSourceAsync(root, game.AppId, source, progress, cancellation.Token);
+            if (!Current()) return;
+            _downloadCompleted = result.Succeeded;
+            OverlayStatus.Text = result.Succeeded ? "Game added. Open Steam to choose its library and install. " + result.Message : result.Message;
+            model.RefreshDetection();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception exception) { if (Current()) OverlayStatus.Text = "Could not add the game: " + exception.Message; }
+        finally
+        {
+            if (ReferenceEquals(_steamToolsCts, cancellation)) _steamToolsCts = null;
+            if (revision == _overlayRevision) { _wizardBusy = false; UpdateWizardControls(); }
+        }
+    }
+
     private void DepotChoiceChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (_batchDepotSelection) return;
         UpdateWizardControls();
-        if (_wizardStep == 2) _ = UpdateLocationSpaceAsync();
+        if (_wizardStep == 3) _ = UpdateLocationSpaceAsync();
     }
 
     private void SelectAllDepots_Click(object sender, RoutedEventArgs args) => SetAllDepotsSelected(true);
@@ -739,8 +1053,7 @@ public partial class LibraryPage : Page
     private void WizardBackButton_Click(object sender, RoutedEventArgs args)
     {
         if (_downloadRunning || _wizardBusy || _resumingExisting) return;
-        if (_wizardStep == 0 && _selectedItem is { } item) OpenGameDetails(item);
-        else SetWizardStep(_wizardStep - 1);
+        if (_wizardStep > 0) SetWizardStep(_wizardStep - 1);
     }
 
     private void ResetPreparedDownload()
@@ -762,22 +1075,39 @@ public partial class LibraryPage : Page
         if (_selectedItem is null || _downloadRunning || _wizardBusy) return;
         if (!_showingDownloadSetup) { OpenDownloadSetup(_selectedItem); return; }
         if (_resumingExisting) { await StartDownloadAsync(navigateToDownloads); return; }
-        if (_wizardStep == 2)
+        if (_wizardStep == 0)
+        {
+            if (_installMethod is null) { OverlayStatus.Text = "Choose DepotDownloader or BetterSteamTools to continue."; return; }
+            SelectDownloadSource(_selectedSource);
+            return;
+        }
+        if (_installMethod == GameInstallMethod.BetterSteamTools)
+        {
+            if (_wizardStep == 1)
+            {
+                if (_sourceUnavailable || (_selectedSource == ManifestSource.Local && string.IsNullOrWhiteSpace(_localPackagePath))) return;
+                SetWizardStep(2); OverlayStatus.Text = "";
+            }
+            else if (_downloadCompleted) OpenSteamInstall();
+            else await AddSelectedGameToSteamAsync();
+            return;
+        }
+        if (_wizardStep == 3)
         {
             if (!ValidDepotSelection() || !ValidLocation(_downloadPath)) { OverlayStatus.Text = "Choose at least one depot version and a valid download folder."; return; }
             await StartDownloadAsync(navigateToDownloads);
             return;
         }
-        if (_wizardStep == 1)
+        if (_wizardStep == 2)
         {
             if (!ValidDepotSelection()) { OverlayStatus.Text = "Select at least one depot and its version to continue."; return; }
-            SetWizardStep(2);
+            SetWizardStep(3);
             OverlayStatus.Text = "Review the selection and choose where to save the game.";
             return;
         }
         if (_sourceUnavailable) { OverlayStatus.Text = "This source is unavailable. Choose another source or configure its credentials in Settings."; return; }
         if (_preparedDownload is { } existing && existing.AppId == _selectedItem.AppId && existing.Source == _selectedSource)
-        { SetWizardStep(1); return; }
+        { SetWizardStep(2); return; }
         _availabilityCts?.Cancel();
         _preparationCts?.Cancel();
         using var cancellation = new CancellationTokenSource();
@@ -808,6 +1138,14 @@ public partial class LibraryPage : Page
             {
                 if (preparation.Plan is not null) downloader.DiscardPreparedDownload(preparation.Plan.Id);
                 OverlayStatus.Text = preparation.Message;
+                if (preparation.Message.Contains("unsupported Lua code", StringComparison.OrdinalIgnoreCase))
+                {
+                    _availabilityCts?.Cancel();
+                    _sourceUnavailable = true;
+                    SourceAvailabilityText.Text = $"{source}: package is not compatible";
+                    SourceAvailabilityText.Foreground = ThemeBrush("WarningBrush");
+                    OverlayStatus.Text = "This provider returned a script instead of supported depot metadata. Choose another source or import a compatible metadata package. No download was started.";
+                }
                 return;
             }
             _preparedDownload = plan;
@@ -818,7 +1156,7 @@ public partial class LibraryPage : Page
                 _depotChoices.Add(choice);
             }
             DepotSourceText.Text = $"{source} · {plan.Depots.Count} available depots";
-            SetWizardStep(1);
+            SetWizardStep(2);
             OverlayStatus.Text = "Select the depots and manifest versions you want to download.";
         }
         catch (OperationCanceledException) { }
@@ -846,6 +1184,47 @@ public partial class LibraryPage : Page
         catch (Exception exception)
         {
             OverlayStatus.Text = $"Error: {exception.Message}";
+        }
+    }
+
+    /// <summary>One Install action prepares the selected source, checks the destination and starts the job.</summary>
+    public async Task InstallFromSheetAsync(bool navigateToDownloads = false)
+    {
+        if (_selectedItem is not { } item || _installMethod is null || _wizardBusy || _downloadRunning || _sheetInstalling) return;
+        var revision = _overlayRevision;
+        var method = _installMethod;
+        var source = _selectedSource;
+        _sheetInstalling = true;
+        UpdateWizardControls();
+        try
+        {
+            bool Current() => revision == _overlayRevision && ReferenceEquals(item, _selectedItem) && method == _installMethod && source == _selectedSource;
+            var finalStep = method == GameInstallMethod.BetterSteamTools ? 2 : 3;
+            while (!_resumingExisting && _wizardStep < finalStep)
+            {
+                var previous = _wizardStep;
+                await AdvanceDownloadWizardAsync();
+                if (_wizardStep <= previous || !Current()) return;
+            }
+            if (method == GameInstallMethod.DepotDownloader && !_resumingExisting)
+            {
+                await UpdateLocationSpaceAsync();
+                if (!Current()) return;
+                if (!_locationHasEnoughSpace)
+                {
+                    OverlayStatus.Text = "Not enough space on the selected drive. Choose another drive or folder.";
+                    return;
+                }
+            }
+            await AdvanceDownloadWizardAsync(navigateToDownloads);
+        }
+        finally
+        {
+            if (revision == _overlayRevision)
+            {
+                _sheetInstalling = false;
+                UpdateWizardControls();
+            }
         }
     }
 
@@ -1085,7 +1464,7 @@ public partial class LibraryPage : Page
                     {
                         _resumeJob = job;
                         _resumingExisting = true;
-                        SetWizardStep(2);
+                        SetWizardStep(3);
                     }
                     OverlayStatus.Text = result.Succeeded
                         ? $"Done! {result.Message}"
@@ -1108,7 +1487,7 @@ public partial class LibraryPage : Page
                 {
                     _resumeJob = job;
                     _resumingExisting = true;
-                    SetWizardStep(2);
+                    SetWizardStep(3);
                     OverlayStatus.Text = job.Status;
                     StartButton.Content = wasPaused ? "Resume download" : "Start download";
                     StartButton.IsEnabled = true;
@@ -1123,7 +1502,7 @@ public partial class LibraryPage : Page
                 {
                     _resumeJob = job;
                     _resumingExisting = true;
-                    SetWizardStep(2);
+                    SetWizardStep(3);
                     OverlayStatus.Text = $"Error: {ex.Message}";
                     StartButton.Content = "Retry";
                     StartButton.IsEnabled = true;

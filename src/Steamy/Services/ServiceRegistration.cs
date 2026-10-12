@@ -11,13 +11,22 @@ public static class ServiceRegistration
 
         services.AddSingleton<Wpf.Ui.Abstractions.INavigationViewPageProvider, NavigationViewPageProvider>();
         services.AddSingleton<INavigationService, NavigationService>();
+        services.AddSingleton<IShellBackdropService, ShellBackdropService>();
         services.AddSingleton<IAppDataStore, AppDataStore>();
         services.AddSingleton<ILocalDatabase, SqliteLocalDatabase>();
         services.AddSingleton<IDownloadQueueStore, DownloadQueueStore>();
         services.AddSingleton<ISteamLibraryService, SteamLibraryService>();
         services.AddSingleton<ILibrarySyncService, LibrarySyncService>();
+        services.AddSingleton<IDownloadedGameLibrary, DownloadedGameLibrary>();
+        services.AddSingleton<IPcGameScanService, PcGameScanService>();
         services.AddSingleton<ISettingsService, JsonSettingsService>();
         services.AddSingleton<IGameActivityService>(_ => new JsonGameActivityService());
+        services.AddSingleton<IPlayTimeService, PlayTimeService>();
+        services.AddSingleton<IGamePreferencesStore>(_ => new GamePreferencesStore());
+        services.AddSingleton<IGameProcessStarter, GameProcessStarter>();
+        services.AddSingleton<IGameLaunchService, GameLaunchService>();
+        services.AddSingleton<IGameDetailsDataService, SteamGameDetailsService>();
+        services.AddSingleton<GameDetailsViewModel>();
         services.AddSingleton<ISecureCredentialService, DpapiCredentialService>();
         services.AddSingleton<UiTranslationService>();
         services.AddSingleton<ILogDispatcher, WpfLogDispatcher>();
@@ -31,7 +40,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<IDownloadQueueStore>(),
             sp.GetRequiredService<ILoggingService>(),
             sp.GetRequiredService<INotificationService>(),
-            sp.GetRequiredService<IRyuuGameDownloadService>()
+            sp.GetRequiredService<IRyuuGameDownloadService>(),
+            sp.GetRequiredService<IDownloadedGameLibrary>()
         ));
         services.AddSingleton<ISteamApiHealthService, DemoSteamApiHealthService>();
         services.AddSingleton<IFileVerificationService, LocalFileVerificationService>();
@@ -46,6 +56,7 @@ public static class ServiceRegistration
         services.AddSingleton<IArtworkService>(_ => new SteamArtworkService());
         services.AddSingleton<ISteamCatalogService>(_ => new SteamCatalogService());
         services.AddSingleton<ISpotlightService>(_ => new SpotlightCatalogService());
+        services.AddSingleton<ITrailerPreviewService>(_ => new TrailerPreviewService());
         services.AddSingleton<IFreeManifestCatalogService, FreeManifestCatalogService>();
         services.AddSingleton<IRyuuCatalogService>(sp => new RyuuCatalogService(sp.GetRequiredService<ISettingsService>()));
         services.AddSingleton<IHubcapCatalogService>(sp => new HubcapCatalogService(sp.GetRequiredService<ISettingsService>(), sp.GetRequiredService<ISecureCredentialService>()));
@@ -118,6 +129,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<ISettingsService>(),
             sp.GetRequiredService<ISecureCredentialService>()));
         services.AddSingleton<GoldbergViewModel>();
+        services.AddSingleton<UcOnlineService>();
+        services.AddSingleton<UcOnlineViewModel>();
         services.AddSingleton<UnsteamViewModel>();
         services.AddSingleton<ScreamApiViewModel>();
         services.AddSingleton<HvFixesViewModel>();

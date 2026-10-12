@@ -10,6 +10,58 @@ namespace Steamy.UiTests;
 
 public sealed partial class PageSmokeTests
 {
+    private static void CheckSteamToolsAppearance(IServiceProvider provider, BetterSteamToolsFixture fixture)
+    {
+        var previousWindow = Application.Current.MainWindow;
+        var previousTheme = UiThemeService.IsLight ? "Light" : "Dark";
+        var installed = fixture.Installed;
+        var model = provider.GetRequiredService<BetterSteamToolsViewModel>();
+        fixture.Installed = true;
+        model.RefreshDetection();
+        var window = new MainWindow { Width = 1280, Height = 800, WindowState = WindowState.Normal, ShowInTaskbar = false };
+        Application.Current.MainWindow = window;
+        try
+        {
+            window.Show();
+            PumpDispatcher(TimeSpan.FromMilliseconds(350));
+            Assert.True(window.RootNavigationView.Navigate(typeof(BetterSteamToolsPage)));
+            PumpDispatcher(TimeSpan.FromMilliseconds(350));
+            var page = Descendants<BetterSteamToolsPage>(window).Single();
+            foreach (var theme in new[] { "Dark", "Light" })
+            foreach (var width in new[] { 980, 1280 })
+            {
+                UiThemeService.Apply(theme);
+                window.Width = width; window.Height = width == 980 ? 620 : 800;
+                window.UpdateLayout();
+                CheckSteamToolsLayout(page);
+                var launcher = (Border)window.RootNavigationView.Template.FindName("LauncherSurface", window.RootNavigationView);
+                var launcherGlass = Assert.IsType<System.Windows.Media.LinearGradientBrush>(launcher.Background);
+                Assert.All(launcherGlass.GradientStops, stop => Assert.InRange(stop.Color.A, 1, 180));
+                foreach (var name in new[] { "GameExpander", "SteamSetupExpander" })
+                {
+                    var expander = (Expander)page.FindName(name);
+                    var header = Descendants<System.Windows.Controls.Primitives.ToggleButton>(expander).First();
+                    var group = Descendants<StackPanel>(header).Single();
+                    var left = group.TranslatePoint(new Point(), page).X;
+                    var inputLeft = ((FrameworkElement)page.FindName("GameInputBox")).TranslatePoint(new Point(), page).X;
+                    Assert.InRange(left - inputLeft, -1, 1);
+                }
+                SaveGlassVisual(window, $"tools-aligned-{theme}-{width}");
+            }
+            fixture.Installed = false; model.RefreshDetection(); window.UpdateLayout();
+            Assert.Equal(Visibility.Visible, ((TextBlock)page.FindName("ConnectionHint")).Visibility);
+            Assert.True(((Border)page.FindName("BackendSetupNotice")).IsVisible);
+            SaveGlassVisual(window, "tools-backend-missing");
+            fixture.Installed = true; model.RefreshDetection(); window.UpdateLayout();
+            Assert.Equal(Visibility.Collapsed, ((TextBlock)page.FindName("ConnectionHint")).Visibility);
+        }
+        finally
+        {
+            window.Close(); Application.Current.MainWindow = previousWindow;
+            fixture.Installed = installed; model.RefreshDetection(); UiThemeService.Apply(previousTheme);
+        }
+    }
+
     private static void CheckSteamToolsLayout(BetterSteamToolsPage page)
     {
         var drop = (Border)page.FindName("MetadataDropZone");
@@ -17,6 +69,11 @@ public sealed partial class PageSmokeTests
         var setupOptions = (Expander)page.FindName("SteamSetupExpander");
         var scroll = (ScrollViewer)page.FindName("ToolScrollHost");
         var footer = (Grid)page.FindName("OperationFooter");
+        Assert.Equal(Visibility.Collapsed, ((TextBlock)page.FindName("ConnectionHint")).Visibility);
+        Assert.Equal(TextAlignment.Left, ((TextBlock)page.FindName("SourceLabel")).TextAlignment);
+        var content = (FrameworkElement)page.FindName("ToolContent");
+        var contentCenter = content.TranslatePoint(new Point(content.ActualWidth / 2, 0), page).X;
+        Assert.InRange(contentCenter - page.ActualWidth / 2, -10, 10);
         Assert.True(gameOptions.IsExpanded, "The game input must be available without an extra click.");
         Assert.False(setupOptions.IsExpanded, "An installed backend must keep setup collapsed initially.");
         var dropBounds = drop.TransformToAncestor(page).TransformBounds(new Rect(drop.RenderSize));

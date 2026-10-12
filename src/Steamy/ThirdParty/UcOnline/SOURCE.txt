@@ -1,0 +1,3 @@
+Source: https://github.com/LukeWarmSodas/uc-online2
+Revision: 936fbf337a4144651adeb2a257a0ba3d66147b4c
+Core only; no external GUI or scripts are executed.

@@ -25,7 +25,7 @@ public sealed class SettingsViewModel : ViewModelBase
     /// <summary>Typing a secret is a little more expensive to store, so it waits slightly longer.</summary>
     private static readonly TimeSpan CredentialAutosaveDelay = TimeSpan.FromMilliseconds(900);
 
-    private const string SteamApiKeyName = "steam-api-key";
+    private const string SteamApiKeyName = SteamGameDetailsService.CredentialKey;
     private const string RyuuAuthKeyName = "ryuu-auth-key";
     private const string HubcapApiKeyName = "hubcap-api-key";
     private const string DepotBoxApiKeyName = "depotbox-api-key";
@@ -504,6 +504,8 @@ public sealed class SettingsViewModel : ViewModelBase
             // Deliberately without ConfigureAwait(false): the status properties are bound to the
             // page and must be updated on the thread that owns them.
             await _settingsService.SaveAsync(Settings);
+            if (App.Services.GetService<IPlayTimeService>() is { } playtime)
+                await playtime.ConfigureAsync(Settings, Store.Games);
             await SaveCredentialsAsync();
 
             HasUnsavedChanges = false;
@@ -640,6 +642,7 @@ public sealed class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(DnsEndpointHint));
 
         SaveStatus = "Settings were reset to their defaults.";
+        UiThemeService.ConfigureBackground(Settings);
         HasUnsavedChanges = false;
     }
 
@@ -975,8 +978,10 @@ public sealed class SettingsViewModel : ViewModelBase
         if (_settingsChangedHandler is not null && Settings is not null)
             Settings.PropertyChanged -= _settingsChangedHandler;
 
-        _settingsChangedHandler = (_, _) =>
+        _settingsChangedHandler = (_, args) =>
         {
+            if (args.PropertyName is nameof(AppSettings.AmbientEnabled) or nameof(AppSettings.BackgroundColor))
+                UiThemeService.ConfigureBackground(settings);
             HasUnsavedChanges = true;
             SaveStatus = "Unsaved changes…";
             OnPropertyChanged(nameof(SteamIdHint));

@@ -3,11 +3,28 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:controls="clr-namespace:Steamy.Controls"
+      xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
       ScrollViewer.CanContentScroll="False"
       UseLayoutRounding="True" SnapsToDevicePixels="True"
-      Background="{DynamicResource AppBackgroundBrush}">
+      Background="{DynamicResource PageBackgroundBrush}">
   <Page.Resources>
+    <SolidColorBrush x:Key="DashboardBodyForeground" Color="#F2FFFFFF" />
+    <SolidColorBrush x:Key="DashboardBodySecondary" Color="#B8FFFFFF" />
+    <SolidColorBrush x:Key="DashboardBodyTertiary" Color="#8FFFFFFF" />
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    <Style x:Key="HeroPillButton" TargetType="Button">
+      <Setter Property="controls:CardMotion.IsEnabled" Value="True" />
+      <Setter Property="controls:CardMotion.HoverScale" Value="1.04" />
+      <Setter Property="controls:CardMotion.HoverLift" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource HeroForegroundBrush}" /><Setter Property="Background" Value="Transparent" />
+      <Setter Property="FontSize" Value="{Binding DashboardNavigationFontSize, RelativeSource={RelativeSource AncestorType=Page}}" /><Setter Property="Padding" Value="8,4" /><Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="16" Padding="{TemplateBinding Padding}">
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#20FFFFFF" /></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
     <Style x:Key="CoverCardButton" TargetType="Button">
       <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}" />
       <Setter Property="controls:CardMotion.IsEnabled" Value="True" />
@@ -37,27 +54,113 @@
         </Setter.Value>
       </Setter>
     </Style>
+    <Style x:Key="UpcomingCardButton" TargetType="Button" BasedOn="{StaticResource CoverCardButton}">
+      <Setter Property="controls:CardMotion.HoverScale" Value="1" />
+      <Setter Property="controls:CardMotion.HoverLift" Value="0" />
+      <EventSetter Event="MouseEnter" Handler="DashboardAmbient_Enter" />
+      <EventSetter Event="MouseLeave" Handler="DashboardAmbient_Leave" />
+      <EventSetter Event="GotKeyboardFocus" Handler="DashboardAmbient_Focus" />
+      <EventSetter Event="LostKeyboardFocus" Handler="DashboardAmbient_Blur" />
+    </Style>
     <Style x:Key="SectionTitle" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="16" />
+      <Setter Property="FontSize" Value="22" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource DashboardBodyForeground}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
+    <Style x:Key="RecentCardButton" TargetType="Button" BasedOn="{StaticResource CoverCardButton}">
+      <Setter Property="controls:CardMotion.HoverScale" Value="1.025" />
+      <Setter Property="controls:CardMotion.HoverLift" Value="-3" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Grid Background="Transparent"><Grid x:Name="MotionSurface">
+          <ContentPresenter />
+          <Border x:Name="HoverSheen" CornerRadius="26" Background="#16FFFFFF" Opacity="0" IsHitTestVisible="False" />
+        </Grid></Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HoverSheen" Property="Opacity" Value="1" /></Trigger>
+          <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="HoverSheen" Property="Opacity" Value="1" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="InstalledTileButton" TargetType="Button" BasedOn="{StaticResource CoverCardButton}">
+      <Setter Property="Width" Value="{Binding RecentTileWidth, RelativeSource={RelativeSource AncestorType=Page}}" />
+      <Setter Property="controls:CardMotion.CollapsedWidth" Value="{Binding RecentTileWidth, RelativeSource={RelativeSource AncestorType=Page}}" />
+      <Setter Property="controls:CardMotion.ExpandedWidth" Value="248" />
+      <Setter Property="controls:CardMotion.HoverDuration" Value="180" />
+      <Setter Property="controls:CardMotion.HoverScale" Value="1" />
+      <Setter Property="controls:CardMotion.HoverLift" Value="-2" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Grid Background="Transparent" Margin="0,5">
+          <Border x:Name="MotionSurface" Height="{Binding RecentTileWidth, RelativeSource={RelativeSource AncestorType=Page}}" CornerRadius="20" controls:RoundedClip.Radius="20" Background="{DynamicResource GlassSurfaceBrush}">
+            <Grid>
+              <Border Background="{Binding Game.CoverColor}" Opacity="0.55" />
+              <TextBlock Text="{Binding Game.ShortName}" Foreground="White" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" Margin="8" />
+              <Image Source="{Binding Game.HeaderImage}" Width="{Binding RecentTileWidth, RelativeSource={RelativeSource AncestorType=Page}}" HorizontalAlignment="Left" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
+              <Image Source="{Binding Game.ArtworkImage}" Width="{Binding RecentTileWidth, RelativeSource={RelativeSource AncestorType=Page}}" HorizontalAlignment="Left" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
+              <Grid x:Name="HoverDetails" Width="248" HorizontalAlignment="Left" Opacity="0" IsHitTestVisible="False">
+                <Image Source="{Binding Game.HeaderImage}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
+                <Border><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#18060A12" Offset="0" /><GradientStop Color="#AA0C1422" Offset="0.45" /><GradientStop Color="#D0101B2B" Offset="1" /></LinearGradientBrush></Border.Background></Border>
+                <Grid Margin="14" VerticalAlignment="Center">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="36" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                  <Border Width="32" Height="32" CornerRadius="16" Background="#30FFFFFF" VerticalAlignment="Center"><ui:SymbolIcon Symbol="Play24" FontSize="17" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                  <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <TextBlock Text="{Binding Game.Name}" Foreground="#F0FFFFFF" FontSize="12" FontWeight="Medium" TextTrimming="CharacterEllipsis" Margin="0,0,0,5" />
+                    <TextBlock Text="{Binding PlayTimeLabel}" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+                  </StackPanel>
+                </Grid>
+              </Grid>
+              <Border CornerRadius="20" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="0" IsHitTestVisible="False" />
+            </Grid>
+          </Border>
+        </Grid>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <DataTemplate x:Key="InstalledTileTemplate">
+      <Button Style="{StaticResource InstalledTileButton}" VerticalAlignment="Top"
+              Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding Game}"
+              AutomationProperties.Name="{Binding Game.Name}" AutomationProperties.HelpText="{Binding ActionLabel}" AutomationProperties.ItemStatus="{Binding PlayTimeLabel}" />
+    </DataTemplate>
+    <DataTemplate x:Key="InstalledBannerTemplate">
+              <Button VerticalAlignment="Top" Style="{StaticResource RecentCardButton}"
+                      Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding Game}"
+                      AutomationProperties.Name="{Binding Game.Name}" AutomationProperties.HelpText="{Binding ActionLabel}" AutomationProperties.ItemStatus="{Binding PlayTimeLabel}">
+                <Border Height="{Binding RecentCardHeight, RelativeSource={RelativeSource AncestorType=Page}}" CornerRadius="24" Background="{DynamicResource GlassSurfaceBrush}" controls:RoundedClip.Radius="24">
+                  <Grid>
+                    <Border Background="{Binding Game.CoverColor}" Opacity="0.35" />
+                    <TextBlock Text="{Binding Game.ShortName}" FontSize="36" FontWeight="Bold" Opacity="0.2" Foreground="White" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="20" />
+                    <Image Source="{Binding Game.HeaderImage}" Stretch="UniformToFill" Opacity="0.82" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Border IsHitTestVisible="False"><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#70060C16" Offset="0" /><GradientStop Color="#850A1220" Offset="0.5" /><GradientStop Color="#280F1A29" Offset="1" /></LinearGradientBrush></Border.Background></Border>
+                    <Grid Margin="14,12,14,12">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                      <Border Width="36" Height="36" CornerRadius="18" Background="#24FFFFFF" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <ui:SymbolIcon FontSize="19" Foreground="White" Margin="2,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"><ui:SymbolIcon.Style><Style TargetType="ui:SymbolIcon"><Setter Property="Symbol" Value="Play24" /><Style.Triggers><DataTrigger Binding="{Binding CanLaunch}" Value="False"><Setter Property="Symbol" Value="Folder24" /></DataTrigger></Style.Triggers></Style></ui:SymbolIcon.Style></ui:SymbolIcon>
+                      </Border>
+                      <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Game.Name}" FontSize="12.5" FontWeight="Medium" Foreground="#E8FFFFFF" TextTrimming="CharacterEllipsis" Margin="0,0,0,5" />
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="{Binding PlayTimeLabel}" FontSize="19" FontWeight="SemiBold" Foreground="White" />
+                          <Ellipse Width="6" Height="6" Fill="#7CE5B4" Margin="9,2,0,0" VerticalAlignment="Center" Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
+                      </StackPanel>
+                    </Grid>
+                  </Grid>
+                </Border>
+              </Button>
+            </DataTemplate>
     <DataTemplate x:Key="DiscoveryCoverTemplate">
-      <Button Style="{StaticResource CoverCardButton}" ToolTip="{Binding Game.Name}" CommandParameter="{Binding}"
+      <Button Style="{StaticResource UpcomingCardButton}" CommandParameter="{Binding}"
               Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}"
               AutomationProperties.Name="{Binding Game.Name}">
         <Grid>
           <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="52" /></Grid.RowDefinitions>
-          <Border CornerRadius="12" RenderOptions.BitmapScalingMode="LowQuality">
-            <Border.Background><ImageBrush ImageSource="{Binding Game.HeaderImage}" Stretch="UniformToFill" /></Border.Background>
-            <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" CornerRadius="6" Padding="8,5" Margin="10" Background="#E51B2534" ToolTip="{Binding CountdownDetail}">
-              <TextBlock Text="{Binding ReleaseBadge}" Foreground="#FFDCE2F4" FontWeight="SemiBold" FontSize="10" />
-            </Border>
+          <controls:ArtworkHalo Source="{Binding Game.HeaderImage}" IsActive="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" />
+          <Border CornerRadius="14" RenderOptions.BitmapScalingMode="HighQuality">
+            <Grid><controls:TrailerPreview AppId="{Binding Game.AppId}" Poster="{Binding Game.HeaderImage}" />
+            </Grid>
           </Border>
           <StackPanel Grid.Row="1" Margin="2,9,2,0">
-            <TextBlock Text="{Binding Game.Name}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
-            <TextBlock Text="{Binding ReleaseLabel}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="10.5" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Game.Name}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DashboardBodyForeground}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding ReleaseLabel}" Foreground="{DynamicResource DashboardBodyTertiary}" FontSize="10.5" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
           </StackPanel>
         </Grid>
       </Button>
@@ -65,22 +168,35 @@
   </Page.Resources>
 
   <Grid>
-  <ScrollViewer x:Name="DashboardScroll" Style="{StaticResource DashboardScrollHostStyle}" Padding="28,22,28,30">
-    <StackPanel MaxWidth="1120" RequestBringIntoView="Dashboard_RequestBringIntoView">
-      <Grid Margin="0,0,0,22">
+  <ScrollViewer x:Name="DashboardScroll" Style="{StaticResource DashboardScrollHostStyle}" Padding="0" ScrollChanged="DashboardScroll_Changed">
+    <Grid x:Name="DashboardContent">
+      <Canvas IsHitTestVisible="False">
+        <controls:DashboardBackdropView x:Name="DashboardBackdrop"
+            Width="{Binding ActualWidth, ElementName=DashboardContent}" Height="{Binding ActualHeight, ElementName=DashboardContent}"
+            HeroHeight="{Binding ActualHeight, ElementName=DashboardHero}" />
+      </Canvas>
+    <StackPanel RequestBringIntoView="Dashboard_RequestBringIntoView">
+      <Border x:Name="DashboardHero" Height="480" CornerRadius="0" Background="Transparent"
+              BorderThickness="0" Margin="0,0,0,28"
+              Visibility="{Binding DataContext.HasSpotlight, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolToVis}}" DataContext="{Binding FeaturedGame}">
+        <Grid>
+          <Border x:Name="SpotlightArtworkFrame" Opacity="0" Height="480" CornerRadius="0" RenderOptions.BitmapScalingMode="HighQuality">
+            <Image Source="{Binding HeroArtwork}" Stretch="UniformToFill" StretchDirection="DownOnly" RenderTransformOrigin="0.5,0.5">
+              <Image.RenderTransform><ScaleTransform x:Name="ArtworkZoom" /></Image.RenderTransform>
+            </Image>
+          </Border>
+
+      <Grid VerticalAlignment="Top" Margin="28,60,28,0" Panel.ZIndex="3" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-        <TextBlock Text="Discover" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
         <ui:TextBox x:Name="DashboardSearch" Grid.Column="1" Width="340" Height="38"
                     Visibility="{Binding DashboardSearchEnabled, Converter={StaticResource BoolToVis}}"
                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                     PlaceholderText="Search games or App ID" Icon="{ui:SymbolIcon Search24}"
                     KeyDown="DashboardSearch_KeyDown" GotKeyboardFocus="DashboardSearch_GotKeyboardFocus" LostKeyboardFocus="DashboardSearch_LostKeyboardFocus"
                     ToolTip="Type to search. Enter opens Games; Escape clears the search." />
-        <ui:Button Grid.Column="2" Appearance="Transparent" Icon="{ui:SymbolIcon ArrowSync24}" Margin="8,0,0,0"
-                   Command="{Binding RefreshCommand}" ToolTip="Refresh spotlight" AutomationProperties.Name="Refresh spotlight" />
       </Grid>
-
-      <Border x:Name="DashboardSearchPanel" CornerRadius="14" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}" Padding="12" Margin="0,0,0,24"
+      <Border x:Name="DashboardSearchPanel" CornerRadius="14" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}" Padding="12" Margin="28,64,28,0" VerticalAlignment="Top" Panel.ZIndex="4"
+              DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}"
               Visibility="{Binding ShowSearchPanel, Converter={StaticResource BoolToVis}}" LostKeyboardFocus="DashboardSearch_LostKeyboardFocus">
         <StackPanel>
           <TextBlock Text="{Binding SearchStatus}" Visibility="{Binding HasSearchQuery, Converter={StaticResource BoolToVis}}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="8,2,0,8" AutomationProperties.LiveSetting="Polite" />
@@ -104,36 +220,6 @@
         </StackPanel>
       </Border>
 
-      <Border Visibility="{Binding HasActivityNotice, Converter={StaticResource BoolToVis}}" Background="{DynamicResource SurfaceBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="12" Padding="14" Margin="0,0,0,18">
-        <TextBlock Text="{Binding ActivityNotice}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" FontSize="12" />
-      </Border>
-
-      <Border x:Name="DashboardHero" Height="360" CornerRadius="16" Background="#09090B"
-              BorderThickness="0" Margin="0,0,0,24"
-              Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}" DataContext="{Binding FeaturedGame}">
-        <Grid>
-          <Border x:Name="SpotlightArtworkFrame" Height="360" CornerRadius="16" RenderOptions.BitmapScalingMode="LowQuality">
-            <Image Source="{Binding HeroArtwork}" Stretch="UniformToFill" StretchDirection="DownOnly" RenderTransformOrigin="0.5,0.5">
-              <Image.RenderTransform><ScaleTransform x:Name="ArtworkZoom" /></Image.RenderTransform>
-            </Image>
-          </Border>
-          <Border CornerRadius="16" IsHitTestVisible="False">
-            <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-              <GradientStop Color="#A008080B" Offset="0" /><GradientStop Color="#3008080B" Offset="0.55" /><GradientStop Color="#0008080B" Offset="1" />
-            </LinearGradientBrush></Border.Background>
-          </Border>
-          <Border CornerRadius="16" IsHitTestVisible="False">
-            <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-              <GradientStop Color="#0008080B" Offset="0.2" /><GradientStop Color="#5008080B" Offset="0.6" /><GradientStop Color="#DF08080B" Offset="1" />
-            </LinearGradientBrush></Border.Background>
-          </Border>
-          <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="24,20" CornerRadius="12" Padding="10,6" Background="#60070709">
-            <StackPanel Orientation="Horizontal">
-              <Ellipse Width="4" Height="4" Fill="#DEDEE4" VerticalAlignment="Center" Margin="0,0,7,0" />
-              <TextBlock Text="UPCOMING" FontSize="9" FontWeight="SemiBold" Foreground="#DEDEE4" />
-            </StackPanel>
-          </Border>
           <Border x:Name="SpotlightLoader" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="24" Padding="10"
                   Background="#40000000" Visibility="Collapsed" IsHitTestVisible="False" AutomationProperties.Name="Next spotlight">
             <Path Width="24" Height="24" Stroke="#DDFFFFFF" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -141,18 +227,23 @@
               <Path.RenderTransform><RotateTransform x:Name="LoaderRotation" /></Path.RenderTransform>
             </Path>
           </Border>
-          <Grid x:Name="SpotlightFooter" VerticalAlignment="Bottom" Margin="24">
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+          <Grid x:Name="SpotlightFooter" VerticalAlignment="Center" Margin="72,24,72,0">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel x:Name="SpotlightDetails" Grid.ColumnSpan="2" HorizontalAlignment="Left" MaxWidth="500">
-              <TextBlock x:Name="SpotlightTitle" Text="{Binding Game.Name}" FontSize="28" FontWeight="SemiBold" Foreground="#F0F0F3" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="76" ToolTip="{Binding Game.Name}" />
-              <TextBlock Text="{Binding ReleaseLabel}" Foreground="#AAAAAF" FontSize="10" Margin="0,7,0,0" TextTrimming="CharacterEllipsis" />
-              <TextBlock x:Name="SpotlightDescription" Text="{Binding Description}" Foreground="#BEBEC5" FontSize="12" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
-                         MaxWidth="360" HorizontalAlignment="Left" Height="34" LineHeight="17" LineStackingStrategy="BlockLineHeight" Margin="0,8,0,0" />
+              <TextBlock x:Name="SpotlightEyebrow" Text="{Binding Eyebrow}" FontSize="10" Foreground="{DynamicResource HeroSecondaryForegroundBrush}" Margin="0,0,0,6" />
+              <Image x:Name="SpotlightLogo" Source="{Binding LogoArtwork}" Stretch="Uniform" HorizontalAlignment="Left" Width="320" MaxHeight="126" RenderOptions.BitmapScalingMode="HighQuality" Visibility="{Binding HasLogo, Converter={StaticResource BoolToVis}}" AutomationProperties.Name="{Binding Game.Name}" ToolTip="{Binding Game.Name}" />
+              <TextBlock x:Name="SpotlightTitle" Text="{Binding HeroTitle}" FontSize="38" FontWeight="SemiBold" Foreground="{DynamicResource HeroForegroundBrush}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" LineStackingStrategy="BlockLineHeight" MaxHeight="110">
+                <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Visible" /><Style.Triggers>
+                  <DataTrigger Binding="{Binding HasLogo}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                </Style.Triggers></Style></TextBlock.Style>
+              </TextBlock>
+              <TextBlock x:Name="SpotlightDescription" Text="{Binding Description}" Foreground="{DynamicResource HeroSecondaryForegroundBrush}" FontSize="12" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                         MaxWidth="320" HorizontalAlignment="Left" Height="18" LineHeight="18" LineStackingStrategy="BlockLineHeight" Margin="0,8,0,0" />
             </StackPanel>
             <StackPanel x:Name="SpotlightActions" Grid.Row="1" Orientation="Horizontal" Margin="0,12,0,0" HorizontalAlignment="Left">
-              <Border x:Name="SpotlightCountdown" CornerRadius="9" Padding="6,0" BorderThickness="1" BorderBrush="#24FFFFFF" Background="#550A0B10"
-                      ToolTip="{Binding CountdownDetail}" MinWidth="100">
+              <Border x:Name="SpotlightCountdown" Padding="0" BorderThickness="0" Background="Transparent"
+                      ToolTip="{Binding CountdownDetail}" MinWidth="100" Visibility="{Binding Metadata.ComingSoon, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
                   <StackPanel Orientation="Horizontal" Visibility="{Binding HasTimedCountdown, Converter={StaticResource BoolToVis}}">
                     <controls:CountdownDigit Value="{Binding CountdownDays}" Label="DAYS" />
@@ -160,41 +251,119 @@
                     <controls:CountdownDigit Value="{Binding CountdownMinutes}" Label="MIN" />
                     <controls:CountdownDigit Value="{Binding CountdownSeconds}" Label="SEC" />
                   </StackPanel>
-                  <TextBlock Text="{Binding Countdown}" FontSize="21" Foreground="#EEEEF2" Padding="12,8">
+                  <TextBlock Text="{Binding ReleaseLabel}" FontSize="13" Foreground="{DynamicResource HeroForegroundBrush}" Padding="0,8">
                     <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Visible" />
                       <Style.Triggers><DataTrigger Binding="{Binding HasTimedCountdown}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
                     </Style></TextBlock.Style>
                   </TextBlock>
                 </StackPanel>
               </Border>
-              <ui:Button Content="Details" Appearance="Transparent" Foreground="#F0F1F7" BorderBrush="#354F5C7C" BorderThickness="1" Padding="13,9" Margin="12,0,0,0" VerticalAlignment="Center"
-                         Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" />
-            </StackPanel>
-            <StackPanel x:Name="SpotlightPaging" Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="12,0,0,0"
-                        DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
-              <ui:Button Content="{Binding SpotlightPlaybackLabel}" Command="{Binding ToggleSpotlightCommand}" Appearance="Transparent" Foreground="#CECED5" Background="Transparent" BorderThickness="0" Padding="6" FontSize="10" Margin="0,0,5,0" AutomationProperties.Name="Pause or resume spotlight" />
-              <TextBlock Text="{Binding FeaturedPosition}" FontSize="10" Foreground="#92929B" VerticalAlignment="Center" Margin="0,0,8,0" />
-              <ui:Button Icon="{ui:SymbolIcon ChevronLeft24}" Foreground="#CECED5" Background="Transparent" BorderThickness="0" Appearance="Transparent" Width="30" Height="30" Padding="5" Command="{Binding PreviousFeaturedCommand}" ToolTip="Previous spotlight" AutomationProperties.Name="Previous spotlight" />
-              <ui:Button Icon="{ui:SymbolIcon ChevronRight24}" Foreground="#CECED5" Background="Transparent" BorderThickness="0" Appearance="Transparent" Width="30" Height="30" Padding="5" Margin="2,0,0,0" Command="{Binding NextFeaturedCommand}" ToolTip="Next spotlight" AutomationProperties.Name="Next spotlight" />
+              <ui:Button x:Name="SpotlightViewButton" Content="{Binding FeatureActionLabel}" Appearance="Transparent" Foreground="{DynamicResource HeroForegroundBrush}" Background="#30FFFFFF" BorderThickness="0" FontSize="13" Padding="20,9" VerticalAlignment="Center" CornerRadius="20"
+                         Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}">
+                <ui:Button.Style><Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}"><Setter Property="Margin" Value="0" />
+                  <Style.Triggers><DataTrigger Binding="{Binding Metadata.ComingSoon}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
+                </Style></ui:Button.Style>
+              </ui:Button>
             </StackPanel>
           </Grid>
+            <ItemsControl x:Name="SpotlightDots" HorizontalAlignment="Center" Margin="0,0,0,-26" VerticalAlignment="Bottom"
+                          ItemsSource="{Binding DataContext.SpotlightPreviews, RelativeSource={RelativeSource AncestorType=Page}}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <Button Width="13" Height="24" FocusVisualStyle="{StaticResource GalleryKeyboardFocus}" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                        ToolTip="{Binding Game.Name}" AutomationProperties.Name="{Binding Game.Name}"
+                        Command="{Binding DataContext.SelectFeaturedCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}">
+                  <Button.Template><ControlTemplate TargetType="Button"><Grid Background="Transparent"><Ellipse Width="5" Height="5" Fill="{DynamicResource HeroForegroundBrush}">
+                    <Ellipse.Style><Style TargetType="Ellipse"><Setter Property="Opacity" Value="0.35" /><Style.Triggers><DataTrigger Binding="{Binding IsSelected}" Value="True"><Setter Property="Opacity" Value="1" /></DataTrigger><Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.8" /></Trigger></Style.Triggers></Style></Ellipse.Style>
+                  </Ellipse></Grid></ControlTemplate></Button.Template>
+                </Button>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Grid x:Name="SpotlightPaging" VerticalAlignment="Center" Margin="6,0"
+                        DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
+              <ui:Button Icon="{ui:SymbolIcon ChevronLeft24}" Foreground="{DynamicResource HeroSecondaryForegroundBrush}" Background="Transparent" BorderThickness="0" Appearance="Transparent" Width="30" Height="40" Padding="5" HorizontalAlignment="Left" Command="{Binding PreviousFeaturedCommand}" ToolTip="Previous spotlight" AutomationProperties.Name="Previous spotlight" />
+              <ui:Button Icon="{ui:SymbolIcon ChevronRight24}" Foreground="{DynamicResource HeroSecondaryForegroundBrush}" Background="Transparent" BorderThickness="0" Appearance="Transparent" Width="30" Height="40" Padding="5" HorizontalAlignment="Right" Command="{Binding NextFeaturedCommand}" ToolTip="Next spotlight" AutomationProperties.Name="Next spotlight" />
+            </Grid>
         </Grid>
       </Border>
 
-      <StackPanel Margin="0,0,0,24" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
-        <TextBlock Text="Upcoming releases" Style="{StaticResource SectionTitle}" Margin="0,0,0,14" />
+      <Border Visibility="{Binding HasActivityNotice, Converter={StaticResource BoolToVis}}" Background="{DynamicResource SurfaceBrush}"
+              BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="12" Padding="14" Margin="28,0,28,18">
+        <TextBlock Text="{Binding ActivityNotice}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" FontSize="12" />
+      </Border>
+
+          <StackPanel x:Name="RecentSection" Margin="40,4,40,24">
+        <Grid Margin="0,0,0,12">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <TextBlock x:Name="RecentHeading" Text="Installed games" Style="{StaticResource SectionTitle}" />
+          <Button Grid.Column="1" Content="Scan PC" Foreground="{DynamicResource DashboardBodySecondary}" FontSize="12" Padding="14,8" Command="{Binding ScanPcCommand}" AutomationProperties.Name="Scan PC for installed games">
+            <Button.Style><Style TargetType="Button" BasedOn="{StaticResource HeroPillButton}"><Style.Triggers><DataTrigger Binding="{Binding IsScanningPc}" Value="True"><Setter Property="IsEnabled" Value="False" /></DataTrigger></Style.Triggers></Style></Button.Style>
+          </Button>
+          <Button x:Name="ShowAllGamesButton" Grid.Column="2" Style="{StaticResource HeroPillButton}" Foreground="{DynamicResource DashboardBodyForeground}" FontSize="12" Padding="14,8,0,8" Command="{Binding ShowAllGamesCommand}" AutomationProperties.Name="Show all games">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="Show all games" Foreground="{DynamicResource DashboardBodyForeground}" /><ui:SymbolIcon Symbol="ChevronRight16" Foreground="{DynamicResource DashboardBodyForeground}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" /></StackPanel>
+          </Button>
+        </Grid>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,10" Visibility="{Binding IsScanningPc, Converter={StaticResource BoolToVis}}">
+          <TextBlock Text="{Binding PcScanStatus}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" MaxWidth="500" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          <Button Content="Cancel" Style="{StaticResource HeroPillButton}" Command="{Binding CancelPcScanCommand}" Margin="12,0,0,0" />
+        </StackPanel>
+        <ScrollViewer x:Name="RecentScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" CanContentScroll="False" PanningMode="HorizontalOnly" PreviewMouseWheel="RecentScroll_MouseWheel">
+          <ItemsControl x:Name="RecentlyOpenedStrip" ItemsSource="{Binding InstalledGames}" ItemTemplate="{StaticResource InstalledTileTemplate}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:GameShortcutStrip TileWidth="{Binding RecentTileWidth, RelativeSource={RelativeSource AncestorType=Page}}" ViewportWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </ScrollViewer>
+      </StackPanel>
+      <StackPanel x:Name="UpcomingSection" Margin="40,0,40,30" Visibility="{Binding HasSpotlight, Converter={StaticResource BoolToVis}}">
+        <TextBlock x:Name="UpcomingHeading" Text="Upcoming releases" Style="{StaticResource SectionTitle}" Margin="0,0,0,14" />
         <ItemsControl x:Name="UpcomingGameGrid" ItemsSource="{Binding NewGames}" ItemTemplate="{StaticResource DiscoveryCoverTemplate}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="210" MaxItemWidth="400" MaxColumns="3" Spacing="22" CoverRatio="0.5" FooterHeight="52" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:AdaptiveGridPanel MinItemWidth="210" MaxColumns="3" Spacing="22" CoverRatio="0.4673913043478261" FooterHeight="52" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         </ItemsControl>
       </StackPanel>
 
     </StackPanel>
+    </Grid>
   </ScrollViewer>
 
+    <Grid x:Name="InstalledLibraryOverlay" Visibility="{Binding IsInstalledLibraryOpen, Converter={StaticResource BoolToVis}}" KeyboardNavigation.TabNavigation="Cycle" KeyDown="InstalledLibrary_KeyDown">
+      <Border Background="#70050910" MouseLeftButtonUp="InstalledLibrary_Close" />
+      <Border x:Name="InstalledLibraryPanel" MaxWidth="1040" MaxHeight="700" Margin="24" CornerRadius="30" Background="{DynamicResource GlassSurfaceBrush}" controls:RoundedClip.Radius="30" controls:SurfaceMotion.RevealOnShow="True" VerticalAlignment="Center">
+        <Grid>
+          <controls:ShellBackdropView IsGlass="True" BaseBrush="{DynamicResource GlassSurfaceBrush}" Opacity="0.86" CacheMode="BitmapCache" />
+          <Border Background="{DynamicResource GlassSurfaceBrush}" Opacity="0.35" />
+          <Grid Margin="28,26,28,24">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <Grid>
+              <StackPanel Margin="0,0,54,22"><TextBlock Text="Your games" FontSize="27" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" /><TextBlock Text="{Binding InstalledLibrarySummary}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,6,0,0" /></StackPanel>
+              <Button x:Name="CloseInstalledLibraryButton" Style="{StaticResource HeroPillButton}" Width="36" Height="36" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Top" Command="{Binding CloseInstalledLibraryCommand}" AutomationProperties.Name="Close installed games"><ui:SymbolIcon Symbol="Dismiss20" FontSize="18" /></Button>
+            </Grid>
+            <Grid Grid.Row="1" Margin="0,0,0,22">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
+              <ui:TextBox x:Name="InstalledLibrarySearch" Text="{Binding InstalledSearchText, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Find a game" AutomationProperties.Name="Search installed games" Margin="0,0,14,0" />
+              <ComboBox Grid.Column="1" ItemsSource="{Binding InstalledSources}" SelectedItem="{Binding InstalledSourceFilter}" AutomationProperties.Name="Installation source" />
+            </Grid>
+            <Grid Grid.Row="2" Margin="0,0,0,18">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <StackPanel VerticalAlignment="Center" Margin="0,0,18,0"><TextBlock Text="{Binding PcScanStatus}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" /><ProgressBar Height="2" IsIndeterminate="True" Margin="0,8,0,0" Visibility="{Binding IsScanningPc, Converter={StaticResource BoolToVis}}" /></StackPanel>
+              <Button Grid.Column="1" Content="Scan PC" Style="{StaticResource HeroPillButton}" Command="{Binding ScanPcCommand}" Padding="14,7" />
+              <Button Grid.Column="2" Content="Stop" Style="{StaticResource HeroPillButton}" Command="{Binding CancelPcScanCommand}" Padding="14,7" Visibility="{Binding IsScanningPc, Converter={StaticResource BoolToVis}}" />
+            </Grid>
+              <Grid x:Name="InstalledLibraryResults" Grid.Row="3" Height="400">
+                <ItemsControl x:Name="AllInstalledGamesGrid" ItemsSource="{Binding FilteredInstalledGames}" ItemTemplate="{StaticResource InstalledBannerTemplate}">
+                  <ItemsControl.Template><ControlTemplate TargetType="ItemsControl"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" CanContentScroll="True" Style="{StaticResource PageScrollHostStyle}"><ItemsPresenter /></ScrollViewer></ControlTemplate></ItemsControl.Template>
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:VirtualizingGamePanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                </ItemsControl>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,32"><StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding HasInstalledResults}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                  <TextBlock Text="No games found" FontSize="18" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" /><TextBlock Text="Try another name or installation source." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,8,0,0" />
+                </StackPanel>
+              </Grid>
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
     <Grid x:Name="DiscoveryOverlay" Visibility="{Binding HasSelectedDiscovery, Converter={StaticResource BoolToVis}}" KeyboardNavigation.TabNavigation="Cycle" KeyDown="Discovery_KeyDown">
       <Border Background="#B0090C14" MouseLeftButtonUp="Discovery_Close" />
       <Border x:Name="DiscoveryDetailsPanel" MaxWidth="680" MaxHeight="660" Margin="20" CornerRadius="18" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
-              Background="{DynamicResource GameDialogSurfaceBrush}" VerticalAlignment="Center" DataContext="{Binding SelectedDiscovery}">
+              Background="{DynamicResource GameDialogSurfaceBrush}" controls:SurfaceMotion.RevealOnShow="True" VerticalAlignment="Center" DataContext="{Binding SelectedDiscovery}">
         <ScrollViewer Style="{StaticResource PageScrollHostStyle}">
           <StackPanel>
             <Border Height="180" CornerRadius="18,18,0,0"><Border.Background><ImageBrush ImageSource="{Binding Game.HeaderImage}" Stretch="UniformToFill" /></Border.Background>
@@ -229,5 +398,30 @@
         </ScrollViewer>
       </Border>
     </Grid>
+          <Grid x:Name="DashboardNavigationPill" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" Panel.ZIndex="3" controls:RoundedClip.Radius="18" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
+            <Grid.ContextMenu>
+              <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                <MenuItem Header="{Binding SpotlightPlaybackLabel}" Command="{Binding ToggleSpotlightCommand}" />
+                <MenuItem Header="Refresh spotlight" Command="{Binding RefreshCommand}" />
+              </ContextMenu>
+            </Grid.ContextMenu>
+            <controls:ShellBackdropView IsGlass="True" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}" FadeColor="{DynamicResource WorkspaceColor}" />
+            <Border x:Name="DashboardNavigationChrome" CornerRadius="18" Background="#18FFFFFF" BorderThickness="0" Padding="3">
+              <Grid controls:PillMotion.IsEnabled="True" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="36" /></Grid.ColumnDefinitions>
+                <Border x:Name="NavigationHighlight" Grid.ColumnSpan="6" CornerRadius="15" Background="#30FFFFFF" HorizontalAlignment="Left" IsHitTestVisible="False" />
+                <Button Content="Home" Style="{StaticResource HeroPillButton}" Click="DashboardHome_Click" />
+                <Button Grid.Column="1" Content="Games" Style="{StaticResource HeroPillButton}" Command="{Binding NavigateLibraryCommand}" />
+                <Button Grid.Column="2" Content="Downloads" Style="{StaticResource HeroPillButton}" Command="{Binding NavigateDownloadsCommand}" />
+                <Button Grid.Column="3" Content="Tools" Style="{StaticResource HeroPillButton}" Click="DashboardTools_Click" />
+                <Button Grid.Column="4" Content="Fixes" Style="{StaticResource HeroPillButton}" Click="DashboardFixes_Click" />
+                <Button Grid.Column="5" Style="{StaticResource HeroPillButton}" Padding="9,5" Command="{Binding NavigateLibraryCommand}" ToolTip="Find games" AutomationProperties.Name="Find games"><ui:SymbolIcon Symbol="Search24" FontSize="13" /></Button>
+              </Grid>
+            </Border>
+          </Grid>
+
   </Grid>
 </Page>
+
+

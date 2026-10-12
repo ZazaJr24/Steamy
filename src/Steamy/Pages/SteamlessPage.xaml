@@ -5,7 +5,9 @@
       ScrollViewer.CanContentScroll="False"
       Background="{DynamicResource WorkspaceBackgroundBrush}">
   <Page.Resources>
+    <ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Steamy;component/Resources/ToolPageStyles.xaml"/></ResourceDictionary.MergedDictionaries>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </ResourceDictionary>
   </Page.Resources>
 
   <!--
@@ -16,8 +18,8 @@
   <ScrollViewer Style="{StaticResource PageScrollHostStyle}"
                 HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto"
-                Padding="22,16,22,26">
-    <StackPanel HorizontalAlignment="Stretch">
+                Padding="28,28,28,24">
+    <StackPanel MaxWidth="780" HorizontalAlignment="Stretch">
 
       <!-- Header with the Steamless mark -->
       <Grid Margin="0,0,0,14">
@@ -29,15 +31,15 @@
         <!-- Assembly-qualified pack URI: the mark lives in the application assembly, not in
              whatever assembly happens to host the page (which matters in tests as well). -->
         <Image Source="pack://application:,,,/Steamy;component/Resources/steamless.png"
-               Height="42"
+               Height="32"
                Stretch="Uniform"
                VerticalAlignment="Center"
                Margin="0,0,12,0"
                RenderOptions.BitmapScalingMode="HighQuality"
                ToolTip="Steamless — SteamStub unpacker by atom0s" />
         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-          <TextBlock Text="Steamless" Style="{StaticResource PageTitleStyle}" />
-          <TextBlock Text="Steamless ships inside this app. Pick the game .exe, press Run — the unpacked build replaces it and the original stays as a .bak.exe backup."
+          <TextBlock Text="Steamless" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock Text="Choose your game executable, then run Steamless. Your original stays backed up."
                      Style="{StaticResource PageSubtitleStyle}" />
         </StackPanel>
         <ui:Button Grid.Column="2"
@@ -56,8 +58,8 @@
         The bundled build is the default, so this bar only appears when it actually has something
         to say: a build you selected yourself, or a problem with the bundled one.
       -->
-      <Border Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
+      <Border Background="{DynamicResource GlassSurfaceBrush}"
+              BorderBrush="{DynamicResource GlassBorderBrush}"
               BorderThickness="1"
               CornerRadius="18"
               Padding="14,11"
@@ -94,36 +96,25 @@
         workflow squeezed to the right. A Border with Stretch content behaves the same everywhere.
       -->
       <Border x:Name="WorkflowCard"
-              Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
+              Background="{DynamicResource GlassSurfaceBrush}"
+              BorderBrush="{DynamicResource GlassBorderBrush}"
               BorderThickness="1"
               CornerRadius="18"
               Padding="18,16"
               Margin="0,0,0,10"
               HorizontalAlignment="Stretch">
-        <StackPanel HorizontalAlignment="Stretch">
+        <StackPanel MaxWidth="780" HorizontalAlignment="Stretch">
           <Grid Margin="0,0,0,2">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
-              <TextBlock Text="Unpack workflow" Style="{StaticResource CardTitleStyle}" FontSize="14" />
-              <TextBlock Text="{Binding BundleSummary}" Style="{StaticResource MutedTextStyle}"
-                         FontSize="11.5" Margin="0,3,0,0" TextWrapping="Wrap" />
+              <TextBlock Text="Game executable" Style="{StaticResource CardTitleStyle}" FontSize="14" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
               <ui:ProgressRing Width="18" Height="18" Margin="0,0,8,0" IsIndeterminate="{Binding IsBusy}"
                                Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
-              <ui:Button Content="{Binding LogButtonLabel}"
-                         Command="{Binding ToggleLogCommand}"
-                         Appearance="Secondary"
-                         ToolTip="Show or hide what the tool reported" />
-              <ui:Button Content="Refresh"
-                         Command="{Binding RefreshStatusCommand}"
-                         Appearance="Secondary"
-                         Margin="6,0,0,0"
-                         ToolTip="Check the build once more" />
             <ui:Button Margin="6,0,0,0"
                        Content="{Binding AdvancedButtonLabel}"
                        Command="{Binding ToggleAdvancedCommand}"
@@ -155,6 +146,7 @@
 
           <!-- Everything optional, hidden until asked for -->
           <StackPanel Visibility="{Binding ShowAdvanced, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal" Margin="0,16,0,0"><ui:Button Content="{Binding LogButtonLabel}" Command="{Binding ToggleLogCommand}" Appearance="Secondary"/><ui:Button Content="Refresh tool" Command="{Binding RefreshStatusCommand}" Appearance="Secondary" Margin="8,0,0,0"/></StackPanel>
             <TextBlock Text="Your own Steamless build (optional)" Style="{StaticResource PillTextStyle}" Margin="0,14,0,5" />
             <Grid>
               <Grid.ColumnDefinitions>
@@ -188,9 +180,9 @@
             <TextBlock Text="{Binding LastMessage}" Style="{StaticResource MutedTextStyle}"
                        FontSize="11.5" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0" />
             <ui:Button Grid.Column="1" Content="Cancel" Command="{Binding CancelRunCommand}"
-                       IsEnabled="{Binding IsBusy}" Appearance="Secondary" Margin="0,0,6,0" />
+                       Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" Appearance="Secondary" Margin="0,0,6,0" />
             <ui:Button Grid.Column="2" Content="Undo rename" Command="{Binding UndoCommand}"
-                       IsEnabled="{Binding CanUndo}" Appearance="Secondary" Margin="0,0,6,0"
+                       Visibility="{Binding CanUndo, Converter={StaticResource BooleanToVisibilityConverter}}" Appearance="Secondary" Margin="0,0,6,0"
                        ToolTip="Restore the .bak.exe backup" />
             <ui:Button Grid.Column="3" Content="Run" Command="{Binding RunCommand}"
                        IsEnabled="{Binding CanRun}" Appearance="Primary" />
@@ -213,8 +205,8 @@
       </Border>
 
       <!-- Done popup -->
-      <Border Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
+      <Border Background="{DynamicResource GlassSurfaceBrush}"
+              BorderBrush="{DynamicResource GlassBorderBrush}"
               BorderThickness="1"
               CornerRadius="18"
               Padding="18"
@@ -277,8 +269,8 @@
       </Border>
 
       <!-- The tool's own report, in the page instead of in a console window -->
-      <Border Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
+      <Border Background="{DynamicResource GlassSurfaceBrush}"
+              BorderBrush="{DynamicResource GlassBorderBrush}"
               BorderThickness="1"
               CornerRadius="18"
               Padding="16"
@@ -305,8 +297,8 @@
       </Border>
 
       <!-- Info card -->
-      <Border Background="{DynamicResource SurfaceElevatedBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
+      <Border Background="{DynamicResource GlassSurfaceBrush}"
+              BorderBrush="{DynamicResource GlassBorderBrush}"
               BorderThickness="1"
               CornerRadius="18"
               Padding="16"

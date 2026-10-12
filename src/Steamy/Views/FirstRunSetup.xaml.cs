@@ -22,20 +22,31 @@ public partial class FirstRunSetup : UserControl
     private readonly ISecureCredentialService? _credentials;
     private readonly IRyuuGameDownloadService? _downloaderSetup;
     private readonly AppSettings _settings;
+    private readonly IPcGameScanService? _gameScanner;
+    private CancellationTokenSource? _scanCancellation;
     private int _step = 1;
     private bool _isSaving;
     private bool _isLoaded;
     private bool _downloaderReady;
     private bool _applyChoices = true;
+    private Window? _ownerWindow;
 
     public FirstRunSetup(ISettingsService settingsService, IRyuuGameDownloadService? downloaderSetup = null,
-        ISecureCredentialService? credentials = null, AppSettings? settings = null)
+        ISecureCredentialService? credentials = null, AppSettings? settings = null, IPcGameScanService? gameScanner = null)
     {
         InitializeComponent();
         _settingsService = settingsService;
         _credentials = credentials ?? App.Services?.GetService<ISecureCredentialService>();
         _downloaderSetup = downloaderSetup ?? App.Services?.GetService<IRyuuGameDownloadService>();
         _settings = settings ?? settingsService.Load();
+        SetupBackgroundPreferences.Settings = _settings;
+        _gameScanner = gameScanner ?? App.Services?.GetService<IPcGameScanService>();
+        Unloaded += (_, _) =>
+        {
+            _scanCancellation?.Cancel();
+            if (_ownerWindow is not null) _ownerWindow.SizeChanged -= OwnerSizeChanged;
+            _ownerWindow = null;
+        };
         LanguageSelector.ItemsSource = Languages;
         LanguageSelector.SelectedItem = Languages.FirstOrDefault(language => language.Equals(_settings.Language, StringComparison.OrdinalIgnoreCase))
             ?? (_settings.Language.Equals("Deutsch", StringComparison.OrdinalIgnoreCase) ? "de-DE · Deutsch"
@@ -46,6 +57,7 @@ public partial class FirstRunSetup : UserControl
         SystemAppearance.IsChecked = savedAppearance.Equals("System", StringComparison.OrdinalIgnoreCase);
         LightAppearance.IsChecked = savedAppearance.Equals("Light", StringComparison.OrdinalIgnoreCase);
         DarkAppearance.IsChecked = savedAppearance.Equals("Dark", StringComparison.OrdinalIgnoreCase);
+        TrailerPreviewsToggle.IsChecked = _settings.AutoplayTrailers;
 
         var detectedSteamRoot = SteamLibraryService.FindSteamRoot();
         SteamFolderText.Text = !string.IsNullOrWhiteSpace(_settings.SteamLibraryPath)
@@ -62,39 +74,50 @@ public partial class FirstRunSetup : UserControl
         VerifyCheck.IsChecked = _settings.VerifyAfterDownload;
         ResumeCheck.IsChecked = _settings.AutoResume;
         LancacheCheck.IsChecked = _settings.UseLancache;
-        Loaded += (_, _) =>
+        Loaded += async (_, _) =>
         {
             _isLoaded = true;
+            if (Window.GetWindow(this) is { } window)
+            {
+                _ownerWindow = window;
+                window.SizeChanged += OwnerSizeChanged;
+                ResizeWizard();
+            }
             AnimateStep();
+            await DiscoverKnownGamesAsync();
         };
         UpdateStep();
     }
 
     public event EventHandler? Completed;
 
+    private void OwnerSizeChanged(object sender, SizeChangedEventArgs e) => ResizeWizard();
+
+    private void ResizeWizard()
+    {
+        if (_ownerWindow is null) return;
+        WizardPanel.MaxWidth = Math.Max(300, _ownerWindow.ActualWidth - 60);
+        WizardPanel.MaxHeight = Math.Max(350, _ownerWindow.ActualHeight - 100);
+    }
+
     private void UpdateStep()
     {
-        var contentSteps = new FrameworkElement[]
-        {
-            LanguageStep, AppearanceStep, ApiKeysStep, FoldersStep, DownloadsStep, RecoveryStep, ReadyStep
-        };
-        for (var index = 0; index < contentSteps.Length; index++)
-            contentSteps[index].Visibility = index == _step - 1 ? Visibility.Visible : Visibility.Collapsed;
-
+        GameScanStep.Visibility = _step == 1 ? Visibility.Visible : Visibility.Collapsed;
+        LanguageStep.Visibility = AppearanceStep.Visibility = _step == 2 ? Visibility.Visible : Visibility.Collapsed;
+        FoldersStep.Visibility = AdvancedPreferences.Visibility = _step == 3 ? Visibility.Visible : Visibility.Collapsed;
+        DownloadsStep.Visibility = RecoveryStep.Visibility = Visibility.Visible;
+        ApiKeysStep.Visibility = Visibility.Collapsed;
+        ReadyStep.Visibility = _step == 4 ? Visibility.Visible : Visibility.Collapsed;
         BackButton.Visibility = _step == 1 ? Visibility.Collapsed : Visibility.Visible;
-        NextButton.Content = _step == 7 ? "Finish" : "Continue";
-        StepCounter.Text = $"{_step:00}  /  07";
+        NextButton.Content = _step == 4 ? "Finish" : "Continue";
+        StepCounter.Text = $"{_step:00}  /  04";
         WizardProgress.Value = _step;
-
         (StepTitle.Text, StepDescription.Text) = _step switch
         {
-            1 => ("Select Language", "Choose the language Steamy should use. You can change it later."),
-            2 => ("Choose your appearance", "Pick a look that feels right. You can change it anytime in Settings."),
-            3 => ("Connect your services", "Add optional API keys now, or leave them blank and add them later."),
-            4 => ("Choose your folders", "Set where Steamy finds Steam and saves downloaded files."),
-            5 => ("Tune downloads", "Set speed, connection and retry preferences for downloads."),
-            6 => ("Protect your downloads", "Choose how Steamy verifies and resumes interrupted downloads."),
-            _ => ("Preparing Steamy", "Checking the downloader and required files for your first use.")
+            1 => ("Your games, together", "Your installed games come first. Find more folders now or scan later."),
+            2 => ("Make it yours", "Choose your language and appearance. Everything can be changed in Settings."),
+            3 => ("A place for your games", "Choose your folders. Download preferences are optional; the defaults are ready to use."),
+            _ => ("One last thing", "Preparing the downloader for your first install. Optional connections live in Settings.")
         };
         SaveErrorText.Visibility = Visibility.Collapsed;
         if (_isLoaded) AnimateStep();
@@ -119,27 +142,9 @@ public partial class FirstRunSetup : UserControl
 
     private async void Next_Click(object sender, RoutedEventArgs e)
     {
-        if (_step < 6)
-        {
-            if (_step == 3 && _credentials is not null)
-            {
-                var hubcapKey = HubcapKeyBox.Password.Trim();
-                var depotBoxKey = DepotBoxKeyBox.Password.Trim();
-                if (hubcapKey.Length > 0) await _credentials.SaveAsync("hubcap-api-key", hubcapKey);
-                if (depotBoxKey.Length > 0) await _credentials.SaveAsync("depotbox-api-key", depotBoxKey);
-            }
-            _step++;
-            UpdateStep();
-            return;
-        }
-
-        if (_step == 6)
-        {
-            _step = 7;
-            UpdateStep();
-            await CheckDownloaderAsync();
-            return;
-        }
+        if (_scanCancellation is not null) return;
+        if (_step < 3) { _step++; UpdateStep(); return; }
+        if (_step == 3) { _step = 4; UpdateStep(); await CheckDownloaderAsync(); return; }
 
         if (!_downloaderReady)
         {
@@ -147,11 +152,12 @@ public partial class FirstRunSetup : UserControl
             if (!_downloaderReady) return;
         }
 
-        _ = SaveAndFinishAsync(applyChoices: _applyChoices);
+        await SaveAndFinishAsync(applyChoices: _applyChoices);
     }
 
     private void Back_Click(object sender, RoutedEventArgs e)
     {
+        if (_scanCancellation is not null) return;
         if (_step <= 1) return;
         _step--;
         UpdateStep();
@@ -160,10 +166,8 @@ public partial class FirstRunSetup : UserControl
     private async void Skip_Click(object sender, RoutedEventArgs e)
     {
         _applyChoices = false;
-        UiThemeService.Apply(_settings.Appearance);
-        _step = 7;
-        UpdateStep();
-        await CheckDownloaderAsync();
+        _scanCancellation?.Cancel();
+        await SaveAndFinishAsync(applyChoices: false);
     }
 
     private void AppearanceCard_Checked(object sender, RoutedEventArgs e)
@@ -172,6 +176,7 @@ public partial class FirstRunSetup : UserControl
         {
             _settings.Appearance = appearance;
             UiThemeService.Apply(appearance);
+            UiThemeService.ConfigureBackground(_settings);
         }
     }
 
@@ -253,8 +258,10 @@ public partial class FirstRunSetup : UserControl
                 _settings.VerifyAfterDownload = VerifyCheck.IsChecked == true;
                 _settings.AutoResume = ResumeCheck.IsChecked == true;
                 _settings.UseLancache = LancacheCheck.IsChecked == true;
+                _settings.AutoplayTrailers = TrailerPreviewsToggle.IsChecked == true;
             }
 
+            _settings.FirstRunCompleted = true;
             await _settingsService.SaveAsync(_settings);
             if (applyChoices && _credentials is not null)
             {
@@ -266,6 +273,8 @@ public partial class FirstRunSetup : UserControl
             if (applyChoices)
             {
                 UiThemeService.Apply(_settings.Appearance);
+                UiThemeService.ConfigureBackground(_settings);
+                MotionPreferences.ConfigureTrailers(_settings.AutoplayTrailers);
                 App.ApplyCulture(_settings.Language);
             }
             Completed?.Invoke(this, EventArgs.Empty);
@@ -289,6 +298,7 @@ public partial class FirstRunSetup : UserControl
         DependencyStatus.Text = "Checking and downloading the verified downloader…";
         DependencyProgress.IsIndeterminate = true;
         NextButton.IsEnabled = false;
+        FinishLaterButton.IsEnabled = false;
         SkipButton.IsEnabled = false;
         BackButton.IsEnabled = false;
         try
@@ -316,7 +326,66 @@ public partial class FirstRunSetup : UserControl
         {
             SkipButton.IsEnabled = true;
             BackButton.IsEnabled = true;
+            FinishLaterButton.IsEnabled = true;
         }
+    }
+
+    private async void FinishLater_Click(object sender, RoutedEventArgs e) => await SaveAndFinishAsync(applyChoices: _applyChoices);
+
+    private async Task DiscoverKnownGamesAsync()
+    {
+        GameScanStatus.Text = "Finding games in known libraries…";
+        try
+        {
+            if (App.Services?.GetService<ILibrarySyncService>() is { } library) await library.RefreshAsync();
+            ShowInstalledPreview();
+        }
+        catch { GameScanStatus.Text = "Choose a folder to find installed games, or continue and scan later."; }
+    }
+    private void ShowInstalledPreview()
+    {
+        var games = App.Services?.GetService<IAppDataStore>()?.Games.Where(game => game.InstallState == GameInstallState.Installed && !GameClassification.IsRuntime(game.AppId, game.Name)).ToArray() ?? [];
+        InstalledPreview.ItemsSource = games.Take(6).ToArray();
+        GameScanStatus.Text = games.Length == 0 ? "No games found in known libraries yet" : $"{games.Length} installed games found";
+        if (App.Services?.GetService<IArtworkService>() is { } artwork) _ = artwork.LoadManyAsync(games.Take(6));
+    }
+
+    private async Task ScanGamesAsync(IReadOnlyList<string>? roots = null)
+    {
+        if (_scanCancellation is not null || _gameScanner is null) return;
+        using var cancellation = new CancellationTokenSource();
+        _scanCancellation = cancellation;
+        NextButton.IsEnabled = BackButton.IsEnabled = ScanGamesButton.IsEnabled = ScanFolderButton.IsEnabled = false;
+        StopGameScanButton.IsEnabled = true;
+        GameScanProgress.IsIndeterminate = true;
+        GameScanStatus.Text = "Looking for installed games…";
+        try
+        {
+            var progress = new Progress<GameScanProgress>(p =>
+            {
+                GameScanStatus.Text = $"{p.Games} games found · {p.Folders:N0} folders checked";
+                GameScanFolder.Text = p.CurrentFolder;
+            });
+            var result = await _gameScanner.ScanAsync(progress, cancellation.Token, roots);
+            GameScanStatus.Text = $"{(result.Cancelled ? "Scan stopped" : "Scan complete")} · {result.Games.Count} games found";
+            GameScanFolder.Text = $"{result.Folders:N0} folders checked · {result.Skipped:N0} inaccessible folders skipped";
+        }
+        catch (Exception e) { GameScanStatus.Text = $"Scan could not finish: {e.Message}"; }
+        finally
+        {
+            _scanCancellation = null;
+            GameScanProgress.IsIndeterminate = false;
+            GameScanProgress.Value = 100;
+            NextButton.IsEnabled = BackButton.IsEnabled = ScanGamesButton.IsEnabled = ScanFolderButton.IsEnabled = true;
+            StopGameScanButton.IsEnabled = false;
+        }
+    }
+    private async void ScanGames_Click(object sender, RoutedEventArgs e) => await ScanGamesAsync();
+    private void StopGameScan_Click(object sender, RoutedEventArgs e) => _scanCancellation?.Cancel();
+    private async void ScanFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog { Title = "Find games in a folder", Multiselect = false };
+        if (dialog.ShowDialog(Window.GetWindow(this)) == true) await ScanGamesAsync([dialog.FolderName]);
     }
 
     private void ReportDependencyStatus(string message)
@@ -343,8 +412,11 @@ public partial class FirstRunSetup : UserControl
 
     private void ShowValidationError(string message, Control field)
     {
+        _step = 3;
+        UpdateStep();
         SaveErrorText.Text = message;
         SaveErrorText.Visibility = Visibility.Visible;
+        if (field != SteamFolderText) AdvancedPreferences.IsExpanded = true;
         field.Focus();
         if (field is TextBox textBox) textBox.SelectAll();
     }

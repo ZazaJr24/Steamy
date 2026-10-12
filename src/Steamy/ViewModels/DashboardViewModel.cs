@@ -13,13 +13,36 @@ using CommunityToolkit.Mvvm.Input;
 using Steamy.Models;
 using Steamy.Pages;
 using Steamy.Services;
+using Steamy.Playtime;
 
 namespace Steamy.ViewModels;
 
 public sealed record DashboardStatusItem(string Title, string Detail, bool IsOk, string ActionLabel, ICommand Action);
 
-public sealed record DashboardLibraryEntry(Game Game, bool IsFavorite, DateTimeOffset? OpenedAt)
+public sealed class DashboardLibraryEntry(Game game, bool isFavorite, DateTimeOffset? openedAt) : UiObservableObject, IEquatable<DashboardLibraryEntry>
 {
+    public Game Game { get; } = game;
+    public bool IsFavorite { get; } = isFavorite;
+    public DateTimeOffset? OpenedAt { get; } = openedAt;
+    // Preserve card instances on an unchanged library refresh, including live time bindings.
+    public bool Equals(DashboardLibraryEntry? other) => other is not null && Equals(Game, other.Game) && IsFavorite == other.IsFavorite && OpenedAt == other.OpenedAt;
+    public override bool Equals(object? other) => other is DashboardLibraryEntry entry && Equals(entry);
+    public override int GetHashCode() => HashCode.Combine(Game, IsFavorite, OpenedAt);
+    private long _playedSeconds;
+    private bool _isPlaying;
+    public string PlayTimeLabel => PlayTimeFiles.Format(_playedSeconds);
+    public bool IsPlaying => _isPlaying;
+    public bool CanLaunch => !Game.IsLocalDownload || !string.IsNullOrWhiteSpace(Game.LaunchExecutable);
+    public string SourceLabel => string.IsNullOrWhiteSpace(Game.InstallationSource) ? (Game.IsLocalDownload ? "DepotDownloader" : "Steam") : Game.InstallationSource;
+    public string ActionLabel => CanLaunch ? "Play" : "Open folder";
+    public void UpdatePlayTime(GamePlayTime? time, bool fresh)
+    {
+        var seconds = Math.Max(0, time?.Seconds ?? 0);
+        var playing = fresh && time?.IsRunning == true;
+        if (_playedSeconds / 60 != seconds / 60) { _playedSeconds = seconds; OnPropertyChanged(nameof(PlayTimeLabel)); }
+        else _playedSeconds = seconds;
+        if (_isPlaying != playing) { _isPlaying = playing; OnPropertyChanged(nameof(IsPlaying)); }
+    }
     public string FavoriteGlyph => IsFavorite ? "★" : "☆";
     public string FavoriteActionLabel => IsFavorite ? "Remove from favorites" : "Add to favorites";
     public string OpenedLabel => OpenedAt is { } opened ? $"Opened in Steamy · {opened.LocalDateTime:g}" : Game.Size;
@@ -35,6 +58,10 @@ public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObjec
     private readonly SpotlightGame _dateOnly = metadata with { ReleaseTime = null };
     public string ReleaseBadge => ReleaseCountdown.Label(_dateOnly, DateTimeOffset.Now);
     private ImageSource? _heroArtwork;
+    private ImageSource? _logoArtwork;
+    public ImageSource? LogoArtwork { get => _logoArtwork; set { if (SetProperty(ref _logoArtwork, value)) { OnPropertyChanged(nameof(HasLogo)); OnPropertyChanged(nameof(Eyebrow)); } } }
+    public bool HasLogo => LogoArtwork is not null;
+    public string FeatureActionLabel => Metadata.ComingSoon ? "Release details" : "View game";
     private bool _isSelected;
     public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
     public SpotlightGame Metadata { get; } = metadata;
@@ -43,6 +70,18 @@ public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObjec
         AppId = metadata.AppId, Name = metadata.Name, CoverColor = "#283E53", InstallState = GameInstallState.NotInstalled
     };
     public string Description => Metadata.Description;
+    public string HeroTitle => Metadata.AppId switch
+    {
+        3751950 => "Black Flag\nResynced",
+        4435490 => "Modern\nWarfare 4",
+        4354570 => "Final Fantasy VII\nRevelation",
+        _ => Metadata.Name.Replace("®", "", StringComparison.Ordinal).Replace("™", "", StringComparison.Ordinal)
+    };
+    public string Eyebrow => HasLogo ? (Metadata.ComingSoon ? "Coming soon" : "Featured game") : Metadata.AppId switch
+    {
+        3751950 => "Assassin’s Creed", 4435490 => "Call of Duty",
+        _ => Metadata.ComingSoon ? "Coming soon" : "Featured game"
+    };
     public string Genres => Metadata.Genres;
     public string ReleaseLabel => Metadata.ReleaseLabel;
     public string ReleaseStatus => Metadata.ComingSoon ? "UPCOMING" : "RELEASED";
@@ -251,13 +290,24 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly ISpotlightService _spotlight;
     private Task? _discoveryArtworkTask;
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _heroLoads = new();
+    private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _logoLoads = new();
+    private async Task LoadLogoAsync(DashboardFeature feature)
+    {
+        try
+        {
+            if (!_logoLoads.TryGetValue(feature.Metadata, out var task) || task.IsCompletedSuccessfully && task.Result is null)
+                _logoLoads[feature.Metadata] = task = Task.Run(() => _artwork.LoadSpotlightLogoAsync(feature.Metadata));
+            feature.LogoArtwork = await task;
+        }
+        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Logo unavailable: {exception.GetType().Name}."); }
+    }
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _headerLoads = new();
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _portraitLoads = new();
     private readonly SemaphoreSlim _discoveryArtworkGate = new(3, 3);
     private int _featuredIndex;
     public IReadOnlyList<DashboardFeature> DiscoverGames { get; private set; } = Array.Empty<DashboardFeature>();
     public IReadOnlyList<DashboardFeature> SpotlightPreviews => DiscoverGames.Take(8).ToArray();
-    public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames;
+    public IReadOnlyList<DashboardFeature> NewGames => DiscoverGames.Where(feature => feature.Metadata.ComingSoon).ToArray();
     private DashboardFeature? _selectedDiscovery;
     public DashboardFeature? SelectedDiscovery { get => _selectedDiscovery; private set { if (SetProperty(ref _selectedDiscovery, value)) OnPropertyChanged(nameof(HasSelectedDiscovery)); } }
     public bool HasSelectedDiscovery => SelectedDiscovery is not null;
@@ -330,12 +380,17 @@ public sealed class DashboardViewModel : ViewModelBase
 
     private void ApplySpotlight(SpotlightSnapshot snapshot)
     {
-        var upcoming = ReleaseCountdown.UpcomingAt(snapshot.Games, DateTimeOffset.Now);
-        if (DiscoverGames.Select(feature => feature.Metadata).SequenceEqual(upcoming)) return;
+        var now = DateTimeOffset.Now;
+        var upcoming = ReleaseCountdown.UpcomingAt(snapshot.Games, now);
+        var recentHighlights = snapshot.Games.Where(game => game.Featured && !game.ComingSoon
+            && game.ReleaseDate is { } released && released >= DateOnly.FromDateTime(now.DateTime).AddMonths(-6));
+        var discoveries = recentHighlights.Concat(upcoming).ToArray();
+        if (DiscoverGames.Select(feature => feature.Metadata).SequenceEqual(discoveries)) return;
         var previousId = FeaturedGame?.Game.AppId;
-        DiscoverGames = upcoming.Select(game => new DashboardFeature(game)).ToArray();
+        DiscoverGames = discoveries.Select(game => new DashboardFeature(game)).ToArray();
         _featuredIndex = Math.Max(0, Array.FindIndex(DiscoverGames.ToArray(), feature => feature.Game.AppId == previousId));
         _heroLoads.Clear();
+        _logoLoads.Clear();
         _headerLoads.Clear();
         _portraitLoads.Clear();
         OnPropertyChanged(nameof(DiscoverGames));
@@ -374,6 +429,7 @@ public sealed class DashboardViewModel : ViewModelBase
     {
         var feature = FeaturedGame;
         if (feature is null) return;
+        _ = LoadLogoAsync(feature);
         try
         {
             if (!_heroLoads.TryGetValue(feature.Metadata, out var task))
@@ -397,6 +453,7 @@ public sealed class DashboardViewModel : ViewModelBase
                 _heroLoads[next.Metadata] = hero = Task.Run(() => _artwork.LoadSpotlightHeroAsync(next.Metadata));
             if (!_headerLoads.TryGetValue(next.Metadata, out var header))
                 _headerLoads[next.Metadata] = header = Task.Run(() => _artwork.LoadSpotlightHeaderAsync(next.Metadata));
+            _ = LoadLogoAsync(next);
             next.HeroArtwork = await hero;
             next.Game.HeaderImage = await header;
         }
@@ -451,6 +508,10 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly ILibrarySyncService _librarySync;
     private readonly ISettingsService _settings;
     private readonly IGameActivityService _activity;
+    private readonly IPlayTimeService? _playTime;
+    private PlayTimeSnapshot _playTimeSnapshot = PlayTimeSnapshot.Empty;
+    private bool _readingPlayTime;
+    private readonly DispatcherTimer _playTimeTimer = new(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(15) };
     private GameActivitySnapshot _activitySnapshot = GameActivitySnapshot.Empty;
     private readonly Dictionary<int, Game> _catalogFavorites = new();
     private readonly HashSet<int> _resolvedFavoriteAppIds = new();
@@ -478,12 +539,15 @@ public sealed class DashboardViewModel : ViewModelBase
         _personalArtworkRequested.Clear();
         LoadPersonalArtwork();
         RaiseDownloadStats();
+        _ = RefreshPlayTimeAsync();
+        _playTimeTimer.Start();
         _statsTimer.Start();
     }
 
     public void StopLiveStats()
     {
         _statsTimer.Stop();
+        _playTimeTimer.Stop();
         _personalArtworkCancellation?.Cancel();
         _personalArtworkCancellation?.Dispose();
         _personalArtworkCancellation = null;
@@ -507,7 +571,10 @@ public sealed class DashboardViewModel : ViewModelBase
         IArtworkService artwork,
         ISteamCatalogService catalog,
         ISpotlightService spotlight,
-        IGameActivityService activity) : base(store, navigation, logging)
+        IGameActivityService activity,
+        IPlayTimeService? playTime = null,
+        IDownloadedGameLibrary? downloadedLibrary = null,
+        IPcGameScanService? pcScanner = null) : base(store, navigation, logging)
     {
         _catalog = catalog;
         OpenSearchResultCommand = new RelayCommand<SteamCatalogItem>(item => { if (item is not null) OpenSearch(item.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture)); });
@@ -523,10 +590,31 @@ public sealed class DashboardViewModel : ViewModelBase
         _librarySync = librarySync;
         _settings = settings;
         _activity = activity;
+        _playTime = playTime;
+        _pcScanner = pcScanner;
+        if (downloadedLibrary is not null) downloadedLibrary.Changed += (_, _) =>
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            void RefreshLocal()
+            {
+                _downloadedRefreshPending = true;
+                if (!IsRefreshing) _ = RefreshAsync(force: true);
+            }
+            if (dispatcher is not null && !dispatcher.CheckAccess()) dispatcher.BeginInvoke(new Action(RefreshLocal));
+            else RefreshLocal();
+        };
+        _playTimeTimer.Tick += (_, _) => _ = RefreshPlayTimeAsync();
         _activity.Changed += OnActivityChanged;
         ToggleFavoriteCommand = new AsyncRelayCommand<Game>(ToggleFavoriteAsync);
         ContinueGameCommand = new AsyncRelayCommand(() => PlayGameAsync(ContinueGame?.Game), () => CanPlayGame(ContinueGame?.Game));
         PlayGameCommand = new AsyncRelayCommand<Game>(PlayGameAsync, CanPlayGame);
+        OpenGameCommand = new RelayCommand<Game>(game =>
+        {
+            if (game is null) return;
+            IsInstalledLibraryOpen = false;
+            App.Services.GetRequiredService<GameDetailsViewModel>().SelectGame(game);
+            Navigation.Navigate<GameDetailsPage>();
+        }, CanPlayGame);
         _depotCheck = depotCheck;
         DownloadActions = downloadActions;
 
@@ -552,6 +640,63 @@ public sealed class DashboardViewModel : ViewModelBase
     public RangeObservableCollection<DashboardLibraryEntry> PersonalLibrary { get; } = new();
     public RangeObservableCollection<DashboardLibraryEntry> FavoriteGames { get; } = new();
     public RangeObservableCollection<DashboardLibraryEntry> RecentlyOpenedGames { get; } = new();
+    public RangeObservableCollection<DashboardLibraryEntry> InstalledGames { get; } = new();
+    public RangeObservableCollection<DashboardLibraryEntry> AllInstalledGames { get; } = new();
+    public RangeObservableCollection<DashboardLibraryEntry> FilteredInstalledGames { get; } = new();
+    private bool _isInstalledLibraryOpen;
+    private string _installedSearchText = "";
+    private string _installedSourceFilter = "All games";
+    private bool _downloadedRefreshPending;
+    private readonly IPcGameScanService? _pcScanner;
+    private CancellationTokenSource? _pcScanCancellation;
+    private bool _isScanningPc;
+    private string _pcScanStatus = "Find games on all local drives";
+    public bool IsScanningPc { get => _isScanningPc; private set => SetProperty(ref _isScanningPc, value); }
+    public string PcScanStatus { get => _pcScanStatus; private set => SetProperty(ref _pcScanStatus, value); }
+    public ICommand ScanPcCommand => new AsyncRelayCommand(ScanPcAsync);
+    public ICommand CancelPcScanCommand => new RelayCommand(() => _pcScanCancellation?.Cancel());
+    private async Task ScanPcAsync()
+    {
+        if (IsScanningPc || _pcScanner is null) return;
+        using var cancellation = new CancellationTokenSource();
+        _pcScanCancellation = cancellation;
+        IsScanningPc = true;
+        try
+        {
+            var progress = new Progress<GameScanProgress>(p => PcScanStatus = $"{p.Games} games · {p.Folders:N0} folders checked · {p.CurrentFolder}");
+            var result = await _pcScanner.ScanAsync(progress, cancellation.Token);
+            PcScanStatus = $"{(result.Cancelled ? "Scan stopped" : "Scan complete")} · {result.Games.Count} games found · {result.Skipped:N0} inaccessible folders skipped";
+            await RefreshAsync(force: true);
+        }
+        catch (Exception e) { PcScanStatus = $"Scan could not finish: {e.Message}"; }
+        finally { IsScanningPc = false; _pcScanCancellation = null; }
+    }
+    public bool IsInstalledLibraryOpen { get => _isInstalledLibraryOpen; private set { if (SetProperty(ref _isInstalledLibraryOpen, value) && value) LoadPersonalArtwork(); } }
+    public string InstalledSearchText { get => _installedSearchText; set { if (SetProperty(ref _installedSearchText, value)) FilterInstalledLibrary(); } }
+    public IReadOnlyList<string> InstalledSources { get; } = new[] { "All games", "Steam", "DepotDownloader", "Epic", "GOG", "Local" };
+    public string InstalledSourceFilter { get => _installedSourceFilter; set { if (SetProperty(ref _installedSourceFilter, value)) FilterInstalledLibrary(); } }
+    public bool HasInstalledResults => FilteredInstalledGames.Count > 0;
+    public string InstalledLibrarySummary => $"{AllInstalledGames.Count} installed games";
+    public ICommand ShowAllGamesCommand => new RelayCommand(() =>
+    {
+        SelectedDiscovery = null;
+        InstalledSearchText = "";
+        InstalledSourceFilter = "All games";
+        IsInstalledLibraryOpen = true;
+        _ = RefreshPlayTimeAsync();
+    });
+    public ICommand CloseInstalledLibraryCommand => new RelayCommand(() => IsInstalledLibraryOpen = false);
+
+    private void FilterInstalledLibrary()
+    {
+        var search = InstalledSearchText.Trim();
+        FilteredInstalledGames.ReplaceWith(AllInstalledGames.Where(entry =>
+            (InstalledSourceFilter == "All games" || entry.SourceLabel == InstalledSourceFilter)
+            && (search.Length == 0 || entry.Game.Name.Contains(search, StringComparison.CurrentCultureIgnoreCase))));
+        OnPropertyChanged(nameof(HasInstalledResults));
+        OnPropertyChanged(nameof(InstalledLibrarySummary));
+    }
+    public bool HasInstalledGames => InstalledGames.Count > 0;
     public DashboardLibraryEntry? ContinueGame => RecentlyOpenedGames.FirstOrDefault(entry => entry.Game.InstallState == GameInstallState.Installed);
     public bool HasContinueGame => ContinueGame is not null;
     public bool HasFavoriteGames => FavoriteGames.Count > 0;
@@ -758,6 +903,7 @@ public sealed class DashboardViewModel : ViewModelBase
 
     public ICommand RefreshCommand => new AsyncRelayCommand(() => RefreshAsync(force: true));
     public ICommand PlayGameCommand { get; }
+    public ICommand OpenGameCommand { get; }
     public ICommand OpenGameFolderCommand => new RelayCommand<Game>(OpenGameFolder);
     public ICommand NavigateDownloadsCommand => new RelayCommand(() => Navigation.Navigate<DownloadsPage>());
     public ICommand NavigateLibraryCommand => new RelayCommand(() => Navigation.Navigate<LibraryPage>());
@@ -799,6 +945,7 @@ public sealed class DashboardViewModel : ViewModelBase
     {
         if (IsRefreshing || (!force && DateTime.UtcNow - _lastRefresh < RefreshDebounce)) return;
         IsRefreshing = true;
+        _downloadedRefreshPending = false;
         _lastRefresh = DateTime.UtcNow;
         _ = EnsureDiscoveryArtworkAsync(force);
         try
@@ -807,6 +954,7 @@ public sealed class DashboardViewModel : ViewModelBase
             catch (Exception exception) { _scan = SteamLibraryScanResult.Failure($"The Steam library could not be read ({exception.GetType().Name})."); }
 
             RefreshLibrary();
+            if (_playTime is not null) await _playTime.ConfigureAsync(_settings.Load(), Store.Games);
             _ = RefreshStorageAsync();
             RefreshDownloads();
             RefreshStatus();
@@ -822,6 +970,7 @@ public sealed class DashboardViewModel : ViewModelBase
             OnPropertyChanged(nameof(DepotToolVersionLabel));
             OnPropertyChanged(nameof(IsDepotReady));
             OnPropertyChanged(nameof(LastScanLabel));
+            if (_downloadedRefreshPending) _ = RefreshAsync(force: true);
         }
     }
 
@@ -845,6 +994,15 @@ public sealed class DashboardViewModel : ViewModelBase
         }
 
         PersonalLibrary.ReplaceWith(recent.Select(game => new DashboardLibraryEntry(game, favoriteIds.Contains(game.AppId), opened.GetValueOrDefault(game.AppId))));
+        AllInstalledGames.ReplaceWith(Store.Games.Where(game => game.InstallState == GameInstallState.Installed && !GameClassification.IsRuntime(game.AppId, game.Name))
+            .OrderByDescending(game => favoriteIds.Contains(game.AppId))
+            .ThenByDescending(game => opened.GetValueOrDefault(game.AppId))
+            .ThenBy(game => game.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(game => new DashboardLibraryEntry(game, favoriteIds.Contains(game.AppId), opened.GetValueOrDefault(game.AppId))));
+        InstalledGames.ReplaceWith(AllInstalledGames.Take(8));
+        FilterInstalledLibrary();
+        OnPropertyChanged(nameof(HasInstalledGames));
+        ApplyPlayTime();
         var favorites = favoriteIds.Select(appId => Store.Games.FirstOrDefault(game => game.AppId == appId)
             ?? _catalogFavorites.GetValueOrDefault(appId)
             ?? new Game { AppId = appId, Name = $"App {appId}", InstallState = GameInstallState.NotInstalled });
@@ -886,6 +1044,26 @@ public sealed class DashboardViewModel : ViewModelBase
             await EnsureFavoriteDetailsAsync();
         }
         catch (Exception exception) { Logging.Add(LogLevel.Debug, "Library", $"Personal library unavailable: {exception.GetType().Name}."); }
+    }
+
+    public async Task RefreshPlayTimeAsync()
+    {
+        if (_playTime is null || _readingPlayTime) return;
+        _readingPlayTime = true;
+        try
+        {
+            _playTimeSnapshot = await _playTime.ReadAsync() ?? PlayTimeSnapshot.Empty;
+            ApplyPlayTime();
+        }
+        catch (Exception e) { Logging.Add(LogLevel.Debug, "Playtime", $"Playtime unavailable: {e.GetType().Name}."); }
+        finally { _readingPlayTime = false; }
+    }
+
+    private void ApplyPlayTime()
+    {
+        var fresh = _settings.Load().TrackPlayTime && DateTimeOffset.UtcNow - _playTimeSnapshot.UpdatedAt < TimeSpan.FromSeconds(35);
+        var byId = _playTimeSnapshot.Games.Where(g => g.AppId != 0).DistinctBy(g => g.AppId).ToDictionary(g => g.AppId);
+        foreach (var entry in AllInstalledGames) entry.UpdatePlayTime(byId.GetValueOrDefault(entry.Game.AppId), fresh);
     }
 
     private Task EnsureFavoriteDetailsAsync() => _favoriteDetailsTask is { IsCompleted: false }
@@ -932,16 +1110,27 @@ public sealed class DashboardViewModel : ViewModelBase
     private void LoadPersonalArtwork()
     {
         if (_personalArtworkCancellation is not { IsCancellationRequested: false } cancellation) return;
-        var visible = PersonalLibrary.Concat(FavoriteGames).Select(entry => entry.Game).DistinctBy(game => game.AppId).ToArray();
+        var visible = PersonalLibrary.Concat(FavoriteGames).Concat(IsInstalledLibraryOpen ? AllInstalledGames : InstalledGames).Select(entry => entry.Game).DistinctBy(game => game.AppId).ToArray();
         _personalArtworkRequested.RemoveWhere(game => !visible.Contains(game));
         foreach (var game in visible)
-            if (game.HeaderImage is null && _personalArtworkRequested.Add(game))
+            if ((game.HeaderImage is null || game.ArtworkImage is null && InstalledGames.Any(entry => ReferenceEquals(entry.Game, game))) && _personalArtworkRequested.Add(game))
                 _ = LoadPersonalHeaderAsync(game, cancellation.Token);
     }
 
     private async Task LoadPersonalHeaderAsync(Game game, CancellationToken cancellationToken)
     {
-        try { await LoadSearchHeaderAsync(game, cancellationToken); }
+        try
+        {
+            await _searchArtworkGate.WaitAsync(cancellationToken);
+            try
+            {
+                var loadPortrait = game.AppId <= 0 || InstalledGames.Any(entry => ReferenceEquals(entry.Game, game));
+                await Task.Run(() => loadPortrait
+                    ? _artwork.LoadAsync(game, cancellationToken)
+                    : _artwork.LoadHeadersAsync(new[] { game }, cancellationToken), cancellationToken);
+            }
+            finally { _searchArtworkGate.Release(); }
+        }
         catch (OperationCanceledException) { }
         catch (Exception exception) { Logging.Add(LogLevel.Debug, "Library", $"Optional cover unavailable: {exception.GetType().Name}."); }
     }
@@ -1143,19 +1332,15 @@ public sealed class DashboardViewModel : ViewModelBase
 
     // ---- actions --------------------------------------------------------------------------------
 
-    private bool CanPlayGame(Game? game) => game is { AppId: > 0, InstallState: GameInstallState.Installed }
+    private bool CanPlayGame(Game? game) => game is { AppId: not 0, InstallState: GameInstallState.Installed }
         && Store.Games.Any(installed => installed.AppId == game.AppId && installed.InstallState == GameInstallState.Installed);
 
     private async Task PlayGameAsync(Game? game)
     {
         if (game is null || !CanPlayGame(game)) return;
-        if (!StartShell($"steam://rungameid/{game.AppId}")) return;
-        try
-        {
-            await _activity.RecordLaunchAsync(game.AppId);
-            await RefreshActivityAsync();
-        }
-        catch (Exception exception) { Logging.Add(LogLevel.Warning, "Library", $"The launch was requested, but its history could not be saved: {exception.Message}"); }
+        var result = await App.Services.GetRequiredService<IGameLaunchService>().LaunchAsync(game);
+        if (result.Succeeded) await RefreshActivityAsync();
+        else Logging.Add(LogLevel.Warning, "Library", result.Message);
     }
 
     private void OpenGameFolder(Game? game)

@@ -10,6 +10,15 @@ namespace Steamy.Pages;
 
 public partial class DashboardPage : Page
 {
+    public static readonly DependencyProperty RecentTileWidthProperty = DependencyProperty.Register(
+        nameof(RecentTileWidth), typeof(double), typeof(DashboardPage), new PropertyMetadata(108d));
+    public double RecentTileWidth { get => (double)GetValue(RecentTileWidthProperty); set => SetValue(RecentTileWidthProperty, value); }
+    public static readonly DependencyProperty RecentCardHeightProperty = DependencyProperty.Register(
+        nameof(RecentCardHeight), typeof(double), typeof(DashboardPage), new PropertyMetadata(120d));
+    public double RecentCardHeight { get => (double)GetValue(RecentCardHeightProperty); set => SetValue(RecentCardHeightProperty, value); }
+    public static readonly DependencyProperty DashboardNavigationFontSizeProperty = DependencyProperty.Register(
+        nameof(DashboardNavigationFontSize), typeof(double), typeof(DashboardPage), new PropertyMetadata(13d));
+    public double DashboardNavigationFontSize { get => (double)GetValue(DashboardNavigationFontSizeProperty); set => SetValue(DashboardNavigationFontSizeProperty, value); }
     private readonly System.Windows.Threading.DispatcherTimer _spotlightTimer = new(System.Windows.Threading.DispatcherPriority.Background)
         { Interval = TimeSpan.FromMilliseconds(250) };
     private readonly System.Windows.Threading.DispatcherTimer _countdownTimer = new(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
@@ -19,6 +28,8 @@ public partial class DashboardPage : Page
     private Window? _carouselWindow;
     private bool _loaderRunning;
     private System.Windows.IInputElement? _discoveryFocus;
+    private IShellBackdropService? _shellBackdrop;
+    private DashboardFeature? _observedFeature;
     public DashboardPage()
     {
         InitializeComponent();
@@ -31,7 +42,13 @@ public partial class DashboardPage : Page
             viewModel.StartLiveStats();
             viewModel.PropertyChanged += SpotlightChanged;
             Controls.MotionPreferences.Changed += MotionChanged;
+            UiThemeService.PaletteChanged += DashboardAmbientChanged;
             _carouselWindow = Window.GetWindow(this);
+            DashboardNavigationPill.Visibility = _carouselWindow is MainWindow ? Visibility.Collapsed : Visibility.Visible;
+            _shellBackdrop = _carouselWindow is MainWindow ? App.Services.GetRequiredService<IShellBackdropService>() : null;
+            SpotlightArtworkFrame.Opacity = 0;
+            UpdateShellArtwork();
+            UpdateShellViewport();
             if (_carouselWindow is not null)
             {
                 _carouselWindow.Activated += CarouselActivated;
@@ -46,11 +63,20 @@ public partial class DashboardPage : Page
         };
         Unloaded += (_, _) =>
         {
+            ClearDashboardPreview();
             var model = (DashboardViewModel)DataContext;
+            if (_observedFeature is not null) _observedFeature.PropertyChanged -= FeatureArtworkChanged;
+            _observedFeature = null;
+            if (_shellBackdrop is not null)
+                _shellBackdrop.SetViewport(_shellBackdrop.HeroHeight, _shellBackdrop.HeroTop, 0);
+            _shellBackdrop = null;
             model.PropertyChanged -= SpotlightChanged;
+            UiThemeService.PaletteChanged -= DashboardAmbientChanged;
             Controls.MotionPreferences.Changed -= MotionChanged;
             MotionChanged(this, EventArgs.Empty);
             model.StopLiveStats(); model.StopSearch();
+            model.CloseInstalledLibraryCommand.Execute(null);
+            DashboardScroll.IsEnabled = true;
             _spotlightTimer.Stop();
             if (_carouselWindow is not null)
             {
@@ -64,12 +90,56 @@ public partial class DashboardPage : Page
         };
         _countdownTimer.Tick += (_, _) => ((DashboardViewModel)DataContext).RefreshCountdowns();
         _spotlightTimer.Tick += CarouselTick;
-        DashboardHero.SizeChanged += (_, _) => DashboardHero.Clip = new System.Windows.Media.RectangleGeometry(new Rect(DashboardHero.RenderSize), 16, 16);
+        DashboardHero.SizeChanged += (_, _) => { UpdateShellViewport(); UpdateDashboardAmbient(); };
+        RecentScroll.SizeChanged += (_, e) =>
+        {
+            RecentTileWidth = Math.Clamp(e.NewSize.Width / 12, 76, 84);
+        };
         SizeChanged += (_, e) =>
         {
             ApplyResponsiveLayout(e.NewSize.Width);
             DiscoveryDetailsPanel.MaxHeight = Math.Max(0, e.NewSize.Height - 40);
+            InstalledLibraryPanel.MaxHeight = Math.Max(0, e.NewSize.Height - 48);
+            InstalledLibraryResults.Height = Math.Clamp(e.NewSize.Height - 330, 100, 400);
         };
+    }
+
+    private void UpdateShellArtwork()
+    {
+        var feature = ((DashboardViewModel)DataContext).FeaturedGame;
+        if (!ReferenceEquals(feature, _observedFeature))
+        {
+            if (_observedFeature is not null) _observedFeature.PropertyChanged -= FeatureArtworkChanged;
+            _observedFeature = feature;
+            if (feature is not null) feature.PropertyChanged += FeatureArtworkChanged;
+        }
+        UpdateDashboardAmbient();
+        _shellBackdrop?.SetArtwork(feature?.HeroArtwork);
+    }
+
+    private void DashboardAmbientChanged(object? sender, EventArgs args) => UpdateDashboardAmbient();
+
+    private void UpdateDashboardAmbient()
+    {
+        if (!UiThemeService.AmbientEnabled) ClearDashboardPreview();
+        UpdateDashboardBodyColors();
+        DashboardBackdrop.Artwork = ((DashboardViewModel)DataContext).FeaturedGame?.HeroArtwork;
+        DashboardBackdrop.InvalidateVisual();
+        (Window.GetWindow(this) as MainWindow)?.RefreshCaptionAppearance();
+    }
+
+    private void FeatureArtworkChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(DashboardFeature.HeroArtwork)) UpdateShellArtwork();
+    }
+
+    private void DashboardScroll_Changed(object sender, ScrollChangedEventArgs args) => UpdateShellViewport();
+
+    private void UpdateShellViewport()
+    {
+        if (_shellBackdrop is null || _carouselWindow is null) return;
+        var top = DashboardHero.TranslatePoint(new Point(), _carouselWindow).Y + DashboardScroll.VerticalOffset;
+        _shellBackdrop.SetViewport(DashboardHero.ActualHeight, top, DashboardScroll.VerticalOffset);
     }
 
     private void CarouselActivated(object? sender, EventArgs args)
@@ -89,7 +159,7 @@ public partial class DashboardPage : Page
         var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(_lastSlideTick);
         _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
         var model = (DashboardViewModel)DataContext;
-        if (!IsVisible || _carouselWindow?.IsActive != true || model.SpotlightPaused || model.HasSearchQuery || model.HasSelectedDiscovery)
+        if (!IsVisible || _carouselWindow?.IsActive != true || model.SpotlightPaused || model.HasSearchQuery || model.HasSelectedDiscovery || model.IsInstalledLibraryOpen)
         {
             HideSpotlightLoader();
             return;
@@ -100,18 +170,18 @@ public partial class DashboardPage : Page
             _ = model.EnsureDiscoveryArtworkAsync();
         }
         _slideElapsed += elapsed > TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : elapsed;
-        if (_slideElapsed >= TimeSpan.FromSeconds(5))
+        if (_slideElapsed >= TimeSpan.FromSeconds(8))
         {
             _slideElapsed = TimeSpan.Zero;
             HideSpotlightLoader();
             model.NextFeaturedCommand.Execute(null);
         }
-        else if (_slideElapsed >= TimeSpan.FromSeconds(4.4) && !_loaderRunning && Controls.MotionPreferences.AnimationsEnabled)
+        else if (_slideElapsed >= TimeSpan.FromSeconds(7.4) && !_loaderRunning && Controls.MotionPreferences.AnimationsEnabled)
         {
             _loaderRunning = true;
             SpotlightLoader.Visibility = Visibility.Visible;
             LoaderRotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty,
-                new System.Windows.Media.Animation.DoubleAnimation(0, 360, TimeSpan.FromSeconds(5) - _slideElapsed));
+                new System.Windows.Media.Animation.DoubleAnimation(0, 360, TimeSpan.FromSeconds(8) - _slideElapsed));
         }
     }
 
@@ -136,38 +206,44 @@ public partial class DashboardPage : Page
             ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, null);
             ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, null);
             SpotlightArtworkFrame.BeginAnimation(OpacityProperty, null);
+            SpotlightArtworkFrame.Opacity = 0;
         }
     }
 
     private void SpotlightChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
-        if (args.PropertyName == nameof(DashboardViewModel.SelectedDiscovery))
+        if (args.PropertyName is nameof(DashboardViewModel.SelectedDiscovery) or nameof(DashboardViewModel.IsInstalledLibraryOpen))
         {
-            var open = ((DashboardViewModel)DataContext).HasSelectedDiscovery;
+            var model = (DashboardViewModel)DataContext;
+            var open = model.HasSelectedDiscovery || model.IsInstalledLibraryOpen;
             DashboardScroll.IsEnabled = !open;
             if (open)
             {
                 _discoveryFocus = System.Windows.Input.Keyboard.FocusedElement;
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() => CloseDiscoveryButton.Focus()));
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() =>
+                { if (model.IsInstalledLibraryOpen) InstalledLibrarySearch.Focus(); else CloseDiscoveryButton.Focus(); }));
             }
             else { _discoveryFocus?.Focus(); _discoveryFocus = null; }
             HideSpotlightLoader();
         }
         if (args.PropertyName == nameof(DashboardViewModel.SpotlightPaused)) HideSpotlightLoader();
         if (args.PropertyName != nameof(DashboardViewModel.FeaturedGame)) return;
+        UpdateShellArtwork();
         _slideElapsed = TimeSpan.Zero;
         _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
         HideSpotlightLoader();
         ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, null);
         ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, null);
-        if (!Controls.MotionPreferences.AnimationsEnabled) return;
-        Controls.EntranceMotion.Reveal(SpotlightArtworkFrame);
-        var zoom = new System.Windows.Media.Animation.DoubleAnimation(1, 1.015, TimeSpan.FromSeconds(5));
-        ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, zoom);
-        ArtworkZoom.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, zoom);
     }
 
     private void Discovery_Close(object sender, System.Windows.Input.MouseButtonEventArgs args) => ((DashboardViewModel)DataContext).CloseDiscoveryCommand.Execute(null);
+    private void InstalledLibrary_Close(object sender, System.Windows.Input.MouseButtonEventArgs args) => ((DashboardViewModel)DataContext).CloseInstalledLibraryCommand.Execute(null);
+    private void InstalledLibrary_KeyDown(object sender, System.Windows.Input.KeyEventArgs args)
+    {
+        if (args.Key != System.Windows.Input.Key.Escape) return;
+        ((DashboardViewModel)DataContext).CloseInstalledLibraryCommand.Execute(null);
+        args.Handled = true;
+    }
     private void Discovery_KeyDown(object sender, System.Windows.Input.KeyEventArgs args)
     {
         if (args.Key == System.Windows.Input.Key.Escape)
@@ -181,23 +257,56 @@ public partial class DashboardPage : Page
     {
         // Focus and refreshed bindings must not pull a manually scrolled page back to
         // Spotlight. Explicit keyboard navigation can still reveal the focused control.
-        if (!Controls.ScrollNavigation.IsNavigationKeyDown()) args.Handled = true;
+        if (_carouselWindow?.IsActive != true || !IsKeyboardFocusWithin || !Controls.ScrollNavigation.IsNavigationKeyDown())
+            args.Handled = true;
     }
 
     private void ApplyResponsiveLayout(double width)
     {
-        var compact = width < 700;
+        var scale = Math.Clamp(width / 1280, 0.76, 1.5);
         DashboardSearch.Width = width < 640 ? 220 : width < 900 ? 280 : 340;
-        DashboardScroll.Padding = width < 640 ? new Thickness(18, 18, 18, 26) : new Thickness(28, 22, 28, 30);
-        DashboardHero.Height = compact ? 340 : width < 1100 ? 360 : 380;
+        DashboardScroll.Padding = new Thickness(0);
+        DashboardNavigationFontSize = 12 * Math.Clamp(scale, 0.9, 1.15);
+        DashboardNavigationChrome.Width = Math.Clamp(width * 0.42, 430, 660);
+        DashboardNavigationChrome.CornerRadius = new CornerRadius(18 * scale);
+        Controls.RoundedClip.SetRadius(DashboardNavigationPill, 18 * scale);
+        RecentCardHeight = Math.Round(92 * Math.Clamp(scale, 0.9, 1.1));
+        RecentSection.Margin = new Thickness(40 * scale, 4 * scale, 40 * scale, 24 * scale);
+        RecentHeading.FontSize = UpcomingHeading.FontSize = 22 * scale;
+        RecentHeading.Margin = new Thickness(0);
+        UpcomingSection.Margin = new Thickness(40 * scale, 0, 40 * scale, 30);
+        DashboardHero.Height = Math.Clamp(ActualHeight * 0.64, 360, 800);
+        DashboardHero.Margin = new Thickness(0, 0, 0, 12 * scale);
         SpotlightArtworkFrame.Height = DashboardHero.Height;
-        SpotlightTitle.FontSize = compact ? 24 : width < 1100 ? 28 : 30;
-        SpotlightPaging.SetValue(Grid.RowProperty, 1);
-        SpotlightPaging.SetValue(Grid.ColumnProperty, 1);
-        SpotlightPaging.Margin = new Thickness(12,0,0,0);
-        SpotlightDetails.MaxWidth = compact ? Math.Max(220, Math.Min(460, width - 100)) : Math.Max(220, Math.Min(500, width - 100));
-        SpotlightDescription.MaxWidth = Math.Min(360, SpotlightDetails.MaxWidth * 0.8);
+        SpotlightTitle.FontSize = 36 * scale;
+        SpotlightTitle.LineHeight = Math.Ceiling(SpotlightTitle.FontSize * 1.06);
+        SpotlightTitle.MaxHeight = SpotlightTitle.LineHeight * 3;
+        SpotlightLogo.Width = 320 * scale;
+        SpotlightLogo.MaxHeight = 126 * scale;
+        SpotlightEyebrow.FontSize = 10 * scale;
+        SpotlightDescription.FontSize = 12 * scale;
+        SpotlightDescription.Height = SpotlightDescription.LineHeight = 18 * scale;
+        SpotlightViewButton.FontSize = 13 * scale;
+        SpotlightViewButton.Padding = new Thickness(20 * scale, 9 * scale, 20 * scale, 9 * scale);
+        SpotlightFooter.Margin = new Thickness(Math.Max(48, width * 0.058), 24 * scale, 48, 0);
+        SpotlightDetails.MaxWidth = Math.Max(220, 300 * scale);
+        SpotlightTitle.MaxWidth = SpotlightDetails.MaxWidth;
+        SpotlightDots.HorizontalAlignment = HorizontalAlignment.Center;
+        SpotlightDots.LayoutTransform = new System.Windows.Media.ScaleTransform(scale, scale);
+        SpotlightDots.Margin = new Thickness(0, 0, 0, -26 * scale);
+        SpotlightDescription.MaxWidth = SpotlightDetails.MaxWidth;
     }
+
+    private void DashboardHome_Click(object sender, RoutedEventArgs args) => DashboardScroll.ScrollToTop();
+    private void RecentScroll_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs args)
+    {
+        var next = Math.Clamp(RecentScroll.HorizontalOffset - args.Delta, 0, RecentScroll.ScrollableWidth);
+        if (Math.Abs(next - RecentScroll.HorizontalOffset) < 1) return;
+        RecentScroll.ScrollToHorizontalOffset(next);
+        args.Handled = true;
+    }
+    private void DashboardTools_Click(object sender, RoutedEventArgs args) => (Window.GetWindow(this) as MainWindow)?.ToggleToolsMenu();
+    private void DashboardFixes_Click(object sender, RoutedEventArgs args) => (Window.GetWindow(this) as MainWindow)?.ToggleToolsMenu(fixes: true);
 
     private void GameCover_Click(object sender, RoutedEventArgs e)
     {
@@ -268,33 +377,48 @@ public partial class DownloadsPage : Page
         InitializeComponent();
         var viewModel = App.Services.GetRequiredService<DownloadsViewModel>();
         DataContext = viewModel;
-        Loaded += (_, _) => viewModel.StartLiveStats();
-        Unloaded += (_, _) => viewModel.StopLiveStats();
+        Loaded += (_, _) => { viewModel.StartLiveStats(); AttachDeckInput(); AttachDownloadAmbient(); };
+        Unloaded += (_, _) => { viewModel.StopLiveStats(); DetachDeckInput(); DetachDownloadAmbient(); };
         SizeChanged += (_, e) =>
         {
-            // Keep the wide artwork at desktop sizes while leaving a usable queue on laptops.
-            var shortWindow = e.NewSize.Height < 650;
-            FocusedMetrics.Columns = e.NewSize.Width < 700 && !shortWindow ? 2 : 4;
-            DownloadHero.MinHeight = shortWindow ? 250 : 330;
-            DownloadHeroContent.Margin = shortWindow ? new Thickness(18,14,18,14) : new Thickness(24,20,24,22);
-            DownloadHeroHeading.Margin = new Thickness(0, shortWindow ? 40 : 48, 0, 0);
-            DownloadHeroProgressRow.Margin = shortWindow ? new Thickness(0,10,0,6) : new Thickness(0,22,0,14);
-            DownloadHeroDetailRow.Visibility = shortWindow ? Visibility.Collapsed : Visibility.Visible;
-            foreach (StackPanel field in FocusedMetrics.Children)
-            {
-                ((TextBlock)field.Children[0]).FontSize = shortWindow && e.NewSize.Width < 700 ? 8 : 9.5;
-                ((TextBlock)field.Children[1]).FontSize = shortWindow && e.NewSize.Width < 700 ? 14 : 18;
-            }
-            DownloadHeroTitle.FontSize = e.NewSize.Width < 700 ? 26 : 32;
-            DownloadHeaderActions.MaxWidth = e.NewSize.Width < 600 ? 140 : double.PositiveInfinity;
+            var compact = e.NewSize.Width < 700;
+            Tag = e.NewSize.Width < 980 ? "Compact" : "Wide";
+            DownloadArtworkColumn.Width = new GridLength(compact ? 136 : 180);
+
+            DownloadHero.Height = compact ? 236 : 252;
+
+            DownloadHero.Margin = new Thickness(24,16,24,0);
+
+            DownloadArtworkPane.Margin = new Thickness(compact ? 14 : 20);
+
+            ((FrameworkElement)DownloadArtworkPane.Children[0]).Height = compact ? 168 : 204;
+
+            DownloadHeroContent.Margin = compact ? new Thickness(4,22,20,22) : new Thickness(10,24,28,24);
+
+            DownloadHeroTitle.FontSize = compact ? 21 : 25;
+
+            DownloadNetworkRate.FontSize = compact ? 17 : 20;
+
+            DeckAutomation.Visibility = e.NewSize.Width < 1050 ? Visibility.Collapsed : Visibility.Visible;
+            DownloadOptionsPanel.Width = Math.Min(520, Math.Max(280, e.NewSize.Width - 48));
+            DownloadOptionsPanel.MaxHeight = Math.Max(240, e.NewSize.Height - 48);
+            RefreshDownloadAmbientGeometry();
         };
+        ApplyDeckAccessibility();
     }
 
     private void DownloadDetails_Click(object sender, RoutedEventArgs e)
     {
         var model = (DownloadsViewModel)DataContext;
-        model.SelectedJob = model.HeroJob;
+        model.SelectedJob ??= model.HeroJob;
+        SetDownloadOptions(true);
         DownloadDetails.IsExpanded = true;
+    }
+
+    private void QueueMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { ContextMenu: { } menu } button)
+        { menu.PlacementTarget = button; menu.IsOpen = true; }
     }
 
     // Clicking Start/Pause swaps the buttons and WPF would scroll the card into view; only

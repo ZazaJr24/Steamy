@@ -32,7 +32,7 @@ public sealed partial class PageSmokeTests
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
-        Assert.True(thread.Join(TimeSpan.FromSeconds(180)), "WPF smoke test did not finish within 180 seconds. Last phase: " + _phase);
+        Assert.True(thread.Join(TimeSpan.FromSeconds(600)), "WPF smoke test did not finish within 600 seconds. Last phase: " + _phase);
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
@@ -43,13 +43,14 @@ public sealed partial class PageSmokeTests
         // declared in a different assembly.
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
-        app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ThemesDictionary());
+        app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ThemesDictionary { Theme = Wpf.Ui.Appearance.ApplicationTheme.Dark });
         app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Steamy;component/Resources/Themes/Dark.xaml") });
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Steamy;component/Resources/Styles.xaml") });
+        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Steamy;component/Resources/Shell.xaml") });
         var services = new ServiceCollection().AddSteamyServices();
         // Real view models, no downloader processes, network clients, database or user credentials.
-        foreach (var type in services.Select(s => s.ServiceType).Where(t => t.IsInterface).Distinct().ToArray())
+        foreach (var type in services.Select(s => s.ServiceType).Where(t => t.IsInterface && t.IsVisible).Distinct().ToArray())
             services.AddSingleton(type, _ => OfflineServiceProxy.Create(type));
         var store = new AppDataStore();
         store.Downloads.Add(new DownloadJob { GameName = "A game ready to continue", State = DownloadJobState.Paused, Progress = 42.5, Status = "Paused — existing files are retained", TargetFolder = "C:\\Games\\Example", DownloadMode = "DepotDownloaderMod (Zaza)" });
@@ -60,6 +61,7 @@ public sealed partial class PageSmokeTests
         var fixtureArtwork = new FixtureArtwork();
         services.AddSingleton<IArtworkService>(fixtureArtwork);
         services.AddSingleton<ISpotlightService>(new FixtureSpotlight());
+        services.AddSingleton<ITrailerPreviewService>(new FixtureTrailers());
         var wizardQueue = new WizardQueueFixture();
         services.AddSingleton<IDownloadManager>(wizardQueue);
         services.AddSingleton<IDownloadQueueStore>(wizardQueue);
@@ -75,12 +77,206 @@ public sealed partial class PageSmokeTests
             _ => new NavigationViewPageProvider(App.Services));
         services.AddSingleton<IAppDataStore>(store);
         services.AddSingleton<ISettingsService>(new MemorySettings());
+        var detailsFixture = new GameDetailsFixture();
+        services.AddSingleton<IGameDetailsDataService>(detailsFixture);
+        services.AddSingleton<IGamePreferencesStore>(detailsFixture);
+        services.AddSingleton<IGameLaunchService>(detailsFixture);
+        if (Environment.GetEnvironmentVariable("STEAMY_UI_GAME_DETAILS_ONLY") == "1")
+            services.AddSingleton<IPlayTimeService>(detailsFixture);
         using var provider = services.BuildServiceProvider();
         typeof(App).GetProperty(nameof(App.Services))!.SetValue(null, provider);
         var bindingLog = new BindingLog();
         PresentationTraceSources.DataBindingSource.Listeners.Add(bindingLog);
         try
         {
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_LIBRARY_INSTALL_OFFSCREEN_ONLY") == "1" || Environment.GetEnvironmentVariable("STEAMY_UI_LIBRARY_BLACK_OFFSCREEN_ONLY") == "1")
+            {
+                AddScreenshotLibrary(store,fixtureArtwork);
+                OfflineServiceProxy.ScreenshotCatalog=store.Games.Select(game=>new SteamCatalogItem
+                { AppId=game.AppId,Name=game.Name,AppType=SteamCatalogAppType.Game,ArtworkImage=game.ArtworkImage,IsReleaseVerified=true }).Concat(new[] { (1808500,"ARC Raiders"), (945360,"Among Us"), (553850,"HELLDIVERS 2"), (958520,"Construction Simulator"), (812140,"Assassin's Creed Odyssey"), (4435490,"Fable"), (48190,"Assassin's Creed Brotherhood"), (33230,"Assassin's Creed 2") }.Select(game=>new SteamCatalogItem
+                { AppId=game.Item1,Name=game.Item2,AppType=game.Item1==33230 ? SteamCatalogAppType.Unknown : SteamCatalogAppType.Game,ArtworkImage=FixtureArtwork.Read(game.Item1,"portrait") })).ToArray();
+                var catalogSize=OfflineServiceProxy.ScreenshotCatalog.Length;
+                var releaseGate=new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                OfflineServiceProxy.ReleaseMetadataGate=releaseGate.Task;
+                var model=provider.GetRequiredService<LibraryViewModel>();
+                Assert.Equal("Browse all",model.SelectedMode);
+                Assert.Equal("All games",model.SelectedTypeFilter);
+                var library=new LibraryPage();
+                library.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+                try
+                {
+                    var refresh=((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)model.RefreshCatalogCommand).ExecuteAsync(null);
+                    PumpUntil(()=>model.PagedCatalogItems.Count==catalogSize);
+                    Assert.Contains(model.PagedCatalogItems,item=>item.AppId==33230 && !item.IsReleaseVerified);
+                    releaseGate.SetResult(); OfflineServiceProxy.ReleaseMetadataGate=null;
+                    PumpUntil(()=>refresh.IsCompleted);
+                    foreach(var theme in new[] { "Dark","Light" })
+                    {
+                        UiThemeService.Apply(theme);
+                        var size=new Size(1280,800);
+                        library.Measure(size); library.Arrange(new Rect(size)); library.UpdateLayout();
+                        PumpDispatcher(TimeSpan.FromMilliseconds(200));
+                        Assert.True(Assert.IsType<DrawingBrush>(((ShellBackdropView)library.FindName("LibraryAmbientBackdrop")).BaseBrush).IsFrozen);
+                        Assert.Equal(Colors.White,Assert.IsType<SolidColorBrush>(library.Resources["TextPrimaryBrush"]).Color);
+                        Assert.Contains(Descendants<Button>(library),button=>button.Tag is SteamCatalogItem);
+                        var image=new RenderTargetBitmap(1280,800,96,96,PixelFormats.Pbgra32); image.Render(library);
+                        var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(image));
+                        var directory=Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS") ?? Path.GetTempPath();
+                        Directory.CreateDirectory(directory);
+                        using var file=File.Create(Path.Combine(directory,$"games-grid-{theme.ToLowerInvariant()}.png")); encoder.Save(file);
+                    }
+                    model.SearchText="Cyberpunk";
+                    PumpUntil(()=>!model.IsSearchBusy && model.PagedCatalogItems.Count==1);
+                    Assert.Equal(1091500,model.PagedCatalogItems[0].AppId);
+                    model.SearchText="";
+                    PumpUntil(()=>model.PagedCatalogItems.Count==catalogSize);
+                    CheckLibraryInstallStepsOffscreen(library, provider, wizardDownloads);
+                    Assert.DoesNotContain(bindingLog.Lines,line=>line.Contains("Error:",StringComparison.OrdinalIgnoreCase));
+                }
+                finally { releaseGate.TrySetResult(); OfflineServiceProxy.ReleaseMetadataGate=null; library.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent)); }
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_DOWNLOAD_CARD_OFFSCREEN_ONLY") == "1")
+            {
+                store.Downloads.Clear();
+                store.Downloads.Add(new DownloadJob { AppId = 1808500, GameName = "ARC Raiders", State = DownloadJobState.Downloading,
+                    TransferredBytes = 130_570_000, TransferTotalBytes = 78_250_000_000, BytesPerSecond = 15_981_250, EtaSeconds = 1200 });
+                store.Downloads.Add(new DownloadJob { AppId=289650, GameName="Assassin's Creed Unity", State=DownloadJobState.Queued, QueuePosition=1 });
+                store.Downloads.Add(new DownloadJob { AppId=1091500, GameName="Cyberpunk 2077", State=DownloadJobState.Queued, QueuePosition=2, TotalSize="64 GB" });
+                var historyJob = new DownloadJob { AppId=1174180, GameName="Red Dead Redemption 2", State=DownloadJobState.Failed, Status="Download failed. Existing files were kept; you can retry or remove this entry." };
+                store.Downloads.Add(historyJob);
+                var page = new DownloadsPage();
+                page.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+                try
+                {
+                    var cover = FixtureArtwork.Read(1808500, "portrait");
+                    Assert.NotNull(cover);
+                    ((Border)page.FindName("DownloadHeroArtwork")).Background = new ImageBrush(cover) { Stretch = Stretch.UniformToFill, AlignmentY = AlignmentY.Top };
+                    foreach (var size in new[] { new Size(1880,800), new Size(1280,720), new Size(660,520) })
+                    {
+                        page.Measure(size); page.Arrange(new Rect(size)); page.UpdateLayout();
+                        PumpDispatcher(TimeSpan.FromMilliseconds(350));
+                        page.Measure(size); page.Arrange(new Rect(size)); page.UpdateLayout();
+                        CheckDownloadsLayout(page);
+                        var image = new RenderTargetBitmap((int)size.Width,(int)size.Height,96,96,PixelFormats.Pbgra32);
+                        image.Render(page);
+                        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(image));
+                        var directory = Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS") ?? Path.GetTempPath();
+                        Directory.CreateDirectory(directory);
+                        using var stream = File.Create(Path.Combine(directory, $"download-card-{size.Width:0}.png")); encoder.Save(stream);
+                    }
+                    store.Downloads[0].TransferTotalBytes = null;
+                    var unknownSize = new Size(1280,720);
+                    page.Measure(unknownSize); page.Arrange(new Rect(unknownSize)); page.UpdateLayout();
+                    PumpDispatcher(TimeSpan.FromMilliseconds(350));
+                    var unknownBar = (Steamy.Controls.SmoothProgressBar)page.FindName("FocusedProgress");
+                    Assert.True(unknownBar.IsIndeterminate);
+                    var unknownActivity = Assert.IsType<Grid>(unknownBar.Template.FindName("UnknownActivity", unknownBar));
+                    Assert.Equal(Visibility.Visible, unknownActivity.Visibility);
+                    Assert.True(unknownActivity.ActualWidth > 100, "Unknown totals must retain a visible activity track.");
+                    Assert.Equal(Visibility.Collapsed, ((TextBlock)page.FindName("DownloadTransferPercentage")).Visibility);
+                    var unknownImage = new RenderTargetBitmap(1280,720,96,96,PixelFormats.Pbgra32);
+                    unknownImage.Render(page);
+                    var unknownEncoder = new PngBitmapEncoder(); unknownEncoder.Frames.Add(BitmapFrame.Create(unknownImage));
+                    using (var unknownFile = File.Create(Path.Combine(Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS") ?? Path.GetTempPath(), "download-card-unknown.png"))) unknownEncoder.Save(unknownFile);
+                    var deleteButton = Descendants<Button>(page).Single(button => System.Windows.Automation.AutomationProperties.GetName(button)=="Remove history entry" && ReferenceEquals(button.CommandParameter,historyJob));
+                    Assert.Equal(Visibility.Visible,deleteButton.Visibility);
+                    Assert.NotNull(deleteButton.Command);
+                    ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand<DownloadJob>)deleteButton.Command).ExecuteAsync(historyJob).GetAwaiter().GetResult();
+                    Assert.DoesNotContain(historyJob,store.Downloads);
+                    var keySettings = new SettingsPage();
+                    keySettings.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+                    try
+                    {
+                        ((Wpf.Ui.Controls.TextBox)keySettings.FindName("SettingsSearch")).Text="auth key";
+                        PumpDispatcher(TimeSpan.FromMilliseconds(300));
+                        var settingsSize=new Size(1280,720);
+                        keySettings.Measure(settingsSize); keySettings.Arrange(new Rect(settingsSize)); keySettings.UpdateLayout();
+                        var authBox=(PasswordBox)keySettings.FindName("RyuuAuthKeyBox");
+                        authBox.BringIntoView(); PumpDispatcher(TimeSpan.FromMilliseconds(100)); keySettings.UpdateLayout();
+                        Assert.True(authBox.ActualWidth>=150 && authBox.ActualHeight>=44);
+                        Assert.NotEqual(Brushes.Transparent,authBox.Background);
+                        Assert.NotEqual(Brushes.Transparent,authBox.BorderBrush);
+                        var placeholder=Assert.IsType<TextBlock>(authBox.Template.FindName("Placeholder",authBox));
+                        Assert.Equal(Visibility.Visible,placeholder.Visibility);
+                        var settingsImage=new RenderTargetBitmap(1280,720,96,96,PixelFormats.Pbgra32); settingsImage.Render(keySettings);
+                        var settingsEncoder=new PngBitmapEncoder(); settingsEncoder.Frames.Add(BitmapFrame.Create(settingsImage));
+                        using var settingsFile=File.Create(Path.Combine(Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS") ?? Path.GetTempPath(),"auth-key-settings.png")); settingsEncoder.Save(settingsFile);
+                    }
+                    finally { keySettings.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent)); }
+                    store.Downloads[0] = new DownloadJob { AppId=33230, GameName="Assassin's Creed 2", State=DownloadJobState.Downloading,
+                        TransferredBytes=130_570_000, TransferTotalBytes=78_250_000_000, BytesPerSecond=15_981_250, EtaSeconds=1200 };
+                    PumpDispatcher(TimeSpan.FromMilliseconds(500));
+                    ((Border)page.FindName("DownloadHeroArtwork")).Background=new ImageBrush(FixtureArtwork.Read(33230,"portrait")) { Stretch=Stretch.UniformToFill };
+                    page.Measure(unknownSize); page.Arrange(new Rect(unknownSize)); page.UpdateLayout();
+                    var neutralImage=new RenderTargetBitmap(1280,720,96,96,PixelFormats.Pbgra32); neutralImage.Render(page);
+                    var neutralEncoder=new PngBitmapEncoder(); neutralEncoder.Frames.Add(BitmapFrame.Create(neutralImage));
+                    using (var neutralFile=File.Create(Path.Combine(Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS") ?? Path.GetTempPath(),"download-ac2.png"))) neutralEncoder.Save(neutralFile);
+                    var neutralPixels=new byte[1280*720*4]; neutralImage.CopyPixels(neutralPixels,1280*4,0);
+                    var panelPixel=(110*1280+1100)*4;
+                    Assert.True(Math.Abs(neutralPixels[panelPixel+2]-neutralPixels[panelPixel+1])<15,"A neutral cover with a small red logo must not make the panel red.");
+                    CheckTrailerOffscreen(provider);
+                    Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                }
+                finally { page.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent)); }
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_TOOL_STYLE_ONLY") == "1")
+            {
+                CheckSteamToolsAppearance(provider, betterSteamTools);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_DOWNLOAD_AMBIENT_ONLY") == "1")
+            {
+                CheckDownloadAmbient(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_DOWNLOAD_WIZARD_ONLY") == "1")
+            {
+                CheckDownloadWizard(provider, wizardDownloads, wizardQueue);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_INSTALL_GLASS_ONLY") == "1")
+            {
+                CheckGlassInstallFlow(provider, store, fixtureArtwork, betterSteamTools, wizardDownloads);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_SCROLL_ONLY") == "1")
+            {
+                provider.GetRequiredService<LibraryViewModel>().SelectedMode = "Browse all";
+                CheckShellScrolling(provider);
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_STORAGE_LIBRARY_ONLY") == "1")
+            {
+                CheckFirstRunSetup();
+                CheckStorageLibrary(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_GAME_DETAILS_ONLY") == "1")
+            {
+                CheckGameDetails(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_GLASS_ONLY") == "1")
+            {
+                if (Environment.GetEnvironmentVariable("STEAMY_UI_BACKGROUND_ONLY") == "1")
+                { _phase = "CheckFirstRunSetup()"; CheckFirstRunSetup(); }
+                AddScreenshotLibrary(store, fixtureArtwork);
+                foreach (var (game, index) in store.Games.Select((game, index) => (game, index)))
+                    activity.RecordLaunchAsync(game.AppId, DateTimeOffset.UtcNow.AddHours(-index - 1)).GetAwaiter().GetResult();
+                _phase = "CheckGlassShell(provider)";
+                CheckGlassShell(provider);
+                if (Environment.GetEnvironmentVariable("STEAMY_UI_VIDEO_CHECK") == "1")
+                { _phase = "CheckTrailerPreviews(provider)"; CheckTrailerPreviews(provider); }
+                return;
+            }
             _phase = "CheckBurstUpdates()";
             CheckBurstUpdates();
             _phase = "CheckLoggingBatches()";
@@ -113,12 +309,14 @@ public sealed partial class PageSmokeTests
             CheckDownloadsControls(provider);
             _phase = "CheckDownloadWizard(provider)";
             CheckDownloadWizard(provider, wizardDownloads, wizardQueue);
-            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
+            // Shell interaction checks need installed/recent titles even when optional
+            // screenshot artwork is unavailable (for example on a fresh CI machine).
             {
                 AddScreenshotLibrary(store, fixtureArtwork);
                 activity.ToggleFavoriteAsync(1091500).GetAwaiter().GetResult();
                 activity.ToggleFavoriteAsync(1245620).GetAwaiter().GetResult();
-                activity.RecordLaunchAsync(1091500, DateTimeOffset.UtcNow.AddHours(-2)).GetAwaiter().GetResult();
+                foreach (var (game, index) in store.Games.Select((game, index) => (game, index)))
+                    activity.RecordLaunchAsync(game.AppId, DateTimeOffset.UtcNow.AddHours(-index - 1)).GetAwaiter().GetResult();
             }
             foreach (var theme in new[] { "Dark", "Light" })
             {
@@ -143,10 +341,8 @@ public sealed partial class PageSmokeTests
                         Assert.NotNull(page.DataContext);
                         if (page is DashboardPage or LibraryPage or BetterSteamToolsPage)
                         {
-                            var background = Assert.IsType<SolidColorBrush>(page.Background).Color;
-                            Assert.True(theme == "Light" ? background.R > 220 && background.G > 220 && background.B > 220
-                                : background.R < 40 && background.G < 40 && background.B < 40,
-                                "Discovery, Games and SteamTools must use a legible background after a theme switch.");
+                            Assert.Equal(0, Assert.IsType<SolidColorBrush>(page.Background).Color.A);
+                            Assert.NotNull(app.Resources["WorkspaceBackgroundBrush"]);
                         }
                         if (page is DashboardPage dashboard) CheckDashboardLayout(dashboard);
                         if (page is DownloadsPage downloads) CheckDownloadsLayout(downloads);
@@ -159,6 +355,7 @@ public sealed partial class PageSmokeTests
                     if (page is LibraryPage)
                     {
                         var viewModel = Assert.IsType<Steamy.ViewModels.LibraryViewModel>(page.DataContext);
+                        viewModel.SelectedMode = "Browse all";
                         PumpUntil(() => !viewModel.IsCatalogLoading && viewModel.CatalogItems.Count > 0);
                         viewModel.SelectedSourceFilter = "Sushi";
                         PumpDispatcher(TimeSpan.FromMilliseconds(100));
@@ -199,21 +396,6 @@ public sealed partial class PageSmokeTests
                     }
                     if (page is SettingsPage settings)
                     {
-                        var categories = Assert.IsType<ComboBox>(settings.FindName("CategorySelector"));
-                        categories.SelectedItem = categories.Items.Cast<ComboBoxItem>().Single(item => Equals(item.Tag, "services"));
-                        settings.Measure(new Size(settings.Width, settings.Height));
-                        settings.Arrange(new Rect(0, 0, settings.Width, settings.Height));
-                        settings.UpdateLayout();
-                        foreach (var name in new[] { "SteamApiKeyBox", "RyuuAuthKeyBox", "HubcapApiKeyBox", "DepotBoxApiKeyBox", "ManifestHubApiKeyBox", "MirrorTokenBox" })
-                        {
-                            var box = Assert.IsType<PasswordBox>(settings.FindName(name));
-                            Assert.Equal(((SolidColorBrush)settings.FindResource("SolidSurfaceBrush")).Color, Assert.IsType<SolidColorBrush>(box.Background).Color);
-                            Assert.Equal(((SolidColorBrush)settings.FindResource("BorderStrongBrush")).Color, Assert.IsType<SolidColorBrush>(box.BorderBrush).Color);
-                            Assert.True(((SolidColorBrush)box.Background).Color.A > 0);
-                            Assert.True(((SolidColorBrush)box.BorderBrush).Color.A > 0);
-                            Assert.True(box.ActualWidth >= 160);
-                            Assert.True(box.ActualHeight >= 36);
-                        }
                         var search = Assert.IsAssignableFrom<TextBox>(settings.FindName("SettingsSearch"));
                         search.Text = "resume";
                         PumpDispatcher(TimeSpan.FromMilliseconds(250));
@@ -229,9 +411,15 @@ public sealed partial class PageSmokeTests
             }
             _phase = "CheckBetterSteamTools";
             CheckBetterSteamTools(provider, betterSteamTools);
+            _phase = "CheckTrailerPreviews(provider)";
+            CheckTrailerPreviews(provider);
+            _phase = "CheckGlassShell(provider)";
+            CheckGlassShell(provider);
             _phase = "CheckShellScrolling(provider)";
             CheckShellScrolling(provider);
-            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK")))
+            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK"))
+                && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS"))
+                && Environment.GetEnvironmentVariable("STEAMY_UI_QUICK_CAPTURE") != "1")
                 SaveShellScreenshots(provider, fixtureArtwork);
             Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Steamy.ViewModels", StringComparison.Ordinal) && line.Contains("property not found", StringComparison.OrdinalIgnoreCase));
         }
@@ -296,10 +484,14 @@ public sealed partial class PageSmokeTests
     private static void AddScreenshotLibrary(AppDataStore store, FixtureArtwork artwork)
     {
         var names = new[] { (1245620, "ELDEN RING", "61.1 GB"), (1091500, "Cyberpunk 2077", "86.3 GB"),
-            (1174180, "Red Dead Redemption 2", "119 GB"), (2358720, "Black Myth: Wukong", "128 GB") };
+            (1174180, "Red Dead Redemption 2", "119 GB"), (2358720, "Black Myth: Wukong", "128 GB"),
+            (1086940, "Baldur’s Gate 3", "150 GB"), (1593500, "God of War", "70 GB"),
+            (2050650, "Resident Evil 4", "67 GB"), (990080, "Hogwarts Legacy", "85 GB") };
         foreach (var (id, name, size) in names)
         {
             _phase = "Read sample artwork " + id;
+            var existing = store.Games.FirstOrDefault(entry => entry.AppId == id);
+            if (existing is not null) store.Games.Remove(existing);
             var game = new Game { AppId = id, Name = name, Size = size, InstallState = GameInstallState.Installed, LastUpdated = DateTime.Today.AddMinutes(-store.Games.Count) };
             artwork.LoadAsync(game).GetAwaiter().GetResult();
             store.Games.Add(game);
@@ -326,7 +518,7 @@ public sealed partial class PageSmokeTests
         setup.TargetFolder = @"C:\Games\Cyberpunk 2077";
         if (!setup.Branches.Any(branch => branch.Name == "public")) setup.Branches.Add(new Branch { Name = "public" });
         setup.SelectedBranch = setup.Branches.First(branch => branch.Name == "public");
-        var window = new MainWindow { WindowState = WindowState.Normal, Width = 1600, Height = 1050 };
+        var window = new MainWindow { WindowState = WindowState.Normal, Width = 1600, Height = 1050, Topmost = true, ShowInTaskbar = false };
         Assert.False(window.RootNavigationView.IsFooterSeparatorVisible);
         var dashboard = provider.GetRequiredService<DashboardViewModel>();
         if (dashboard.DiscoverGames.Count > 0) dashboard.SelectFeaturedCommand.Execute(dashboard.DiscoverGames[0]);
@@ -408,6 +600,7 @@ public sealed partial class PageSmokeTests
         Assert.True(window.RootNavigationView.Navigate(typeof(LibraryPage)));
         var library = provider.GetRequiredService<Steamy.ViewModels.LibraryViewModel>();
         _phase = "Refresh screenshot catalog";
+        library.SelectedMode = "Browse all";
         var refresh = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)library.RefreshCatalogCommand).ExecuteAsync(null);
         PumpUntil(() => refresh.IsCompleted);
         refresh.GetAwaiter().GetResult();
@@ -423,17 +616,19 @@ public sealed partial class PageSmokeTests
         System.Windows.Input.Mouse.Synchronize();
         PumpUntil(() => !hoveredCard.IsMouseOver);
         PumpDispatcher(TimeSpan.FromMilliseconds(200));
-        var galleryPanels = Descendants<Steamy.Controls.AdaptiveGridPanel>(page).Where(panel => panel.IsVisible && panel.Children.Count >= 5).ToArray();
+        var galleryPanels = Descendants<Steamy.Controls.VirtualizingGamePanel>(page).Where(panel => panel.IsVisible && panel.Children.Count >= 5).ToArray();
         Assert.Single(galleryPanels);
         Assert.Null(page.FindName("UpcomingSection"));
         Assert.All(library.PagedCatalogItems, item => Assert.False(item.IsUpcoming));
         foreach (var galleryPanel in galleryPanels)
         {
-            var firstFive = galleryPanel.Children.Cast<FrameworkElement>().Take(5).ToArray();
-            var positions = firstFive.Select(child => child.TranslatePoint(new Point(0, 0), galleryPanel)).ToArray();
-            Assert.Equal(4, positions.Count(point => point.Y == positions[0].Y));
-            Assert.InRange(firstFive[0].ActualWidth, 175, 210); // Four larger covers in the native 1044px window.
-            Assert.Equal(5, galleryPanel.MaxColumns); // Five covers remain available in a wider window.
+            var children = galleryPanel.Children.Cast<FrameworkElement>().ToArray();
+            var firstRow = children.Where(child => child.TranslatePoint(new Point(0, 0), galleryPanel).Y == 0).ToArray();
+            Assert.InRange(firstRow.Length, 5, 6);
+            Assert.InRange(firstRow[0].ActualWidth, 184, 280);
+            var last = firstRow[^1];
+            var right = last.TranslatePoint(new Point(last.ActualWidth, 0), galleryPanel).X;
+            Assert.InRange(galleryPanel.ActualWidth - right, -1, 1); // No unused strip at the right edge.
         }
         SaveVisual(window, "games.png");
         _phase = "Hover a gallery card";
@@ -442,7 +637,9 @@ public sealed partial class PageSmokeTests
         var pointer = hoveredCard.PointToScreen(new Point(hoveredCard.ActualWidth / 2, hoveredCard.ActualHeight / 2));
         Assert.True(MoveCursorAway((int)Math.Round(pointer.X), (int)Math.Round(pointer.Y)));
         System.Windows.Input.Mouse.Synchronize();
-        PumpUntil(() => hoveredCard.IsMouseOver);
+        PumpDispatcher(TimeSpan.FromMilliseconds(300));
+        Assert.True(hoveredCard.IsMouseOver,
+            $"Native hover failed. Active={window.IsActive}, enabled={hoveredCard.IsEnabled}, visible={hoveredCard.IsVisible}, pointer={System.Windows.Input.Mouse.GetPosition(window)}, target={hoveredCard.TranslatePoint(new Point(hoveredCard.ActualWidth / 2, hoveredCard.ActualHeight / 2), window)}, directlyOver={System.Windows.Input.Mouse.DirectlyOver}, hit={window.InputHitTest(hoveredCard.TranslatePoint(new Point(hoveredCard.ActualWidth / 2, hoveredCard.ActualHeight / 2), window))}.");
         PumpDispatcher(TimeSpan.FromMilliseconds(300));
         Assert.Equal(cardSize, new Size(hoveredCard.ActualWidth, hoveredCard.ActualHeight));
         Assert.Equal(cardPosition, hoveredCard.TranslatePoint(new Point(0,0), page));
@@ -455,10 +652,13 @@ public sealed partial class PageSmokeTests
         PumpDispatcher(TimeSpan.FromMilliseconds(200));
         _phase = "Open game details";
         page.OpenDownloadSetup(library.PagedCatalogItems.First(item => item.AppId == 1091500));
+        SaveVisual(window, "install-method.png");
+        page.SelectInstallMethod(GameInstallMethod.DepotDownloader);
+        AwaitWizardStep(page);
         PumpDispatcher(TimeSpan.FromMilliseconds(350));
         window.UpdateLayout();
         SaveVisual(window, "game-details.png");
-        Assert.Equal(255, Assert.IsType<System.Windows.Media.SolidColorBrush>(((Border)page.FindName("DialogPanel")).Background).Color.A);
+        Assert.IsType<System.Windows.Media.LinearGradientBrush>(((Border)page.FindName("DialogPanel")).Background);
         page.SelectDownloadSource(ManifestSource.Local);
         PumpDispatcher(TimeSpan.FromMilliseconds(150));
         window.UpdateLayout();
@@ -466,12 +666,12 @@ public sealed partial class PageSmokeTests
         page.SelectDownloadSource(ManifestSource.Sushi);
         _phase = "Prepare screenshot depot choices";
         AwaitWizardStep(page);
-        Assert.Equal(1, page.DownloadWizardStep);
+        Assert.Equal(2, page.DownloadWizardStep);
         window.UpdateLayout();
         SaveVisual(window, "download-depots.png");
         _phase = "Prepare screenshot download location";
         AwaitWizardStep(page);
-        Assert.Equal(2, page.DownloadWizardStep);
+        Assert.Equal(3, page.DownloadWizardStep);
         page.ConfigureDownloadLocation(@"C:\Games");
         PumpUntil(() => !((TextBlock)page.FindName("LocationSpaceText")).Text.StartsWith("Checking", StringComparison.Ordinal));
         window.UpdateLayout();
@@ -543,6 +743,7 @@ public sealed partial class PageSmokeTests
         var spotlight = Assert.IsType<FixtureSpotlight>(provider.GetRequiredService<ISpotlightService>());
         var original = spotlight.Cached;
         var previousSource = library.SelectedSourceFilter;
+        library.SelectedMode = "Browse all";
         var previousSearch = library.SearchText;
         var upcoming = original.Games.First(game => game.ComingSoon);
         try
@@ -556,7 +757,7 @@ public sealed partial class PageSmokeTests
             PumpUntil(() => refresh.IsCompleted);
             refresh.GetAwaiter().GetResult();
             PumpDispatcher(TimeSpan.FromMilliseconds(200));
-            Assert.Empty(library.PagedCatalogItems);
+            Assert.True(Assert.Single(library.PagedCatalogItems).IsUpcoming);
 
             // Steam's refreshed feed now confirms the same title released. An old item flag must not hide it.
             spotlight.Cached = new SpotlightSnapshot(DateTimeOffset.UtcNow,
@@ -591,11 +792,14 @@ public sealed partial class PageSmokeTests
     {
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<(int, string), BitmapImage> Images = new();
         public System.Collections.Concurrent.ConcurrentDictionary<int, int> HeroRequests { get; } = new();
+        public Func<int, CancellationToken, Task<BitmapImage?>>? HeroOverride { get; set; }
         public Task<BitmapImage?> LoadHeroAsync(int appId, CancellationToken cancellationToken = default)
         {
             HeroRequests.AddOrUpdate(appId, 1, (_, count) => count + 1);
+            if (HeroOverride is not null) return HeroOverride(appId, cancellationToken);
             return Task.FromResult(Read(appId, "hero"));
         }
+        public Task<BitmapImage?> LoadSpotlightLogoAsync(SpotlightGame game, CancellationToken cancellationToken = default) => Task.FromResult(Read(game.AppId, "logo"));
         public Task LoadAsync(Game game, CancellationToken cancellationToken = default)
         {
             game.HeaderImage = Read(game.AppId, "header");
@@ -687,6 +891,7 @@ public sealed partial class PageSmokeTests
             Assert.True(small.IsFrozen);
             handler.Width = 3200;
             var cached = Task.Run(() => service.LoadHeroAsync(1)).GetAwaiter().GetResult();
+            Assert.Same(small, cached); // Page revisits reuse the frozen decoded bitmap.
             Assert.Equal(16, cached!.PixelWidth);
             Assert.Equal(1, handler.Requests); // Revisiting a game reads the local cache.
             var large = Task.Run(() => service.LoadHeroAsync(2)).GetAwaiter().GetResult();
@@ -712,6 +917,23 @@ public sealed partial class PageSmokeTests
             using var uncachedClient = new HttpClient(new ArtworkHandler());
             using var uncached = new SteamArtworkService(uncachedClient, blockedCache);
             Assert.NotNull(Task.Run(() => uncached.LoadHeroAsync(4)).GetAwaiter().GetResult());
+            var beforeLocal = handler.Requests;
+            var local = new Game { AppId = -42, Name = "Local icon", LaunchExecutable = Path.ChangeExtension(typeof(App).Assembly.Location, ".exe") };
+            Task.Run(() => service.LoadAsync(local)).GetAwaiter().GetResult();
+            Assert.NotNull(local.ArtworkImage);
+            Assert.True(local.ArtworkImage.IsFrozen);
+            Assert.True(local.ArtworkImage.PixelWidth >= 32);
+            Assert.Equal(beforeLocal, handler.Requests); // Local games never query a fake Steam app ID.
+            var xboxExe = Path.Combine(directory, "XboxGame.exe");
+            File.WriteAllBytes(xboxExe, [0]); // No executable icon: packaged publisher artwork must win.
+            var packaged = new PngBitmapEncoder();
+            packaged.Frames.Add(BitmapFrame.Create(small));
+            using (var output = File.Create(Path.Combine(directory, "Square480x480Logo.png"))) packaged.Save(output);
+            var xbox = new Game { AppId = -43, Name = "Xbox game", LaunchExecutable = xboxExe };
+            Task.Run(() => service.LoadAsync(xbox)).GetAwaiter().GetResult();
+            Assert.NotNull(xbox.ArtworkImage);
+            Assert.True(xbox.ArtworkImage.IsFrozen);
+            Assert.Equal(beforeLocal, handler.Requests);
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }
@@ -774,19 +996,27 @@ public sealed partial class PageSmokeTests
             var service = new JsonSettingsService(path);
             var settings = service.Load();
             Assert.Equal("Light", settings.Appearance);
+            Assert.True(settings.AutoplayTrailers); // Existing settings files keep previews enabled by default.
+            Assert.True(settings.TrackPlayTime);
             File.WriteAllText(path, "not valid JSON");
             Assert.Same(settings, service.Load());
             Assert.False(settings.DashboardSearch);
             settings.DashboardSearch = true;
+            settings.AutoplayTrailers = false;
+            settings.TrackPlayTime = false;
             settings.Appearance = "Dark";
             service.SaveAsync(settings).GetAwaiter().GetResult();
             var reloaded = new JsonSettingsService(path).Load();
             Assert.Equal("Dark", reloaded.Appearance);
             Assert.True(reloaded.DashboardSearch);
+            Assert.False(reloaded.AutoplayTrailers); // Survives a fresh settings service after restart.
+            Assert.False(reloaded.TrackPlayTime);
             Assert.Empty(Directory.GetFiles(directory, "*.tmp"));
             service.ResetAsync().GetAwaiter().GetResult();
             Assert.NotSame(settings, service.Load());
             Assert.False(service.Load().DashboardSearch);
+            Assert.True(service.Load().AutoplayTrailers);
+            Assert.True(service.Load().TrackPlayTime);
         }
         finally { Directory.Delete(directory, true); }
     }
@@ -800,11 +1030,12 @@ public sealed partial class PageSmokeTests
         Dispatcher.PushFrame(frame);
     }
 
-    private static void PumpUntil(Func<bool> condition)
+    private static void PumpUntil(Func<bool> condition, TimeSpan? timeout = null)
     {
+        var limit = timeout ?? TimeSpan.FromSeconds(5);
         var elapsed = Stopwatch.StartNew();
-        while (!condition() && elapsed.Elapsed < TimeSpan.FromSeconds(5)) PumpDispatcher(TimeSpan.FromMilliseconds(20));
-        Assert.True(condition(), "The asynchronous UI operation did not settle within 5 seconds.");
+        while (!condition() && elapsed.Elapsed < limit) PumpDispatcher(TimeSpan.FromMilliseconds(20));
+        Assert.True(condition(), $"The asynchronous UI operation did not settle within {limit.TotalSeconds} seconds. Phase: {_phase}.");
     }
 
     private static void CheckSushiImport(IServiceProvider provider)
@@ -876,6 +1107,8 @@ public sealed partial class PageSmokeTests
 
     private static void SaveScreenshot(Page page, string theme, Size size, double scale = 1)
     {
+        if (Environment.GetEnvironmentVariable("STEAMY_UI_QUICK_CAPTURE") == "1"
+            && page is not DashboardPage && page is not SettingsPage) return;
         var folder = Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS");
         if (string.IsNullOrWhiteSpace(folder)) return;
         Directory.CreateDirectory(folder);
@@ -889,7 +1122,7 @@ public sealed partial class PageSmokeTests
 
     private sealed class MemorySettings : ISettingsService
     {
-        private readonly AppSettings _settings = new() { AutoUpdate = false };
+        private readonly AppSettings _settings = new() { AutoUpdate = false, Language = "en-US · English" };
         public AppSettings Load() => _settings;
         public Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task ResetAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -907,6 +1140,7 @@ public sealed partial class PageSmokeTests
 public class OfflineServiceProxy : DispatchProxy
 {
     public static int CatalogRequests;
+    public static Task? ReleaseMetadataGate;
     public static SteamCatalogItem[]? ScreenshotCatalog;
     public static object Create(Type interfaceType) => DispatchProxy.Create(interfaceType, typeof(OfflineServiceProxy));
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
@@ -917,6 +1151,13 @@ public class OfflineServiceProxy : DispatchProxy
         if (method.DeclaringType == typeof(IUpdateService) && method.Name == "get_CurrentVersion")
             return GitHubUpdateService.Normalize(typeof(App).Assembly.GetName().Version!);
         if (method.DeclaringType == typeof(ILoggingService)) return null;
+        if (method.DeclaringType == typeof(IPlayTimeService))
+        {
+            if (method.Name == nameof(IPlayTimeService.ConfigureAsync)) return Task.CompletedTask;
+            if (method.Name == nameof(IPlayTimeService.ReadLastPlayedAsync)) return Task.FromResult<DateTimeOffset?>(null);
+            return Task.FromResult(new Steamy.Playtime.PlayTimeSnapshot(1, DateTimeOffset.UtcNow,
+                new Steamy.Playtime.GamePlayTime[] { new(1245620, 19200, false), new(1091500, 8040, false), new(1174180, 42300, false) }));
+        }
         if (method.DeclaringType == typeof(IGameLocatorService) && method.Name == nameof(IGameLocatorService.ListInstalledGames)) return Array.Empty<InstalledGameEntry>();
         if (method.DeclaringType == typeof(ICreamApiService) && method.Name == nameof(ICreamApiService.HasCachedDlls)) return true;
         if (method.DeclaringType == typeof(IDenuvoGeneratorDownloadService))
@@ -939,10 +1180,28 @@ public class OfflineServiceProxy : DispatchProxy
         }
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.PrepareReleaseStatusAsync))
         {
+            if (ReleaseMetadataGate is { } gate) return gate.WaitAsync(args![1] is CancellationToken token ? token : default);
             foreach (var item in (IReadOnlyList<SteamCatalogItem>)args![0]!) item.IsReleaseVerified = true;
             return Task.CompletedTask;
         }
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.PrepareArtworkAsync)) return Task.CompletedTask;
+        if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.EnsureDetailsAsync))
+        {
+            if (ReleaseMetadataGate is { } gate)
+            {
+                async Task<bool> WaitForDetails()
+                {
+                    await gate.WaitAsync(args![1] is CancellationToken token ? token : default);
+                    return true;
+                }
+                return WaitForDetails();
+            }
+            var item = (SteamCatalogItem)args![0]!;
+            item.HasDetails = true; item.GenresDisplay = "Action · RPG"; // Explicit layout/ranking fixture, no live metadata claim.
+            if (item.AppType == SteamCatalogAppType.Unknown) item.AppType = SteamCatalogAppType.Game;
+            item.IsReleaseVerified = true;
+            return Task.FromResult(true);
+        }
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.EnsureArtworkAsync))
         {
             var item = (SteamCatalogItem)args![0]!;

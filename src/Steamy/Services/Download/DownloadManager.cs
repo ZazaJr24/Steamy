@@ -22,6 +22,7 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
     private readonly ILoggingService _logging;
     private readonly INotificationService _notifications;
     private readonly IRyuuGameDownloadService? _downloaderSetup;
+    private readonly IDownloadedGameLibrary? _downloadedLibrary;
     private readonly DownloadOperationRegistry _operations = new();
 
     private sealed class InlineProgress<T> : IProgress<T>
@@ -41,7 +42,8 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
         IDownloadQueueStore queueStore,
         ILoggingService logging,
         INotificationService notifications,
-        IRyuuGameDownloadService? downloaderSetup = null)
+        IRyuuGameDownloadService? downloaderSetup = null,
+        IDownloadedGameLibrary? downloadedLibrary = null)
     {
         _store = store;
         _settingsService = settingsService;
@@ -51,6 +53,7 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
         _logging = logging;
         _notifications = notifications;
         _downloaderSetup = downloaderSetup;
+        _downloadedLibrary = downloadedLibrary;
     }
 
     public async Task<bool> StartAsync(DownloadJob job, CancellationToken cancellationToken = default)
@@ -402,6 +405,7 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
             : "DepotDownloader finished without errors";
         job.Finished = DateTime.Now;
         _logging.Add(LogLevel.Info, "DownloadManager", "Download completed.", job.AppId, job.Id);
+        if (_downloadedLibrary is not null) await _downloadedLibrary.RegisterAsync(job.AppId, job.GameName, job.TargetFolder, cancellationToken).ConfigureAwait(false);
         _notifications.Show("Download completed", $"{job.GameName} is ready.");
         return true;
     }
@@ -455,6 +459,7 @@ public sealed class DownloadManager : IDownloadManager, IDownloadOperationStatus
         if (!string.IsNullOrWhiteSpace(update.Downloaded)) job.Downloaded = update.Downloaded;
         if (!string.IsNullOrWhiteSpace(update.Total)) job.TotalSize = update.Total;
         job.Speed = update.Speed;
+        job.DiskSpeed = update.DiskBytesPerSecond is { } diskRate ? DownloadFormat.Speed(diskRate) : string.Empty;
         job.Eta = update.Eta;
         job.BytesPerSecond = update.BytesPerSecond;
         job.EtaSeconds = update.EtaSeconds;

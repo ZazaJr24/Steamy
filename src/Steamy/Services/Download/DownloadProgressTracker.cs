@@ -40,7 +40,7 @@ public static class ProcessWriteCounter
     };
 }
 
-/// <summary>Disk writes are used only to detect activity, never as transferred bytes.</summary>
+/// <summary>Process writes measure I/O activity; they never advance network transfer or content progress.</summary>
 public static class DownloadByteSource
 {
     public static Func<long?> For(Process process, string targetFolder) => ProcessWriteCounter.For(process);
@@ -60,11 +60,16 @@ public sealed class DownloadProgressTracker
     private long _lastTransferred, _lastWrites;
     private int _depotIndex;
     private string _pending = "";
+    private double _lastDiskSample;
+    private long? _lastDiskWrites;
+    private double? _diskRate;
     public DownloadProgressTracker(Func<long?> bytesWritten, Func<double>? clockSeconds = null)
     {
         _activityBytes = bytesWritten;
         var stopwatch = Stopwatch.StartNew();
         _clock = clockSeconds ?? (() => stopwatch.Elapsed.TotalSeconds);
+        _lastDiskWrites = _activityBytes();
+        _lastDiskSample = _clock();
     }
     public double SecondsSinceActivity
     {
@@ -105,6 +110,15 @@ public sealed class DownloadProgressTracker
         lock (_gate)
         {
             var raw = _pending; _pending = "";
+            var now = _clock();
+            var writes = _activityBytes();
+            if (writes is null) { _lastDiskWrites = null; _diskRate = null; _lastDiskSample = now; }
+            else if (_lastDiskWrites is null) { _lastDiskWrites = writes; _lastDiskSample = now; }
+            else if (now - _lastDiskSample >= .25)
+            {
+                _diskRate = Math.Max(0, writes.Value - _lastDiskWrites.Value) / (now - _lastDiskSample);
+                _lastDiskWrites = writes; _lastDiskSample = now;
+            }
             if (_telemetry is { } value)
             {
                 var rate = _clock() - _lastSample > 5 ? 0 : _rate;
@@ -131,13 +145,13 @@ public sealed class DownloadProgressTracker
                     value.Phase == "downloading" ? DownloadFormat.Speed(rate) : "", eta is { } seconds ? "~" + DownloadFormat.Duration(seconds) : "", raw,
                     Math.Max(_depotIndex, 1), Math.Max(_depots.Count, 1), rate, eta, (long)Math.Min(transferred, long.MaxValue - 1.0),
                     (long)Math.Min(totalContent, long.MaxValue - 1.0), transferTotal,
-                    (long)Math.Min(content, long.MaxValue - 1.0), (long)Math.Min(reused, long.MaxValue - 1.0), value.Phase);
+                    (long)Math.Min(content, long.MaxValue - 1.0), (long)Math.Min(reused, long.MaxValue - 1.0), value.Phase, _diskRate);
             }
             // No interpolation from time, folder growth or process writes. Multi-depot totals
             // are unknown until actual weights are available.
             return new(_depots.Count <= 1 ? _legacy?.Percent is { } percent && double.IsFinite(percent) ? Math.Clamp(percent, 0, 99.9) : null : null,
                 _legacy?.CurrentFile ?? "", _legacy?.Downloaded ?? "", _legacy?.Total ?? "",
-                _legacy?.Speed ?? "", _legacy?.Eta ?? "", raw, _depotIndex, _depots.Count);
+                _legacy?.Speed ?? "", _legacy?.Eta ?? "", raw, _depotIndex, _depots.Count, DiskBytesPerSecond: _diskRate);
         }
     }
 }

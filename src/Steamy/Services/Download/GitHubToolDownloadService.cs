@@ -2,6 +2,8 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using System.Security.Cryptography;
+using System.Collections.Concurrent;
 using SharpCompress.Archives;
 using SharpCompress.Common;
 
@@ -34,6 +36,7 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
     private readonly HttpClient _httpClient;
     private readonly string _baseCacheDir;
     private readonly bool _ownsHttpClient;
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> DownloadGates = new(StringComparer.OrdinalIgnoreCase);
 
     public GitHubToolDownloadService(HttpClient? httpClient = null, string? baseCacheDir = null)
     {
@@ -43,9 +46,7 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/0.1");
 
-        _baseCacheDir = baseCacheDir ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy",
+        _baseCacheDir = baseCacheDir ?? Path.Combine(Steamy.Storage.AppDataPaths.Root,
             "ToolCache");
     }
 
@@ -59,6 +60,8 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
 
     public async Task<ToolDownloadResult> DownloadLatestAsync(GitHubToolDefinition tool, CancellationToken cancellationToken = default)
     {
+        var gate = DownloadGates.GetOrAdd(Path.GetFullPath(Path.Combine(_baseCacheDir, tool.CacheSubfolder)), _ => new(1, 1));
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var cacheDir = Path.Combine(_baseCacheDir, tool.CacheSubfolder);
@@ -74,6 +77,9 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
                 return new ToolDownloadResult(false, $"No matching asset found in {release.TagName} for {tool.RepoName}.", GetCachedPath(tool), release.TagName);
 
             var assetName = asset.Name.ToLowerInvariant();
+            if (!Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out var uri) || uri.Scheme != "https"
+                || uri.Host != "github.com" || !uri.AbsolutePath.StartsWith($"/{tool.RepoOwner}/{tool.RepoName}/releases/download/", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Unexpected tool release URL.");
 
             if (assetName.EndsWith(".zip") || assetName.EndsWith(".7z"))
             {
@@ -81,13 +87,24 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
                 if (zipBytes is null)
                     return new ToolDownloadResult(false, "Download failed.", GetCachedPath(tool), release.TagName);
 
-                ExtractArchive(zipBytes, cacheDir);
-
-                var exePath = FindExecutableInCache(cacheDir, tool.TargetExecutableName);
-                if (exePath is null)
-                    return new ToolDownloadResult(false, $"{tool.TargetExecutableName} not found in the downloaded archive.", GetCachedPath(tool), release.TagName);
-
-                return new ToolDownloadResult(true, $"{tool.RepoName} {release.TagName} ready.", exePath, release.TagName);
+                VerifyDigest(zipBytes, asset.Digest);
+                var stage = Path.Combine(_baseCacheDir, tool.CacheSubfolder + ".preparing-" + Guid.NewGuid().ToString("N"));
+                var backup = stage + ".previous";
+                var committed = false;
+                try
+                {
+                    Directory.CreateDirectory(stage); ExtractArchive(zipBytes, stage);
+                    var stagedTarget = tool.TargetExecutableName.Equals("steamclient64.dll", StringComparison.OrdinalIgnoreCase)
+                        ? FullSteamClient.Find(stage) : FindExecutableInCache(stage, tool.TargetExecutableName);
+                    if (stagedTarget is null) throw new InvalidDataException($"{tool.TargetExecutableName} not found in the complete tool archive.");
+                    cancellationToken.ThrowIfCancellationRequested();
+                    RejectLinks(cacheDir);
+                    Directory.Move(cacheDir, backup);
+                    try { Directory.Move(stage, cacheDir); committed = true; }
+                    catch { Directory.Move(backup, cacheDir); throw; }
+                    return new ToolDownloadResult(true, $"{tool.RepoName} {release.TagName} ready.", GetCachedPath(tool), release.TagName);
+                }
+                finally { CleanStage(stage); if (committed) CleanStage(backup); }
             }
             else
             {
@@ -95,7 +112,15 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
                 if (bytes is null)
                     return new ToolDownloadResult(false, "Download failed.", GetCachedPath(tool), release.TagName);
 
-                await File.WriteAllBytesAsync(targetExe, bytes, cancellationToken).ConfigureAwait(false);
+                VerifyDigest(bytes, asset.Digest);
+                var temporary = targetExe + ".preparing-" + Guid.NewGuid().ToString("N");
+                try
+                {
+                    RejectLinks(targetExe);
+                    await File.WriteAllBytesAsync(temporary, bytes, cancellationToken).ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested(); File.Move(temporary, targetExe, true);
+                }
+                finally { if (File.Exists(temporary)) File.Delete(temporary); }
                 return new ToolDownloadResult(true, $"{tool.RepoName} {release.TagName} ready.", targetExe, release.TagName);
             }
         }
@@ -107,11 +132,14 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
         {
             return new ToolDownloadResult(false, $"Download failed: {ex.Message}", GetCachedPath(tool), null);
         }
+        finally { gate.Release(); }
     }
 
     private string ResolveCachedExe(GitHubToolDefinition tool)
     {
         var cacheDir = Path.Combine(_baseCacheDir, tool.CacheSubfolder);
+        if (tool.TargetExecutableName.Equals("steamclient64.dll", StringComparison.OrdinalIgnoreCase))
+            return FullSteamClient.Find(cacheDir) ?? Path.Combine(cacheDir, tool.TargetExecutableName);
         var direct = Path.Combine(cacheDir, tool.TargetExecutableName);
         if (File.Exists(direct)) return direct;
 
@@ -156,6 +184,8 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
             if (tool.AssetFilter is not null && tool.AssetFilter(asset.Name)) return asset;
         }
 
+        if (tool.AssetFilter is not null) return null;
+
         foreach (var asset in assets)
         {
             if (string.IsNullOrWhiteSpace(asset.Name)) continue;
@@ -171,34 +201,61 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
     {
         using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode) return null;
-        return await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+        const long maximum = 256L * 1024 * 1024;
+        if (response.Content.Headers.ContentLength > maximum) throw new InvalidDataException("Tool archive is too large.");
+        await using var input = await response.Content.ReadAsStreamAsync(ct);
+        using var bytes = new MemoryStream(); var buffer = new byte[81920]; int count;
+        while ((count = await input.ReadAsync(buffer, ct)) > 0)
+        { if (bytes.Length + count > maximum) throw new InvalidDataException("Tool archive is too large."); bytes.Write(buffer, 0, count); }
+        return bytes.ToArray();
+    }
+
+    private static void VerifyDigest(byte[] bytes, string? digest)
+    {
+        if (string.IsNullOrWhiteSpace(digest)) return;
+        if (!digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)
+            || !Convert.ToHexString(SHA256.HashData(bytes)).Equals(digest[7..], StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Tool release checksum failed.");
     }
 
     private static void ExtractArchive(byte[] archiveBytes, string destDir)
     {
-        try
-        {
+        var root = Path.GetFullPath(destDir) + Path.DirectorySeparatorChar;
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        long total = 0;
             using var stream = new MemoryStream(archiveBytes);
             using var archive = ArchiveFactory.OpenArchive(stream);
             foreach (var entry in archive.Entries)
             {
                 if (entry.IsDirectory) continue;
-                entry.WriteToDirectory(destDir, new ExtractionOptions
-                {
-                    ExtractFullPath = true,
-                    Overwrite = true
-                });
+                if (string.IsNullOrWhiteSpace(entry.Key) || entry.Key.Contains(':')) throw new InvalidDataException("Unsafe tool archive name.");
+                var path = Path.GetFullPath(Path.Combine(destDir, (entry.Key ?? "").Replace('/', Path.DirectorySeparatorChar)));
+                if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase) || entry.Size < 0 || (total += entry.Size) > 1024L * 1024 * 1024)
+                    throw new InvalidDataException("Unsafe tool archive entry.");
+                if (!names.Add(path)) throw new InvalidDataException("Duplicate tool archive entry.");
+                for (var parent = new DirectoryInfo(Path.GetDirectoryName(path)!); parent is not null; parent = parent.Parent)
+                    if (parent.Exists && parent.Attributes.HasFlag(FileAttributes.ReparsePoint)) throw new IOException("Tool cache contains a symbolic link.");
+                if (File.Exists(path) && File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint)) throw new IOException("Tool cache file is a symbolic link.");
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                entry.WriteToFile(path, new ExtractionOptions { Overwrite = true });
             }
-        }
-        catch
-        {
-            // Not a valid archive — might be a self-extracting exe, just save as-is
-        }
     }
 
     public void Dispose()
     {
         if (_ownsHttpClient) _httpClient.Dispose();
+    }
+
+    private void CleanStage(string directory)
+    {
+        var full = Path.GetFullPath(directory);
+        if (!full.StartsWith(Path.GetFullPath(_baseCacheDir) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new IOException("Invalid tool staging path.");
+        if (Directory.Exists(full)) { RejectLinks(full); Directory.Delete(full, true); }
+    }
+    private static void RejectLinks(string path)
+    {
+        for (var current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
+            if ((Directory.Exists(current) || File.Exists(current)) && File.GetAttributes(current).HasFlag(FileAttributes.ReparsePoint)) throw new IOException("Tool folder contains a symbolic link.");
     }
 
     private sealed record GhRelease(
@@ -207,5 +264,6 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
 
     private sealed record GhAsset(
         [property: JsonPropertyName("name")] string Name,
-        [property: JsonPropertyName("browser_download_url")] string BrowserDownloadUrl);
+        [property: JsonPropertyName("browser_download_url")] string BrowserDownloadUrl,
+        [property: JsonPropertyName("digest")] string? Digest);
 }

@@ -72,7 +72,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
         _settings = settings;
         _credentials = credentials;
 
-        _baseCacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools");
+        _baseCacheDir = Steamy.Storage.AppDataPaths.ToolsRoot;
 
         Directory.CreateDirectory(ColdLoaderCacheDir);
         Directory.CreateDirectory(ColdLoaderProxyCacheDir);
@@ -236,7 +236,9 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             SelectedLaunchConfig = LaunchConfigList[0];
     }
 
-    public bool HasDownloadError => string.IsNullOrWhiteSpace(_toolExecutablePath) && !_isBusy;
+    private bool _dummyPackage;
+    public bool DummyPackage { get => _dummyPackage; set { if (SetProperty(ref _dummyPackage, value)) OnPropertyChanged(nameof(HasDownloadError)); } }
+    public bool HasDownloadError => !DummyPackage && string.IsNullOrWhiteSpace(_toolExecutablePath) && !_isBusy;
 
     public bool CanGenerate => !IsBusy && _resolvedAppId > 0;
 
@@ -419,6 +421,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
     {
         if (_resolvedAppId <= 0) return;
         var appId = _resolvedAppId;
+        var dummy = DummyPackage;
         Suggestions.Clear();
 
         _cts?.Cancel();
@@ -429,6 +432,8 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
 
         try
         {
+            if (!dummy)
+            {
             Status = "Generating activation token…";
             await EnsureToolDownloadedAsync();
             if (string.IsNullOrWhiteSpace(_toolExecutablePath) || !File.Exists(_toolExecutablePath))
@@ -451,6 +456,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
 
             _rawSteamId = parsed.Value.steamId;
             _rawTicket = parsed.Value.ticket;
+            }
 
             Status = "Fetching DLC list…";
             List<(int AppId, string Name)> dlcs;
@@ -484,7 +490,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             }
 
             Status = "Building package…";
-            var tempDir = Path.Combine(Path.GetTempPath(), $"RT_Denuvo_{appId}");
+            var tempDir = Path.Combine(Steamy.Storage.AppDataPaths.CreateTemporaryRoot(), $"RT_Denuvo_{appId}");
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
             Directory.CreateDirectory(tempDir);
 
@@ -513,8 +519,12 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             var userIni = new StringBuilder();
             userIni.AppendLine("[user::general]");
             userIni.AppendLine("account_name=Player");
-            userIni.AppendLine($"account_steamid={_rawSteamId}");
-            userIni.AppendLine($"ticket={_rawTicket}");
+            if (!dummy)
+            {
+                userIni.AppendLine($"account_steamid={_rawSteamId}");
+                userIni.AppendLine($"ticket={_rawTicket}");
+            }
+            else File.WriteAllText(Path.Combine(tempDir, "DUMMY-PACKAGE.txt"), "This package contains no activation token and does not activate Denuvo.\r\n", Encoding.UTF8);
             userIni.AppendLine("language=english");
             File.WriteAllText(Path.Combine(ssDir, "configs.user.ini"),
                 userIni.ToString(), Encoding.UTF8);
@@ -594,12 +604,16 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
 
             Status = "Creating .zip…";
             var desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            var zipName = $"Denuvo_App{appId}.zip";
+            var zipName = dummy ? $"Denuvo_Dummy_App{appId}.zip" : $"Denuvo_App{appId}.zip";
             var zipPath = Path.Combine(desktop, zipName);
 
-            if (File.Exists(zipPath)) File.Delete(zipPath);
-            ZipFile.CreateFromDirectory(tempDir, zipPath);
-            Directory.Delete(tempDir, true);
+            await Task.Run(() =>
+            {
+                _cts.Token.ThrowIfCancellationRequested();
+                if (File.Exists(zipPath)) File.Delete(zipPath);
+                ZipFile.CreateFromDirectory(tempDir, zipPath);
+                Directory.Delete(tempDir, true);
+            }, _cts.Token);
 
             var dlcInfo = dlcs.Count > 0 ? $" ({dlcs.Count} DLCs)" : "";
             Status = $"Done! {zipName} saved to Desktop.{dlcInfo}";
@@ -887,9 +901,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
     private async Task<bool> EnsureGbeSteamClientAsync()
     {
         var gbeDir = GbeCacheDir;
-        var fallbackGbe = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy", "gbe_fork", "current");
+        var fallbackGbe = Path.Combine(Steamy.Storage.AppDataPaths.Root, "gbe_fork", "current");
 
         // Try the Goldberg page's install first
         if ((!Directory.Exists(gbeDir) || !HasSteamClientDlls(gbeDir)) && Directory.Exists(fallbackGbe) && HasSteamClientDlls(fallbackGbe))
@@ -897,7 +909,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             try
             {
                 Directory.CreateDirectory(gbeDir);
-                foreach (var f in Directory.EnumerateFiles(fallbackGbe, "*", SearchOption.AllDirectories))
+                foreach (var f in Directory.EnumerateFiles(fallbackGbe, "*", SearchOption.AllDirectories).OrderBy(f => new FileInfo(f).Length))
                 {
                     var fname = Path.GetFileName(f);
                     if (!fname.Contains("steamclient", StringComparison.OrdinalIgnoreCase) &&
@@ -982,7 +994,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
             using var arc = ArchiveFactory.OpenArchive(ms);
             Directory.CreateDirectory(gbeDir);
 
-            foreach (var entry in arc.Entries)
+            foreach (var entry in arc.Entries.OrderBy(entry => entry.Size))
             {
                 if (entry.IsDirectory) continue;
                 var entryName = Path.GetFileName(entry.Key ?? "");
@@ -994,7 +1006,7 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
                     var isExperimental = entryPath.Contains("experimental", StringComparison.OrdinalIgnoreCase);
                     var destPath = Path.Combine(gbeDir, entryName);
 
-                    if (!File.Exists(destPath) || isExperimental)
+                    if (!File.Exists(destPath) || entry.Size > new FileInfo(destPath).Length)
                         entry.WriteToFile(destPath, new ExtractionOptions { Overwrite = true });
                 }
             }
@@ -1019,12 +1031,18 @@ public sealed class DenuvoActivationViewModel : ViewModelBase
     private static bool HasSteamClientDlls(string dir)
     {
         if (!Directory.Exists(dir)) return false;
-        return Directory.EnumerateFiles(dir, "steamclient*.dll", SearchOption.AllDirectories).Any();
+        return FullSteamClient.Find(dir) is not null;
     }
 
     private static void CopySingleDll(string cacheDir, string destDir, string dllName)
     {
         if (!Directory.Exists(cacheDir)) return;
+        if (dllName.Equals("steamclient64.dll", StringComparison.OrdinalIgnoreCase))
+        {
+            var fullClient = FullSteamClient.Find(cacheDir) ?? throw new InvalidDataException("The full x64 steamclient64.dll is missing. A loader DLL cannot be used here.");
+            File.Copy(fullClient, Path.Combine(destDir, dllName), true);
+            return;
+        }
         foreach (var f in Directory.EnumerateFiles(cacheDir, "*.dll", SearchOption.AllDirectories))
         {
             if (string.Equals(Path.GetFileName(f), dllName, StringComparison.OrdinalIgnoreCase))

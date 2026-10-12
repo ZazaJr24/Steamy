@@ -52,8 +52,16 @@ public sealed class BetterSteamToolsService(ISettingsService settings, IManifest
             using var ownedHttp = httpClient is null ? new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromMinutes(2) } : null;
             var http = httpClient ?? ownedHttp!;
             http.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/" + BuildStamp.Version);
+            Dictionary<string, byte[]> files;
+            string tag;
+            var prepared = ReadPreparedBackend();
+            if (prepared is not null)
+            { files = prepared; tag = "v1.0.4"; progress?.Report("Using the verified BetterSteamTools files prepared by Setup…"); }
+            else
+            {
             progress?.Report("Checking the official BetterSteamTools release…");
-            var (tag, digest, url) = await ResolveReleaseAsync(http, progress, token);
+            var release = await ResolveReleaseAsync(http, progress, token);
+            tag = release.Tag; var digest = release.Digest; var url = release.Url;
             progress?.Report("Downloading and verifying BetterSteamTools " + tag + "…");
             using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token);
             response.EnsureSuccessStatusCode();
@@ -68,7 +76,8 @@ public sealed class BetterSteamToolsService(ISettingsService settings, IManifest
                 if (bytes.Length + count > maximum) throw new InvalidDataException("The backend archive is too large.");
                 bytes.Write(buffer, 0, count);
             }
-            var files = SteamToolsBackend.ReadArchive(bytes.ToArray(), digest);
+            files = SteamToolsBackend.ReadArchive(bytes.ToArray(), digest);
+            }
             files[SteamToolsBackend.ReceiptPath] = SteamToolsBackend.CreateReceipt(tag, files);
             AddConfiguration(steamRoot, files);
             if ((isSteamRunning ?? SteamIsRunning)()) throw new IOException("Steam started during preparation. Close it and try again.");
@@ -84,6 +93,25 @@ public sealed class BetterSteamToolsService(ISettingsService settings, IManifest
         finally { _gate.Release(); }
     }
 
+    private static Dictionary<string, byte[]>? ReadPreparedBackend()
+    {
+        var root = Path.Combine(Steamy.Storage.AppDataPaths.Root, "ToolCache", "BetterSteamTools");
+        if (!Directory.Exists(root)) return null;
+        try
+        {
+            var files = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+            foreach (var expected in SteamToolsBackend.Official104)
+            {
+                var path = Directory.EnumerateFiles(root, expected.Key, SearchOption.AllDirectories).FirstOrDefault();
+                if (path is null || new FileInfo(path).Length > 64 * 1024 * 1024) return null;
+                var bytes = File.ReadAllBytes(path);
+                if (!Convert.ToHexString(SHA256.HashData(bytes)).Equals(expected.Value, StringComparison.OrdinalIgnoreCase)) return null;
+                files[expected.Key] = bytes;
+            }
+            return files;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
+    }
     private static async Task<(string Tag, string Digest, string Url)> ResolveReleaseAsync(HttpClient http, IProgress<string>? progress, CancellationToken token)
     {
         try
@@ -114,13 +142,19 @@ public sealed class BetterSteamToolsService(ISettingsService settings, IManifest
         }
     }
 
-    public async Task<BetterSteamToolsResult> ImportAsync(string steamRoot, IReadOnlyList<string> paths, int? appId = null, CancellationToken token = default)
+    public Task<BetterSteamToolsResult> ImportAsync(string steamRoot, IReadOnlyList<string> paths, int? appId = null, CancellationToken token = default) =>
+        ImportCoreAsync(steamRoot, paths, appId, token);
+
+    private async Task<BetterSteamToolsResult> ImportCoreAsync(string steamRoot, IReadOnlyList<string> paths, int? appId,
+        CancellationToken token, string? providerScript = null)
     {
         await _gate.WaitAsync(token);
         try
         {
             if (!Detect(steamRoot).BackendInstalled) throw new IOException("Install BetterSteamTools before adding game metadata.");
-            var plan = await Task.Run(() => SteamToolsMetadata.ReadAsync(paths, appId, token), token);
+            var plan = await Task.Run(() => providerScript is not null && appId is { } requested
+                ? SteamClientPackage.ReadAsync(requested, providerScript, paths.Where(path => Path.GetExtension(path).Equals(".manifest", StringComparison.OrdinalIgnoreCase)).ToArray(), token)
+                : SteamToolsMetadata.ReadAsync(paths, appId, token), token);
             var files = new Dictionary<string, byte[]>(plan.Files, StringComparer.OrdinalIgnoreCase);
             AddConfiguration(steamRoot, files);
             await Task.Run(() => SteamToolsFiles.Apply(steamRoot, files, token: token), token);
@@ -146,9 +180,9 @@ public sealed class BetterSteamToolsService(ISettingsService settings, IManifest
             progress?.Report("Checking " + candidate.Label + "…");
             var availability = await sources.CheckAvailabilityAsync(candidate.Source, appId, token);
             if (availability.Certain && !availability.Available) { errors.Add(candidate.Label + ": " + availability.Message); continue; }
-            var download = await sources.DownloadManifestsAsync(candidate.Source, appId, progress, token);
+            var download = await sources.DownloadSteamClientPackageAsync(candidate.Source, appId, progress, token);
             if (!download.Succeeded || string.IsNullOrWhiteSpace(download.LuaContent)) { errors.Add(candidate.Label + ": " + download.Message); continue; }
-            var owned = Path.Combine(Path.GetTempPath(), "Steamy-bst-source-" + Guid.NewGuid().ToString("N"));
+            var owned = Path.Combine(Steamy.Storage.AppDataPaths.CreateTemporaryRoot(), "Steamy-bst-source-" + Guid.NewGuid().ToString("N"));
             try
             {
                 Directory.CreateDirectory(owned);
@@ -157,7 +191,7 @@ public sealed class BetterSteamToolsService(ISettingsService settings, IManifest
                 var files = new List<string> { lua };
                 if (!string.IsNullOrWhiteSpace(download.WorkDirectory) && Directory.Exists(download.WorkDirectory))
                     files.AddRange(Directory.EnumerateFiles(download.WorkDirectory, "*.manifest", SearchOption.AllDirectories));
-                var result = await ImportAsync(steamRoot, files, appId, token);
+                var result = await ImportCoreAsync(steamRoot, files, appId, token, download.IsSteamClientScript ? download.LuaContent : null);
                 if (result.Succeeded) return result with { Message = "From " + candidate.Label + ": " + result.Message };
                 errors.Add(candidate.Label + ": " + result.Message);
             }

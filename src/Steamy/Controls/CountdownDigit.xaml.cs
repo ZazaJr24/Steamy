@@ -27,9 +27,10 @@ public partial class CountdownDigit : UserControl
         digit.Number.Text = (string)args.NewValue;
         digit.Reset();
         if (!digit.IsLoaded || !MotionPreferences.AnimationsEnabled) return;
-        var duration = TimeSpan.FromMilliseconds(180);
-        digit.DigitMotion.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(5, 0, duration) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop });
-        digit.Number.BeginAnimation(OpacityProperty, new DoubleAnimation(0.45, 1, duration) { FillBehavior = FillBehavior.Stop });
+        var duration = TimeSpan.FromMilliseconds(110);
+        // Keep glyphs on the pixel grid while digits change, including fractional DPI scales.
+        digit.Number.BeginAnimation(OpacityProperty, new DoubleAnimation(0.85, 1, duration) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop });
+
     }
     private void PreferencesChanged(object? sender, EventArgs args) { if (!MotionPreferences.AnimationsEnabled) Reset(); }
     private void Reset()

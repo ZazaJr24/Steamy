@@ -87,6 +87,8 @@ public sealed class SteamCatalogItem : UiObservableObject
     };
 
     public string AppLabel => $"App {AppId}";
+    public string ArtworkMonogram => string.Concat(Name.Split([' ', ':', '-', '™', '®'], StringSplitOptions.RemoveEmptyEntries)
+        .Where(word => char.IsLetterOrDigit(word[0])).Take(2).Select(word => char.ToUpperInvariant(word[0])));
     public string InstallStateLabel => IsInstalled ? "Installed locally" : "Public catalog";
     public bool IsInstalled
     {
@@ -127,10 +129,14 @@ public sealed class SteamCatalogItem : UiObservableObject
         set => SetProperty(ref _priceLabel, value);
     }
 
+    private string _recommendationLabel = "";
+    public string RecommendationLabel { get => _recommendationLabel; set => SetProperty(ref _recommendationLabel, value); }
+    public string GenreLabel => string.IsNullOrWhiteSpace(GenresDisplay) || GenresDisplay.Contains("unavailable", StringComparison.OrdinalIgnoreCase) ? (IsInstalled ? "Installed on this PC" : TypeLabel) : GenresDisplay;
+
     public string GenresDisplay
     {
         get => _genresDisplay;
-        set => SetProperty(ref _genresDisplay, value);
+        set { if (SetProperty(ref _genresDisplay, value)) OnPropertyChanged(nameof(GenreLabel)); }
     }
 
     public string SystemRequirements
@@ -275,7 +281,12 @@ public sealed record SteamCatalogDetails(
     IReadOnlyList<SteamCatalogScreenshotInfo> Screenshots,
     string SystemRequirements,
     string StoreUrl,
-    bool? ComingSoon = null);
+    bool? ComingSoon = null)
+{
+    public string DetailedDescription { get; init; } = "";
+    public string Languages { get; init; } = "";
+    public string Features { get; init; } = "";
+}
 
 public static class SteamCatalogQuery
 {
@@ -285,7 +296,8 @@ public static class SteamCatalogQuery
         string? typeFilter,
         string? sortOption,
         LibraryNsfwScope nsfwScope = LibraryNsfwScope.Hide,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool includeUpcoming = false)
     {
         ArgumentNullException.ThrowIfNull(items);
 
@@ -294,7 +306,7 @@ public static class SteamCatalogQuery
         IEnumerable<SteamCatalogItem> query = items.Where(item =>
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return !item.IsUpcoming && (search.Length == 0 || MatchesSearch(item.Name, item.AppId, search, words));
+            return (includeUpcoming || !item.IsUpcoming) && (search.Length == 0 || MatchesSearch(item.Name, item.AppId, search, words));
         });
 
         if (nsfwScope == LibraryNsfwScope.Hide)

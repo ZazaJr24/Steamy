@@ -1,14 +1,16 @@
 <UserControl x:Class="Steamy.Controls.CountdownDigit"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Width="76" Height="42" Foreground="#F0F1F7" Focusable="False">
+             Width="50" Height="52" Foreground="{DynamicResource HeroForegroundBrush}" Focusable="False"
+             UseLayoutRounding="True" TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="Grayscale"
+             TextOptions.TextHintingMode="Fixed" RenderOptions.ClearTypeHint="Auto">
   <Border CornerRadius="0" BorderThickness="0" Background="Transparent" ClipToBounds="True">
-    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
-      <TextBlock x:Name="Number" Text="00" FontFamily="Segoe UI" FontSize="21" FontWeight="SemiBold"
+    <StackPanel Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Center">
+      <TextBlock x:Name="Number" Text="00" FontSize="24" FontWeight="SemiBold"
                  Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=UserControl}}" TextAlignment="Center" VerticalAlignment="Center">
         <TextBlock.RenderTransform><TranslateTransform x:Name="DigitMotion" /></TextBlock.RenderTransform>
       </TextBlock>
-      <TextBlock x:Name="Unit" FontSize="9" Foreground="#ADAFC1" TextAlignment="Center" Margin="6,0,0,0" VerticalAlignment="Center" />
+      <TextBlock x:Name="Unit" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource HeroSecondaryForegroundBrush}" TextAlignment="Center" Margin="0,5,0,0" VerticalAlignment="Center" />
     </StackPanel>
   </Border>
 </UserControl>

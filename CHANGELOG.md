@@ -3,10 +3,113 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.7.0
+
+Steamy 0.7.0 brings the small all-in-one download installer, a more consistent artwork-driven interface, the original-script DepotBox import and a large set of responsiveness and state fixes. The app, playtime tracker, installer metadata and release packages all use version 0.7.0.
+
+### Small setup and portable distribution
+
+- Make `Steamy-v0.7.0-Setup.exe` the small download installer again: approximately **1.84 MiB**, without a large embedded app archive.
+- Download the matching 0.7.0 app package, verify its size and SHA-256, and install missing Microsoft .NET Desktop and WebView2 components automatically.
+- Prepare **nine supported tool components** during setup: BetterSteamTools, Steamless, CreamInstaller, XStoreUnlocker, UC Online, ColdLoader, ColdLoaderProxy, Goldberg and the activation generator. DepotDownloaderMod is supplied with the app package.
+- Reuse verified tool caches when setup is retried. Stop preparation with a useful error when a required package cannot be obtained; do not report incomplete preparation as ready.
+- Download tool files without running the downloaded tools during preparation. Sources that only support manual browsing remain manual.
+- Request the installer's own release version and reject a different release, so a 0.7.0 setup cannot silently install an older app.
+- Preserve the selectable installation folder, Start menu shortcut, optional desktop shortcut, cancellation and previous-installation backup behavior.
+- Ship `Steamy-v0.7.0.zip` as the complete portable package with private .NET 9.0.20 runtimes for both the app and playtime tracker.
+- Preserve the app's WPF `WindowsBase.dll` when adding the tracker to the portable folder.
+- Keep the animated native setup, vector branding, embedded Google Sans fonts, display text formatting and Windows motion preferences.
+- Retain full embedded setup as an optional packaging variant rather than making the main Setup EXE large.
+
+### Games, game details and artwork ambient
+
+- Keep every catalog card opening the game details page. The Install action then asks whether to download in Steamy or install through the Steam client.
+- Guide direct Steamy installation through method, source, depot/files and location steps. Steam-client installation keeps its own source and client-folder steps on the same game page.
+- Show large portrait covers with readable title fades and remove the redundant “Game” badge.
+- Carry colors sampled from game artwork continuously through the window background and library header. Use the same window coordinates to prevent a horizontal seam beneath navigation.
+- Strengthen the artwork-colored glow above the grid and around each card. The ambient is present before hovering and has enough space to fade at the first row.
+- Move the first library row **26 pixels higher** in the checked layout and remove blank spacing from hidden search hints.
+- Keep search hints, suggestions and loading indicators readable without reserving their height when hidden.
+- Preserve game descriptions, achievements, notes, launch options, playtime, last-played information, installation folder actions and Steam/community links.
+- Show a gray **Downloading** action with a blue progress line while the selected game is downloading, and update its state as the queue changes.
+- Prefer the active download over a queued duplicate for the same game; react to priority and queue-position changes.
+- Refresh game details when the library replaces its immutable game record, including install state, current folder and Play availability.
+- Keep the shared compact glass navigation, search, settings and download controls, with synchronized download status.
+
+### Cover cache and responsiveness
+
+- Give cached artwork its own bounded loading queue, separate from slow network artwork requests.
+- Load a cached cover even while four CDN requests are blocked, and try existing fallback cover files before probing additional URLs.
+- Reuse decoded frozen images and disk artwork caches rather than waiting for a new image download on every visit.
+- Correct the artwork result flag: a missing cover is a failure, and an explicitly requested header must also be present before success is reported.
+- Keep card rendering virtualized and retain the soft glow without introducing a live blur or window capture for every card.
+
+### Downloads and navigation scrolling
+
+- Fix the UC Online page's navigation embedding so expanded Settings and Backups can scroll down to the restore action.
+- Apply the same explicit page-scroll ownership to Downloads; verify that long download histories remain scrollable inside the real navigation host.
+- Let the library glow fade within its padded scroll viewport instead of cutting it at the inner presenter edge.
+- Retain pause, resume, cancellation, retry, repair, priority, filtering, queue and history actions.
+- Keep existing files available for resume/repair and preserve explicit status messages when depot selections need attention.
+- Repair corrupted German characters in download menus, search placeholders, separators and the close button.
+
+### DepotBox and Steam-client import
+
+- **Preserve DepotBox's original Lua for “Install with Steam”.** Steamy transports the provider script without interpreting its Lua statements or rewriting it into a smaller metadata script.
+- Support original-script ZIP packages, Lua attachments served as `application/octet-stream`, and the provider's Lua-only fallback.
+- Import the requested app's script into the configured Steam Lua folder and accompanying manifests into `depotcache` using the existing staged write and backup transaction.
+- Keep the direct **“Download in Steamy”** path separate: it still parses the depot IDs, keys and manifest metadata needed by DepotDownloader.
+- Retain HTTP/API-key error handling, bounded UTF-8 content, archive path and filename checks, manifest validation and isolated staging directories.
+- Do not install HTML verification pages, corrupt archives or ambiguous Lua filenames as game scripts. Steamy itself does not execute the transported Lua.
+- Add regression coverage for helper/wrapper Lua, unchanged script bytes, ZIP and Lua responses, endpoint fallback, invalid responses and unchanged direct-download validation.
+
+### UC Online
+
+- Integrate game-folder inspection, executable selection, game/network App IDs and the upstream backend settings in one tool page.
+- Retain review-before-apply, encrypted saved backend settings, backup selection and restoration of original files.
+- Accept valid uppercase `.EXE` filenames while preserving PE and architecture validation.
+- Validate App IDs and required backend settings before downloading the tool package.
+- Move cache lookup, planner work, executable checks, backup enumeration and restore hashing away from the UI thread.
+- Remove synchronous directory-existence checks from command eligibility while typing a game path.
+- Reset the previous game's selected match, App IDs, settings and status when changing folders; allow the same game match to be selected again.
+- Propagate cancellation during Steam lookup and avoid an unconditional claim that files were rolled back.
+- Finish preference and backup bookkeeping after a successful apply commit even if cancellation arrives late.
+- Verify every stored original backup before changing any game files during restore, preventing a damaged later backup from causing a partial restoration.
+
+### Tool pages and inherited hotfixes
+
+- Keep Steamless, activation and UC Online pages on the shared glass surfaces and compact tool layouts.
+- Move **“Without token (dummy)”** into activation Settings as a compact switch, removing the separate large dummy-package card above game search. This mode prepares files only and does not activate Denuvo.
+- Move ZIP compression and temporary-package cleanup away from the activation page's UI thread.
+- Select and validate the full x64 `steamclient64.dll` rather than the small loader when preparing the relevant component.
+- Preserve the existing 0.6.4.7 Ryuu authentication fixes, background GreenLuma download discovery and current project/third-party license files.
+- Keep Hypervisor's planned feature marked **“Coming in version 0.8.0.”**
+
+### Verification
+
+- Add and run isolated service and WPF regression tests for DepotBox transport, cover-cache waits, download selection, game-record refresh, UC validation/cancellation/restore and real navigation-host scrolling.
+- Exercise setup tool preparation and retry cache reuse with controlled transport fixtures; no downloaded tools are executed by these tests.
+- Verify release versions, archive hashes, extraction bounds, rejection of another app version, portable WPF runtime preservation and installer size.
+- Live provider credentials, real multiplayer and end-to-end Microsoft runtime installation remain separate from the isolated regression tests; this release does not claim every possible provider/game combination is tested.
+
 ## 0.6.4.5
 
-- Accept `addtoken` access-token metadata and positive `~= nil` / `type(...) == "function"` compatibility guards across provider and local Lua imports. Preserve exact 64-bit values and continue rejecting executable Lua.
-- Give API/auth key fields a visible theme-aware background, border, caret and focus state in Settings and setup.
+- Make the shell download shortcut smaller and rounder with a matching glass surface, a 160 ms hover lift/scale, a soft highlight and a short press animation. Preserve the separate progress line and reduced-motion preferences.
+- Keep the Steamy menu and centered top navigation visible on Downloads. Place the live progress line below the shell's game icon and use larger download/pause icons.
+- Simplify the game grid to larger 2:3 covers with separate titles/genres, underlined library tabs and blue hover/focus outlines; remove nested tile frames.
+- Rebuild Downloads in the Steam Deck layout: a full-width artwork banner and official logo, blue network bars with a green measured average, session peak and write-I/O metrics, independent blue transfer and green content progress, landscape queue rows and a fixed footer.
+- Add keyboard and XInput download navigation, a focused options/recovery panel, state-aware queue actions and virtualized grouped history. Retain a bounded network history when leaving Downloads; unknown totals remain unknown.
+- Reduce settings frames and use understated install step indicators. Use wide drive rows with free space aligned right and a green final install action.
+- Add a live game download shortcut to the right of the shell, independent of page filters. Use clearer glass surfaces, a stationary Steamy gradient and settings categories in a keyboard-accessible sidebar.
+- Ask for DepotDownloader or BetterSteamTools before installation. Guide direct downloads through source, depot versions and drive/folder selection; guide Steam metadata through its verified backend and client folder.
+- Redesign Games with spacious covers, separate readable titles, library tabs and a fixed pager. Use native pixel scrolling and create controls only for visible rows.
+- Open every catalog game in the Big Picture detail page, with artwork, game information and a green Install button leading to the DepotDownloader source and folder choices.
+- Shorten first-run setup to four steps with installed-game discovery first and optional advanced download preferences. Refresh the once-per-version explanation.
+- Use shared vector branding, ClearType/display text formatting and high-quality artwork scaling throughout the main shell.
+- Add a native WPF animated download installer under 2 MB, with fluid Steamy light fields and embedded Google Sans fonts. Download and verify the app, install Microsoft .NET Desktop and WebView2 only when missing, and preserve the previous application on updates.
+- Include the verified DepotDownloader fork in app packages. Ship a complete portable ZIP with private .NET runtimes for both Steamy and its playtime tracker.
+- Preserve the app's WPF runtime when packaging the tracker, fixing a crash before the portable app opens.
+- Keep legacy update metadata compatible and publish separate verified installer payload metadata.
 
 ## 0.6.4.4
 

@@ -3,7 +3,12 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:pages="clr-namespace:Steamy.Pages"
+                 xmlns:controls="clr-namespace:Steamy.Controls"
                  xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+                 FontFamily="{DynamicResource SteamyFontFamily}"
+                 UseLayoutRounding="True" SnapsToDevicePixels="True"
+                 TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="Auto"
+                 RenderOptions.ClearTypeHint="Auto" RenderOptions.BitmapScalingMode="HighQuality"
                  Title="Steamy"
                  Height="900"
                  Width="1440"
@@ -22,6 +27,41 @@
                         CornerRadius="0" UseAeroCaptionButtons="False" />
   </shell:WindowChrome.WindowChrome>
   <ui:FluentWindow.Resources>
+    <BooleanToVisibilityConverter x:Key="ShellBoolVis" />
+    <Style x:Key="ShellPillButton" TargetType="Button">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /><Setter Property="Background" Value="Transparent" />
+      <Setter Property="FontSize" Value="12" /><Setter Property="Padding" Value="8,5" /><Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}" />
+      <Setter Property="controls:CardMotion.IsEnabled" Value="True" />
+      <Setter Property="controls:CardMotion.HoverScale" Value="1.075" />
+      <Setter Property="controls:CardMotion.HoverLift" Value="-0.4" />
+      <Setter Property="controls:CardMotion.HoverDuration" Value="150" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Grid Background="Transparent">
+          <Grid x:Name="MotionSurface">
+            <Border x:Name="Chrome" CornerRadius="15" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <Border CornerRadius="15" Background="#0DFFFFFF" Opacity="0" IsHitTestVisible="False" controls:DownloadHoverGlow.IsEnabled="True" />
+          </Grid>
+        </Grid>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="ToolMenuButton" TargetType="Button" BasedOn="{StaticResource ShellPillButton}">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="14,12" />
+      <Setter Property="controls:CardMotion.IsEnabled" Value="False" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="Chrome" CornerRadius="14" Padding="{TemplateBinding Padding}" Background="#08FFFFFF"><ContentPresenter HorizontalAlignment="Stretch" /></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#22FFFFFF" /></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#22FFFFFF" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="ShellDownloadGlassButton" TargetType="Button" BasedOn="{StaticResource GalleryCardButton}">
+      <Setter Property="controls:CardMotion.IsEnabled" Value="True" />
+      <Setter Property="controls:CardMotion.HoverScale" Value="1.055" />
+      <Setter Property="controls:CardMotion.HoverLift" Value="-1.5" />
+      <Setter Property="controls:CardMotion.HoverDuration" Value="160" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Grid Background="Transparent"><Grid x:Name="MotionSurface"><ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch" /></Grid></Grid>
+        <ControlTemplate.Triggers><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55" /></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
     <Style TargetType="ui:NavigationViewContentPresenter"
            BasedOn="{StaticResource {x:Type ui:NavigationViewContentPresenter}}">
       <Setter Property="BorderBrush" Value="Transparent" />
@@ -30,9 +70,11 @@
     </Style>
     <Style TargetType="ui:NavigationViewItem" BasedOn="{StaticResource {x:Type ui:NavigationViewItem}}">
       <Setter Property="Border.CornerRadius" Value="12" />
+      <Setter Property="MinHeight" Value="40" />
+      <Setter Property="FontSize" Value="13" />
       <Style.Triggers>
         <Trigger Property="IsActive" Value="True">
-          <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+          <Setter Property="Foreground" Value="{DynamicResource SidebarSelectedForegroundBrush}" />
           <Setter Property="FontWeight" Value="SemiBold" />
         </Trigger>
       </Style.Triggers>
@@ -44,42 +86,45 @@
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
 
-    <ui:TitleBar Grid.Row="0"
-                 Title="Steamy"
+    <ui:TitleBar x:Name="WindowTitleBar" Grid.Row="0" Panel.ZIndex="5" Width="180" HorizontalAlignment="Right"
+                 shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                 Title=""
                  Height="34"
                  ShowMinimize="True" ShowMaximize="True" ShowClose="True" CanMaximize="True"
-                 Icon="{ui:ImageIcon '/Steamy;component/Resources/Brand/steamy-256.png'}"
-                 Background="{DynamicResource AppBackgroundBrush}"
+                 Background="Transparent"
                  Foreground="{DynamicResource TextSecondaryBrush}"
+                 ButtonsForeground="{Binding Foreground, RelativeSource={RelativeSource Self}}"
                  BorderBrush="Transparent" BorderThickness="0" />
 
-    <Grid Grid.Row="1">
+    <Grid x:Name="WorkspaceLayer" Grid.RowSpan="2">
+        <controls:ShellBackdropView x:Name="WorkspaceBackdrop" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}" FadeColor="{DynamicResource WorkspaceColor}" />
         <ui:NavigationView x:Name="RootNavigation"
                         PaneDisplayMode="Left"
-                        OpenPaneLength="196"
-                        CompactPaneLength="52"
+                        Template="{StaticResource GlassNavigationTemplate}"
+                        OpenPaneLength="232"
+                        CompactPaneLength="56"
                         IsBackButtonVisible="Collapsed"
                         IsPaneToggleVisible="True"
-                        IsTopSeparatorVisible="True"
+                        IsTopSeparatorVisible="False"
                         IsFooterSeparatorVisible="False"
                         PaneTitle=""
                         Transition="None"
-                        IsPaneOpen="True"
+                        IsPaneOpen="False" Tag="Home"
                         BorderBrush="Transparent" BorderThickness="0"
-                        Background="{DynamicResource SidebarBackgroundBrush}">
+                        Background="Transparent">
         <ui:NavigationView.Header>
           <Border Height="0" Visibility="Collapsed" />
         </ui:NavigationView.Header>
         <ui:NavigationView.PaneHeader>
-          <Grid Margin="14,10,14,16">
+          <Grid Margin="16,0,0,0">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Image Source="/Steamy;component/Resources/Brand/steamy-256.png" Width="36" Height="36"
+            <Image Source="{StaticResource SteamyBrandImage}" Width="34" Height="34"
                    RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center" />
             <StackPanel Grid.Column="1" Margin="11,0,0,0" VerticalAlignment="Center">
-              <TextBlock Text="Steamy" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="15" FontWeight="Bold" />
+              <TextBlock Text="Steamy" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="18" FontWeight="SemiBold" />
               <TextBlock Text="Steam toolkit" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,1,0,0" />
             </StackPanel>
           </Grid>
@@ -97,15 +142,6 @@
           <ui:NavigationViewItem Content="Games"
                                  Icon="{ui:SymbolIcon Games24}"
                                  TargetPageType="{x:Type pages:LibraryPage}" />
-          <ui:NavigationViewItemSeparator Height="1" Margin="16,8"
-                                           Background="{DynamicResource SidebarSeparatorBrush}" BorderThickness="0"
-                                           SnapsToDevicePixels="True">
-            <ui:NavigationViewItemSeparator.Template>
-              <ControlTemplate TargetType="ui:NavigationViewItemSeparator">
-                <Border Height="1" Background="{TemplateBinding Background}" SnapsToDevicePixels="True" />
-              </ControlTemplate>
-            </ui:NavigationViewItemSeparator.Template>
-          </ui:NavigationViewItemSeparator>
           <ui:NavigationViewItem Content="Tools" Icon="{ui:SymbolIcon Wrench24}">
             <ui:NavigationViewItem.MenuItems>
               <ui:NavigationViewItem Content="BetterSteamTools" Icon="{ui:SymbolIcon Box24}" TargetPageType="{x:Type pages:BetterSteamToolsPage}" />
@@ -149,8 +185,68 @@
       </ui:NavigationView>
     </Grid>
 
+    <Grid x:Name="PersistentNavigation" Grid.RowSpan="2" Panel.ZIndex="3" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" Height="34" Width="556" controls:RoundedClip.Radius="17" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+      <Grid.ContextMenu><ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}"><MenuItem Header="{Binding SpotlightPlaybackLabel}" Command="{Binding ToggleSpotlightCommand}" /><MenuItem Header="Refresh spotlight" Command="{Binding RefreshCommand}" /></ContextMenu></Grid.ContextMenu>
+      <controls:ShellBackdropView IsPageBackdrop="{Binding IsPageBackdrop, ElementName=WorkspaceBackdrop}" IsGlass="True" PreferSharpArtwork="True" IncludePageContent="True" UseLiquidRefraction="False" GlassBlurIntensity="0.006" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}" />
+      <Border x:Name="NavigationSheen" CornerRadius="17" IsHitTestVisible="False">
+        <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+          <GradientStop Color="#38FFFFFF" Offset="0" />
+          <GradientStop Color="#12FFFFFF" Offset="0.26" />
+          <GradientStop Color="#00FFFFFF" Offset="0.54" />
+          <GradientStop Color="#14000000" Offset="1" />
+        </LinearGradientBrush></Border.Background>
+      </Border>
+      <Border x:Name="NavigationSurface" CornerRadius="17" Padding="3" BorderThickness="1">
+        <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#06FFFFFF" Offset="0" /><GradientStop Color="#01FFFFFF" Offset="0.5" /><GradientStop Color="#10000000" Offset="1" /></LinearGradientBrush></Border.Background>
+        <Border.BorderBrush><LinearGradientBrush StartPoint="0,0" EndPoint="0.2,1"><GradientStop Color="#A0FFFFFF" Offset="0" /><GradientStop Color="#28FFFFFF" Offset="0.5" /><GradientStop Color="#50FFFFFF" Offset="1" /></LinearGradientBrush></Border.BorderBrush>
+        <Grid x:Name="ShellPillItems" Height="26" VerticalAlignment="Center" UseLayoutRounding="True" SnapsToDevicePixels="True" controls:PillMotion.IsEnabled="True">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="36" /><ColumnDefinition Width="36" /><ColumnDefinition Width="36" /></Grid.ColumnDefinitions>
+          <Border x:Name="NavigationHighlight" Grid.ColumnSpan="8" CornerRadius="15" HorizontalAlignment="Left" IsHitTestVisible="False" BorderThickness="1">
+            <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#1CFFFFFF" /><GradientStop Color="#08FFFFFF" Offset="1" /></LinearGradientBrush></Border.Background>
+            <Border.BorderBrush><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#38FFFFFF" /><GradientStop Color="#08FFFFFF" Offset="1" /></LinearGradientBrush></Border.BorderBrush>
+          </Border>
+          <Button Content="Home" Style="{StaticResource ShellPillButton}" Tag="{x:Type pages:DashboardPage}" Click="ShellRoute_Click" />
+          <Button Grid.Column="1" Content="Games" Style="{StaticResource ShellPillButton}" Tag="{x:Type pages:LibraryPage}" Click="ShellRoute_Click" />
+          <Button Grid.Column="2" Content="Downloads" Style="{StaticResource ShellPillButton}" Tag="{x:Type pages:DownloadsPage}" Click="ShellRoute_Click" />
+          <Button x:Name="ShellToolsButton" Grid.Column="3" Content="Tools" Style="{StaticResource ShellPillButton}" Click="ShellTools_Click" />
+          <Button Grid.Column="4" Content="Fixes" Style="{StaticResource ShellPillButton}" Click="ShellFixes_Click" />
+          <Button Grid.Column="5" Style="{StaticResource ShellPillButton}" Tag="{x:Type pages:LibraryPage}" Click="ShellRoute_Click" AutomationProperties.Name="Find games"><ui:SymbolIcon Symbol="Search24" FontSize="13" /></Button>
+          <Button x:Name="ShellQuickDownloadsButton" Grid.Column="6" Style="{StaticResource ShellPillButton}" Tag="{x:Type pages:DownloadsPage}" Click="ShellRoute_Click" ToolTip="{Binding Summary}" AutomationProperties.Name="{Binding Summary}"><ui:SymbolIcon Symbol="ArrowDownload24" FontSize="16" /></Button>
+          <Button x:Name="ShellSettingsButton" Grid.Column="7" Style="{StaticResource ShellPillButton}" Tag="{x:Type pages:SettingsPage}" Click="ShellRoute_Click" AutomationProperties.Name="Settings"><ui:SymbolIcon Symbol="Settings24" FontSize="16" /></Button>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Grid x:Name="ToolsMenuLayer" Grid.RowSpan="2" Panel.ZIndex="4" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle">
+      <Border Background="#26060A12" MouseLeftButtonDown="ToolsDismiss_Click" />
+      <Border x:Name="ToolsDropdown" Width="560" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,54,0,0" CornerRadius="24" controls:RoundedClip.Radius="24" controls:SurfaceMotion.RevealOnShow="True">
+        <Grid>
+          <controls:ShellBackdropView IsPageBackdrop="{Binding IsPageBackdrop, ElementName=WorkspaceBackdrop}" IsGlass="True" BaseBrush="{DynamicResource GlassSurfaceBrush}" CacheMode="BitmapCache" />
+          <Border Background="{DynamicResource GlassSurfaceBrush}" Opacity="0.65" />
+          <StackPanel Margin="18">
+            <TextBlock Text="Fixes" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="8,0,0,10" />
+            <UniformGrid Columns="2">
+              <Button x:Name="GameFixesMenuButton" Style="{StaticResource ToolMenuButton}" Tag="{x:Type pages:GameFixesPage}" Click="ShellRoute_Click" Margin="0,0,5,5"><StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="ShieldTask24" Margin="0,0,10,0" /><TextBlock Text="Game fixes" /></StackPanel></Button>
+              <Button Style="{StaticResource ToolMenuButton}" Tag="{x:Type pages:HypervisorFixesPage}" Click="ShellRoute_Click" Margin="5,0,0,5"><StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Shield24" Margin="0,0,10,0" /><TextBlock Text="Hypervisor fixes" /></StackPanel></Button>
+            </UniformGrid>
+            <TextBlock Text="Tools" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="8,14,0,10" />
+            <UniformGrid Columns="2">
+              <Button x:Name="SteamToolsMenuButton" Style="{StaticResource ToolMenuButton}" Tag="{x:Type pages:BetterSteamToolsPage}" Click="ShellRoute_Click" Content="BetterSteamTools" Margin="0,0,5,5" />
+              <Button Style="{StaticResource ToolMenuButton}" Tag="{x:Type pages:SteamlessPage}" Click="ShellRoute_Click" Content="Steamless" Margin="5,0,0,5" />
+              <Button Style="{StaticResource ToolMenuButton}" Tag="{x:Type pages:DenuvoActivationPage}" Click="ShellRoute_Click" Content="Denuvo activation" Margin="0,5,5,5" />
+              <Button Style="{StaticResource ToolMenuButton}" Tag="{x:Type pages:CreamApiPage}" Click="ShellRoute_Click" Content="DLC unlocker" Margin="5,5,0,5" />
+              <Button Style="{StaticResource ToolMenuButton}" Tag="{x:Type pages:FamilySharePage}" Click="ShellRoute_Click" Content="GreenLuma" Margin="0,5,5,0" />
+              <Button Style="{StaticResource ToolMenuButton}" Tag="{x:Type pages:GoldbergPage}" Click="ShellRoute_Click" Content="Goldberg" Margin="5,5,0,0" />
+              <Button Style="{StaticResource ToolMenuButton}" Tag="{x:Type pages:UcOnlinePage}" Click="ShellRoute_Click" Content="UC Online" Margin="0,10,5,0" />
+            </UniformGrid>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+
     <!-- Dimmed layer for cards shown on top of the app, e.g. the update prompt -->
-    <Grid x:Name="OverlayLayer" Grid.Row="1" Visibility="Collapsed" Background="{DynamicResource ScrimBrush}" Opacity="0">
+    <Grid x:Name="OverlayLayer" Grid.Row="1" Panel.ZIndex="6" Visibility="Collapsed" Background="{DynamicResource ScrimBrush}" Opacity="0">
+      <controls:ShellBackdropView x:Name="SetupBackdrop" IsPageBackdrop="True" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}" Visibility="Collapsed" />
       <ContentControl x:Name="OverlayHost" HorizontalAlignment="Center" VerticalAlignment="Center" Focusable="False" />
     </Grid>
   </Grid>

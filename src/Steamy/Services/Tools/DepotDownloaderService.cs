@@ -71,7 +71,8 @@ public sealed record DepotDownloaderProgress(
     long? TransferTotalBytes = null,
     long ContentBytes = 0,
     long ReusedBytes = 0,
-    string Phase = "");
+    string Phase = "",
+    double? DiskBytesPerSecond = null);
 
 public sealed record DepotDownloaderRunResult(
     int? ExitCode,
@@ -300,9 +301,7 @@ public static class DepotDownloaderOutputParser
 
     private const int MaxPendingLogLines = 2_048;
     private const int MaxLinesPerLogFlush = 256;
-    private static readonly string _logPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Steamy", "ddmod-output.log");
+    private static readonly string _logPath = Path.Combine(Steamy.Storage.AppDataPaths.Root, "ddmod-output.log");
     private static readonly ConcurrentQueue<string> _pendingLogLines = new();
     private static readonly Timer _logFlushTimer = new(FlushQueuedOutput, null,
         TimeSpan.FromMilliseconds(250), TimeSpan.FromMilliseconds(250));

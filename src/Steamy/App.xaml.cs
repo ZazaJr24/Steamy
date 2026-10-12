@@ -14,11 +14,24 @@ public partial class App : Application
 {
     public static IServiceProvider Services { get; private set; } = null!;
     public static bool ShouldShowFirstRunSetup { get; private set; }
+    public static bool ShouldShowTransparencyNotice { get; private set; }
+    public static bool IsLaunched { get; private set; }
+    private static TaskCompletionSource? _transparencyDismissed;
+    public static void MarkTransparencyCompleted() { ShouldShowTransparencyNotice = false; _transparencyDismissed?.TrySetResult(); }
+    private static async Task AwaitTransparencyAsync() { if (_transparencyDismissed is not null) await _transparencyDismissed.Task; }
     private static TaskCompletionSource? _firstRunSetupDismissed;
     private UiResponsivenessMonitor? _responsivenessMonitor;
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
+        // A bootstrap preparation process has no window, navigation, game or Steam services.
+        if (e.Args.Length == 2 && e.Args[0] == "--prepare-tools")
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            try { await ToolPreparationService.PrepareAsync(e.Args[1]); Shutdown(0); }
+            catch (Exception) { Shutdown(1); }
+            return;
+        }
         DispatcherUnhandledException += (_, args) =>
         {
             // WPF-UI 4.x throws a non-fatal type-conversion error for ContentDialogButton
@@ -47,8 +60,11 @@ public partial class App : Application
             args.SetObserved();
         };
 
-        var roamingData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy");
-        var localData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Steamy");
+        string roamingData;
+        try { roamingData = Steamy.Storage.AppDataPaths.Root; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        { MessageBox.Show(error.Message, "Steamy storage", MessageBoxButton.OK, MessageBoxImage.Warning); Shutdown(); return; }
+        var localData = Steamy.Storage.AppDataPaths.LegacyLocalRoot;
         var settingsPath = Path.Combine(roamingData, "settings.json");
         var existingDatabase = Path.Combine(roamingData, "content-manager.db");
         var existingActivity = Path.Combine(localData, "game-activity.json");
@@ -57,25 +73,80 @@ public partial class App : Application
             && !File.Exists(existingActivity)
             && !Directory.Exists(localData)
             && !Directory.Exists(Path.Combine(roamingData, "credentials"));
+        try
+        {
+            if (File.Exists(settingsPath))
+            {
+                using var saved = System.Text.Json.JsonDocument.Parse(File.ReadAllText(settingsPath));
+                if (saved.RootElement.TryGetProperty("FirstRunCompleted", out var completed) && completed.ValueKind == System.Text.Json.JsonValueKind.False)
+                    ShouldShowFirstRunSetup = true;
+            }
+        }
+        catch (Exception error) when (error is IOException or System.Text.Json.JsonException) { }
         _firstRunSetupDismissed = ShouldShowFirstRunSetup
             ? new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
             : null;
 
+        try
+        {
+            var paths = Steamy.Storage.AppDataPaths.Locations;
+            if (paths.NeedsPreparation(localData))
+            {
+                var anotherWindow = Process.GetProcessesByName("Steamy").Any(process =>
+                {
+                    using (process) return process.Id != Environment.ProcessId;
+                });
+                if (anotherWindow) throw new IOException("Close other Steamy windows before transferring your saved data, then start this version again. Your files have not been moved.");
+                // Keep startup responsive while a large artwork/tool cache is copied.
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                var content = new System.Windows.Controls.StackPanel { Margin = new Thickness(28) };
+                content.Children.Add(new System.Windows.Controls.TextBlock { Text = "Preparing your Steamy data", FontSize = 22, Margin = new Thickness(0, 0, 0, 14) });
+                content.Children.Add(new System.Windows.Controls.TextBlock { Text = "Copying saved data to your data folder. Original files are kept. Please wait…", TextWrapping = TextWrapping.Wrap });
+                content.Children.Add(new System.Windows.Controls.ProgressBar { IsIndeterminate = true, Height = 4, Margin = new Thickness(0, 22, 0, 0) });
+                var progress = new Window { Title = "Steamy", Width = 480, Height = 220, Content = content, ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterScreen };
+                System.ComponentModel.CancelEventHandler guard = (_, args) => args.Cancel = true;
+                progress.Closing += guard;
+                progress.Show();
+                try { await Task.Run(StorageTrackerTransition.Prepare); }
+                finally { progress.Closing -= guard; progress.Close(); }
+            }
+            else Steamy.Storage.AppDataPaths.Initialize();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            MessageBox.Show(exception.Message + "\n\nYour original data is kept. No storage switch was completed.", "Steamy storage", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Shutdown(); return;
+        }
+
         ApplySavedCulture();
 
         Services = new ServiceCollection().AddSteamyServices().BuildServiceProvider();
+        IsLaunched = true;
+        ShouldShowTransparencyNotice = Services.GetRequiredService<ISettingsService>().Load().TransparencyAcknowledgement != Views.TransparencyNotice.CurrentAcknowledgement;
+        if (ShouldShowTransparencyNotice) _transparencyDismissed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         base.OnStartup(e);
         ApplySavedAppearance();
 
         var window = new MainWindow();
         MainWindow = window;
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
         window.Show();
         _responsivenessMonitor = new UiResponsivenessMonitor(window, Services.GetRequiredService<ILoggingService>());
 
         ApplySavedBackdrop();
 
         _ = RestoreDownloadQueueAsync();
+        _ = StartPlayTimeTrackerAsync();
         _ = RunStartupUpdateFlowAsync(window);
+    }
+
+    private static async Task StartPlayTimeTrackerAsync()
+    {
+        await AwaitTransparencyAsync();
+        if (ShouldShowFirstRunSetup && _firstRunSetupDismissed is not null)
+            await _firstRunSetupDismissed.Task;
+        await Services.GetRequiredService<IPlayTimeService>().ConfigureAsync(
+            Services.GetRequiredService<ISettingsService>().Load(), Services.GetRequiredService<IAppDataStore>().Games);
     }
 
     /// <summary>
@@ -87,6 +158,7 @@ public partial class App : Application
         try
         {
             var updates = Services.GetRequiredService<IUpdateService>();
+            await AwaitTransparencyAsync();
             await Task.Run(updates.CleanUpPreviousInstall);
 
             if (!Services.GetRequiredService<ISettingsService>().Load().AutoUpdate) return;
@@ -144,6 +216,7 @@ public partial class App : Application
     {
         try
         {
+            await AwaitTransparencyAsync();
             if (ShouldShowFirstRunSetup && _firstRunSetupDismissed is not null)
                 await _firstRunSetupDismissed.Task;
 
@@ -160,6 +233,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (Services is null) { base.OnExit(e); return; }
         _responsivenessMonitor?.Dispose();
         SaveAllDownloads();
         StopOwnedDownloads();
@@ -233,8 +307,7 @@ public partial class App : Application
         LogException(headline, exception);
         try
         {
-            var logFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy");
+            var logFolder = Steamy.Storage.AppDataPaths.Root;
             Directory.CreateDirectory(logFolder);
             File.AppendAllText(
                 Path.Combine(logFolder, "crash.log"),
@@ -294,7 +367,7 @@ public partial class App : Application
     {
         try
         {
-            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "settings.json");
+            var path = Path.Combine(Steamy.Storage.AppDataPaths.Root, "settings.json");
             if (!File.Exists(path)) return;
             using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
             if (!document.RootElement.TryGetProperty("Language", out var language)
@@ -315,7 +388,7 @@ public partial class App : Application
         var saved = "System";
         try
         {
-            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "settings.json");
+            var path = Path.Combine(Steamy.Storage.AppDataPaths.Root, "settings.json");
             if (File.Exists(path))
             {
                 using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
@@ -336,7 +409,7 @@ public partial class App : Application
         var saved = "Mica";
         try
         {
-            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steamy", "settings.json");
+            var path = Path.Combine(Steamy.Storage.AppDataPaths.Root, "settings.json");
             if (File.Exists(path))
             {
                 using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));

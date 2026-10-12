@@ -1,5 +1,7 @@
 using System.IO;
+using System.Collections.Concurrent;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Windows.Media.Imaging;
 using Steamy.Models;
@@ -8,6 +10,8 @@ namespace Steamy.Services;
 
 public interface IArtworkService
 {
+    Task<BitmapImage?> LoadGameLogoAsync(Game game, CancellationToken cancellationToken = default) => LoadSpotlightLogoAsync(new SpotlightGame { AppId = game.AppId, Name = game.Name }, cancellationToken);
+    Task<BitmapImage?> LoadSpotlightLogoAsync(SpotlightGame game, CancellationToken cancellationToken = default) => Task.FromResult<BitmapImage?>(null);
     Task<BitmapImage?> LoadHeroAsync(int appId, CancellationToken cancellationToken = default);
     Task<BitmapImage?> LoadSpotlightHeroAsync(SpotlightGame game, CancellationToken cancellationToken = default) => LoadHeroAsync(game.AppId, cancellationToken);
     async Task<BitmapImage?> LoadSpotlightHeaderAsync(SpotlightGame item, CancellationToken cancellationToken = default)
@@ -36,6 +40,10 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
     private readonly HttpClient _httpClient;
     private readonly string _cacheDirectory;
     private readonly bool _ownsHttpClient;
+    private readonly ConcurrentDictionary<string, WeakReference<BitmapImage>> _decodedImages = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Lazy<IReadOnlyDictionary<int, string>> BundledLogos = new(() =>
+        SpotlightCatalogService.LoadBundled().Games.Where(game => SpotlightCatalogService.IsArtworkUrl(game.LogoUrl))
+            .ToDictionary(game => game.AppId, game => game.LogoUrl));
 
     public SteamArtworkService(HttpClient? httpClient = null, string? cacheDirectory = null)
     {
@@ -46,19 +54,61 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
         {
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/0.1");
         }
-        _cacheDirectory = cacheDirectory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Steamy",
+        _cacheDirectory = cacheDirectory ?? Path.Combine(Steamy.Storage.AppDataPaths.Root,
             "artwork");
     }
 
-    public Task<BitmapImage?> LoadHeroAsync(int appId, CancellationToken cancellationToken = default) =>
-        LoadFirstAvailableAsync(new[]
+    public async Task<BitmapImage?> LoadHeroAsync(int appId, CancellationToken cancellationToken = default)
+    {
+        if (appId <= 0) return null;
+        var cache = Path.Combine(_cacheDirectory, $"{appId}_hero.jpg");
+        var image = await LoadFirstAvailableAsync(new[]
         {
             $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/library_hero.jpg",
-            $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/library_hero.jpg",
-            $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/header.jpg"
-        }, Path.Combine(_cacheDirectory, $"{appId}_hero.jpg"), cancellationToken);
+            $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/library_hero.jpg"
+        }, cache, cancellationToken).ConfigureAwait(false);
+        if (image is not null) return image;
+        var assets = await GetStoreAssetUrlsAsync(appId, cancellationToken).ConfigureAwait(false);
+        return await LoadFirstAvailableAsync(new[] { assets.Hero, assets.Header }.Where(SpotlightCatalogService.IsArtworkUrl).ToArray(), cache, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<BitmapImage?> LoadGameLogoAsync(Game game, CancellationToken cancellationToken = default)
+    {
+        if (game.AppId <= 0) return null;
+        var path = Path.Combine(_cacheDirectory, $"{game.AppId}_game_logo.png");
+        var cached = await LoadFirstAvailableAsync([], path, cancellationToken).ConfigureAwait(false);
+        if (cached is not null) return cached;
+        if (BundledLogos.Value.TryGetValue(game.AppId, out var bundled))
+        {
+            var bundledImage = await LoadFirstAvailableAsync([bundled], path, cancellationToken).ConfigureAwait(false);
+            if (bundledImage is not null) return bundledImage;
+        }
+        try
+        {
+            // The same public SteamCMD metadata mirror is already used for app launch/depot
+            // metadata. Only a validated relative logo filename is accepted; image bytes
+            // always come from Steam's CDN. Legacy /logo.png can actually return a banner.
+            using var response = await _httpClient.GetAsync($"https://api.steamcmd.net/v1/info/{game.AppId}", cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength > 4 * 1024 * 1024) return null;
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!document.RootElement.TryGetProperty("data", out var data)
+                || !data.TryGetProperty(game.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture), out var app)
+                || !app.TryGetProperty("common", out var common) || !common.TryGetProperty("library_assets_full", out var assets)
+                || !assets.TryGetProperty("library_logo", out var logo)) return null;
+            foreach (var size in new[] { "image2x", "image" })
+            {
+                if (!logo.TryGetProperty(size, out var languages) || !languages.TryGetProperty("english", out var english) || english.ValueKind != JsonValueKind.String) continue;
+                var filename = english.GetString() ?? "";
+                if (!System.Text.RegularExpressions.Regex.IsMatch(filename, @"\A(?:[a-fA-F0-9]{40}/)?logo(?:_2x)?\.png\z", System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100))) continue;
+                var image = await LoadFirstAvailableAsync([$"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{game.AppId}/{filename}"], path, cancellationToken).ConfigureAwait(false);
+                if (image is not null) return image;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception e) when (e is HttpRequestException or IOException or JsonException or OperationCanceledException) { }
+        return null;
+    }
 
     public Task<BitmapImage?> LoadSpotlightHeroAsync(SpotlightGame game, CancellationToken cancellationToken = default) =>
         LoadFirstAvailableAsync(new[] { game.HeroUrl, game.HeaderUrl }.Where(SpotlightCatalogService.IsArtworkUrl).ToArray(),
@@ -72,6 +122,23 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
     {
         var fingerprint = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url)))[..12];
         return Path.Combine(_cacheDirectory, $"{appId}_spotlight_{kind}_{fingerprint}.jpg");
+    }
+
+    public async Task<BitmapImage?> LoadSpotlightLogoAsync(SpotlightGame game, CancellationToken cancellationToken = default)
+    {
+        // Older cached or online feeds omit logo URLs. Keep using the hashed Steam logo
+        // shipped with the app instead of falling back only to a nonexistent legacy URL.
+        var bundledUrl = BundledLogos.Value.GetValueOrDefault(game.AppId, string.Empty);
+        var urls = new[] { game.LogoUrl, bundledUrl }
+            .Where(SpotlightCatalogService.IsArtworkUrl).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (urls.Length > 0)
+        {
+            var explicitLogo = await LoadFirstAvailableAsync(urls, SpotlightCachePath(game.AppId, "logo", urls[0]), cancellationToken).ConfigureAwait(false);
+            if (explicitLogo is not null) return explicitLogo;
+        }
+        // Online spotlight entries need the same hashed library-logo lookup as game pages.
+        // The old /logo.png route can return a rectangular banner instead of a wordmark.
+        return await LoadGameLogoAsync(new Game { AppId = game.AppId }, cancellationToken).ConfigureAwait(false);
     }
 
     public Task<BitmapImage?> LoadSpotlightPortraitAsync(SpotlightGame game, CancellationToken cancellationToken = default) =>
@@ -95,6 +162,8 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
                     $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{game.AppId}/header.jpg",
                     $"https://cdn.akamai.steamstatic.com/steam/apps/{game.AppId}/header.jpg"
                 }, Path.Combine(_cacheDirectory, $"{game.AppId}_header.jpg"), cancellationToken).ConfigureAwait(false);
+                if (game.HeaderImage is null)
+                    await LoadAsync(game, cancellationToken).ConfigureAwait(false);
             }
             finally { gate.Release(); }
         })).ConfigureAwait(false);
@@ -125,6 +194,13 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
     public async Task LoadAsync(Game game, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(game);
+        if (game.AppId <= 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            game.ArtworkImage ??= LocalGameArtwork.Read(game.LaunchExecutable);
+            game.HeaderImage ??= game.ArtworkImage;
+            return;
+        }
         game.IsArtworkLoading = true;
 
         try
@@ -158,19 +234,20 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
             // Store art filenames can be versioned (hash-prefixed) for newer games.
             // Steam's public store metadata supplies the current asset URLs when the
             // stable legacy filenames above are no longer available.
-            if (portraitImage is null && headerImage is null)
+            if (portraitImage is null || headerImage is null)
             {
                 var storeAssets = await GetStoreAssetUrlsAsync(game.AppId, cancellationToken).ConfigureAwait(false);
-                var storePortrait = storeAssets.Portrait.Length > 0
+                var storePortrait = portraitImage is null && storeAssets.Portrait.Length > 0
                     ? await LoadFirstAvailableAsync(new[] { storeAssets.Portrait }, portraitCachePath, cancellationToken).ConfigureAwait(false)
                     : null;
-                var storeHeader = storeAssets.Header.Length > 0
+                var storeHeader = headerImage is null && storeAssets.Header.Length > 0
                     ? await LoadFirstAvailableAsync(new[] { storeAssets.Header }, headerCachePath, cancellationToken).ConfigureAwait(false)
                     : null;
                 portraitImage ??= storePortrait;
                 headerImage ??= storeHeader;
             }
 
+            portraitImage ??= headerImage is null ? LocalGameArtwork.Read(game.LaunchExecutable) : null;
             game.ArtworkImage = portraitImage ?? headerImage;
             game.HeaderImage = headerImage ?? portraitImage;
         }
@@ -188,7 +265,7 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
         }
     }
 
-    private async Task<(string Portrait, string Header)> GetStoreAssetUrlsAsync(int appId, CancellationToken cancellationToken)
+    private async Task<(string Portrait, string Header, string Hero)> GetStoreAssetUrlsAsync(int appId, CancellationToken cancellationToken)
     {
         try
         {
@@ -201,12 +278,12 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
             using var response = await _httpClient.GetAsync(
                 "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json=" + Uri.EscapeDataString(query),
                 cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode) return (string.Empty, string.Empty);
+            if (!response.IsSuccessStatusCode) return (string.Empty, string.Empty, string.Empty);
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (!document.RootElement.TryGetProperty("response", out var root)
-                || !root.TryGetProperty("store_items", out var rows)) return (string.Empty, string.Empty);
+                || !root.TryGetProperty("store_items", out var rows)) return (string.Empty, string.Empty, string.Empty);
 
             foreach (var row in rows.EnumerateArray())
             {
@@ -231,24 +308,27 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
                     return string.Empty;
                 }
 
-                return (Resolve("library_capsule_2x", "library_capsule"), Resolve("header_2x", "header"));
+                return (Resolve("library_capsule_2x", "library_capsule"), Resolve("header_2x", "header"), Resolve("library_hero_2x", "library_hero"));
             }
         }
         catch (OperationCanceledException) { throw; }
         catch { /* Current Steam asset metadata is optional; keep glyph fallback. */ }
 
-        return (string.Empty, string.Empty);
+        return (string.Empty, string.Empty, string.Empty);
     }
 
     private async Task<BitmapImage?> LoadFirstAvailableAsync(string[] urls, string cachePath, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (_decodedImages.TryGetValue(cachePath, out var reference) && reference.TryGetTarget(out var retained))
+            return retained;
         if (File.Exists(cachePath))
         {
             try
             {
                 var cached = await File.ReadAllBytesAsync(cachePath, cancellationToken);
                 var cachedImage = Decode(cached);
-                if (cachedImage is not null) return cachedImage;
+                if (cachedImage is not null) return Remember(cachePath, cachedImage);
             }
             catch (OperationCanceledException) { throw; }
             catch { /* stale cache, re-fetch */ }
@@ -257,9 +337,19 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
         foreach (var url in urls)
         {
             var image = await FetchAndCacheAsync(url, cachePath, cancellationToken);
-            if (image is not null) return image;
+            if (image is not null) return Remember(cachePath, image);
         }
         return null;
+    }
+
+    private BitmapImage Remember(string path, BitmapImage image)
+    {
+        // Frozen bitmaps can be shared across pages; weak references release unused art.
+        if (_decodedImages.Count >= 1024)
+            foreach (var entry in _decodedImages)
+                if (!entry.Value.TryGetTarget(out _)) _decodedImages.TryRemove(entry.Key, out _);
+        if (_decodedImages.Count < 1024) _decodedImages[path] = new(image);
+        return image;
     }
 
     private async Task<BitmapImage?> FetchAndCacheAsync(string url, string cachePath, CancellationToken cancellationToken)
@@ -301,6 +391,15 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
     private static BitmapImage? Decode(byte[] bytes)
     {
         if (bytes.Length == 0) return null;
+        // Steam returns these generic gray JPEGs with HTTP 200 for obsolete asset URLs.
+        // Treat both downloaded and already-cached placeholders as missing artwork so
+        // the current hashed URLs from StoreBrowse can replace them. Exact fingerprints
+        // deliberately preserve legitimate minimal or monochrome game artwork.
+        if (bytes.Length <= 8192 && Convert.ToHexString(SHA256.HashData(bytes)) is
+            "574128283765E00DD4EEF95EFAA40F54AA60FDA25AD01A56B265A8B1D0C655CD" or
+            "9EA238901BE13C138C061365CC705840BB757FD076A66EC3731C1948BB2B6A44" or
+            "3514810F0A5A3F0D55D756924B16F33D5AAFAFC8996DBC501631ED534798F3A8" or
+            "CF39EAA2E57FE66C0B7B92F371F3E945BE5631CB96D9002F4DED1417E13843B8") return null;
 
         try
         {
