@@ -6,6 +6,8 @@ from pathlib import Path
 import urllib.error
 import urllib.request
 
+COMMIT_IDENTITY = {'name': 'ZazaJr24', 'email': '218105339+ZazaJr24@users.noreply.github.com'}
+
 FILES = (
     'settings-updates.png', 'settings-transfers.png', 'dashboard.png', 'discover-games.png', 'upcoming-details.png', 'better-steamtools.png', 'downloads.png', 'depot-downloader.png', 'settings.png', 'games.png', 'games-hover.png',
     'game-details.png', 'local-package.png', 'download-depots.png',
@@ -44,7 +46,7 @@ def publish(api, captures):
             return parent
         commit = api('POST', '/git/commits', {
             'message': 'docs: refresh screenshots from the Windows app', 'tree': tree, 'parents': [parent],
-            'author': {'name': 'github-actions[bot]', 'email': '41898282+github-actions[bot]@users.noreply.github.com'},
+            'author': COMMIT_IDENTITY, 'committer': COMMIT_IDENTITY,
         })['sha']
         try:
             api('PATCH', '/git/refs/heads/main', {'sha': commit, 'force': False})

@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import re
 import urllib.error
-from publish_screenshots import GitHubApi
+from publish_screenshots import COMMIT_IDENTITY, GitHubApi
 
 
 def manifest(release, archive, repository):
@@ -50,8 +50,8 @@ def publish(api, description):
         if tree == base:
             return parent
         commit = api('POST', '/git/commits', {'message': 'updates: publish verified ' + description['tag_name'],
-            'tree': tree, 'parents': [parent], 'author': {'name': 'github-actions[bot]',
-            'email': '41898282+github-actions[bot]@users.noreply.github.com'}})['sha']
+            'tree': tree, 'parents': [parent], 'author': COMMIT_IDENTITY,
+            'committer': COMMIT_IDENTITY})['sha']
         try:
             api('PATCH', '/git/refs/heads/main', {'sha': commit, 'force': False})
             return commit
