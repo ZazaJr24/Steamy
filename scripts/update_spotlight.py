@@ -192,11 +192,23 @@ def enrich_artwork(games, response):
         if template.startswith(f"steam/apps/{game['appId']}/") and '${FILENAME}' in template:
             for target, keys in {'portraitUrl': ('library_capsule_2x', 'library_capsule'),
                                  'heroUrl': ('library_hero_2x', 'library_hero'),
-                                 'headerUrl': ('header_2x', 'header')}.items():
+                                 'headerUrl': ('header_2x', 'header'),
+                                 'logoUrl': ('logo_2x', 'logo')}.items():
                 filename = next((assets.get(key) for key in keys if assets.get(key)), None)
                 if isinstance(filename, str) and re.fullmatch(r'[A-Za-z0-9_./-]+\.(jpg|png|webp)', filename) and '..' not in filename:
                     changes[target] = 'https://shared.akamai.steamstatic.com/store_item_assets/' + template.replace('${FILENAME}', filename)
         result.append({**game, **changes})
+    return result
+
+
+def retain_known_logos(games, previous):
+    logos = {game.get('appId'): game.get('logoUrl', '') for game in previous.get('games', [])}
+    result = []
+    for game in games:
+        logo = logos.get(game['appId'], '')
+        uri = urllib.parse.urlparse(logo)
+        trusted = uri.scheme == 'https' and (uri.hostname or '').endswith('.steamstatic.com') and f"/steam/apps/{game['appId']}/" in uri.path
+        result.append({**game, 'logoUrl': logo} if not game.get('logoUrl') and trusted else game)
     return result
 
 
@@ -235,6 +247,11 @@ def refresh(output):
     games = sorted(upcoming, key=lambda game: (game['releaseDate'] is None, game['releaseDate'] or '9999-12-31')) + released
     if len(upcoming) < 3:
         raise RuntimeError('Too few verified recent/upcoming games; retaining the previous feed')
+    if output.exists():
+        try:
+            games = retain_known_logos(games, json.loads(output.read_text(encoding='utf-8')))
+        except (OSError, ValueError):
+            pass
     document = {'schemaVersion': 1, 'updatedAt': now.isoformat(), 'games': games}
     output.parent.mkdir(parents=True, exist_ok=True)
     temp = output.with_suffix('.tmp')

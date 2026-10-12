@@ -1,9 +1,21 @@
 import unittest
 from datetime import datetime, timezone
-from update_spotlight import select_game, plain_text, confirmed_release_time, enrich_releases, enrich_artwork
+from update_spotlight import select_game, plain_text, confirmed_release_time, enrich_releases, enrich_artwork, retain_known_logos
 
 
 class SelectionTests(unittest.TestCase):
+    def test_refresh_retains_only_matching_trusted_logos(self):
+        games = [{'appId': 123, 'name': 'Current title'}, {'appId': 456}, {'appId': 789, 'logoUrl': 'new'}]
+        trusted = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/123/hash/logo.png'
+        previous = {'games': [{'appId': 123, 'name': 'Old title', 'logoUrl': trusted},
+                             {'appId': 456, 'logoUrl': 'https://example.invalid/steam/apps/456/logo.png'},
+                             {'appId': 789, 'logoUrl': trusted}]}
+        result = retain_known_logos(games, previous)
+        self.assertEqual(trusted, result[0]['logoUrl'])
+        self.assertEqual('Current title', result[0]['name'])
+        self.assertNotIn('logoUrl', result[1])
+        self.assertEqual('new', result[2]['logoUrl'])
+
     def setUp(self):
         self.now = datetime(2026, 9, 30, tzinfo=timezone.utc)
         self.game = {'type': 'game', 'steam_appid': 123, 'name': 'Upcoming game', 'publishers': ['BANDAI NAMCO Entertainment'],
