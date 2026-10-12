@@ -111,7 +111,17 @@ Additional tools are fetched when needed. Credentials are kept in a Windows DPAP
 
 ## A closer look
 
-Screenshots are captured from the actual Windows app using sample library, queue, depot and SteamTools status metadata. The Spotlight uses verified public Steam data. Game artwork belongs to the respective rights holders.
+**Small setup** — 1.84 MiB; downloads Steamy and eight supported tool components from GitHub. XStoreUnlocker and the obsolete Unsteam launcher are removed. Missing Microsoft prerequisites use Microsoft's official download sources.
+
+![Steamy download setup](docs/screenshots/setup.png)
+
+**Tools** — clean Steamless selection and UC Online settings.
+
+![Steamless workspace](docs/screenshots/steamless-page.png)
+
+![UC Online configuration](docs/screenshots/uc-online-settings.png)
+
+The refreshed 0.7.0 screenshots below are rendered offscreen from the actual Windows controls using sample library, queue, depot and SteamTools status metadata; no desktop control is used. The Spotlight uses verified public Steam data. Game artwork belongs to the respective rights holders.
 
 **Discovery** — a wide upcoming spotlight and wide upcoming covers.
 
@@ -119,15 +129,19 @@ Screenshots are captured from the actual Windows app using sample library, queue
 
 ![Upcoming game details with the actual Steam release countdown](docs/screenshots/upcoming-details.png)
 
-**Games** — released titles only, with larger portrait covers: five per row in wide windows and four in smaller windows.
+**Games** — released titles in a responsive portrait grid with artwork ambient and compact search controls.
 
 ![The Games grid](docs/screenshots/games.png)
 
-**Card hover** — a subtle highlight and motion add depth while the card's layout and clickable area stay fixed.
+**Game page** — banner ambient, game information and install status.
 
-![A game card under the actual Windows mouse pointer](docs/screenshots/games-hover.png)
+![Game details with artwork ambient](docs/screenshots/game-page.png)
 
-**Download setup** — a fully opaque source picker keeps every control readable.
+**Install method** — choose Steamy or Steam without leaving the game page.
+
+![Install in Steamy or Steam](docs/screenshots/install-method.png)
+
+**Download setup** — a glass source picker keeps every control readable.
 
 ![Choose the download source](docs/screenshots/game-details.png)
 

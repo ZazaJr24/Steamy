@@ -23,7 +23,7 @@ public sealed class BetterSteamToolsServiceTests
             File.WriteAllText(Path.Combine(root, "steam.exe"), "offline fixture; never executed");
             var bytes = BackendArchive();
             using var http = new HttpClient(new BackendHttp(bytes, wrongDigest));
-            var service = new BetterSteamToolsService(new Settings(), new Source(root), http, () => false);
+            var service = new BetterSteamToolsService(new Settings(), new Source(root), http, () => false, preparedCacheRoot: Path.Combine(root, "isolated-cache"));
             Assert.False(service.Detect(root).BackendInstalled);
             var result = await service.InstallBackendAsync(root);
             Assert.Equal(!wrongDigest, result.Succeeded);
@@ -53,7 +53,7 @@ public sealed class BetterSteamToolsServiceTests
             Directory.CreateDirectory(root);
             File.WriteAllText(Path.Combine(root, "steam.exe"), "offline fixture; never executed");
             using var http = new HttpClient(new BackendHttp(BackendArchive(), false, rateLimited: true));
-            var service = new BetterSteamToolsService(new Settings(), new Source(root), http, () => false);
+            var service = new BetterSteamToolsService(new Settings(), new Source(root), http, () => false, preparedCacheRoot: Path.Combine(root, "isolated-cache"));
             var result = await service.InstallBackendAsync(root);
             if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("STEAMY_BST_TEST_ARCHIVE")))
             {
@@ -80,7 +80,7 @@ public sealed class BetterSteamToolsServiceTests
             File.WriteAllText(Path.Combine(root, "steam.exe"), "offline fixture; never executed");
             var handler = new BackendHttp(BackendArchive(), false);
             using var http = new HttpClient(handler);
-            var service = new BetterSteamToolsService(new Settings(), new Source(root), http, () => true);
+            var service = new BetterSteamToolsService(new Settings(), new Source(root), http, () => true, preparedCacheRoot: Path.Combine(root, "isolated-cache"));
             var result = await service.InstallBackendAsync(root);
             Assert.False(result.Succeeded);
             Assert.Contains("Close Steam", result.Message);
@@ -209,3 +209,4 @@ public sealed class BetterSteamToolsServiceTests
         }
     }
 }
+

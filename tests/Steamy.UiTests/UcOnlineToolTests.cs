@@ -71,13 +71,13 @@ public sealed class UcOnlineToolTests
         var downloader = new PreparationDownloader(root); var generator = new PreparationGenerator();
         var report = Path.Combine(root, "status.json");
         await ToolPreparationService.PrepareAsync(report, downloader: downloader, generator: generator, dataRoot: root, bundledRoot: fixture.Root);
-        Assert.Equal(8, downloader.Downloads); Assert.Equal(1, generator.Downloads);
+        Assert.Equal(7, downloader.Downloads); Assert.Equal(1, generator.Downloads);
         using (var document = JsonDocument.Parse(File.ReadAllText(report)))
-        { Assert.True(document.RootElement.GetProperty("Done").GetBoolean()); Assert.Equal(9, document.RootElement.GetProperty("Completed").GetInt32()); }
+        { Assert.True(document.RootElement.GetProperty("Done").GetBoolean()); Assert.Equal(8, document.RootElement.GetProperty("Completed").GetInt32()); }
         Assert.NotNull(FullSteamClient.Find(Path.Combine(root, "gbe_fork", "current")));
         Assert.True(File.Exists(Path.Combine(root, "Tools", "ColdLoaderProxy", "version.dll")));
         await ToolPreparationService.PrepareAsync(report, downloader: downloader, generator: generator, dataRoot: root, bundledRoot: fixture.Root);
-        Assert.Equal(8, downloader.Downloads); Assert.Equal(1, generator.Downloads);
+        Assert.Equal(7, downloader.Downloads); Assert.Equal(1, generator.Downloads);
     }
     private sealed class PreparationDownloader(string root) : IGitHubToolDownloadService
     {
@@ -87,7 +87,9 @@ public sealed class UcOnlineToolTests
         public bool HasCached(GitHubToolDefinition tool) => GetCachedPath(tool) is not null;
         public Task<ToolDownloadResult> DownloadLatestAsync(GitHubToolDefinition tool, CancellationToken token = default)
         {
-            token.ThrowIfCancellationRequested(); Downloads++;
+            token.ThrowIfCancellationRequested();
+            Assert.DoesNotContain(tool.RepoName, new[] { "XStoreUnlocker", "Unsteam" });
+            Downloads++;
             var path = Path.Combine(root, "ToolCache", tool.CacheSubfolder, tool.TargetExecutableName);
             WritePe(path, 0x8664, tool == ToolDefinitions.Goldberg ? 3 * 1024 * 1024 : 512);
             _cache[tool.CacheSubfolder] = path;

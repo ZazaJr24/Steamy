@@ -13,7 +13,7 @@ public static class ToolPreparationService
     {
         var root = dataRoot ?? Steamy.Storage.AppDataPaths.Root;
         var definitions = new[] { ToolDefinitions.BetterSteamTools, ToolDefinitions.Steamless, ToolDefinitions.CreamInstaller,
-            ToolDefinitions.XStoreUnlocker, ToolDefinitions.UcOnline, ToolDefinitions.ColdLoader, ToolDefinitions.ColdLoaderProxy, ToolDefinitions.Goldberg };
+            ToolDefinitions.UcOnline, ToolDefinitions.ColdLoader, ToolDefinitions.ColdLoaderProxy, ToolDefinitions.Goldberg };
         var total = definitions.Length + 1; var completed = 0;
         void Report(string phase, bool done = false, string? error = null)
         {

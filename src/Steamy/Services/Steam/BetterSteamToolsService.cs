@@ -19,7 +19,7 @@ public interface IBetterSteamToolsService
     Task<BetterSteamToolsResult> AddFromSourceAsync(string steamRoot, int appId, ManifestSource? source, IProgress<string>? progress = null, CancellationToken token = default);
 }
 
-public sealed class BetterSteamToolsService(ISettingsService settings, IManifestSourceService sources, HttpClient? httpClient = null, Func<bool>? isSteamRunning = null) : IBetterSteamToolsService
+public sealed class BetterSteamToolsService(ISettingsService settings, IManifestSourceService sources, HttpClient? httpClient = null, Func<bool>? isSteamRunning = null, string? preparedCacheRoot = null) : IBetterSteamToolsService
 {
     public const string Repository = "madoiscool/BetterSteamTools";
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -93,9 +93,9 @@ public sealed class BetterSteamToolsService(ISettingsService settings, IManifest
         finally { _gate.Release(); }
     }
 
-    private static Dictionary<string, byte[]>? ReadPreparedBackend()
+    private Dictionary<string, byte[]>? ReadPreparedBackend()
     {
-        var root = Path.Combine(Steamy.Storage.AppDataPaths.Root, "ToolCache", "BetterSteamTools");
+        var root = preparedCacheRoot ?? Path.Combine(Steamy.Storage.AppDataPaths.Root, "ToolCache", "BetterSteamTools");
         if (!Directory.Exists(root)) return null;
         try
         {

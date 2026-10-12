@@ -7,11 +7,20 @@ Add a new `## x.y.z` section at the top before tagging.
 
 Steamy 0.7.0 brings the small all-in-one download installer, a more consistent artwork-driven interface, the original-script DepotBox import and a large set of responsiveness and state fixes. The app, playtime tracker, installer metadata and release packages all use version 0.7.0.
 
+### Setup hotfix
+
+- Remove the unsupported XStoreUnlocker executable download, which prevented setup from completing because the upstream archive only supplies XGameRuntime files.
+- Remove the obsolete Unsteam launcher and its unavailable download entry.
+- Verify that all eight remaining setup components have matching public GitHub release assets, download successfully in a clean isolated folder, and prepare again using verified caches.
+- Verify the packaged app's installer-only preparation mode, 31 installer checks and 25 installer interface checks without starting the main app or changing Steam.
+- Isolate BetterSteamTools download tests from an already prepared user cache.
+- Refresh the GitHub screenshots for Games, game details, install steps, Steamless, UC Online and the small setup using offscreen rendering.
+
 ### Small setup and portable distribution
 
 - Make `Steamy-v0.7.0-Setup.exe` the small download installer again: approximately **1.84 MiB**, without a large embedded app archive.
 - Download the matching 0.7.0 app package, verify its size and SHA-256, and install missing Microsoft .NET Desktop and WebView2 components automatically.
-- Prepare **nine supported tool components** during setup: BetterSteamTools, Steamless, CreamInstaller, XStoreUnlocker, UC Online, ColdLoader, ColdLoaderProxy, Goldberg and the activation generator. DepotDownloaderMod is supplied with the app package.
+- Prepare **eight supported tool components** during setup: BetterSteamTools, Steamless, CreamInstaller, UC Online, ColdLoader, ColdLoaderProxy, Goldberg and the activation generator. DepotDownloaderMod is supplied with the app package.
 - Reuse verified tool caches when setup is retried. Stop preparation with a useful error when a required package cannot be obtained; do not report incomplete preparation as ready.
 - Download tool files without running the downloaded tools during preparation. Sources that only support manual browsing remain manual.
 - Request the installer's own release version and reject a different release, so a 0.7.0 setup cannot silently install an older app.

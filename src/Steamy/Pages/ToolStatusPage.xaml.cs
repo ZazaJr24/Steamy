@@ -30,11 +30,6 @@ public sealed class HvFixesPage : ToolRunnerPage
     public HvFixesPage() : base(App.Services.GetRequiredService<HvFixesViewModel>()) { }
 }
 
-public sealed class UnsteamPage : ToolRunnerPage
-{
-    public UnsteamPage() : base(App.Services.GetRequiredService<UnsteamViewModel>()) { }
-}
-
 public sealed class ScreamApiPage : ToolRunnerPage
 {
     public ScreamApiPage() : base(App.Services.GetRequiredService<ScreamApiViewModel>()) { }

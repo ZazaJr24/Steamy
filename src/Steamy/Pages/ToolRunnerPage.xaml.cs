@@ -87,11 +87,3 @@ public partial class ToolRunnerPage : Page
             ViewModel.WorkingDirectory = dialog.FolderName;
     }
 }
-
-public sealed class XStoreUnlockerPage : ToolRunnerPage
-{
-    public XStoreUnlockerPage()
-        : base(App.Services.GetRequiredService<XStoreUnlockerViewModel>())
-    {
-    }
-}

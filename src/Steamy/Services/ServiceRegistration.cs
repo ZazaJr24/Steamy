@@ -94,7 +94,6 @@ public static class ServiceRegistration
         services.AddSingleton<ICreamInstallerDownloadService, CreamInstallerDownloadService>();
         services.AddSingleton<IDenuvoGeneratorDownloadService, DenuvoGeneratorDownloadService>();
         services.AddSingleton<CreamInstallerViewModel>();
-        services.AddSingleton<XStoreUnlockerViewModel>();
         services.AddSingleton<IGameFixProvider, DemoGameFixProvider>();
         services.AddSingleton<IFixCatalogService>(sp => new FixCatalogService(sp.GetRequiredService<ISettingsService>(), sp.GetRequiredService<ISecureCredentialService>()));
         services.AddSingleton<IGameFixDownloadService, GameFixDownloadService>();
@@ -131,7 +130,6 @@ public static class ServiceRegistration
         services.AddSingleton<GoldbergViewModel>();
         services.AddSingleton<UcOnlineService>();
         services.AddSingleton<UcOnlineViewModel>();
-        services.AddSingleton<UnsteamViewModel>();
         services.AddSingleton<ScreamApiViewModel>();
         services.AddSingleton<HvFixesViewModel>();
 

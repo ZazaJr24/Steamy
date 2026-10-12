@@ -3,41 +3,6 @@ using Steamy.Services;
 
 namespace Steamy.ViewModels;
 
-public sealed class XStoreUnlockerViewModel : ToolRunnerViewModel
-{
-    public XStoreUnlockerViewModel(ILocalToolRunner runner, ISettingsService settings, IGitHubToolDownloadService dl)
-        : base(
-            runner, settings,
-            pageKey: "xstore-unlocker",
-            title: "XStoreUnlocker",
-            subtitle: "Microsoft Store & Xbox PC DLC Unlocker — auto-downloads from GitHub.",
-            expectedFileNameHint: "XStoreUnlocker.exe",
-            infoText: "XStoreUnlocker unlocks DLC for Microsoft Store and Xbox PC titles. The tool is downloaded automatically.",
-            downloadUrl: "https://github.com/Zephkek/XStoreUnlocker",
-            readPath: s => s.XStoreUnlockerPath,
-            writePath: (s, v) => s.XStoreUnlockerPath = v,
-            downloadService: dl,
-            toolDefinition: ToolDefinitions.XStoreUnlocker)
-    { }
-}
-
-public sealed class UnsteamViewModel : ToolRunnerViewModel
-{
-    public UnsteamViewModel(ILocalToolRunner runner, ISettingsService settings)
-        : base(
-            runner, settings,
-            pageKey: "unsteam",
-            title: "Unsteam",
-            subtitle: "Steam multiplayer emulator — browse and configure manually.",
-            expectedFileNameHint: "Unsteam.exe",
-            infoText: "Unsteam is used for Steam multiplayer emulation. Launches with its own GUI window. Browse to select the executable manually.",
-            downloadUrl: "https://github.com/Starter0110/UnammedSteamToolBox",
-            showWindow: true,
-            readPath: s => s.UnsteamPath,
-            writePath: (s, v) => s.UnsteamPath = v)
-    { }
-}
-
 public sealed class ScreamApiViewModel : ToolRunnerViewModel
 {
     public ScreamApiViewModel(ILocalToolRunner runner, ISettingsService settings)
