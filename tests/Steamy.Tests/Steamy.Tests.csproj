@@ -8,7 +8,6 @@
     <IsPackable>false</IsPackable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Include="..\..\src\Steamy\Services\Update\UpdateService.cs" Link="Linked\UpdateService.cs" />
     <Compile Include="..\..\src\Steamy\Services\Storage\GameActivityStore.cs" Link="Linked\GameActivityStore.cs" />
@@ -43,8 +42,16 @@
     <Compile Include="..\..\src\Steamy\Services\Sharing\OwnedGames.cs" Link="Linked\OwnedGames.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\SteamIdLookup.cs" Link="Linked\SteamIdLookup.cs" />
     <Compile Include="..\..\src\Steamy\Services\Storage\ArchiveExtractor.cs" Link="Linked\ArchiveExtractor.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Catalog\GameRecommendationRanker.cs" Link="Linked\GameRecommendationRanker.cs" />
+    <Compile Include="..\..\src\Steamy\Storage\AppDataPaths.cs" Link="Linked\AppDataPaths.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Storage\GameClassification.cs" Link="Linked\GameClassification.cs" />
+    <Compile Include="..\..\src\Steamy\Playtime\PlayTimeData.cs" Link="Linked\PlayTimeData.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Storage\DownloadedInstallCatalog.cs" Link="Linked\DownloadedInstallCatalog.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Storage\GamePreferencesStore.cs" Link="Linked\GamePreferencesStore.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Catalog\TrailerPreviewService.cs" Link="Linked\TrailerPreviewService.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Steam\SteamPlayTimeReader.cs" Link="Linked\SteamPlayTimeReader.cs" />
+    <Compile Include="..\..\src\Steamy\Services\Storage\PcGameScanner.cs" Link="Linked\PcGameScanner.cs" />
   </ItemGroup>
-
   <ItemGroup>
     <Compile Include="..\..\src\Steamy\Services\Catalog\ReleaseCountdown.cs" Link="Linked\ReleaseCountdown.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\SteamToolsMetadata.cs" Link="Linked\SteamToolsMetadata.cs" />
@@ -52,15 +59,12 @@
     <Compile Include="..\..\src\Steamy\Services\Steam\SteamToolsBackend.cs" Link="Linked\SteamToolsBackend.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\LocalManifestPackage.cs" Link="Linked\LocalManifestPackage.cs" />
   </ItemGroup>
-
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
-
   <ItemGroup>
     <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />

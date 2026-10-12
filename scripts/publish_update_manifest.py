@@ -10,13 +10,13 @@ import urllib.error
 from publish_screenshots import COMMIT_IDENTITY, GitHubApi
 
 
-def manifest(release, archive, repository):
+def manifest(release, archive, repository, app_payload=False):
     tag = release.get('tag_name', '')
     if not re.fullmatch(r'v\d+\.\d+\.\d+(?:\.\d+)?', tag):
         raise ValueError('Invalid release version')
     if release.get('draft') is not False or release.get('prerelease') is not False or not release.get('published_at'):
         raise ValueError('A published regular release is required')
-    name = f'Steamy-{tag}.zip'
+    name = f'Steamy-{tag}-app.zip' if app_payload else f'Steamy-{tag}.zip'
     if archive.name != name:
         raise ValueError('Archive does not match the release')
     assets = [asset for asset in release.get('assets', []) if asset.get('name') == name]
@@ -34,7 +34,9 @@ def manifest(release, archive, repository):
             'assets': [{'name': name, 'browser_download_url': url, 'size': asset['size'], 'digest': digest}]}
 
 
-def publish(api, description):
+def publish(api, description, path='updates/latest.json'):
+    if path not in ('updates/latest.json', 'updates/installer.json'):
+        raise ValueError('Unexpected update manifest path')
     # A later release may have completed while this workflow was packaging.
     if api('GET', '/releases/latest')['tag_name'] != description['tag_name']:
         return 'Skipped an older release; the latest manifest stays intact.'
@@ -46,7 +48,7 @@ def publish(api, description):
         parent = api('GET', '/git/ref/heads/main')['object']['sha']
         base = api('GET', '/git/commits/' + parent)['tree']['sha']
         tree = api('POST', '/git/trees', {'base_tree': base, 'tree': [
-            {'path': 'updates/latest.json', 'mode': '100644', 'type': 'blob', 'sha': blob}]})['sha']
+            {'path': path, 'mode': '100644', 'type': 'blob', 'sha': blob}]})['sha']
         if tree == base:
             return parent
         commit = api('POST', '/git/commits', {'message': 'updates: publish verified ' + description['tag_name'],
@@ -65,8 +67,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', required=True)
     parser.add_argument('--archive', required=True, type=Path)
+    parser.add_argument('--app-archive', type=Path)
     args = parser.parse_args()
     repository = os.environ['GITHUB_REPOSITORY']
     api = GitHubApi(repository, os.environ['GITHUB_TOKEN'])
     release = api('GET', '/releases/tags/v' + args.version)
     print(publish(api, manifest(release, args.archive, repository)))
+    if args.app_archive:
+        print(publish(api, manifest(release, args.app_archive, repository, app_payload=True), 'updates/installer.json'))
