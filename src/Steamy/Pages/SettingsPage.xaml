@@ -22,7 +22,7 @@
         <Border x:Name="Field" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9">
           <Grid>
             <ScrollViewer x:Name="PART_ContentHost" Margin="12,8" VerticalAlignment="Center"/>
-            <TextBlock x:Name="Placeholder" Text="Key eingeben …" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" Margin="12,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+            <TextBlock x:Name="Placeholder" Text="Put Api Key …" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" Margin="12,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
           </Grid>
         </Border>
         <ControlTemplate.Triggers>
