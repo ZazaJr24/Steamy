@@ -1,5 +1,9 @@
 <h1 align="center">Steamy</h1>
-<p align="center">Your games, downloads and tools in one Windows app.</p>
+<p align="center">Browse and launch your PC games, manage downloads, and set up Steam tools on Windows.</p>
+
+**Steamy is a Windows desktop app for managing your Steam and PC game library, downloading game files, and configuring tools such as Steamless and Goldberg.**
+
+Use it when your games, downloads and tool settings are spread across different folders and programs. Steamy gives you one place to find an installed game, launch it, check a download queue and set up a supported game tool.
 
 <p align="center">
   <a href="https://github.com/ZazaJr24/Steamy/releases/latest"><img src="https://img.shields.io/github/v/release/ZazaJr24/Steamy?style=flat&amp;color=8b9dff" alt="Latest version" /></a>
@@ -8,38 +12,45 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ZazaJr24/Steamy/releases/download/v0.7.1.2/Steamy-v0.7.1.2-Setup.exe"><strong>Download Setup · 1.84 MiB</strong></a> &nbsp;·&nbsp;
-  <a href="https://github.com/ZazaJr24/Steamy/releases/download/v0.7.1.2/Steamy-v0.7.1.2.zip"><strong>Portable ZIP</strong></a> &nbsp;·&nbsp;
-  <a href="https://github.com/ZazaJr24/Steamy/releases/tag/v0.7.1.2">Release notes</a> &nbsp;·&nbsp;
+  <a href="https://github.com/ZazaJr24/Steamy/releases/latest"><strong>Download for Windows</strong></a> &nbsp;·&nbsp;
+  <a href="CHANGELOG.md">Changelog</a> &nbsp;·&nbsp;
   <a href="https://discord.gg/npWpm73z4B">Discord</a>
 </p>
 
-![Steamy Dashboard](docs/screenshots/dashboard.png)
+## What you can do
 
-## What's new in 0.7.1.2
+- **Find and launch installed games.** Scan your Steam, Epic, GOG and standalone game folders and browse the results in one library. Game pages give you play time, notes and launch options.
+- **Browse Steam games before installing.** Search the catalog and read game descriptions, screenshots and system requirements. Get recommendations based on the genres and series in your installed library.
+- **Manage game downloads.** Choose a supported download source or import a local ZIP/Lua package through the installation steps. Follow progress, speed and remaining time, and control the download queue from the Downloads page.
+- **Set up game tools.** Use dedicated pages for Steamless, Goldberg, GreenLuma, UC Online and DLC tools to select game files and manage their configuration.
 
-- Fix the local ZIP/Lua picker closing the installation menu. Selecting or cancelling a file now keeps the game page and installation steps open.
-- Retain the 0.7.0 artwork ambient, fades and glass interface.
-- Faster browsing and search, with cached game artwork.
-- Game details and installation steps for **Steamy** or **Steam**.
-- Clearer download progress, queue controls and scrolling fixes.
-- UC Online settings, backups and improved DepotBox imports.
-- Small download setup and a complete portable package.
+Downloads depend on the selected source and the files available for that game. Some sources require an account or API key, which you can configure in Settings. Steam integration uses your installed Steam client.
 
-The setup hotfix removes the unsupported XStoreUnlocker download and the obsolete Unsteam launcher. Hypervisor support is planned for **0.8.0**. [Full changelog →](CHANGELOG.md)
+![Steamy Home: installed games, recommendations and download activity](docs/screenshots/dashboard.png)
 
 ## Get started
 
 Requires **Windows 10 or 11, 64-bit**.
 
-**Setup:** run the installer and choose a folder. Steamy and eight supported tool components are downloaded from GitHub. Missing Microsoft prerequisites come from Microsoft's official sources.
+1. Open the [latest release](https://github.com/ZazaJr24/Steamy/releases/latest).
+2. Choose how to run Steamy:
+   - **Installer:** download the file ending in `-Setup.exe`, run it and choose an installation folder. Setup downloads the app and supported tool components from GitHub, along with any missing Microsoft prerequisites from Microsoft's official sources. An internet connection is required.
+   - **Portable:** download `Steamy-v*.zip` without the `-app` suffix, extract it and run `Steamy.exe`. The .NET runtime is included. Keep the extracted files and `Tools` folder together.
+3. Follow the first-run setup to select your Steam and download folders and find installed games. You can scan a specific folder or all drives, and scan again later from Home.
 
-**Portable:** extract the ZIP and run `Steamy.exe`. The .NET runtime is included; keep the extracted files and `Tools` folder together.
+## Your first session
 
-The `app.zip` asset is for Setup to download automatically. Some providers require a key in Settings. [Report a bug →](https://github.com/ZazaJr24/Steamy/issues)
+- Open **Games → Your games** to find and launch something already installed.
+- Switch to **Browse all** to search the Steam catalog. Open a game and select **Install** for the available installation steps.
+- Open **Downloads** to check active transfers and manage queued jobs.
+- Choose a tool from the sidebar when you want to configure it for a game.
+
+For changes between releases, see the [changelog](CHANGELOG.md).
+
+## Build from source
 
 <details>
-<summary>Build from source</summary>
+<summary>Windows development instructions</summary>
 
 Use Windows and the .NET SDK specified in [global.json](global.json).
 

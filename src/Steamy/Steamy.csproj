@@ -14,7 +14,7 @@
     <Product>Steamy</Product>
     <Company>ZazaJr24</Company>
     <Authors>ZazaJr24</Authors>
-    <Description>Steamy — Steam toolkit for Windows: library, downloads, manifests and tools in one app.</Description>
+    <Description>A Windows app to browse and launch Steam and PC games, manage game downloads, and configure tools such as Steamless and Goldberg.</Description>
     <Copyright>Copyright (c) 2026 ZazaJr24. All rights reserved.</Copyright>
     <RepositoryUrl>https://github.com/ZazaJr24/Steamy</RepositoryUrl>
     <ApplicationIcon>Resources\Brand\steamy.ico</ApplicationIcon>
