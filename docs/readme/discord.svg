@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="40" viewBox="0 0 144 40" role="img" aria-labelledby="title">
+  <title id="title">Join Discord</title>
+  <rect x="0.5" y="0.5" width="143" height="39" rx="8" fill="#202536" stroke="#414962" />
+  <path d="M14 12h16v12H20l-5 4v-4h-1z" fill="none" stroke="#e4e7f4" stroke-width="1.7" stroke-linejoin="round" />
+  <path d="M18 17h8m-8 4h5" fill="none" stroke="#e4e7f4" stroke-width="1.7" stroke-linecap="round" />
+  <text x="42" y="25" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="600">Join Discord</text>
+</svg>
