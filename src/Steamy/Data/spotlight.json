@@ -1,23 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-13T14:11:53.397696+00:00",
+  "updatedAt": "2026-10-14T11:52:12.076005+00:00",
   "games": [
-    {
-      "appId": 4231820,
-      "name": "Castlevania: Belmont's Curse",
-      "description": "Crimson Curse —Will Your Fate Bloom in Despair or Salvation Set 23 years after Castlevania Dracula's Curse - follow Rose Belmont's journey in an all new 2D Action-Exploration title from KONAMI, Evil Empire and Motion Twin.",
-      "genres": "Action · RPG",
-      "publisher": "KONAMI",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Oct 14, 2026",
-      "releaseDate": "2026-10-14",
-      "storeUrl": "https://store.steampowered.com/app/4231820/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/a86259a3a341818b144f97400c4cc5b3db0e708e/library_hero_2x.jpg?t=1788478863",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/6b65aec2c398006aea8b76e1463cc34d0e4ba68b/header_2x.jpg?t=1788478863",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/a296479a772d37cfb6c36c59059b72d663abca38/library_capsule_2x.jpg?t=1788478863",
-      "releaseTime": "2026-10-15T04:00:00+00:00"
-    },
     {
       "appId": 4435490,
       "name": "Call of Duty®: Modern Warfare® 4",
@@ -80,9 +64,9 @@
       "releaseLabel": "Feb 4, 2027",
       "releaseDate": "2027-02-04",
       "storeUrl": "https://store.steampowered.com/app/2590240/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/2c74f11f5bc793ae3568adcdbe566ac128432367/library_hero_2x.jpg?t=1788444240",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/6998fb70f896b0f155061de0b472a8262bd06ef9/header_2x.jpg?t=1788444240",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/f5e198f382b98e13b4962f98ab7dcd8c5d2d62fa/library_capsule_2x.jpg?t=1788444240",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/2c74f11f5bc793ae3568adcdbe566ac128432367/library_hero_2x.jpg?t=1791918051",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/6998fb70f896b0f155061de0b472a8262bd06ef9/header_2x.jpg?t=1791918051",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/f5e198f382b98e13b4962f98ab7dcd8c5d2d62fa/library_capsule_2x.jpg?t=1791918051",
       "releaseTime": "2027-02-04T16:00:00+00:00",
       "logoUrl": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2590240/40f084843d057328ef2f43843cd4b89729bab882/logo.png"
     },
@@ -203,21 +187,6 @@
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/97215eb609882139ce6a28419116be23fcf5ac86/header_2x.jpg?t=1791388584",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/16514821db6559e75c9067285fee5dd198492aee/library_capsule_2x.jpg?t=1791388584",
       "logoUrl": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/4078430/8c4e7f6aaa666365cb108fe74725c7894690fad8/logo.png"
-    },
-    {
-      "appId": 3010850,
-      "name": "Gears of War: E-Day",
-      "description": "Experience Emergence Day – the brutal origin story of one of gaming’s most acclaimed third-person shooter franchises.",
-      "genres": "Action · Adventure",
-      "publisher": "Xbox Game Studios",
-      "comingSoon": false,
-      "featured": false,
-      "releaseLabel": "Oct 6, 2026",
-      "releaseDate": "2026-10-06",
-      "storeUrl": "https://store.steampowered.com/app/3010850/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/b5751ae4302e34a0fdc216f7d23ba07a8d041443/library_hero_2x.jpg?t=1791488050",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/1abb0c5ef76c14f463dd6e3964adb64f984237d2/header_2x.jpg?t=1791488050",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3010850/f81b268dd5cb697bb6fc73e718f3a57a70657211/library_capsule_2x.jpg?t=1791488050"
     },
     {
       "appId": 3159330,
