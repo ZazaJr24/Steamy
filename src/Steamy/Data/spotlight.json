@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-16T11:24:39.409058+00:00",
+  "updatedAt": "2026-10-17T10:44:08.112848+00:00",
   "games": [
     {
       "appId": 4435490,
@@ -13,9 +13,9 @@
       "releaseLabel": "Oct 22, 2026",
       "releaseDate": "2026-10-22",
       "storeUrl": "https://store.steampowered.com/app/4435490/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/4138eadd1bb476b0499f6ee7690aba461fdf179c/library_hero_2x.jpg?t=1792111318",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/0c492be3204835d71e8b454b6eb1817f8ff68c0d/header_2x.jpg?t=1792111318",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/c71bc2cb60e440d1a0d2435d0c06c4d4a4050edf/library_capsule_2x.jpg?t=1792111318",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/4138eadd1bb476b0499f6ee7690aba461fdf179c/library_hero_2x.jpg?t=1792214069",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/0c492be3204835d71e8b454b6eb1817f8ff68c0d/header_2x.jpg?t=1792214069",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/c71bc2cb60e440d1a0d2435d0c06c4d4a4050edf/library_capsule_2x.jpg?t=1792214069",
       "releaseTime": "2026-10-23T05:00:00+00:00",
       "logoUrl": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/4435490/5cc1d9ffc6a8fde4e601f51714a3c3a0d97f70e1/logo.png"
     },
@@ -36,6 +36,22 @@
       "releaseTime": "2026-10-22T16:00:00+00:00"
     },
     {
+      "appId": 3905010,
+      "name": "ONE PIECE: Grand Gourmet",
+      "description": "Hop aboard a delectable management sim in the world of ONE PIECE! Work alongside the Straw Hat Crew to build the greatest floating restaurant of the seas. Collect ingredients, dream up dishes, and decorate to have familiar faces lining up for more!",
+      "genres": "Casual · Simulation",
+      "publisher": "Bandai Namco Entertainment Inc.",
+      "comingSoon": true,
+      "featured": false,
+      "releaseLabel": "Oct 22, 2026",
+      "releaseDate": "2026-10-22",
+      "storeUrl": "https://store.steampowered.com/app/3905010/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3905010/66a670519ad3df6f9c803d5e367dd18afc6725ae/library_hero_2x.jpg?t=1789090874",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3905010/0437aa2ef308bd35d40833de72c3dac04a24f067/header_2x.jpg?t=1789090874",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3905010/7d20694334d60f4a819f5f89c04b785673b119f7/library_capsule_2x.jpg?t=1789090874",
+      "releaseTime": "2026-10-22T22:00:00+00:00"
+    },
+    {
       "appId": 4115450,
       "name": "Phantom Blade Zero",
       "description": "S-GAME presents Phantom Blade Zero, a fusion of classic Wuxia storytelling and exhilarating action powered by Unreal Engine 5. You play as Soul, a warrior with only sixty-six days left to live. Fend off assassins, unravel world-ending conspiracies, and defend your values with your life.",
@@ -51,6 +67,22 @@
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/471e77854910665c03eb9a53ad06f2ac12903acd/library_capsule_2x.jpg?t=1787142639",
       "releaseTime": "2026-10-29T02:00:00+00:00",
       "logoUrl": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/4115450/31e7af85afd14d7c0881a565b5b205af5b87a81c/logo.png"
+    },
+    {
+      "appId": 4530370,
+      "name": "Football Manager 27",
+      "description": "Flow from the tactics board to the touchline as foundations evolve to deliver greater control, smoother discovery and a more enticing football world. Out from November 10.",
+      "genres": "Simulation · Sports · Strategy",
+      "publisher": "SEGA",
+      "comingSoon": true,
+      "featured": false,
+      "releaseLabel": "Nov 10, 2026",
+      "releaseDate": "2026-11-10",
+      "storeUrl": "https://store.steampowered.com/app/4530370/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/d38e5bf84f475381c6146e2d54f03d1db5292f10/library_hero_2x.jpg?t=1791379324",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/32b41d18ffaac3d2e1dc1a9c3915538db0ba3fca/header_2x.jpg?t=1791379324",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/7ed4ea902189db0f278ae069ff5bfde4f601de93/library_capsule_2x.jpg?t=1791379324",
+      "releaseTime": "2026-11-10T16:00:00+00:00"
     },
     {
       "appId": 2272360,
@@ -80,9 +112,9 @@
       "releaseLabel": "Feb 4, 2027",
       "releaseDate": "2027-02-04",
       "storeUrl": "https://store.steampowered.com/app/2590240/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/2c74f11f5bc793ae3568adcdbe566ac128432367/library_hero_2x.jpg?t=1791986098",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/6998fb70f896b0f155061de0b472a8262bd06ef9/header_2x.jpg?t=1791986098",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/f5e198f382b98e13b4962f98ab7dcd8c5d2d62fa/library_capsule_2x.jpg?t=1791986098",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/2c74f11f5bc793ae3568adcdbe566ac128432367/library_hero_2x.jpg?t=1792162386",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/6998fb70f896b0f155061de0b472a8262bd06ef9/header_2x.jpg?t=1792162386",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2590240/f5e198f382b98e13b4962f98ab7dcd8c5d2d62fa/library_capsule_2x.jpg?t=1792162386",
       "releaseTime": "2027-02-04T16:00:00+00:00",
       "logoUrl": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2590240/40f084843d057328ef2f43843cd4b89729bab882/logo.png"
     },
@@ -189,21 +221,6 @@
       "logoUrl": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3216600/9a77b1df748af71dcc882e0fc1c21bdcc6b8511c/logo.png"
     },
     {
-      "appId": 4930500,
-      "name": "Meow Xiaoxi Is Watching You",
-      "description": "\"Staring at You! Desktop Meow Xiaoxi\" is a cozy, relaxing desktop pet. Roaming freely along the bottom of your screen, she keeps you company during daily work and study, reminds you to stay hydrated and take breaks, and even quietly peeks at your screen.",
-      "genres": "Casual · Free To Play",
-      "publisher": "深层磁场SenseGames",
-      "comingSoon": false,
-      "featured": false,
-      "releaseLabel": "Oct 15, 2026",
-      "releaseDate": "2026-10-15",
-      "storeUrl": "https://store.steampowered.com/app/4930500/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4930500/2c91ea9d5e02645b631f1ac3884cd6217d7d8ca0/library_hero_2x.jpg?t=1792119273",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4930500/36b86689d7afe632f295335994e4c6abdab80fae/header_2x.jpg?t=1792119273",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4930500/cdf3fa5f5a1efcadd89c4ffd974679c7dae771fe/library_capsule_2x.jpg?t=1792119273"
-    },
-    {
       "appId": 1203620,
       "name": "Enshrouded",
       "description": "Enshrouded is a solo and co-op survival action RPG where your freedom and creativity come first. Conquer the Shroud, a corrupting fog devouring the kingdom of Embervale: explore a handcrafted world full of secrets, forge your hero your way, and build anything, anywhere in a fully terraformable land.",
@@ -217,21 +234,6 @@
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1203620/65bf9ce18aee402c94c5e370f0a4c7c87119f910/library_hero_2x.jpg?t=1792078032",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1203620/98ca939f51b39bdd41e0e9198a9ccf8421148770/header_alt_assets_2_2x.jpg?t=1792078032",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1203620/0f641453e3418029205a49c1960e5ae5cb1ce382/library_capsule_2x.jpg?t=1792078032"
-    },
-    {
-      "appId": 4231820,
-      "name": "Castlevania: Belmont's Curse",
-      "description": "Crimson Curse —Will Your Fate Bloom in Despair or Salvation Set 23 years after Castlevania Dracula's Curse - follow Rose Belmont's journey in an all new 2D Action-Exploration title from KONAMI, Evil Empire and Motion Twin.",
-      "genres": "Action · RPG",
-      "publisher": "KONAMI",
-      "comingSoon": false,
-      "featured": false,
-      "releaseLabel": "Oct 14, 2026",
-      "releaseDate": "2026-10-14",
-      "storeUrl": "https://store.steampowered.com/app/4231820/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/a86259a3a341818b144f97400c4cc5b3db0e708e/library_hero_2x.jpg?t=1792036946",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/6b65aec2c398006aea8b76e1463cc34d0e4ba68b/header_2x.jpg?t=1792036946",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4231820/a296479a772d37cfb6c36c59059b72d663abca38/library_capsule_2x.jpg?t=1792036946"
     },
     {
       "appId": 4078430,
@@ -488,6 +490,21 @@
       "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/cf8cec802dc47d0f24b75f9eee135e96812e2652/library_hero_2x.jpg?t=1784714077",
       "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/e9047d8ec47ae3d94bb8b464fb0fc9e9972b4ac7/header_2x.jpg?t=1784714077",
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/6399de67cce3cecadce7900e03f6e09ff910a235/library_capsule_2x.jpg?t=1784714077"
+    },
+    {
+      "appId": 1174180,
+      "name": "Red Dead Redemption 2",
+      "description": "Arthur Morgan and the Van der Linde Gang are outlaws on the run. With federal agents and bounty hunters massing on their heels, the gang must rob, steal, and fight their way across the rugged heartland in order to survive.",
+      "genres": "Action · Adventure",
+      "publisher": "Rockstar Games",
+      "comingSoon": false,
+      "featured": false,
+      "releaseLabel": "Dec 5, 2019",
+      "releaseDate": "2019-12-05",
+      "storeUrl": "https://store.steampowered.com/app/1174180/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/library_hero_2x.jpg?t=1759502961",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/header.jpg?t=1759502961",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/library_600x900_2x.jpg?t=1759502961"
     }
   ]
 }
