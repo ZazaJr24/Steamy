@@ -24,7 +24,7 @@
 
 <p align="center">
   <a href="https://github.com/ZazaJr24/Steamy/stargazers"><img src="https://img.shields.io/github/stars/ZazaJr24/Steamy?style=flat-square&amp;color=8b9dff&amp;label=Stars" alt="GitHub stars" /></a>
-  <a href="https://github.com/ZazaJr24/Steamy/releases"><img src="https://img.shields.io/github/downloads/ZazaJr24/Steamy/total?style=flat-square&amp;color=8b9dff&amp;label=Downloads" alt="Total release downloads" /></a>
+  <a href="https://github.com/ZazaJr24/Steamy/releases"><img src="https://img.shields.io/github/downloads/ZazaJr24/Steamy/total.svg?style=flat-square&amp;color=8b9dff&amp;label=Downloads" alt="Total release downloads" /></a>
 </p>
 
 <p align="center">
