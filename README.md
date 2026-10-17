@@ -5,12 +5,7 @@
 <h1 align="center">Steamy</h1>
 
 <p align="center">
-  <strong>Browse your games. Manage your downloads. Set up your tools.</strong>
-</p>
-
-<p align="center">
-  A Windows desktop app for your installed Steam and PC games, game downloads,<br />
-  and tools such as Steamless and Goldberg — together in one interface.
+  Launch your PC games, manage downloads and configure tools like Steamless and Goldberg.
 </p>
 
 <p align="center">
@@ -19,7 +14,7 @@
 </p>
 
 <p align="center">
-  <sub>Windows 10 / 11 · 64-bit · Installer or portable ZIP</sub>
+  <sub>For Windows 10 and 11 (64-bit)</sub>
 </p>
 
 <p align="center">
@@ -28,8 +23,8 @@
 </p>
 
 <p align="center">
-  <a href="#what-steamy-does">Features</a> &nbsp;·&nbsp;
-  <a href="#get-started">Get started</a> &nbsp;·&nbsp;
+  <a href="#features">Features</a> &nbsp;·&nbsp;
+  <a href="#installation">Installation</a> &nbsp;·&nbsp;
   <a href="#screenshots">Screenshots</a> &nbsp;·&nbsp;
   <a href="CHANGELOG.md">Changelog</a>
 </p>
@@ -38,38 +33,32 @@
 
 <p align="center">
   <a href="docs/screenshots/dashboard.png"><img src="docs/screenshots/dashboard.png" alt="Steamy Home showing a featured game, installed games and upcoming releases" /></a>
-  <br />
-  <sub>Featured games, your installed library and upcoming releases.</sub>
 </p>
 
-## What Steamy does
+## Features
 
-Steamy is for Windows players who want to handle their game library, downloads and tool settings from the same app.
+- Scan Steam, Epic, GOG and standalone game folders. Launch games and keep track of play time, notes and launch options.
+- Search the Steam catalog for games, screenshots and system requirements. Get recommendations based on your library.
+- Queue downloads from supported sources or import local ZIP/Lua packages. Check progress, speed and remaining time.
+- Set up Steamless, Goldberg, GreenLuma, UC Online and DLC tools.
 
-- **Find and play your games.** Scan Steam, Epic, GOG and standalone game folders. Launch installed games, see play time and manage notes and launch options.
-- **Discover your next game.** Browse the Steam catalog, view screenshots and system requirements, and find recommendations based on your installed library.
-- **Keep downloads organised.** Choose a supported source or import a local ZIP/Lua package. Follow transfer progress, speed and remaining time, and manage the queue.
-- **Configure game tools.** Dedicated pages guide you through Steamless, Goldberg, GreenLuma, UC Online and DLC tool settings.
+Some download sources require an account or API key, which you can add in **Settings**. Availability varies by game and source. Steam features use your installed Steam client.
 
-Downloads depend on the source and files available for each game. Some sources need an account or API key in **Settings**. Steam integration uses your installed Steam client.
+## Installation
 
-## Get started
+Download a package from the [latest release](https://github.com/ZazaJr24/Steamy/releases/latest):
 
-Requires **Windows 10 or 11, 64-bit**. Open the [latest release](https://github.com/ZazaJr24/Steamy/releases/latest) and choose a package:
+- **Installer:** Run the file ending in `-Setup.exe` and choose a folder. It downloads Steamy, the supported tools and any missing Microsoft prerequisites. Requires an internet connection.
+- **Portable:** Extract `Steamy-v*.zip` and run `Steamy.exe`. Choose the ZIP without `-app` in its name. It includes the .NET runtime; keep the extracted files and `Tools` folder together.
 
-- **Setup — guided installation.** Download the file ending in `-Setup.exe`, run it and choose an installation folder. Setup downloads the app and supported tools from GitHub, plus any missing Microsoft prerequisites from Microsoft's official sources. An internet connection is required.
-- **Portable — extract and run.** Download `Steamy-v*.zip` without the `-app` suffix, extract it and open `Steamy.exe`. The .NET runtime is included; keep the extracted files and `Tools` folder together.
+On first launch, choose your Steam and download folders, then scan for installed games. You can scan again from **Home**.
 
-### Your first session
-
-1. Follow the setup prompts to choose your Steam and download folders and find installed games. You can scan a folder or all drives, and scan again later from **Home**.
-2. Open **Games → Your games** to launch an installed game, or **Browse all** to explore the Steam catalog and its available installation steps.
-3. Use **Downloads** to check transfers and manage queued jobs. Open **Tools** when you want to configure a game tool.
+Your library is under **Games → Your games**. Use **Browse all** to search the Steam catalog, **Downloads** for the queue and **Tools** for tool settings.
 
 ## Screenshots
 
 <details>
-<summary><strong>Explore the library, download queue and tools</strong></summary>
+<summary>More screenshots</summary>
 
 ### Game library
 
@@ -85,9 +74,11 @@ Requires **Windows 10 or 11, 64-bit**. Open the [latest release](https://github.
 
 </details>
 
-## Community
+## Bugs and feedback
 
-Join [Discord](https://discord.gg/npWpm73z4B) for discussion and feedback, or [open a GitHub issue](https://github.com/ZazaJr24/Steamy/issues) to report a bug. Release changes live in the [changelog](CHANGELOG.md).
+Found a bug? [Open an issue](https://github.com/ZazaJr24/Steamy/issues) with what happened and how to reproduce it. For questions or feedback, join [Discord](https://discord.gg/npWpm73z4B).
+
+See the [changelog](CHANGELOG.md) for release notes.
 
 <details>
 <summary><strong>Build from source</strong></summary>
@@ -113,7 +104,7 @@ Created and maintained by [ZazaJr24](https://github.com/ZazaJr24).
 
 Special thanks to **Mstra**, **yima3** and **teachervituu**.
 
-Thanks to the authors of the tools and libraries used by Steamy. Their credits, licenses and provenance are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). The maintained downloader source is in [tools/DepotDownloaderMod](tools/DepotDownloaderMod).
+Third-party credits and licenses are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). The downloader source is in [tools/DepotDownloaderMod](tools/DepotDownloaderMod).
 
 </details>
 
