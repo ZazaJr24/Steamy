@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-18T11:05:17.729140+00:00",
+  "updatedAt": "2026-10-19T13:15:19.130784+00:00",
   "games": [
     {
       "appId": 4435490,
@@ -36,22 +36,6 @@
       "releaseTime": "2026-10-22T16:00:00+00:00"
     },
     {
-      "appId": 3905010,
-      "name": "ONE PIECE: Grand Gourmet",
-      "description": "Hop aboard a delectable management sim in the world of ONE PIECE! Work alongside the Straw Hat Crew to build the greatest floating restaurant of the seas. Collect ingredients, dream up dishes, and decorate to have familiar faces lining up for more!",
-      "genres": "Casual · Simulation",
-      "publisher": "Bandai Namco Entertainment Inc.",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Oct 22, 2026",
-      "releaseDate": "2026-10-22",
-      "storeUrl": "https://store.steampowered.com/app/3905010/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3905010/66a670519ad3df6f9c803d5e367dd18afc6725ae/library_hero_2x.jpg?t=1789090874",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3905010/0437aa2ef308bd35d40833de72c3dac04a24f067/header_2x.jpg?t=1789090874",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3905010/7d20694334d60f4a819f5f89c04b785673b119f7/library_capsule_2x.jpg?t=1789090874",
-      "releaseTime": "2026-10-22T22:00:00+00:00"
-    },
-    {
       "appId": 4115450,
       "name": "Phantom Blade Zero",
       "description": "S-GAME presents Phantom Blade Zero, a fusion of classic Wuxia storytelling and exhilarating action powered by Unreal Engine 5. You play as Soul, a warrior with only sixty-six days left to live. Fend off assassins, unravel world-ending conspiracies, and defend your values with your life.",
@@ -67,22 +51,6 @@
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/471e77854910665c03eb9a53ad06f2ac12903acd/library_capsule_2x.jpg?t=1787142639",
       "releaseTime": "2026-10-29T02:00:00+00:00",
       "logoUrl": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/4115450/31e7af85afd14d7c0881a565b5b205af5b87a81c/logo.png"
-    },
-    {
-      "appId": 4530370,
-      "name": "Football Manager 27",
-      "description": "Flow from the tactics board to the touchline as foundations evolve to deliver greater control, smoother discovery and a more enticing football world. Out from November 10.",
-      "genres": "Simulation · Sports · Strategy",
-      "publisher": "SEGA",
-      "comingSoon": true,
-      "featured": false,
-      "releaseLabel": "Nov 10, 2026",
-      "releaseDate": "2026-11-10",
-      "storeUrl": "https://store.steampowered.com/app/4530370/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/d38e5bf84f475381c6146e2d54f03d1db5292f10/library_hero_2x.jpg?t=1791379324",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/32b41d18ffaac3d2e1dc1a9c3915538db0ba3fca/header_2x.jpg?t=1791379324",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4530370/7ed4ea902189db0f278ae069ff5bfde4f601de93/library_capsule_2x.jpg?t=1791379324",
-      "releaseTime": "2026-11-10T16:00:00+00:00"
     },
     {
       "appId": 2272360,
