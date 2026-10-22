@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-21T11:49:15.661362+00:00",
+  "updatedAt": "2026-10-22T11:52:33.706443+00:00",
   "games": [
     {
       "appId": 4435490,
@@ -46,9 +46,9 @@
       "releaseLabel": "Oct 28, 2026",
       "releaseDate": "2026-10-28",
       "storeUrl": "https://store.steampowered.com/app/4115450/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/1cd52ca84a3d974c4206e9cb90231956324c5999/library_hero_2x.jpg?t=1787142639",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/7f882f889630270d3d3fb93825ac6f55b55e7a6c/header_2x.jpg?t=1787142639",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/471e77854910665c03eb9a53ad06f2ac12903acd/library_capsule_2x.jpg?t=1787142639",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/1cd52ca84a3d974c4206e9cb90231956324c5999/library_hero_2x.jpg?t=1792637475",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/7f882f889630270d3d3fb93825ac6f55b55e7a6c/header_2x.jpg?t=1792637475",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/471e77854910665c03eb9a53ad06f2ac12903acd/library_capsule_2x.jpg?t=1792637475",
       "releaseTime": "2026-10-29T02:00:00+00:00",
       "logoUrl": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/4115450/31e7af85afd14d7c0881a565b5b205af5b87a81c/logo.png"
     },
@@ -63,9 +63,9 @@
       "releaseLabel": "Dec 3, 2026",
       "releaseDate": "2026-12-03",
       "storeUrl": "https://store.steampowered.com/app/2272360/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/63bb72eb8e7513bc4756bb46d38f046114c33087/library_hero_2x.jpg?t=1791475546",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/f50a309da98ef75cbdae400a7d492e36314ce415/header_2x.jpg?t=1791475546",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/c7dfb77d135e6da1b8a392af39b4272c59b1162a/library_capsule_2x.jpg?t=1791475546",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/63bb72eb8e7513bc4756bb46d38f046114c33087/library_hero_2x.jpg?t=1792608448",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/f50a309da98ef75cbdae400a7d492e36314ce415/header_2x.jpg?t=1792608448",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2272360/c7dfb77d135e6da1b8a392af39b4272c59b1162a/library_capsule_2x.jpg?t=1792608448",
       "releaseTime": "2026-12-03T16:00:00+00:00",
       "logoUrl": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2272360/347ac167f0524cc41126bebb6b14b71811ee4845/logo.png"
     },
@@ -187,6 +187,21 @@
       "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3216600/792358d56ea0ab4c13c19a0cf39c46a351648ed4/library_capsule_2x.jpg?t=1788158325",
       "releaseTime": null,
       "logoUrl": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3216600/9a77b1df748af71dcc882e0fc1c21bdcc6b8511c/logo.png"
+    },
+    {
+      "appId": 1203620,
+      "name": "Enshrouded",
+      "description": "Enshrouded is a solo and co-op survival action RPG where your freedom and creativity come first. Conquer the Shroud, a corrupting fog devouring the kingdom of Embervale: explore a handcrafted world full of secrets, forge your hero your way, and build anything, anywhere in a fully terraformable land.",
+      "genres": "Action · Adventure · Indie",
+      "publisher": "Keen Games GmbH",
+      "comingSoon": false,
+      "featured": false,
+      "releaseLabel": "Oct 15, 2026",
+      "releaseDate": "2026-10-15",
+      "storeUrl": "https://store.steampowered.com/app/1203620/",
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1203620/65bf9ce18aee402c94c5e370f0a4c7c87119f910/library_hero_2x.jpg?t=1792078032",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1203620/98ca939f51b39bdd41e0e9198a9ccf8421148770/header_alt_assets_2_2x.jpg?t=1792078032",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1203620/0f641453e3418029205a49c1960e5ae5cb1ce382/library_capsule_2x.jpg?t=1792078032"
     },
     {
       "appId": 3159330,
@@ -424,9 +439,9 @@
       "releaseLabel": "Dec 9, 2020",
       "releaseDate": "2020-12-09",
       "storeUrl": "https://store.steampowered.com/app/1091500/",
-      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/cf8cec802dc47d0f24b75f9eee135e96812e2652/library_hero_2x.jpg?t=1784714077",
-      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/e9047d8ec47ae3d94bb8b464fb0fc9e9972b4ac7/header_2x.jpg?t=1784714077",
-      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/6399de67cce3cecadce7900e03f6e09ff910a235/library_capsule_2x.jpg?t=1784714077"
+      "heroUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/cf8cec802dc47d0f24b75f9eee135e96812e2652/library_hero_2x.jpg?t=1792663801",
+      "headerUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/48a93d6445a67520ea49833c93dae8f2e68fc540/header_alt_assets_9_2x.jpg?t=1792663801",
+      "portraitUrl": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/6399de67cce3cecadce7900e03f6e09ff910a235/library_capsule_2x.jpg?t=1792663801"
     },
     {
       "appId": 1174180,
