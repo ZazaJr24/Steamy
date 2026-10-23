@@ -12,7 +12,7 @@ using System.Windows.Media;
 
 namespace Steamy.UiTests;
 
-public sealed class GameDetailsTests
+public sealed partial class GameDetailsTests
 {
     [Theory]
     [InlineData(false)]
@@ -36,17 +36,19 @@ public sealed class GameDetailsTests
             Assert.Single(value.Screenshots); Assert.Equal("cdn.akamai.steamstatic.com", value.Screenshots[0].Thumbnail.Host);
             Assert.Equal(newsOffline ? 0 : 1, value.News.Count);
             Assert.All(handler.Requests, uri => Assert.DoesNotContain("key=", uri.Query));
-            Assert.Equal(value, await service.ReadOverviewAsync(1808500)); Assert.Equal(2, handler.Requests.Count);
+            Assert.NotNull(value.Reviews); Assert.Equal(95, value.Reviews.PositivePercent); Assert.Equal(1000, value.Reviews.Total);
+            Assert.Equal(value, await service.ReadOverviewAsync(1808500)); Assert.Equal(3, handler.Requests.Count);
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }
     private sealed class OverviewHandler : HttpMessageHandler
     {
         public bool NewsOffline;
-        public List<Uri> Requests { get; } = [];
+        public System.Collections.Concurrent.ConcurrentBag<Uri> Requests { get; } = [];
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
         {
             token.ThrowIfCancellationRequested(); Requests.Add(request.RequestUri!);
+            if (request.RequestUri!.AbsolutePath.StartsWith("/appreviews/", StringComparison.Ordinal)) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"success":1,"query_summary":{"total_positive":950,"total_reviews":1000,"review_score_desc":"Very Positive"}}""") });
             var news = request.RequestUri!.AbsolutePath.Contains("GetNewsForApp", StringComparison.Ordinal);
             if (news && NewsOffline) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
             var json = news
@@ -108,6 +110,7 @@ public sealed class GameDetailsTests
         var preferences = new Preferences(); var data = new DeferredData();
         var model = Model(data, preferences);
         model.SelectGame(Game(42)); var first = model.ActivateAsync();
+        await WaitForPreferencesAsync(model);
         Assert.True(model.CanEditPreferences);
         model.Notes = "Notes for the first game";
         model.SelectGame(Game(-42, local: true)); await model.ActivateAsync();
@@ -161,10 +164,57 @@ public sealed class GameDetailsTests
         }
         finally { Directory.Delete(directory, true); }
     }
+    [Fact]
+    public async Task DeveloperRecommendationsPreserveCompanyNamesAndLoadOnlySelectedArtwork()
+    {
+        using var catalog = new RelatedCatalog();
+        var data = new RelatedData();
+        var model = Model(data, new Preferences(), catalog);
+        model.SelectGame(Game(42));
+        await model.ActivateAsync();
+        await catalog.ArtworkReady.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(new[] { 43 }, model.DeveloperGames.Select(item => item.AppId));
+        Assert.Equal(new[] { 45 }, model.SimilarGames.Select(item => item.AppId));
+        Assert.Equal(new[] { 43, 45 }, catalog.ArtworkRequests.Order());
+        Assert.Contains("Studio%2C%20Ltd.", model.DeveloperStoreUri!.AbsoluteUri);
+        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand<SteamCatalogItem>)model.OpenRelatedGameCommand).ExecuteAsync(model.DeveloperGames.Single());
+        Assert.Equal(43, model.Game!.AppId);
+        Assert.Equal("Description", model.Description);
+        Assert.True(model.CanEditPreferences); // Same-page navigation must activate the new game.
+        await model.DeactivateAsync();
+    }
+    private sealed class RelatedData : IGameDetailsDataService
+    {
+        public Task<GameOverview> ReadOverviewAsync(int appId, CancellationToken token = default) => Task.FromResult(new GameOverview("Description", "Studio, Ltd.", "Publisher") { Genres = "Action" });
+        public Task<GameAchievementSnapshot> ReadAchievementsAsync(int appId, CancellationToken token = default) => Task.FromResult(GameAchievementSnapshot.Unavailable("Unavailable"));
+    }
+    private class RelatedCatalog : ISteamCatalogService
+    {
+        public List<int> ArtworkRequests { get; } = [];
+        public TaskCompletionSource ArtworkReady { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public List<int> DetailRequests { get; } = [];
+        public SteamCatalogDetails? Details { get; set; }
+        public Task<SteamCatalogSnapshot> GetCatalogAsync(bool forceRefresh = false, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Game recommendations must not request the full catalog.");
+        public virtual Task<IReadOnlyList<SteamCatalogItem>> GetRecommendationCandidatesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SteamCatalogItem>>(
+            [new() { AppId = 42, DevelopersDisplay = "Studio, Ltd.", AppType = SteamCatalogAppType.Game },
+             new() { AppId = 43, DevelopersDisplay = "Studio, Ltd.", AppType = SteamCatalogAppType.Game },
+             new() { AppId = 44, DevelopersDisplay = "Studio, Corp.", AppType = SteamCatalogAppType.Game },
+             new() { AppId = 45, DevelopersDisplay = "Another", GenresDisplay = "Action · Adventure", AppType = SteamCatalogAppType.Game },
+             new() { AppId = 46, DevelopersDisplay = "Studio, Ltd.", AppType = SteamCatalogAppType.Dlc }]);
+        public Task<bool> EnsureArtworkAsync(SteamCatalogItem item, bool includeHeader = false, CancellationToken cancellationToken = default)
+        { ArtworkRequests.Add(item.AppId); if (ArtworkRequests.Count >= 2) ArtworkReady.TrySetResult(); return Task.FromResult(true); }
+        public virtual Task<SteamCatalogDetails?> GetDetailsAsync(int appId, CancellationToken cancellationToken = default)
+        { DetailRequests.Add(appId); return Task.FromResult(Details); }
+        public Task<bool> EnsureDetailsAsync(SteamCatalogItem item, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> EnsureScreenshotsAsync(SteamCatalogItem item, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task PrepareReleaseStatusAsync(IReadOnlyList<SteamCatalogItem> items, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public void Dispose() { }
+    }
     private static Game Game(int appId, bool local = false) => new() { AppId = appId, Name = appId.ToString(), IsLocalDownload = local, InstallState = GameInstallState.Installed };
     private static ILoggingService Log() => (ILoggingService)OfflineServiceProxy.Create(typeof(ILoggingService));
-    private static GameDetailsViewModel Model(IGameDetailsDataService data, IGamePreferencesStore preferences) => new(new AppDataStore(), new NavigationService(), Log(), new Artwork(), data, preferences,
-        (IGameLaunchService)OfflineServiceProxy.Create(typeof(IGameLaunchService)), new Time(), new Activity(), new Credentials());
+    private static GameDetailsViewModel Model(IGameDetailsDataService data, IGamePreferencesStore preferences, ISteamCatalogService? catalog = null, IArtworkService? artwork = null, IPlayTimeService? playtime = null, IGameActivityService? activity = null) => new(new AppDataStore(), new NavigationService(), Log(), artwork ?? new Artwork(), data, preferences,
+        (IGameLaunchService)OfflineServiceProxy.Create(typeof(IGameLaunchService)), playtime ?? new Time(), activity ?? new Activity(), new Credentials(), catalog);
     private sealed class Settings(string? directory = null) : ISettingsService
     {
         private readonly AppSettings _value = new() { SteamId64 = "76561197960265729", SteamLibraryPath = directory ?? "" };
@@ -182,7 +232,7 @@ public sealed class GameDetailsTests
     private sealed class ApiHandler : HttpMessageHandler
     {
         public bool Private;
-        public List<Uri> Requests { get; } = [];
+        public System.Collections.Concurrent.ConcurrentBag<Uri> Requests { get; } = [];
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
         {
             token.ThrowIfCancellationRequested(); Requests.Add(request.RequestUri!);

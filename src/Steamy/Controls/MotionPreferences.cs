@@ -16,6 +16,21 @@ public static class MotionPreferences
     public static bool NativeBackdropEnabled => AnimationsEnabled && !SystemParameters.HighContrast;
     public static event EventHandler? Changed;
 
+    // Template parts can disappear before receiving Unloaded. WPF's weak
+    // manager lets their owner retain the callback without the global policy
+    // retaining the visual tree. The existing event remains for service owners.
+    private sealed class WeakNotifications
+    {
+        internal static readonly WeakNotifications Shared = new();
+        public event EventHandler<EventArgs>? Changed;
+        private WeakNotifications() => MotionPreferences.Changed += Forward;
+        private void Forward(object? sender, EventArgs args) => Changed?.Invoke(this, args);
+    }
+    internal static void AddWeakChangedHandler(EventHandler<EventArgs> handler) =>
+        WeakEventManager<WeakNotifications, EventArgs>.AddHandler(WeakNotifications.Shared, nameof(WeakNotifications.Changed), handler);
+    internal static void RemoveWeakChangedHandler(EventHandler<EventArgs> handler) =>
+        WeakEventManager<WeakNotifications, EventArgs>.RemoveHandler(WeakNotifications.Shared, nameof(WeakNotifications.Changed), handler);
+
     public static void Configure(bool reduceEffects)
     {
         if (ReduceEffects == reduceEffects) return;

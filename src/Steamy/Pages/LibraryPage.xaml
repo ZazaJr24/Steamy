@@ -1,561 +1,644 @@
-<Page x:Class="Steamy.Pages.LibraryPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-      xmlns:controls="clr-namespace:Steamy.Controls"
-      xmlns:local="clr-namespace:Steamy.Pages"
-      FontFamily="Segoe UI" UseLayoutRounding="True" SnapsToDevicePixels="True"
-      TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="Auto" RenderOptions.ClearTypeHint="Auto"
-      PreviewKeyDown="Page_PreviewKeyDown"
-      ScrollViewer.CanContentScroll="False"
-      Background="Transparent">
-  <Page.Resources>
-    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-    <local:EnumToShowBoolConverter x:Key="EnumTo_ShowBoolConverter" />
-    <Style x:Key="InstallDriveButton" TargetType="Button" BasedOn="{StaticResource GalleryCardButton}">
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
-        <Border x:Name="DriveSurface" CornerRadius="10" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
-          <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
-        </Border>
-        <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="DriveSurface" Property="Background" Value="{DynamicResource CardHoverGlassBrush}" /></Trigger>
-          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.6" /></Trigger>
-        </ControlTemplate.Triggers>
-      </ControlTemplate></Setter.Value></Setter>
-    </Style>
-    <!-- keep local xmlns for correctness -->
-    <Style x:Key="GalleryEmptyStateStyle" TargetType="TextBlock" BasedOn="{StaticResource MutedTextStyle}">
-      <Setter Property="Visibility" Value="Collapsed" />
-      <Setter Property="Margin" Value="2,12,0,0" />
-      <Style.Triggers>
-        <DataTrigger Binding="{Binding HasCatalogItems}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
-      </Style.Triggers>
-    </Style>
-    <!-- Option rows and host chips inside the download dialog. The code-behind swaps
-         Background/BorderBrush for the selected state using the same theme brushes. -->
-    <Style x:Key="OptionRow" TargetType="Border">
-      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="12" />
-      <Setter Property="Padding" Value="14,11" />
-      <Setter Property="Margin" Value="0,0,0,8" />
-      <Setter Property="Cursor" Value="Hand" />
-    </Style>
-    <Style x:Key="HostPill" TargetType="Border">
-      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="Padding" Value="10,6" />
-      <Setter Property="Margin" Value="0,0,6,6" />
-      <Setter Property="Cursor" Value="Hand" />
-    </Style>
-    <Style x:Key="DialogSectionLabel" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="10" />
-      <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
-      <Setter Property="Margin" Value="0,0,0,8" />
-    </Style>
-    <LinearGradientBrush x:Key="HeroBannerFade" StartPoint="0,0" EndPoint="0,1">
-      <GradientStop Color="#00000000" Offset="0" />
-      <GradientStop Color="#B3162C47" Offset="0.6" />
-      <GradientStop Color="#EC213B5B" Offset="1" />
-    </LinearGradientBrush>
-
-    <!-- Dashboard stat tile -->
-    <Style x:Key="StatTileStyle" TargetType="Border" BasedOn="{StaticResource SurfaceCardStyle}">
-      <Setter Property="Padding" Value="16,14" />
-      <Setter Property="Margin" Value="6,0" />
-    </Style>
-
-    <!-- Dashboard shortcut tile: icon badge + title + subtitle, click to navigate -->
-    <Style x:Key="ShortcutTileStyle" TargetType="Border">
-      <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="14" />
-      <Setter Property="Padding" Value="15,14" />
-      <Setter Property="Margin" Value="6" />
-      <Setter Property="Cursor" Value="Hand" />
-      <Setter Property="SnapsToDevicePixels" Value="True" />
-      <Style.Triggers>
-        <Trigger Property="IsMouseOver" Value="True">
-          <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-          <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
-        </Trigger>
-      </Style.Triggers>
-    </Style>
-    <Style x:Key="ShortcutIconBadge" TargetType="Border">
-      <Setter Property="Width" Value="38" />
-      <Setter Property="Height" Value="38" />
-      <Setter Property="CornerRadius" Value="12" />
-      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-
-    <Style x:Key="LibraryTabs" TargetType="ListBox">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
-      <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
-      <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></Setter.Value></Setter>
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBox"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"><ItemsPresenter /></Border></ControlTemplate></Setter.Value></Setter>
-      <Setter Property="ItemContainerStyle"><Setter.Value><Style TargetType="ListBoxItem">
-        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-        <Setter Property="Padding" Value="16,11" />
-        <Setter Property="Margin" Value="0,0,8,0" />
-        <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
-          <Grid><Border x:Name="TabSurface" CornerRadius="6,6,0,0" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter /></Border><Border x:Name="TabUnderline" Height="3" Background="{DynamicResource DownloadAccentBrush}" CornerRadius="1.5" VerticalAlignment="Bottom" Opacity="0" /></Grid>
-          <ControlTemplate.Triggers>
-            <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="{DynamicResource GlassSurfaceBrush}" /><Setter TargetName="TabUnderline" Property="Opacity" Value="1" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /><Setter Property="FontWeight" Value="SemiBold" /></Trigger>
-            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="{DynamicResource GlassSurfaceBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /></Trigger>
-            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="TabSurface" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter TargetName="TabSurface" Property="BorderThickness" Value="1" /></Trigger>
-          </ControlTemplate.Triggers>
-        </ControlTemplate></Setter.Value></Setter>
-      </Style></Setter.Value></Setter>
-    </Style>
-    <Style x:Key="LibraryCoverButton" TargetType="Button" BasedOn="{StaticResource GalleryCardButton}">
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="controls:CardMotion.HoverScale" Value="1" />
-      <Setter Property="controls:CardMotion.HoverLift" Value="-3" />
-      <Setter Property="controls:CardMotion.HoverDuration" Value="180" />
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
-        <Grid Background="Transparent"><Grid x:Name="MotionSurface">
-          <Border x:Name="Chrome" Background="Transparent">
-            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
-          </Border>
-        </Grid></Grid>
-        <ControlTemplate.Triggers>
-          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55" /></Trigger>
-        </ControlTemplate.Triggers>
-      </ControlTemplate></Setter.Value></Setter>
-    </Style>
-    <Style x:Key="LibraryOptionalText" TargetType="TextBlock">
-      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
-      <Setter Property="FontSize" Value="12" />
-      <Setter Property="Margin" Value="0,0,0,8" />
-      <Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger></Style.Triggers>
-    </Style>
-    <Style x:Key="InstallStepContent" TargetType="Expander">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Expander">
-        <ContentPresenter x:Name="StepContent" ContentSource="Content" />
-        <ControlTemplate.Triggers><Trigger Property="IsExpanded" Value="False"><Setter TargetName="StepContent" Property="Visibility" Value="Collapsed" /></Trigger></ControlTemplate.Triggers>
-      </ControlTemplate></Setter.Value></Setter>
-    </Style>
-  </Page.Resources>
-
-  <Grid x:Name="LibraryScene" Background="Transparent">
-    <controls:ShellBackdropView x:Name="LibraryAmbientBackdrop" IsPageBackdrop="True" BaseBrush="{DynamicResource PageBackgroundBrush}" IsHitTestVisible="False"/>
-    <Grid x:Name="MainContentGrid" Margin="28,14,26,0">
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" />
-      </Grid.RowDefinitions>
-      <Grid Grid.Row="0" Margin="0,0,0,10">
-        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-        <StackPanel VerticalAlignment="Center">
-          <StackPanel Orientation="Horizontal">
-            <TextBlock Text="{Binding LibraryTitle}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock Text="{Binding CatalogCountLabel}" Margin="14,1,0,0" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-          </StackPanel>
-        </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
-            <ui:Button Icon="{ui:SymbolIcon ChevronLeft24}" Appearance="Transparent" Command="{Binding PreviousPageCommand}" IsEnabled="{Binding CanGoPrevious}" Width="28" Height="32" Padding="4" ToolTip="Previous page" />
-            <TextBlock Text="{Binding PageLabel}" Margin="8,0" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-            <ui:Button Icon="{ui:SymbolIcon ChevronRight24}" Appearance="Transparent" Command="{Binding NextPageCommand}" IsEnabled="{Binding CanGoNext}" Width="28" Height="32" Padding="4" ToolTip="Next page" />
-          </StackPanel>
-          <ui:TextBox x:Name="LibrarySearch" Foreground="{DynamicResource TextPrimaryBrush}" Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" Width="300" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Search games..." Icon="{ui:SymbolIcon Search24}" FontSize="13" MinHeight="40" AutomationProperties.Name="Search games">
-            <ui:TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding SubmitSearchCommand}" /></ui:TextBox.InputBindings>
-          </ui:TextBox>
-          <controls:FilterFlyout Margin="8,0,0,0" FilterSummary="{Binding FilterSummary}" HasActiveFilters="{Binding HasActiveFilters}">
-            <controls:FilterFlyout.FilterContent><StackPanel>
-              <TextBlock Text="View" Style="{StaticResource FieldLabelStyle}" />
-              <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}" Margin="0,0,0,12" AutomationProperties.Name="Library view" />
-              <TextBlock Text="Genre" Style="{StaticResource FieldLabelStyle}" />
-              <ComboBox ItemsSource="{Binding GenreFilters}" SelectedItem="{Binding SelectedGenre}" Margin="0,0,0,12" AutomationProperties.Name="Game genre" />
-              <TextBlock Text="Show" Style="{StaticResource FieldLabelStyle}" /><ComboBox ItemsSource="{Binding TypeFilters}" SelectedItem="{Binding SelectedTypeFilter}" Margin="0,0,0,12" />
-              <TextBlock Text="Manifest source" Style="{StaticResource FieldLabelStyle}" /><ComboBox ItemsSource="{Binding SourceFilters}" SelectedItem="{Binding SelectedSourceFilter}" Margin="0,0,0,8" AutomationProperties.Name="Filter games by manifest source" />
-              <TextBlock Text="{Binding SourceFilterHint}" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Margin="0,0,0,12" />
-              <TextBlock Text="Sort" Style="{StaticResource FieldLabelStyle}" /><ComboBox ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" Margin="0,0,0,12" />
-              <TextBlock Text="Cards per page" Style="{StaticResource FieldLabelStyle}" /><ComboBox ItemsSource="{Binding PageSizes}" SelectedItem="{Binding PageSize}" />
-              <CheckBox Content="Include adult games (NSFW)" IsChecked="{Binding NsfwScope, Converter={StaticResource EnumTo_ShowBoolConverter}, ConverterParameter=Show}" Margin="0,12,0,0" />
-            </StackPanel></controls:FilterFlyout.FilterContent>
-          </controls:FilterFlyout>
-          <ui:Button Style="{StaticResource IconButtonStyle}" Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding RefreshCatalogCommand}" Appearance="Transparent" Margin="8,0,0,0" ToolTip="Refresh library" AutomationProperties.Name="Refresh library" />
-        </StackPanel>
-      </Grid>
-      <StackPanel Grid.Row="1">
-        <TextBlock Text="{Binding SearchHint}" Style="{StaticResource LibraryOptionalText}" TextWrapping="Wrap" />
-        <ItemsControl ItemsSource="{Binding SearchSuggestions}" Margin="0,0,0,8" Visibility="{Binding HasSearchSuggestions, Converter={StaticResource BooleanToVisibilityConverter}}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate><DataTemplate><ui:Button Command="{Binding DataContext.SelectSearchSuggestionCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Appearance="Transparent" Padding="8" Margin="0,6,8,0" ToolTip="{Binding Name}"><TextBlock Text="{Binding Name}" MaxWidth="180" TextTrimming="CharacterEllipsis" FontSize="11" /></ui:Button></DataTemplate></ItemsControl.ItemTemplate>
-        </ItemsControl>
-
-        <ProgressBar IsIndeterminate="True" Height="2" Margin="0,0,0,8" Visibility="{Binding IsCatalogLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
-      </StackPanel>
-      <Grid Grid.Row="2">
-        <ItemsControl x:Name="LibraryGallery" ItemsSource="{Binding PagedCatalogItems}" KeyboardNavigation.DirectionalNavigation="Contained">
-          <ItemsControl.Template><ControlTemplate TargetType="ItemsControl">
-            <ScrollViewer x:Name="GalleryScroll" CanContentScroll="True" Style="{StaticResource DashboardScrollHostStyle}" Padding="32,32,32,32" Margin="-32,-24,-32,0">
-              <ItemsPresenter />
-            </ScrollViewer>
-          </ControlTemplate></ItemsControl.Template>
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:VirtualizingGamePanel MinItemWidth="158" MaxColumns="6" Spacing="22" CoverRatio="1.60" FooterHeight="0" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate><DataTemplate>
-            <Button x:Name="Card" Style="{StaticResource LibraryCoverButton}" Click="GameCard_Click" Tag="{Binding}" ToolTip="{Binding Name}" AutomationProperties.Name="{Binding Name}">
-              <Button.ContextMenu><ContextMenu><MenuItem Header="Game details" Click="GameDetailsMenu_Click" Tag="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}" /><MenuItem Header="Install…" Click="InstallGameMenu_Click" Tag="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}" /><MenuItem Header="{Binding PlacementTarget.Tag.AppId, RelativeSource={RelativeSource AncestorType=ContextMenu}, StringFormat='App {0}'}" IsEnabled="False" /></ContextMenu></Button.ContextMenu>
-              <Grid>
-              <controls:ArtworkHalo x:Name="CardAmbient" Source="{Binding ArtworkImage}" IsActive="True" Spread="28" Intensity="0.68" />
-              <Border x:Name="Cover" CornerRadius="14" BorderThickness="0" Background="#101113" controls:RoundedClip.Radius="14">
-                <Grid ClipToBounds="True">
-                  <Border RenderOptions.BitmapScalingMode="HighQuality"><Border.Background><ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" /></Border.Background></Border>
-                  <Border Background="#242731" Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <Grid><ui:SymbolIcon Symbol="Games24" FontSize="20" Foreground="#70FFFFFF" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16" /><TextBlock Text="{Binding ArtworkMonogram}" FontSize="48" FontWeight="SemiBold" Foreground="#C4FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" /></Grid>
-                  </Border>
-                  <Border IsHitTestVisible="False"><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#00060607" Offset="0.50"/><GradientStop Color="#18060607" Offset="0.68"/><GradientStop Color="#65060607" Offset="0.82"/><GradientStop Color="#B8060607" Offset="0.94"/><GradientStop Color="#DB060607" Offset="1"/></LinearGradientBrush></Border.Background></Border>
-                  <Border x:Name="CoverShade" Background="#14000000" Opacity="0" IsHitTestVisible="False"/>
-                  <Border x:Name="CoverFocusRing" CornerRadius="13" BorderBrush="{DynamicResource DownloadAccentBrush}" BorderThickness="1" Opacity="0" IsHitTestVisible="False"/>
-                  <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Width="24" Height="24" CornerRadius="6" Background="#DE0E141B" BorderBrush="#4066C0F4" BorderThickness="1" ToolTip="Installed on this PC" Visibility="{Binding IsInstalled, Converter={StaticResource BooleanToVisibilityConverter}}"><ui:SymbolIcon Symbol="Checkmark24" FontSize="14" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-                  <StackPanel VerticalAlignment="Bottom" Margin="12,0,12,14">
-                    <TextBlock Text="{Binding Name}" Foreground="#F5F5F6" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="36" MinHeight="18" ToolTip="{Binding Name}"/>
-                  </StackPanel>
-                </Grid>
-              </Border>
-              </Grid>
-            </Button>
-            <DataTemplate.Triggers>
-              <Trigger SourceName="Card" Property="IsMouseOver" Value="True"><Setter TargetName="Cover" Property="BorderBrush" Value="{DynamicResource DownloadAccentBrush}" /><Setter TargetName="CoverFocusRing" Property="Opacity" Value="0.65" /><Setter TargetName="CoverShade" Property="Opacity" Value="1" /></Trigger>
-              <Trigger SourceName="Card" Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="CoverShade" Property="Opacity" Value="1" /><Setter TargetName="CoverFocusRing" Property="Opacity" Value="1" /><Setter TargetName="Cover" Property="BorderBrush" Value="{DynamicResource DownloadAccentBrush}" /></Trigger>
-            </DataTemplate.Triggers>
-          </DataTemplate></ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420">
-          <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding HasCatalogItems}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
-          <ui:SymbolIcon Symbol="Games24" FontSize="36" Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,16" />
-          <TextBlock Text="No games found" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" />
-          <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource MutedTextStyle}" FontSize="12" TextAlignment="Center" Margin="0,9,0,0" />
-        </StackPanel>
-      </Grid>
-    </Grid>
-    <!-- A half-resolution frozen backdrop keeps modal blur independent of live progress updates. -->
-    <Image x:Name="BackdropImage" Margin="28,20,26,0" Visibility="Collapsed" Stretch="Fill"
-           IsHitTestVisible="False" RenderOptions.BitmapScalingMode="HighQuality">
-      <Image.Effect><BlurEffect Radius="5" RenderingBias="Performance" /></Image.Effect>
-    </Image>
-    <!-- One installation step at a time; the footer stays visible while the content scrolls. -->
-    <Grid x:Name="OverlayGrid" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle" KeyboardNavigation.ControlTabNavigation="Cycle">
-      <Border x:Name="DialogDimmer" Background="#55070B12" MouseLeftButtonDown="Overlay_Press" MouseLeftButtonUp="Overlay_Close" />
-      <controls:ArtworkHalo Source="{Binding Source, ElementName=OverlayCover}" IsActive="True" Spread="28" Intensity="0.24"
-                            Width="{Binding ActualWidth, ElementName=DialogPanel}" Height="{Binding ActualHeight, ElementName=DialogPanel}"
-                            HorizontalAlignment="Center" VerticalAlignment="Center" />
-      <Border x:Name="DialogPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
-              Background="{DynamicResource DialogSurfaceBrush}" BorderBrush="{DynamicResource GlassBorderBrush}"
-              BorderThickness="1" CornerRadius="18" Width="740" Margin="16" RenderTransformOrigin="0.5,0.5">
-        <Border.RenderTransform><TransformGroup><ScaleTransform x:Name="DialogScale" /><TranslateTransform x:Name="DialogOffset" /></TransformGroup></Border.RenderTransform>
-        <Grid>
-          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-          <Grid Grid.Row="0">
-            <Grid x:Name="DetailHeader" Height="104">
-              <Image x:Name="OverlayCover" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
-              <Border Background="{StaticResource HeroBannerFade}" />
-              <ui:Button x:Name="DialogCloseButton" Style="{StaticResource IconButtonStyle}" Icon="{ui:SymbolIcon Dismiss24}"
-                         Width="30" Height="30" MinHeight="30" HorizontalAlignment="Right" VerticalAlignment="Top"
-                         Margin="0,12,14,0" ToolTip="Close" Click="OverlayCloseButton_Click" />
-              <StackPanel VerticalAlignment="Bottom" Margin="24,0,24,18">
-                <TextBlock x:Name="OverlayTitle" Foreground="White" FontSize="22" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                <TextBlock x:Name="OverlayAppId" Foreground="#CCD2DD" FontSize="11" Margin="0,4,0,0" />
-              </StackPanel>
-            </Grid>
-            <Grid x:Name="SetupHeader" Visibility="Collapsed" Margin="28,24,28,20">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="120" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <Border x:Name="SetupArtwork" Height="68" CornerRadius="8" VerticalAlignment="Center" controls:RoundedClip.Radius="8" RenderOptions.BitmapScalingMode="HighQuality">
-                <Border.Background><ImageBrush ImageSource="{Binding Source, ElementName=OverlayCover}" Stretch="UniformToFill" /></Border.Background>
-              </Border>
-              <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,14,0">
-                <TextBlock Text="Install" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" />
-                <TextBlock Text="{Binding Text, ElementName=OverlayTitle}" FontSize="22" FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
-              </StackPanel>
-              <TextBlock x:Name="InstallSizeText" Grid.Column="2" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,16,0" VerticalAlignment="Center" />
-              <ui:Button x:Name="SetupCloseButton" Grid.Column="3" Icon="{ui:SymbolIcon Dismiss24}" Appearance="Transparent"
-                         ToolTip="Close setup" AutomationProperties.Name="Close download setup" Click="OverlayCloseButton_Click" VerticalAlignment="Center" />
-            </Grid>
-          </Grid>
-
-          <Grid Grid.Row="1" x:Name="DownloadBody" Margin="28,4,28,22" MaxWidth="1040">
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-            <StackPanel x:Name="WizardHeader" Margin="0,0,0,20">
-              <UniformGrid x:Name="WizardSteps" Columns="4" Margin="0,0,0,18" Visibility="Collapsed">
-                <Border x:Name="MethodStepMarker" CornerRadius="7" Padding="8,7" Margin="0,0,4,0"><TextBlock Text="1 · Method" FontSize="11" /></Border>
-                <Border x:Name="SourceStepMarker" CornerRadius="7" Padding="8,7" Margin="0,0,4,0"><TextBlock Text="2 · Source" FontSize="11" /></Border>
-                <Border x:Name="DepotStepMarker" CornerRadius="7" Padding="8,7" Margin="0,0,4,0"><TextBlock Text="3 · Files" FontSize="11" /></Border>
-                <Border x:Name="LocationStepMarker" CornerRadius="7" Padding="8,7"><TextBlock Text="4 · Location" FontSize="11" /></Border>
-              </UniformGrid>
-              <TextBlock x:Name="WizardStepText" Text="Where do you want to install?" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-              <TextBlock x:Name="WizardTrailText" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,7,0,0" TextWrapping="Wrap" />
-              <ProgressBar x:Name="WizardBusyBar" Height="2" IsIndeterminate="True" Visibility="Collapsed" Margin="0,12,0,0" />
-            </StackPanel>
-
-            <ScrollViewer x:Name="InstallationFormScroll" Grid.Row="1" Style="{StaticResource PageScrollHostStyle}" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
-            <StackPanel>
-            <UniformGrid x:Name="MethodStepPanel" Columns="2" Visibility="Collapsed" Margin="0,0,0,18">
-              <ui:Button x:Name="MethodDepotDownloader" Tag="DepotDownloader" Click="InstallMethod_Click" Appearance="Secondary"
-                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="24,25" MinHeight="126" Margin="0,0,8,0" CornerRadius="12" AutomationProperties.Name="Download in Steamy using DepotDownloader">
-                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="42" /><ColumnDefinition Width="*" /><ColumnDefinition Width="24" /></Grid.ColumnDefinitions>
-                  <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="23" VerticalAlignment="Center" />
-                  <StackPanel Grid.Column="1"><TextBlock Text="Download in Steamy" FontSize="18" FontWeight="SemiBold" />
-                    <TextBlock Text="DepotDownloader · Choose your folder" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,6,4,0" /></StackPanel>
-                  <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight24" FontSize="17" VerticalAlignment="Center" />
-                </Grid>
-              </ui:Button>
-              <ui:Button x:Name="MethodBetterSteamTools" Tag="BetterSteamTools" Click="InstallMethod_Click" Appearance="Secondary"
-                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="24,25" MinHeight="126" Margin="8,0,0,0" CornerRadius="12" AutomationProperties.Name="Install with Steam using BetterSteamTools">
-                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="42" /><ColumnDefinition Width="*" /><ColumnDefinition Width="24" /></Grid.ColumnDefinitions>
-                  <ui:SymbolIcon Symbol="Box24" FontSize="23" VerticalAlignment="Center" />
-                  <StackPanel Grid.Column="1"><TextBlock Text="Install with Steam" FontSize="18" FontWeight="SemiBold" />
-                    <TextBlock Text="BetterSteamTools · Steam manages the download" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,6,4,0" /></StackPanel>
-                  <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight24" FontSize="17" VerticalAlignment="Center" />
-                </Grid>
-              </ui:Button>
-            </UniformGrid>
-
-            <Expander x:Name="SourceOptions" Style="{StaticResource InstallStepContent}" Header="Download source" IsExpanded="False" Margin="0,0,0,16" Visibility="Collapsed">
-            <ScrollViewer x:Name="SourceStepPanel" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-              <StackPanel MaxWidth="760" HorizontalAlignment="Stretch">
-                <TextBlock Text="Community sources" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,9" />
-                <UniformGrid Columns="2">
-                  <ui:Button x:Name="SourceSushi" Tag="Sushi" Click="SourceButton_Click" Appearance="Secondary"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="0,0,5,0" AutomationProperties.Name="Sushi">
-                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <StackPanel><TextBlock Text="Sushi" FontSize="15" FontWeight="SemiBold" />
-                        <TextBlock Text="Free · No API key" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
-                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
-                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
-                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
-                        </Style></TextBlock.Style>
-                      </TextBlock>
-                    </Grid>
-                  </ui:Button>
-<ui:Button x:Name="SourceZaza" Tag="Zaza" Click="SourceButton_Click" Appearance="Secondary"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="5,0,0,0" AutomationProperties.Name="Zaza">
-                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <StackPanel><TextBlock Text="Zaza" FontSize="15" FontWeight="SemiBold" />
-                        <TextBlock Text="Free · No API key" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
-                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
-                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
-                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
-                        </Style></TextBlock.Style>
-                      </TextBlock>
-                    </Grid>
-                  </ui:Button>
-                </UniformGrid>
-                <TextBlock Text="More providers" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,17,0,9" />
-                <UniformGrid Columns="2">
-                <ui:Button x:Name="SourceRyuu" Tag="Ryuu" Click="SourceButton_Click" Appearance="Secondary"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="0,0,5,10" AutomationProperties.Name="Ryuu">
-                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <StackPanel><TextBlock Text="Ryuu" FontSize="13" FontWeight="SemiBold" />
-                        <TextBlock Text="Auth code from Settings" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
-                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
-                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
-                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
-                        </Style></TextBlock.Style>
-                      </TextBlock>
-                    </Grid>
-                  </ui:Button>
-<ui:Button x:Name="SourceHubcap" Tag="Hubcap" Click="SourceButton_Click" Appearance="Secondary"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="5,0,0,10" AutomationProperties.Name="Hubcap">
-                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <StackPanel><TextBlock Text="Hubcap" FontSize="13" FontWeight="SemiBold" />
-                        <TextBlock Text="API key from Settings" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
-                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
-                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
-                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
-                        </Style></TextBlock.Style>
-                      </TextBlock>
-                    </Grid>
-                  </ui:Button>
-<ui:Button x:Name="SourceDepotBox" Tag="DepotBox" Click="SourceButton_Click" Appearance="Secondary"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="0,0,5,0" AutomationProperties.Name="DepotBox">
-                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <StackPanel><TextBlock Text="DepotBox" FontSize="13" FontWeight="SemiBold" />
-                        <TextBlock Text="API key from Settings" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
-                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
-                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
-                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
-                        </Style></TextBlock.Style>
-                      </TextBlock>
-                    </Grid>
-                  </ui:Button>
-                <ui:Button x:Name="SourceLocal" Tag="Local" Click="SourceButton_Click" Appearance="Secondary"
-                           HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="5,0,0,0" AutomationProperties.Name="Your package">
-                  <StackPanel><TextBlock Text="Your package" FontSize="13" FontWeight="SemiBold" />
-                    <TextBlock Text="Local ZIP or Lua metadata" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
-                </ui:Button>
-                </UniformGrid>
-                <Border x:Name="LocalPackagePanel" Visibility="Collapsed" AllowDrop="True" DragOver="LocalPackage_DragOver" Drop="LocalPackage_Drop"
-                        BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,12,0,0">
-                  <StackPanel><TextBlock Text="Drop a ZIP or Lua package here" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" />
-                    <TextBlock x:Name="LocalPackageName" Text="No package selected" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,6,0,10" />
-                    <ui:Button x:Name="BrowseLocalPackage" Content="Choose package" Click="BrowseLocalPackage_Click" HorizontalAlignment="Left" Appearance="Secondary" />
-                    <TextBlock Text="Metadata only. Lua is never executed. A verified copy is kept for this selection and Resume." TextWrapping="Wrap" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,10,0,0" />
-                  </StackPanel>
-                </Border>
-                <TextBlock x:Name="SourceAvailabilityText" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,10,0,0" />
-              </StackPanel>
-            </ScrollViewer>
-            </Expander>
-
-            <Expander x:Name="DepotOptions" Style="{StaticResource InstallStepContent}" Header="Files and versions" IsExpanded="False" Margin="0,0,0,16" Visibility="Collapsed">
-            <Grid x:Name="DepotStepPanel" Visibility="Collapsed">
-              <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-              <Grid Margin="0,0,0,14">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <TextBlock x:Name="DepotSourceText" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                  <ui:Button Content="Select all" Appearance="Transparent" FontSize="11" Padding="8,5" Click="SelectAllDepots_Click" />
-                  <ui:Button Content="Clear" Appearance="Transparent" FontSize="11" Padding="8,5" Margin="6,0,0,0" Click="ClearDepotSelection_Click" />
-                </StackPanel>
-              </Grid>
-              <ListBox x:Name="DepotChoices" Grid.Row="1" BorderThickness="0" Background="Transparent" Padding="0" MaxHeight="300"
-                       ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                       ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"
-                       HorizontalContentAlignment="Stretch" KeyboardNavigation.TabNavigation="Continue">
-                <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
-                <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem">
-                  <Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,10" /><Setter Property="Focusable" Value="False" />
-                  <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                  <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><ContentPresenter /></ControlTemplate></Setter.Value></Setter>
-                </Style></ListBox.ItemContainerStyle>
-                <ListBox.ItemTemplate><DataTemplate>
-                  <Border x:Name="DepotChoiceRow" Padding="16,14" CornerRadius="10" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}">
-                    <Grid>
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="38" /></Grid.ColumnDefinitions>
-                      <StackPanel Margin="0,0,16,0">
-                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding DepotId, StringFormat=Depot {0}}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" />
-                        <TextBlock x:Name="DepotMetadataText" Text="{Binding MetadataSummary}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
-                        <TextBlock Text="{Binding MetadataSource}" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,3,0,0" />
-                        <Grid Margin="0,12,0,0">
-                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                          <ComboBox ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion, Mode=TwoWay}" DisplayMemberPath="Label"
-                                    IsEnabled="{Binding IsSelected}" FontSize="11" MinHeight="32" AutomationProperties.Name="Depot version" PreviewMouseWheel="DepotVersion_PreviewMouseWheel" />
-                          <ui:Button Grid.Column="1" Content="SteamDB ↗" Appearance="Transparent" FontSize="10.5" Padding="8,5" Margin="8,0,0,0"
-                                     Tag="{Binding DepotId}" Click="OpenDepotInfo_Click" ToolTip="Inspect this depot on SteamDB" />
-                        </Grid>
-                        <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
-                          <TextBlock x:Name="DepotSizeText" Text="{Binding SizeLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" />
-                          <TextBlock x:Name="DepotBranchText" Text="{Binding BranchLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="12,0,0,0" />
-                        </StackPanel>
-                      </StackPanel>
-                      <CheckBox x:Name="DepotSelectionCheckBox" Grid.Column="1" IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Top" HorizontalAlignment="Right"
-                                ToolTip="Include this depot" AutomationProperties.Name="{Binding Name}" />
-                    </Grid>
-                  </Border>
-                  <DataTemplate.Triggers>
-                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                      <Setter TargetName="DepotChoiceRow" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-                    </DataTrigger>
-                  </DataTemplate.Triggers>
-                </DataTemplate></ListBox.ItemTemplate>
-              </ListBox>
-              <TextBlock x:Name="DepotSelectionSummary" Grid.Row="2" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,12,0,0" TextWrapping="Wrap" />
-            </Grid>
-            </Expander>
-
-            <ScrollViewer x:Name="LocationStepPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled">
-              <StackPanel MaxWidth="760" HorizontalAlignment="Stretch">
-                <TextBlock x:Name="LocationSelectionText" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
-                <ScrollViewer MaxHeight="168" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14">
-                <ItemsControl x:Name="InstallDriveChoices">
-                  <ItemsControl.ItemTemplate><DataTemplate>
-                    <Button Click="InstallDrive_Click" Tag="{Binding Folder}" IsEnabled="{Binding HasEnoughSpace}" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalContentAlignment="Stretch" Padding="16,12" Margin="0,0,0,8" controls:CardMotion.IsEnabled="False"
-                            AutomationProperties.Name="{Binding Description}">
-                      <Button.Style><Style TargetType="Button" BasedOn="{StaticResource InstallDriveButton}">
-                        <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
-                        <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
-                        <Style.Triggers><DataTrigger Binding="{Binding IsSelected}" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource DownloadAccentBrush}" /><Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" /></DataTrigger></Style.Triggers>
-                      </Style></Button.Style>
-                      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="42" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <Grid Width="24" Height="24" VerticalAlignment="Center" HorizontalAlignment="Left" IsHitTestVisible="False">
-                          <Path Data="M 5,3 L 19,3 L 22,14 L 22,21 L 2,21 L 2,14 Z M 2,14 L 22,14 M 6,18 L 8,18 M 16,18 L 18,18" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                        </Grid>
-                        <StackPanel Grid.Column="1" Margin="0,0,20,0"><TextBlock Text="{Binding Label}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
-                          <TextBlock Text="{Binding AvailabilityLabel}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0" /></StackPanel>
-                        <TextBlock Grid.Column="2" Text="{Binding SpaceLabel}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
-                      </Grid>
-                    </Button>
-                  </DataTemplate></ItemsControl.ItemTemplate>
-                </ItemsControl>
-                </ScrollViewer>
-                <TextBlock Text="Save to" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8" />
-                <Grid Margin="0,0,0,14">
-                  <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                  <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="8" Padding="12,11">
-                    <TextBlock x:Name="DownloadPathText" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
-                  </Border>
-                  <ui:Button x:Name="LocationBrowseButton" Grid.Column="1" Content="Browse" Appearance="Secondary" Margin="8,0,0,0" Click="BrowseFolderButton_Click" />
-                </Grid>
-                <TextBlock Text="Game folder" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,5" />
-                <TextBlock x:Name="DownloadTargetText" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
-                <TextBlock x:Name="LocationSpaceText" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,10,0,20" />
-                <Expander Header="Optional archive" IsExpanded="False" FontSize="11">
-                  <Grid Margin="0,10,0,4">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                    <TextBlock x:Name="CustomArchiveText" Text="No archive selected" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                    <ui:Button Grid.Column="1" Content="Add" Appearance="Secondary" Margin="8,0,0,0" Click="BrowseArchiveButton_Click" ToolTip="Extract an archive after download" />
-                  </Grid>
-                </Expander>
-              </StackPanel>
-            </ScrollViewer>
-            <ScrollViewer x:Name="SteamToolsStepPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled">
-              <StackPanel>
-                <Border Background="{DynamicResource GlassSurfaceBrush}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="14" Padding="18">
-                  <StackPanel>
-                    <TextBlock Text="Steam client" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-                    <TextBlock Text="{Binding SteamRoot}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,8,0,12" />
-                    <WrapPanel><ui:Button Content="Change folder" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding BrowseSteamCommand}" Appearance="Secondary" />
-                      <ui:Button Content="Detect" Command="{Binding DetectCommand}" Appearance="Transparent" Margin="8,0,0,0" /></WrapPanel>
-                    <TextBlock Text="{Binding ConnectionLabel}" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,12,0,0" />
-                  </StackPanel>
-                </Border>
-                <TextBlock Text="Close Steam before adding the game. The required BetterSteamTools files are installed here if needed. Then open Steam to select its game library and start the download."
-                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" TextWrapping="Wrap" Margin="2,18,2,0" />
-              </StackPanel>
-            </ScrollViewer>
-            </StackPanel>
-            </ScrollViewer>
-            <TextBlock x:Name="OverlayStatus" Grid.Row="2" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,16,0,0" TextWrapping="Wrap" />
-          </Grid>
-
-          <Border x:Name="DownloadFooter" Grid.Row="2" BorderThickness="0" Padding="28,16">
-            <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <StackPanel Orientation="Horizontal">
-                <ui:Button Content="Cancel" Appearance="Secondary" Click="OverlayCloseButton_Click" MinHeight="42" CornerRadius="10" />
-                <ui:Button x:Name="BackButton" Content="Back" Icon="{ui:SymbolIcon ChevronLeft24}" Appearance="Secondary" Click="WizardBackButton_Click" Visibility="Collapsed" MinHeight="42" CornerRadius="10" Margin="8,0,0,0" />
-                <ui:Button x:Name="NewSelectionButton" Content="New selection" Appearance="Secondary" Visibility="Collapsed" Click="NewSelectionButton_Click" />
-              </StackPanel>
-            <StackPanel x:Name="GameInfoPanel" Grid.Column="1" Visibility="Visible" Margin="8,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center">
-              <TextBlock x:Name="GameInstallInfo" Visibility="Collapsed" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16" />
-              <StackPanel Orientation="Horizontal">
-                <ui:Button x:Name="AddToSteamToolsButton" Content="Add game" ToolTip="Add using BetterSteamTools" Appearance="Secondary" Margin="8,0,0,0" Click="AddToSteamTools_Click" Visibility="Collapsed" />
-                <ui:Button x:Name="PlayButton" Content="Play in Steam" Icon="{ui:SymbolIcon Play24}" Appearance="Secondary" Margin="8,0,0,0" Visibility="Collapsed" Click="PlayButton_Click" />
-              </StackPanel>
-            </StackPanel>
-
-              <StackPanel Grid.Column="2" Orientation="Horizontal">
-                <ui:Button x:Name="PauseButton" Content="Pause" Icon="{ui:SymbolIcon Pause24}" Appearance="Secondary" Margin="0,0,8,0" Visibility="Collapsed" Click="PauseButton_Click" />
-                <ui:Button x:Name="StartButton" Content="Install game" Icon="{ui:SymbolIcon ArrowDownload24}" Appearance="Primary" Click="StartDownloadButton_Click" MinHeight="42" MinWidth="156" CornerRadius="10" />
-              </StackPanel>
-            </Grid>
-          </Border>
-        </Grid>
-      </Border>
-    </Grid>
-  </Grid>
-</Page>
+<Page x:Class="Steamy.Pages.LibraryPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:Steamy.Controls"
+      xmlns:local="clr-namespace:Steamy.Pages"
+      FontFamily="{DynamicResource SteamyFontFamily}" UseLayoutRounding="True" SnapsToDevicePixels="True"
+      TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="Grayscale" TextOptions.TextHintingMode="Fixed" RenderOptions.ClearTypeHint="Auto"
+      PreviewKeyDown="Page_PreviewKeyDown"
+      ScrollViewer.CanContentScroll="False"
+      Background="Transparent">
+  <Page.Resources>
+    <!-- Official Steam header mark: source recorded in THIRD-PARTY-NOTICES. Vector paths retain the supplied shape. -->
+    <DrawingImage x:Key="LibrarySteamMark"><DrawingImage.Drawing><DrawingGroup><GeometryDrawing Brush="#E8FFFFFF" Geometry="M44.238,0.601C21,0.601,1.963,18.519,0.154,41.29l23.71,9.803c2.009-1.374,4.436-2.179,7.047-2.179   c0.234,0,0.467,0.008,0.698,0.021l10.544-15.283c0-0.073-0.001-0.144-0.001-0.216c0-9.199,7.483-16.683,16.683-16.683   c9.199,0,16.682,7.484,16.682,16.683c0,9.199-7.483,16.684-16.682,16.684c-0.127,0-0.253-0.003-0.379-0.006l-15.038,10.73   c0.008,0.195,0.015,0.394,0.015,0.592c0,6.906-5.617,12.522-12.522,12.522c-6.061,0-11.129-4.326-12.277-10.055L1.678,56.893   c5.25,18.568,22.309,32.181,42.56,32.181c24.432,0,44.237-19.806,44.237-44.235C88.475,20.406,68.669,0.601,44.238,0.601"/><GeometryDrawing Brush="#E8FFFFFF" Geometry="M27.875,67.723l-5.434-2.245c0.963,2.005,2.629,3.684,4.841,4.606c4.782,1.992,10.295-0.277,12.288-5.063   c0.965-2.314,0.971-4.869,0.014-7.189c-0.955-2.321-2.757-4.131-5.074-5.097c-2.299-0.957-4.762-0.922-6.926-0.105l5.613,2.321   c3.527,1.47,5.195,5.52,3.725,9.047C35.455,67.526,31.402,69.194,27.875,67.723"/><GeometryDrawing Brush="#E8FFFFFF" Geometry="M69.95,33.436c0-6.129-4.986-11.116-11.116-11.116c-6.129,0-11.116,4.987-11.116,11.116   c0,6.13,4.987,11.115,11.116,11.115C64.964,44.55,69.95,39.565,69.95,33.436 M50.502,33.417c0-4.612,3.739-8.35,8.351-8.35   c4.612,0,8.351,3.738,8.351,8.35s-3.739,8.35-8.351,8.35C54.241,41.767,50.502,38.028,50.502,33.417"/><GeometryDrawing Brush="#E8FFFFFF" Geometry="M135.718,30.868l-2.964,5.21c-2.283-1.595-5.377-2.555-8.078-2.555c-3.087,0-4.997,1.278-4.997,3.567   c0,2.781,3.393,3.428,8.436,5.238c5.421,1.917,8.537,4.17,8.537,9.135c0,6.793-5.342,10.608-13.02,10.608   c-3.742,0-8.256-0.966-11.726-3.077l2.162-5.776c2.819,1.489,6.191,2.372,9.197,2.372c4.052,0,5.978-1.495,5.978-3.705   c0-2.529-2.937-3.289-7.678-4.859c-5.403-1.804-9.147-4.171-9.147-9.666c0-6.197,4.963-9.756,12.104-9.756   C129.499,27.604,133.499,29.181,135.718,30.868"/><GeometryDrawing Brush="#E8FFFFFF" Geometry="M 158.888,34.161 158.888,61.5 151.909,61.5 151.909,34.161 141.779,34.161 141.779,28.175    168.988,28.175 168.988,34.161   Z"/><GeometryDrawing Brush="#E8FFFFFF" Geometry="M 183.7,34.143 183.7,41.652 197.056,41.652 197.056,47.638 183.7,47.638 183.7,55.459    199.196,55.459 199.196,61.5 176.723,61.5 176.723,28.175 199.196,28.175 199.196,34.143   Z"/><GeometryDrawing Brush="#E8FFFFFF" Geometry="M214.773,55.03l-2.206,6.471h-7.316l12.495-33.325h7.025L237.619,61.5h-7.563l-2.254-6.471H214.773z    M221.219,36.125l-4.551,13.343h9.196L221.219,36.125z"/><GeometryDrawing Brush="#E8FFFFFF" Geometry="M 273.436,41.056 264.316,60.529 260.378,60.529 251.406,41.23 251.406,61.5 244.723,61.5    244.723,28.175 251.391,28.175 262.591,52.231 273.393,28.175 280.119,28.175 280.119,61.5 273.437,61.5   Z"/><GeometryDrawing Brush="#E8FFFFFF" Geometry="M293.611,32.379c0,2.864-2.146,4.649-4.609,4.649c-2.472,0-4.623-1.785-4.623-4.649   c0-2.863,2.151-4.636,4.623-4.636C291.466,27.743,293.611,29.516,293.611,32.379 M285.154,32.379c0,2.396,1.726,3.901,3.848,3.901   c2.114,0,3.833-1.505,3.833-3.901c0-2.403-1.719-3.885-3.833-3.885C286.886,28.494,285.154,29.994,285.154,32.379 M289.066,30.01   c1.195,0,1.597,0.632,1.597,1.315c0,0.626-0.371,1.046-0.823,1.26l1.071,2.007h-0.877l-0.903-1.779H288.2v1.779h-0.73V30.01   H289.066z M288.207,32.142h0.814c0.527,0,0.838-0.331,0.838-0.747c0-0.42-0.223-0.69-0.84-0.69h-0.813V32.142z"/></DrawingGroup></DrawingImage.Drawing></DrawingImage>
+
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    <local:EnumToShowBoolConverter x:Key="EnumTo_ShowBoolConverter" />
+    <local:GenreNameConverter x:Key="GenreNameConverter" />
+    <local:GenreCountConverter x:Key="GenreCountConverter" />
+    <Style x:Key="InstallDriveButton" TargetType="Button" BasedOn="{StaticResource GalleryCardButton}">
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="DriveSurface" CornerRadius="10" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+          <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="DriveSurface" Property="Background" Value="{DynamicResource CardHoverGlassBrush}" /></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.6" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <!-- keep local xmlns for correctness -->
+    <Style x:Key="GalleryEmptyStateStyle" TargetType="TextBlock" BasedOn="{StaticResource MutedTextStyle}">
+      <Setter Property="Visibility" Value="Collapsed" />
+      <Setter Property="Margin" Value="2,12,0,0" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding HasCatalogItems}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <!-- Option rows and host chips inside the download dialog. The code-behind swaps
+         Background/BorderBrush for the selected state using the same theme brushes. -->
+    <Style x:Key="OptionRow" TargetType="Border">
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="14,11" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style x:Key="HostPill" TargetType="Border">
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="Margin" Value="0,0,6,6" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style x:Key="DialogSectionLabel" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+    <LinearGradientBrush x:Key="HeroBannerFade" StartPoint="0,0" EndPoint="0,1">
+      <GradientStop Color="#00000000" Offset="0" />
+      <GradientStop Color="#B3162C47" Offset="0.6" />
+      <GradientStop Color="#EC213B5B" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Dashboard stat tile -->
+    <Style x:Key="StatTileStyle" TargetType="Border" BasedOn="{StaticResource SurfaceCardStyle}">
+      <Setter Property="Padding" Value="16,14" />
+      <Setter Property="Margin" Value="6,0" />
+    </Style>
+
+    <!-- Dashboard shortcut tile: icon badge + title + subtitle, click to navigate -->
+    <Style x:Key="ShortcutTileStyle" TargetType="Border">
+      <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="15,14" />
+      <Setter Property="Margin" Value="6" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="SnapsToDevicePixels" Value="True" />
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+          <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="ShortcutIconBadge" TargetType="Border">
+      <Setter Property="Width" Value="38" />
+      <Setter Property="Height" Value="38" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="LibraryTabs" TargetType="ListBox">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+      <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+      <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></Setter.Value></Setter>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBox"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"><ItemsPresenter /></Border></ControlTemplate></Setter.Value></Setter>
+      <Setter Property="ItemContainerStyle"><Setter.Value><Style TargetType="ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="Padding" Value="16,11" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+          <Grid><Border x:Name="TabSurface" CornerRadius="6,6,0,0" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter /></Border><Border x:Name="TabUnderline" Height="3" Background="{DynamicResource DownloadAccentBrush}" CornerRadius="1.5" VerticalAlignment="Bottom" Opacity="0" /></Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="{DynamicResource GlassSurfaceBrush}" /><Setter TargetName="TabUnderline" Property="Opacity" Value="1" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /><Setter Property="FontWeight" Value="SemiBold" /></Trigger>
+            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="{DynamicResource GlassSurfaceBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /></Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="TabSurface" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter TargetName="TabSurface" Property="BorderThickness" Value="1" /></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate></Setter.Value></Setter>
+      </Style></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="LibraryCoverButton" TargetType="Button" BasedOn="{StaticResource GalleryCardButton}">
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="controls:CardMotion.HoverScale" Value="1" />
+      <Setter Property="controls:CardMotion.HoverLift" Value="-3" />
+      <Setter Property="controls:CardMotion.HoverDuration" Value="180" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Grid Background="Transparent"><Grid x:Name="MotionSurface">
+          <Border x:Name="Chrome" Background="Transparent">
+            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+          </Border>
+        </Grid></Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <SolidColorBrush x:Key="LibrarySelectedChipForegroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="LibrarySelectedChipBrush" Color="#343437" />
+    <SolidColorBrush x:Key="LibrarySelectedChipBorderBrush" Color="#68686D" />
+    <Style x:Key="LibraryFilterToggle" TargetType="ToggleButton" BasedOn="{StaticResource FilterToggleButtonStyle}">
+      <Setter Property="Width" Value="108" /><Setter Property="Height" Value="44" /><Setter Property="FontSize" Value="13" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToggleButton">
+        <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="22"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource LibrarySelectedChipBorderBrush}" /></Trigger>
+          <Trigger Property="IsChecked" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource LibrarySelectedChipBrush}" /><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource LibrarySelectedChipBorderBrush}" /><Setter Property="Foreground" Value="{DynamicResource LibrarySelectedChipForegroundBrush}" /></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="LibraryPills" TargetType="ListBox">
+      <Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="0" />
+      <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" /><Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+      <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></Setter.Value></Setter>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBox"><ItemsPresenter /></ControlTemplate></Setter.Value></Setter>
+      <Setter Property="ItemContainerStyle"><Setter.Value><Style TargetType="ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /><Setter Property="FontSize" Value="13" /><Setter Property="Padding" Value="14,0" /><Setter Property="Height" Value="38" /><Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+          <Border x:Name="Pill" CornerRadius="19" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" Padding="{TemplateBinding Padding}"><ContentPresenter VerticalAlignment="Center" /></Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsSelected" Value="True"><Setter Property="Foreground" Value="{DynamicResource LibrarySelectedChipForegroundBrush}" /><Setter TargetName="Pill" Property="Background" Value="{DynamicResource LibrarySelectedChipBrush}" /><Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource LibrarySelectedChipBorderBrush}" /></Trigger>
+            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" /></Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate></Setter.Value></Setter>
+      </Style></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="LibraryGenrePills" TargetType="ListBox" BasedOn="{StaticResource LibraryPills}">
+      <Setter Property="ItemContainerStyle"><Setter.Value><Style TargetType="ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /><Setter Property="FontSize" Value="13" /><Setter Property="Padding" Value="14,0" /><Setter Property="Height" Value="40" /><Setter Property="Margin" Value="0,0,8,0" /><Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+          <Border x:Name="Pill" CornerRadius="20" Background="#161822" BorderBrush="#262A38" BorderThickness="1" Padding="{TemplateBinding Padding}"><ContentPresenter VerticalAlignment="Center" /></Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsSelected" Value="True"><Setter Property="Foreground" Value="#FFFFFF" /><Setter TargetName="Pill" Property="Background" Value="#2D3244" /><Setter TargetName="Pill" Property="BorderBrush" Value="#545D78" /></Trigger>
+            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Pill" Property="BorderBrush" Value="#4A526B" /></Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate></Setter.Value></Setter>
+      </Style></Setter.Value></Setter>
+      <Setter Property="ItemTemplate"><Setter.Value><DataTemplate>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Converter={StaticResource GenreNameConverter}}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding Converter={StaticResource GenreCountConverter}}" Foreground="#8A92A6" FontSize="11" Margin="6,0,0,0" VerticalAlignment="Center">
+            <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger></Style.Triggers></Style></TextBlock.Style>
+          </TextBlock>
+        </StackPanel>
+      </DataTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="LibraryMoreButton" TargetType="Button">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /><Setter Property="FontSize" Value="14" /><Setter Property="Cursor" Value="Hand" /><Setter Property="Padding" Value="24,10" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="Chrome" Background="{DynamicResource SurfaceElevatedBrush}" CornerRadius="22" Padding="{TemplateBinding Padding}" BorderThickness="1" BorderBrush="{DynamicResource BorderSubtleBrush}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" /></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource TextSecondaryBrush}" /></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="LibraryOptionalText" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+      <Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger></Style.Triggers>
+    </Style>
+    <Style x:Key="InstallStepContent" TargetType="Expander">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Expander">
+        <ContentPresenter x:Name="StepContent" ContentSource="Content" />
+        <ControlTemplate.Triggers><Trigger Property="IsExpanded" Value="False"><Setter TargetName="StepContent" Property="Visibility" Value="Collapsed" /></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+  </Page.Resources>
+
+  <Grid x:Name="LibraryScene" Background="Transparent">
+    <controls:ShellBackdropView x:Name="LibraryAmbientBackdrop" IsPageBackdrop="True" BaseBrush="{DynamicResource PageBackgroundBrush}" IsHitTestVisible="False"/>
+    <Grid x:Name="MainContentGrid" MaxWidth="1408" Margin="32,12,32,0" ClipToBounds="True">
+      <ItemsControl x:Name="LibraryGallery" Margin="0,68,0,0" ItemsSource="{Binding PagedCatalogItems}" KeyboardNavigation.DirectionalNavigation="Contained" VirtualizingPanel.VirtualizationMode="Recycling">
+        <ItemsControl.Template><ControlTemplate TargetType="ItemsControl">
+          <ScrollViewer x:Name="GalleryScroll" CanContentScroll="True" ClipToBounds="True" controls:SmoothScroll.Enabled="True" Style="{StaticResource DashboardScrollHostStyle}" ScrollChanged="LibraryScroll_Changed" SizeChanged="GalleryScroll_SizeChanged">
+            <ItemsPresenter />
+          </ScrollViewer>
+        </ControlTemplate></ItemsControl.Template>
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:VirtualizingGamePanel MinItemWidth="184" MaxColumns="6" Spacing="24" RowSpacing="30" CoverRatio="1.42" FooterHeight="76" LeadingHeight="64" TrailingHeight="100" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate><DataTemplate>
+          <Button x:Name="Card" Style="{StaticResource LibraryCoverButton}" Click="GameCard_Click" Tag="{Binding}" controls:ArtworkLease.Item="{Binding}" ToolTip="{Binding Name}" AutomationProperties.Name="{Binding Name}">
+            <Button.ContextMenu><ContextMenu><MenuItem Header="Game details" Click="GameDetailsMenu_Click" Tag="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}" /><MenuItem Header="Install…" Click="InstallGameMenu_Click" Tag="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}" /><MenuItem Header="{Binding PlacementTarget.Tag.AppId, RelativeSource={RelativeSource AncestorType=ContextMenu}, StringFormat='App {0}'}" IsEnabled="False" /></ContextMenu></Button.ContextMenu>
+            <Grid>
+              <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="76" /></Grid.RowDefinitions>
+              <Border x:Name="Cover" CornerRadius="14" Background="#141418" BorderBrush="#222634" BorderThickness="1" controls:RoundedClip.Radius="14">
+                <Grid ClipToBounds="True">
+                  <Image Source="{Binding ArtworkImage}" RenderOptions.BitmapScalingMode="HighQuality"><Image.Style><Style TargetType="Image"><Setter Property="Stretch" Value="UniformToFill"/><Style.Triggers><DataTrigger Binding="{Binding IsArtworkLandscape}" Value="True"><Setter Property="Stretch" Value="Uniform"/></DataTrigger></Style.Triggers></Style></Image.Style></Image>
+                  <Border Background="#171920" Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Text="{Binding ArtworkMonogram}" FontSize="44" FontWeight="SemiBold" Foreground="#70FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <Border Height="64" VerticalAlignment="Bottom" IsHitTestVisible="False"><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="Transparent"/><GradientStop Color="#95080B10" Offset="1"/></LinearGradientBrush></Border.Background></Border>
+                  <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,10" CornerRadius="6" Background="#B80D1016" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="7,3" IsHitTestVisible="False">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                      <Image Source="{StaticResource LibrarySteamMark}" Width="48" Height="14" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,4,0" AutomationProperties.Name="Steam" />
+                      <TextBlock Text="PC" FontSize="10" FontWeight="SemiBold" Foreground="#CCD2E0" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Border>
+                  <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,10" CornerRadius="6" Background="#D00B1B14" BorderBrush="#5034D399" BorderThickness="1" Padding="6,3" ToolTip="Installed on this PC" Visibility="{Binding IsInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                      <ui:SymbolIcon Symbol="Checkmark24" FontSize="11" Foreground="#34D399" Margin="0,0,3,0" VerticalAlignment="Center" />
+                      <TextBlock Text="Installed" FontSize="10" FontWeight="SemiBold" Foreground="#34D399" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Border>
+                  <Border x:Name="CoverFocusRing" CornerRadius="14" BorderBrush="#A0FFFFFF" BorderThickness="1.5" Opacity="0" IsHitTestVisible="False" />
+                </Grid>
+              </Border>
+              <StackPanel Grid.Row="1" Margin="2,10,2,0">
+                <TextBlock Text="{Binding GenreLabel}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,4,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="40" ToolTip="{Binding Name}" />
+              </StackPanel>
+            </Grid>
+          </Button>
+          <DataTemplate.Triggers>
+            <Trigger SourceName="Card" Property="IsMouseOver" Value="True"><Setter TargetName="CoverFocusRing" Property="Opacity" Value="0.6" /><Setter TargetName="Cover" Property="BorderBrush" Value="#4C546E" /></Trigger>
+            <Trigger SourceName="Card" Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="CoverFocusRing" Property="Opacity" Value="1" /></Trigger>
+          </DataTemplate.Triggers>
+        </DataTemplate></ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Border x:Name="LibraryScrollFade" Height="20" VerticalAlignment="Top" Margin="{Binding Margin, ElementName=LibraryGallery}" IsHitTestVisible="False" Background="{DynamicResource LibraryScrollFadeBrush}"/>
+      <Button x:Name="LoadMoreButton" Content="{Binding LoadMoreLabel}" Command="{Binding LoadMoreCommand}" Visibility="{Binding CanLoadMore, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{StaticResource LibraryMoreButton}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,68,0,0" MinWidth="164" Height="44">
+        <Button.RenderTransform><TranslateTransform x:Name="LoadMoreOffset" /></Button.RenderTransform>
+      </Button>
+      <Grid x:Name="LibraryHeading" Grid.Row="0" Height="48" Margin="0,0,0,16" VerticalAlignment="Top" IsHitTestVisible="False">
+        <Grid.RenderTransform><TranslateTransform x:Name="LibraryHeadingSlide"/></Grid.RenderTransform>
+        <TextBlock x:Name="LibraryTitleText" Text="{Binding LibraryTitle}" FontSize="34" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding CatalogCountLabel}" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+      </Grid>
+      <Border x:Name="LibraryFilterBar" Background="Transparent" VerticalAlignment="Top" Margin="0,64,0,24" Padding="0" SizeChanged="LibraryFilterBar_SizeChanged">
+        <Border.RenderTransform><TranslateTransform x:Name="LibraryFilterSlide"/></Border.RenderTransform>
+        <StackPanel>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Border x:Name="LibrarySearchFrame" Width="280" Height="42" CornerRadius="21" Background="#161822" BorderBrush="#262A38" BorderThickness="1" controls:RoundedClip.Radius="21">
+            <ui:TextBox x:Name="LibrarySearch" Foreground="{DynamicResource TextPrimaryBrush}" Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Height="40" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Search games" Icon="{ui:SymbolIcon Search24}" FontSize="13" AutomationProperties.Name="Search games">
+              <ui:TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding SubmitSearchCommand}" /></ui:TextBox.InputBindings>
+            </ui:TextBox>
+            </Border>
+            <Border Grid.Column="1" Height="42" CornerRadius="21" Background="#161822" BorderBrush="#262A38" BorderThickness="1" Margin="12,0,0,0" Padding="3">
+              <ListBox ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}" Style="{StaticResource LibraryPills}" AutomationProperties.Name="Library view">
+                <ListBox.ItemTemplate><DataTemplate><TextBlock><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="{Binding}" /><Style.Triggers><DataTrigger Binding="{Binding}" Value="Browse all"><Setter Property="Text" Value="All" /></DataTrigger><DataTrigger Binding="{Binding}" Value="Your games"><Setter Property="Text" Value="Installed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></DataTemplate></ListBox.ItemTemplate>
+              </ListBox>
+            </Border>
+            <Grid Grid.Column="2" Margin="14,0,0,0">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <ScrollViewer x:Name="QuickGenresScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" CanContentScroll="False" PanningMode="HorizontalOnly" PreviewMouseWheel="Genres_MouseWheel">
+                <ListBox ItemsSource="{Binding GenreFilters}" SelectedItem="{Binding SelectedGenre}" Style="{StaticResource LibraryGenrePills}" AutomationProperties.Name="Game genre" />
+              </ScrollViewer>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
+                <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding ScrollableWidth, ElementName=QuickGenresScroll}" Value="0"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                <ui:Button Icon="{ui:SymbolIcon ChevronLeft24}" Appearance="Transparent" Width="30" Height="30" MinHeight="30" Padding="3" CornerRadius="15" Click="GenresPrevious_Click" ToolTip="Previous genres" AutomationProperties.Name="Previous genres" Background="#181B26" BorderBrush="#282C3D" BorderThickness="1" />
+                <ui:Button Icon="{ui:SymbolIcon ChevronRight24}" Appearance="Transparent" Width="30" Height="30" MinHeight="30" Padding="3" CornerRadius="15" Click="GenresNext_Click" ToolTip="More genres" AutomationProperties.Name="More genres" Background="#181B26" BorderBrush="#282C3D" BorderThickness="1" Margin="4,0,0,0" />
+              </StackPanel>
+            </Grid>
+            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+              <!-- External Sort Dropdown Pill -->
+              <Border Height="40" CornerRadius="20" Background="#161822" BorderBrush="#262A38" BorderThickness="1" Margin="10,0,0,0" Padding="8,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                  <ui:SymbolIcon Symbol="ArrowSort24" FontSize="13" Foreground="#8A92A6" Margin="4,0,4,0" VerticalAlignment="Center" />
+                  <ComboBox ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" BorderThickness="0" Background="Transparent" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" MinWidth="110" Height="34" VerticalAlignment="Center" AutomationProperties.Name="Sort library" />
+                </StackPanel>
+              </Border>
+              <!-- Secondary filters (Manifest Source, NSFW) -->
+              <controls:FilterFlyout Margin="8,0,0,0" VerticalAlignment="Center" TriggerText="Filters" TriggerStyle="{StaticResource LibraryFilterToggle}" FilterSummary="{Binding FilterSummary}" HasActiveFilters="{Binding HasActiveFilters}">
+                <controls:FilterFlyout.FilterContent><StackPanel>
+                  <TextBlock Text="Manifest source" Style="{StaticResource FieldLabelStyle}" /><ComboBox ItemsSource="{Binding SourceFilters}" SelectedItem="{Binding SelectedSourceFilter}" Margin="0,0,0,8" AutomationProperties.Name="Filter games by manifest source" />
+                  <TextBlock Text="{Binding SourceFilterHint}" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                  <TextBlock Text="Initial batch" Style="{StaticResource FieldLabelStyle}" /><ComboBox ItemsSource="{Binding PageSizes}" SelectedItem="{Binding PageSize}" Margin="0,0,0,12" />
+                  <CheckBox Content="Include adult games (NSFW)" IsChecked="{Binding NsfwScope, Converter={StaticResource EnumTo_ShowBoolConverter}, ConverterParameter=Show}" Margin="0,4,0,0" />
+                </StackPanel></controls:FilterFlyout.FilterContent>
+              </controls:FilterFlyout>
+              <ui:Button Style="{StaticResource IconButtonStyle}" Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding RefreshCatalogCommand}" Appearance="Transparent" Width="40" Height="40" MinHeight="40" CornerRadius="20" Background="#161822" BorderBrush="#262A38" BorderThickness="1" Margin="8,0,0,0" ToolTip="Refresh library" AutomationProperties.Name="Refresh library" />
+            </StackPanel>
+          </Grid>
+          <TextBlock Text="{Binding SearchHint}" Style="{StaticResource LibraryOptionalText}" Margin="2,8,0,0" TextWrapping="Wrap" />
+          <ProgressBar IsIndeterminate="True" Height="2" Margin="0,8,0,0" Visibility="{Binding IsCatalogLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+        </StackPanel>
+      </Border>
+      <StackPanel Margin="0,132,0,0" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420" IsHitTestVisible="False">
+        <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding HasCatalogItems}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+        <TextBlock Text="No games found" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource MutedTextStyle}" FontSize="13" TextAlignment="Center" Margin="0,9,0,0" />
+      </StackPanel>
+    </Grid>
+    <!-- A half-resolution frozen backdrop keeps modal blur independent of live progress updates. -->
+    <Image x:Name="BackdropImage" Margin="28,20,26,0" Visibility="Collapsed" Stretch="Fill"
+           IsHitTestVisible="False" RenderOptions.BitmapScalingMode="HighQuality">
+      <Image.Effect><BlurEffect Radius="5" RenderingBias="Performance" /></Image.Effect>
+    </Image>
+    <!-- One installation step at a time; the footer stays visible while the content scrolls. -->
+    <Grid x:Name="OverlayGrid" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle" KeyboardNavigation.ControlTabNavigation="Cycle">
+      <Border x:Name="DialogDimmer" Background="#55070B12" MouseLeftButtonDown="Overlay_Press" MouseLeftButtonUp="Overlay_Close" />
+      <controls:ArtworkHalo Source="{Binding Source, ElementName=OverlayCover}" IsActive="True" Spread="28" Intensity="0.24"
+                            Width="{Binding ActualWidth, ElementName=DialogPanel}" Height="{Binding ActualHeight, ElementName=DialogPanel}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <Border x:Name="DialogPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
+              Background="{DynamicResource DialogSurfaceBrush}" BorderBrush="{DynamicResource GlassBorderBrush}"
+              BorderThickness="1" CornerRadius="18" Width="740" Margin="16" RenderTransformOrigin="0.5,0.5">
+        <Border.RenderTransform><TransformGroup><ScaleTransform x:Name="DialogScale" /><TranslateTransform x:Name="DialogOffset" /></TransformGroup></Border.RenderTransform>
+        <Grid>
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+          <Grid Grid.Row="0">
+            <Grid x:Name="DetailHeader" Height="104">
+              <Image x:Name="OverlayCover" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
+              <Border Background="{StaticResource HeroBannerFade}" />
+              <ui:Button x:Name="DialogCloseButton" Style="{StaticResource IconButtonStyle}" Icon="{ui:SymbolIcon Dismiss24}"
+                         Width="30" Height="30" MinHeight="30" HorizontalAlignment="Right" VerticalAlignment="Top"
+                         Margin="0,12,14,0" ToolTip="Close" Click="OverlayCloseButton_Click" />
+              <StackPanel VerticalAlignment="Bottom" Margin="24,0,24,18">
+                <TextBlock x:Name="OverlayTitle" Foreground="White" FontSize="22" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="OverlayAppId" Foreground="#CCD2DD" FontSize="11" Margin="0,4,0,0" />
+              </StackPanel>
+            </Grid>
+            <Grid x:Name="SetupHeader" Visibility="Collapsed" Margin="28,24,28,20">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="120" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <Border x:Name="SetupArtwork" Height="68" CornerRadius="8" VerticalAlignment="Center" controls:RoundedClip.Radius="8" RenderOptions.BitmapScalingMode="HighQuality">
+                <Border.Background><ImageBrush ImageSource="{Binding Source, ElementName=OverlayCover}" Stretch="UniformToFill" /></Border.Background>
+              </Border>
+              <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,14,0">
+                <TextBlock Text="Install" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" />
+                <TextBlock Text="{Binding Text, ElementName=OverlayTitle}" FontSize="22" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
+              </StackPanel>
+              <TextBlock x:Name="InstallSizeText" Grid.Column="2" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,16,0" VerticalAlignment="Center" />
+              <ui:Button x:Name="SetupCloseButton" Grid.Column="3" Icon="{ui:SymbolIcon Dismiss24}" Appearance="Transparent"
+                         ToolTip="Close setup" AutomationProperties.Name="Close download setup" Click="OverlayCloseButton_Click" VerticalAlignment="Center" />
+            </Grid>
+          </Grid>
+
+          <Grid Grid.Row="1" x:Name="DownloadBody" Margin="28,4,28,22" MaxWidth="1040">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <StackPanel x:Name="WizardHeader" Margin="0,0,0,20">
+              <UniformGrid x:Name="WizardSteps" Columns="4" Margin="0,0,0,18" Visibility="Collapsed">
+                <Border x:Name="MethodStepMarker" CornerRadius="7" Padding="8,7" Margin="0,0,4,0"><TextBlock Text="1 · Method" FontSize="11" /></Border>
+                <Border x:Name="SourceStepMarker" CornerRadius="7" Padding="8,7" Margin="0,0,4,0"><TextBlock Text="2 · Source" FontSize="11" /></Border>
+                <Border x:Name="DepotStepMarker" CornerRadius="7" Padding="8,7" Margin="0,0,4,0"><TextBlock Text="3 · Files" FontSize="11" /></Border>
+                <Border x:Name="LocationStepMarker" CornerRadius="7" Padding="8,7"><TextBlock Text="4 · Location" FontSize="11" /></Border>
+              </UniformGrid>
+              <TextBlock x:Name="WizardStepText" Text="Where do you want to install?" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <TextBlock x:Name="WizardTrailText" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,7,0,0" TextWrapping="Wrap" />
+              <ProgressBar x:Name="WizardBusyBar" Height="2" IsIndeterminate="True" Visibility="Collapsed" Margin="0,12,0,0" />
+            </StackPanel>
+
+            <ScrollViewer x:Name="InstallationFormScroll" Grid.Row="1" Style="{StaticResource PageScrollHostStyle}" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
+            <StackPanel>
+            <UniformGrid x:Name="MethodStepPanel" Columns="2" Visibility="Collapsed" Margin="0,0,0,18">
+              <ui:Button x:Name="MethodDepotDownloader" Tag="DepotDownloader" Click="InstallMethod_Click" Appearance="Secondary"
+                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="24,25" MinHeight="126" Margin="0,0,8,0" CornerRadius="12" AutomationProperties.Name="Download in Steamy using DepotDownloader">
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="42" /><ColumnDefinition Width="*" /><ColumnDefinition Width="24" /></Grid.ColumnDefinitions>
+                  <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="23" VerticalAlignment="Center" />
+                  <StackPanel Grid.Column="1"><TextBlock Text="Download in Steamy" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Text="DepotDownloader · Choose your folder" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,6,4,0" /></StackPanel>
+                  <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight24" FontSize="17" VerticalAlignment="Center" />
+                </Grid>
+              </ui:Button>
+              <ui:Button x:Name="MethodBetterSteamTools" Tag="BetterSteamTools" Click="InstallMethod_Click" Appearance="Secondary"
+                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="24,25" MinHeight="126" Margin="8,0,0,0" CornerRadius="12" AutomationProperties.Name="Install with Steam using BetterSteamTools">
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="42" /><ColumnDefinition Width="*" /><ColumnDefinition Width="24" /></Grid.ColumnDefinitions>
+                  <ui:SymbolIcon Symbol="Box24" FontSize="23" VerticalAlignment="Center" />
+                  <StackPanel Grid.Column="1"><TextBlock Text="Install with Steam" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Text="BetterSteamTools · Steam manages the download" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,6,4,0" /></StackPanel>
+                  <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight24" FontSize="17" VerticalAlignment="Center" />
+                </Grid>
+              </ui:Button>
+            </UniformGrid>
+
+            <Expander x:Name="SourceOptions" Style="{StaticResource InstallStepContent}" Header="Download source" IsExpanded="False" Margin="0,0,0,16" Visibility="Collapsed">
+            <ScrollViewer x:Name="SourceStepPanel" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+              <StackPanel MaxWidth="760" HorizontalAlignment="Stretch">
+                <TextBlock Text="Community sources" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,9" />
+                <UniformGrid Columns="2">
+                  <ui:Button x:Name="SourceSushi" Tag="Sushi" Click="SourceButton_Click" Appearance="Secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="0,0,5,0" AutomationProperties.Name="Sushi">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="Sushi" FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="Free · No API key" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
+                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </ui:Button>
+<ui:Button x:Name="SourceZaza" Tag="Zaza" Click="SourceButton_Click" Appearance="Secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="5,0,0,0" AutomationProperties.Name="Zaza">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="Zaza" FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="Free · No API key" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
+                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </ui:Button>
+                </UniformGrid>
+                <TextBlock Text="More providers" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,17,0,9" />
+                <UniformGrid Columns="2">
+                <ui:Button x:Name="SourceRyuu" Tag="Ryuu" Click="SourceButton_Click" Appearance="Secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="0,0,5,10" AutomationProperties.Name="Ryuu">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="Ryuu" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="Via Steamy relay" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
+                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </ui:Button>
+<ui:Button x:Name="SourceHubcap" Tag="Hubcap" Click="SourceButton_Click" Appearance="Secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="5,0,0,10" AutomationProperties.Name="Hubcap">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="Hubcap" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="API key from Settings" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
+                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </ui:Button>
+<ui:Button x:Name="SourceDepotBox" Tag="DepotBox" Click="SourceButton_Click" Appearance="Secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="0,0,5,0" AutomationProperties.Name="DepotBox">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="DepotBox" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="Via Steamy relay" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="15">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="○" />
+                          <Style.Triggers><DataTrigger Binding="{Binding Path=(AutomationProperties.ItemStatus), RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="Selected"><Setter Property="Text" Value="✓" /></DataTrigger></Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </ui:Button>
+                <ui:Button x:Name="SourceLocal" Tag="Local" Click="SourceButton_Click" Appearance="Secondary"
+                           HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,8" Margin="5,0,0,0" AutomationProperties.Name="Your package">
+                  <StackPanel><TextBlock Text="Your package" FontSize="13" FontWeight="SemiBold" />
+                    <TextBlock Text="Local ZIP or Lua metadata" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                </ui:Button>
+                </UniformGrid>
+                <Border x:Name="LocalPackagePanel" Visibility="Collapsed" AllowDrop="True" DragOver="LocalPackage_DragOver" Drop="LocalPackage_Drop"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,12,0,0">
+                  <StackPanel><TextBlock Text="Drop a ZIP or Lua package here" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock x:Name="LocalPackageName" Text="No package selected" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,6,0,10" />
+                    <ui:Button x:Name="BrowseLocalPackage" Content="Choose package" Click="BrowseLocalPackage_Click" HorizontalAlignment="Left" Appearance="Secondary" />
+                    <TextBlock Text="Metadata only. Lua is never executed. A verified copy is kept for this selection and Resume." TextWrapping="Wrap" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,10,0,0" />
+                  </StackPanel>
+                </Border>
+                <TextBlock x:Name="SourceAvailabilityText" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,10,0,0" />
+              </StackPanel>
+            </ScrollViewer>
+            </Expander>
+
+            <Expander x:Name="DepotOptions" Style="{StaticResource InstallStepContent}" Header="Files and versions" IsExpanded="False" Margin="0,0,0,16" Visibility="Collapsed">
+            <Grid x:Name="DepotStepPanel" Visibility="Collapsed">
+              <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+              <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBlock x:Name="DepotSourceText" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                  <ui:Button Content="Select all" Appearance="Transparent" FontSize="11" Padding="8,5" Click="SelectAllDepots_Click" />
+                  <ui:Button Content="Clear" Appearance="Transparent" FontSize="11" Padding="8,5" Margin="6,0,0,0" Click="ClearDepotSelection_Click" />
+                </StackPanel>
+              </Grid>
+              <ListBox x:Name="DepotChoices" Grid.Row="1" BorderThickness="0" Background="Transparent" Padding="0" MaxHeight="300"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"
+                       HorizontalContentAlignment="Stretch" KeyboardNavigation.TabNavigation="Continue">
+                <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem">
+                  <Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,10" /><Setter Property="Focusable" Value="False" />
+                  <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                  <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><ContentPresenter /></ControlTemplate></Setter.Value></Setter>
+                </Style></ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate><DataTemplate>
+                  <Border x:Name="DepotChoiceRow" Padding="16,14" CornerRadius="10" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}">
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="38" /></Grid.ColumnDefinitions>
+                      <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding DepotId, StringFormat=Depot {0}}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0" />
+                        <TextBlock x:Name="DepotMetadataText" Text="{Binding MetadataSummary}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                        <TextBlock Text="{Binding MetadataSource}" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,3,0,0" />
+                        <Grid Margin="0,12,0,0">
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                          <ComboBox ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion, Mode=TwoWay}" DisplayMemberPath="Label"
+                                    IsEnabled="{Binding IsSelected}" FontSize="11" MinHeight="32" AutomationProperties.Name="Depot version" PreviewMouseWheel="DepotVersion_PreviewMouseWheel" />
+                          <ui:Button Grid.Column="1" Content="SteamDB ↗" Appearance="Transparent" FontSize="10.5" Padding="8,5" Margin="8,0,0,0"
+                                     Tag="{Binding DepotId}" Click="OpenDepotInfo_Click" ToolTip="Inspect this depot on SteamDB" />
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
+                          <TextBlock x:Name="DepotSizeText" Text="{Binding SizeLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" />
+                          <TextBlock x:Name="DepotBranchText" Text="{Binding BranchLabel}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" Margin="12,0,0,0" />
+                        </StackPanel>
+                      </StackPanel>
+                      <CheckBox x:Name="DepotSelectionCheckBox" Grid.Column="1" IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Top" HorizontalAlignment="Right"
+                                ToolTip="Include this depot" AutomationProperties.Name="{Binding Name}" />
+                    </Grid>
+                  </Border>
+                  <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                      <Setter TargetName="DepotChoiceRow" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                    </DataTrigger>
+                  </DataTemplate.Triggers>
+                </DataTemplate></ListBox.ItemTemplate>
+              </ListBox>
+              <TextBlock x:Name="DepotSelectionSummary" Grid.Row="2" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,12,0,0" TextWrapping="Wrap" />
+            </Grid>
+            </Expander>
+
+            <ScrollViewer x:Name="LocationStepPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel MaxWidth="760" HorizontalAlignment="Stretch">
+                <TextBlock x:Name="LocationSelectionText" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                <ScrollViewer MaxHeight="168" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14">
+                <ItemsControl x:Name="InstallDriveChoices">
+                  <ItemsControl.ItemTemplate><DataTemplate>
+                    <Button Click="InstallDrive_Click" Tag="{Binding Folder}" IsEnabled="{Binding HasEnoughSpace}" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalContentAlignment="Stretch" Padding="16,12" Margin="0,0,0,8" controls:CardMotion.IsEnabled="False"
+                            AutomationProperties.Name="{Binding Description}">
+                      <Button.Style><Style TargetType="Button" BasedOn="{StaticResource InstallDriveButton}">
+                        <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+                        <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
+                        <Style.Triggers><DataTrigger Binding="{Binding IsSelected}" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource DownloadAccentBrush}" /><Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" /></DataTrigger></Style.Triggers>
+                      </Style></Button.Style>
+                      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="42" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Grid Width="24" Height="24" VerticalAlignment="Center" HorizontalAlignment="Left" IsHitTestVisible="False">
+                          <Path Data="M 5,3 L 19,3 L 22,14 L 22,21 L 2,21 L 2,14 Z M 2,14 L 22,14 M 6,18 L 8,18 M 16,18 L 18,18" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        </Grid>
+                        <StackPanel Grid.Column="1" Margin="0,0,20,0"><TextBlock Text="{Binding Label}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding AvailabilityLabel}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0" /></StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding SpaceLabel}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                      </Grid>
+                    </Button>
+                  </DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                </ScrollViewer>
+                <TextBlock Text="Save to" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                <Grid Margin="0,0,0,14">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                  <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="8" Padding="12,11">
+                    <TextBlock x:Name="DownloadPathText" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
+                  </Border>
+                  <ui:Button x:Name="LocationBrowseButton" Grid.Column="1" Content="Browse" Appearance="Secondary" Margin="8,0,0,0" Click="BrowseFolderButton_Click" />
+                </Grid>
+                <TextBlock Text="Game folder" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,5" />
+                <TextBlock x:Name="DownloadTargetText" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                <TextBlock x:Name="LocationSpaceText" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,10,0,20" />
+                <Expander Header="Optional archive" IsExpanded="False" FontSize="11">
+                  <Grid Margin="0,10,0,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBlock x:Name="CustomArchiveText" Text="No archive selected" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <ui:Button Grid.Column="1" Content="Add" Appearance="Secondary" Margin="8,0,0,0" Click="BrowseArchiveButton_Click" ToolTip="Extract an archive after download" />
+                  </Grid>
+                </Expander>
+              </StackPanel>
+            </ScrollViewer>
+            <ScrollViewer x:Name="SteamToolsStepPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel>
+                <Border Background="{DynamicResource GlassSurfaceBrush}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="14" Padding="18">
+                  <StackPanel>
+                    <TextBlock Text="Steam client" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock Text="{Binding SteamRoot}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,8,0,12" />
+                    <WrapPanel><ui:Button Content="Change folder" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding BrowseSteamCommand}" Appearance="Secondary" />
+                      <ui:Button Content="Detect" Command="{Binding DetectCommand}" Appearance="Transparent" Margin="8,0,0,0" /></WrapPanel>
+                    <TextBlock Text="{Binding ConnectionLabel}" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,12,0,0" />
+                  </StackPanel>
+                </Border>
+                <TextBlock Text="Close Steam before adding the game. The required BetterSteamTools files are installed here if needed. Then open Steam to select its game library and start the download."
+                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" TextWrapping="Wrap" Margin="2,18,2,0" />
+              </StackPanel>
+            </ScrollViewer>
+            </StackPanel>
+            </ScrollViewer>
+            <TextBlock x:Name="OverlayStatus" Grid.Row="2" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,16,0,0" TextWrapping="Wrap" />
+          </Grid>
+
+          <Border x:Name="DownloadFooter" Grid.Row="2" BorderThickness="0" Padding="28,16">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <StackPanel Orientation="Horizontal">
+                <ui:Button Content="Cancel" Appearance="Secondary" Click="OverlayCloseButton_Click" MinHeight="42" CornerRadius="10" />
+                <ui:Button x:Name="BackButton" Content="Back" Icon="{ui:SymbolIcon ChevronLeft24}" Appearance="Secondary" Click="WizardBackButton_Click" Visibility="Collapsed" MinHeight="42" CornerRadius="10" Margin="8,0,0,0" />
+                <ui:Button x:Name="NewSelectionButton" Content="New selection" Appearance="Secondary" Visibility="Collapsed" Click="NewSelectionButton_Click" />
+              </StackPanel>
+            <StackPanel x:Name="GameInfoPanel" Grid.Column="1" Visibility="Visible" Margin="8,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center">
+              <TextBlock x:Name="GameInstallInfo" Visibility="Collapsed" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16" />
+              <StackPanel Orientation="Horizontal">
+                <ui:Button x:Name="AddToSteamToolsButton" Content="Add game" ToolTip="Add using BetterSteamTools" Appearance="Secondary" Margin="8,0,0,0" Click="AddToSteamTools_Click" Visibility="Collapsed" />
+                <ui:Button x:Name="PlayButton" Content="Play in Steam" Icon="{ui:SymbolIcon Play24}" Appearance="Secondary" Margin="8,0,0,0" Visibility="Collapsed" Click="PlayButton_Click" />
+              </StackPanel>
+            </StackPanel>
+
+              <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <ui:Button x:Name="PauseButton" Content="Pause" Icon="{ui:SymbolIcon Pause24}" Appearance="Secondary" Margin="0,0,8,0" Visibility="Collapsed" Click="PauseButton_Click" />
+                <ui:Button x:Name="StartButton" Content="Install game" Icon="{ui:SymbolIcon ArrowDownload24}" Appearance="Primary" Click="StartDownloadButton_Click" MinHeight="42" MinWidth="156" CornerRadius="10" />
+              </StackPanel>
+            </Grid>
+          </Border>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</Page>

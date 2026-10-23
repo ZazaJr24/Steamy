@@ -1,0 +1,45 @@
+[Unit]
+Description=Steamy provider download relay
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+User=steamy-relay
+Group=steamy-relay
+WorkingDirectory=/opt/steamy-relay
+EnvironmentFile=/etc/steamy-relay/relay.env
+ExecStart=/usr/bin/python3 /opt/steamy-relay/relay.py
+Restart=on-failure
+RestartSec=5
+CacheDirectory=steamy-relay
+CacheDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectProc=invisible
+ProcSubset=pid
+SystemCallArchitectures=native
+KeyringMode=private
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=192M
+CPUQuota=60%
+TasksMax=32
+LimitNOFILE=128
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

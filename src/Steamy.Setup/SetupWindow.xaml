@@ -97,9 +97,10 @@
         <TextBlock x:Name="Folder" TextTrimming="CharacterEllipsis" Foreground="#DDD7EA" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0"/>
         <Button x:Name="FolderButton" Content="Change" Grid.Column="1" Style="{StaticResource QuietButton}" Background="#12FFFFFF"/>
       </Grid>
-      <CheckBox x:Name="Shortcut" Content="Create a desktop shortcut" FontFamily="{DynamicResource SetupFontFamily}" FontSize="12" Foreground="#C4BCD7" VerticalAlignment="Bottom" Margin="0,0,0,7">
+      <CheckBox x:Name="Shortcut" Content="Create a desktop shortcut" FontFamily="{DynamicResource SetupFontFamily}" FontSize="12" Foreground="#C4BCD7" VerticalAlignment="Bottom" Margin="0,0,0,32">
         <CheckBox.Template><ControlTemplate TargetType="CheckBox"><StackPanel Orientation="Horizontal" Background="Transparent"><Border x:Name="Box" Width="16" Height="16" CornerRadius="4" BorderThickness="1" BorderBrush="#776A89" Background="#24202C" Margin="0,0,10,0"><Path x:Name="Check" Data="M 3,8 L 6,11 L 12,4" Stroke="#21192D" StrokeThickness="1.6" Visibility="Collapsed"/></Border><ContentPresenter VerticalAlignment="Center"/></StackPanel><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Box" Property="Background" Value="#D1B8FA"/><Setter TargetName="Check" Property="Visibility" Value="Visible"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="White"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="#D1B8FA"/></Trigger></ControlTemplate.Triggers></ControlTemplate></CheckBox.Template>
       </CheckBox>
+      <CheckBox x:Name="ControllerSetup" Content="Open controller setup after installation" FontFamily="{DynamicResource SetupFontFamily}" FontSize="12" Foreground="#C4BCD7" VerticalAlignment="Bottom" Margin="0,0,0,5" AutomationProperties.Name="Configure optional controller drivers" />
     </Grid>
   </Border>
   <Button x:Name="Primary" Content="Install Steamy  →" Style="{StaticResource PrimaryButton}" Width="286" Height="47" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,384,0,0"/>

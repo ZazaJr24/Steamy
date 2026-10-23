@@ -44,6 +44,15 @@ public sealed partial class PageSmokeTests
         ((TextBox)setup.FindName("SpeedLimitText")!).Text = "120";
         ((TextBox)setup.FindName("RetryCountText")!).Text = "5";
         ClickButton(setup, "NextButton");
+        Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(setup.FindName("DiscordStep")).Visibility);
+        Assert.Equal("04  /  06", Assert.IsType<TextBlock>(setup.FindName("StepCounter")).Text);
+        Assert.Equal(Visibility.Collapsed, Assert.IsType<StackPanel>(setup.FindName("ReadyStep")).Visibility);
+        // Discord is optional, including builds with no application ID or native SDK.
+        ClickButton(setup, "NextButton");
+        Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(setup.FindName("ControllerStep")).Visibility);
+        Assert.Equal("05  /  06", Assert.IsType<TextBlock>(setup.FindName("StepCounter")).Text);
+        Assert.Equal(0, settings.SaveCount);
+        ClickButton(setup, "NextButton");
         PumpUntil(() => Assert.IsType<StackPanel>(setup.FindName("ReadyStep")).Visibility == Visibility.Visible);
         Assert.Equal(0, settings.SaveCount);
         Assert.Equal("Save & finish", Assert.IsAssignableFrom<Button>(setup.FindName("NextButton")).Content);

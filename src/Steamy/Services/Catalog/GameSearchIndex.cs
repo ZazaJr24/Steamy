@@ -7,7 +7,8 @@ public sealed record GameSearchResult<T>(IReadOnlyList<T> Items, bool IsTypoMatc
 
 /// <summary>
 /// Immutable, reusable search data. Names are normalized once per catalog, rather than once per
-/// character typed. Approximate matching runs only when exact matching finds nothing and examines
+/// character typed. Spelling vocabulary is built only for an actual approximate query. That query
+/// runs only when exact matching finds nothing and examines
 /// a bounded vocabulary of similarly shaped words; it never compares every title by edit distance.
 /// </summary>
 public sealed class GameSearchIndex<T>
@@ -16,37 +17,90 @@ public sealed class GameSearchIndex<T>
     private const int MaxWordCandidates = 4_000;
     private const int MaxSimilarWords = 48;
     private readonly Entry[] _entries;
-    private readonly Dictionary<string, List<int>> _wordItems = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, List<string>> _wordBuckets = new(StringComparer.Ordinal);
+    private readonly SemaphoreSlim _fuzzyGate = new(1, 1);
+    private FuzzyData? _fuzzy;
+
+    private readonly record struct WordRange(int Start, int Count);
+    private sealed record FuzzyData(Dictionary<string, WordRange> WordItems,
+        Dictionary<string, string[]> WordBuckets, int[] Postings);
 
     private sealed record Entry(T Item, string AppId, string Name);
 
     public GameSearchIndex(IEnumerable<T> items, Func<T, int> appId, Func<T, string> name)
+        : this(items, appId, name, CancellationToken.None) { }
+
+    public GameSearchIndex(IEnumerable<T> items, Func<T, int> appId, Func<T, string> name, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(appId);
         ArgumentNullException.ThrowIfNull(name);
-        _entries = items.Select(item => new Entry(item,
-            appId(item).ToString(CultureInfo.InvariantCulture), Normalize(name(item)))).ToArray();
-        for (var i = 0; i < _entries.Length; i++)
+        cancellationToken.ThrowIfCancellationRequested();
+        _entries = items.Select(item =>
         {
-            foreach (var word in Words(_entries[i].Name).Distinct(StringComparer.Ordinal))
+            cancellationToken.ThrowIfCancellationRequested();
+            return new Entry(item, appId(item).ToString(CultureInfo.InvariantCulture), Normalize(name(item)));
+        }).ToArray();
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private FuzzyData GetFuzzyData(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (Volatile.Read(ref _fuzzy) is { } ready) return ready;
+        _fuzzyGate.Wait(cancellationToken);
+        try
+        {
+            if (_fuzzy is { } existing) return existing;
+            var wordItems = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+            var wordBuckets = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            var postingCount = 0;
+            for (var i = 0; i < _entries.Length; i++)
             {
-                if (!_wordItems.TryGetValue(word, out var ids))
+                cancellationToken.ThrowIfCancellationRequested();
+                foreach (var word in Words(_entries[i].Name).Distinct(StringComparer.Ordinal))
                 {
-                    ids = new List<int>();
-                    _wordItems[word] = ids;
-                    if (word.Length is >= 4 and <= 32)
+                    cancellationToken.ThrowIfCancellationRequested();
+                    // Words outside these bounds were never fuzzy candidates.
+                    if (word.Length is < 4 or > 32) continue;
+                    if (!wordItems.TryGetValue(word, out var ids))
+                    {
+                        ids = new List<int>();
+                        wordItems[word] = ids;
                         foreach (var key in BucketKeys(word))
                         {
-                            if (!_wordBuckets.TryGetValue(key, out var words))
-                                _wordBuckets[key] = words = new List<string>();
+                            if (!wordBuckets.TryGetValue(key, out var words))
+                                wordBuckets[key] = words = new List<string>();
                             words.Add(word);
                         }
+                    }
+                    ids.Add(i);
+                    postingCount = checked(postingCount + 1);
                 }
-                ids.Add(i);
             }
+            var postings = new int[postingCount];
+            var ranges = new Dictionary<string, WordRange>(wordItems.Count, StringComparer.Ordinal);
+            var offset = 0;
+            foreach (var (word, ids) in wordItems)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                ids.CopyTo(postings, offset);
+                ranges.Add(word, new(offset, ids.Count));
+                offset += ids.Count;
+            }
+            var buckets = new Dictionary<string, string[]>(wordBuckets.Count, StringComparer.Ordinal);
+            foreach (var (key, words) in wordBuckets)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                buckets.Add(key, words.ToArray());
+            }
+            var data = new FuzzyData(ranges, buckets, postings);
+            cancellationToken.ThrowIfCancellationRequested();
+            // Publish only complete immutable data. Cancelled construction is retryable;
+            // concurrent exact queries never wait for this gate.
+            Volatile.Write(ref _fuzzy, data);
+            return data;
         }
+        finally { _fuzzyGate.Release(); }
     }
 
     public GameSearchResult<T> Find(string? query, CancellationToken cancellationToken = default,
@@ -63,17 +117,23 @@ public sealed class GameSearchIndex<T>
             if (eligible is not null && !eligible(entry.Item)) continue;
             if (terms.Length == 0 || (numeric
                     ? entry.Name.Contains(search, StringComparison.Ordinal) || entry.AppId.Contains(search, StringComparison.Ordinal)
-                    : terms.All(term => entry.Name.Contains(term, StringComparison.Ordinal))))
+                    : MatchesTerms(entry.Name, terms)))
                 exact.Add(entry.Item);
         }
         if (exact.Count > 0 || numeric || terms.Length is 0 or > MaxFuzzyWords || search.Length > 128)
             return new(exact, false);
 
-        var similar = terms.Select(term => SimilarWords(term, cancellationToken)).ToArray();
+        if (!terms.Any(CanFuzzyMatch)) return new(exact, false);
+        var data = GetFuzzyData(cancellationToken);
+        var similar = terms.Select(term => SimilarWords(term, data, cancellationToken)).ToArray();
         var candidates = new HashSet<int>();
         foreach (var words in similar)
             foreach (var word in words)
-                foreach (var index in _wordItems[word]) candidates.Add(index);
+            {
+                var range = data.WordItems[word];
+                for (var i = range.Start; i < range.Start + range.Count; i++)
+                { cancellationToken.ThrowIfCancellationRequested(); candidates.Add(data.Postings[i]); }
+            }
 
         var fuzzy = new List<T>();
         foreach (var index in candidates.Order())
@@ -94,15 +154,24 @@ public sealed class GameSearchIndex<T>
         return new(fuzzy, fuzzy.Count > 0);
     }
 
-    private IReadOnlyList<string> SimilarWords(string term, CancellationToken cancellationToken)
+    private static bool MatchesTerms(string name, string[] terms)
     {
-        if (term.Length is < 4 or > 32 || term.Any(character => !char.IsLetterOrDigit(character)))
+        foreach (var term in terms)
+            if (!name.Contains(term, StringComparison.Ordinal)) return false;
+        return true;
+    }
+
+    private static bool CanFuzzyMatch(string term) => term.Length is >= 4 and <= 32 && term.All(char.IsLetterOrDigit);
+
+    private static IReadOnlyList<string> SimilarWords(string term, FuzzyData data, CancellationToken cancellationToken)
+    {
+        if (!CanFuzzyMatch(term))
             return Array.Empty<string>();
         var checkedWords = new HashSet<string>(StringComparer.Ordinal);
         var matches = new List<string>();
         foreach (var key in BucketKeys(term))
         {
-            if (!_wordBuckets.TryGetValue(key, out var candidates)) continue;
+            if (!data.WordBuckets.TryGetValue(key, out var candidates)) continue;
             foreach (var candidate in candidates)
             {
                 cancellationToken.ThrowIfCancellationRequested();

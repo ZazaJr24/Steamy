@@ -24,7 +24,7 @@
         <StackPanel Grid.Column="2"><TextBlock Text="Network App ID" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,7"/><ui:TextBox Text="{Binding NetworkAppId, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="480"/></StackPanel>
       </Grid>
       <ComboBox ItemsSource="{Binding Matches}" SelectedItem="{Binding SelectedMatch}" Margin="0,0,0,16" ToolTip="Steam matches for this game folder"><ComboBox.Style><Style TargetType="ComboBox"><Style.Triggers><DataTrigger Binding="{Binding Matches.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></ComboBox.Style></ComboBox>
-      <Expander Header="Settings" IsEnabled="{Binding CanEdit}" Margin="0,0,0,16">
+      <Expander x:Name="SettingsExpander" Header="Settings" IsEnabled="{Binding CanEdit}" Margin="0,0,0,16" Expanded="Settings_Expanded">
         <StackPanel Margin="0,14,0,4">
           <Grid Margin="0,0,0,16"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ui:TextBox Text="{Binding Executable}" PlaceholderText="Detected game executable"/><ui:Button Grid.Column="1" Content="Choose .exe" Click="Executable_Click" Appearance="Secondary" Margin="10,0,0,0"/></Grid>
           <StackPanel x:Name="OptionsFields"/>

@@ -1,0 +1,42 @@
+<UserControl x:Class="Steamy.Controls.DiscordConnectionCard"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+  <UserControl.Resources><ResourceDictionary>
+    <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Steamy;component/Resources/SocialStyles.xaml" /></ResourceDictionary.MergedDictionaries>
+  </ResourceDictionary></UserControl.Resources>
+  <Border Background="{DynamicResource SocialChromeBrush}" BorderBrush="{DynamicResource SocialEdgeBrush}" BorderThickness="1" CornerRadius="22" Padding="28">
+    <StackPanel DataContext="{Binding Model, RelativeSource={RelativeSource AncestorType=UserControl}}">
+      <Grid Margin="0,0,0,20"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+        <Border Width="46" Height="46" CornerRadius="16" Background="{DynamicResource SocialActionBrush}" Margin="0,0,14,0">
+          <ui:SymbolIcon Symbol="Chat24" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <TextBlock Text="{Binding ProfileLabel}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding AccountLabel}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0" />
+        </StackPanel>
+      </Grid>
+      <TextBlock Text="Your friends, conversations and game invitations, in one place." Visibility="{Binding DisconnectedVisibility}"
+        FontSize="14" LineHeight="23" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,22" />
+      <ui:Button x:Name="ConnectDiscordButton" Content="{Binding ConnectLabel}" Command="{Binding ConnectCommand}"
+        Style="{StaticResource SocialPrimaryButton}" Visibility="{Binding ConnectionActionVisibility}" HorizontalAlignment="Stretch" MinHeight="46" AutomationProperties.Name="Connect Discord" />
+      <WrapPanel Margin="0,8,0,0">
+        <ui:Button Content="Cancel" Command="{Binding CancelCommand}" Visibility="{Binding BusyVisibility}" Style="{StaticResource SocialQuietButton}" />
+        <ui:Button Content="Disconnect" Command="{Binding DisconnectCommand}" Visibility="{Binding DisconnectVisibility}" Style="{StaticResource SocialQuietButton}" />
+      </WrapPanel>
+      <ProgressBar IsIndeterminate="True" Height="3" Margin="0,8,0,12" Visibility="{Binding BusyVisibility}" Style="{StaticResource JobProgressBar}" />
+      <Border CornerRadius="10" Margin="0,8,0,0"><Border.Style><Style TargetType="Border">
+        <Style.Triggers><DataTrigger Binding="{Binding IsError}" Value="True"><Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" /><Setter Property="Padding" Value="12" /></DataTrigger></Style.Triggers>
+      </Style></Border.Style>
+        <TextBlock Text="{Binding StatusMessage}" FontSize="12" TextWrapping="Wrap" LineHeight="19" AutomationProperties.LiveSetting="Polite"><TextBlock.Style><Style TargetType="TextBlock">
+          <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+          <Style.Triggers><DataTrigger Binding="{Binding IsError}" Value="True"><Setter Property="Foreground" Value="{DynamicResource DangerBrush}" /></DataTrigger></Style.Triggers>
+        </Style></TextBlock.Style></TextBlock>
+      </Border>
+      <Border BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,16,0,0" Margin="0,22,0,0">
+        <TextBlock Text="Sign in securely through Discord. You can disconnect at any time."
+          FontSize="11" LineHeight="18" TextWrapping="Wrap" Foreground="{DynamicResource TextTertiaryBrush}" />
+      </Border>
+    </StackPanel>
+  </Border>
+</UserControl>

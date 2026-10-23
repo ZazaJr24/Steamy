@@ -4,21 +4,21 @@
   <Style TargetType="ui:TextBox" BasedOn="{StaticResource {x:Type ui:TextBox}}">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}"/>
     <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
     <Setter Property="MinHeight" Value="36"/>
   </Style>
   <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}"/>
     <Style.Triggers><Trigger Property="Appearance" Value="Primary"><Setter Property="Background" Value="#4389D4"/><Setter Property="Foreground" Value="White"/></Trigger></Style.Triggers>
   </Style>
   <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}"/>
   </Style>
   <Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
-    <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}"/>
     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Expander">
       <StackPanel>
         <Border CornerRadius="12" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
@@ -32,9 +32,9 @@
     </ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/><Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}"/><Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
   </Style>
   <Style TargetType="PasswordBox" BasedOn="{StaticResource {x:Type PasswordBox}}">
-    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/><Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="Padding" Value="10,7"/>
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}"/><Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="Padding" Value="10,7"/>
   </Style>
 </ResourceDictionary>

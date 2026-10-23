@@ -6,6 +6,22 @@ namespace Steamy.UiTests;
 public sealed class DownloadDeckTelemetryTests
 {
     [Fact]
+    public void HeaderAdvancesWithMeasuredDepotProgressWhenNetworkTotalIsUnknown()
+    {
+        var job = new DownloadJob { State = DownloadJobState.Downloading, Phase = "downloading", TransferredBytes = 35_600_000,
+            TransferTotalBytes = null, Progress = 27.4, HasWholeGameProgress = false, CurrentDepotDetail = "Depot 1/2 · 27.4%" };
+        Assert.Equal(27.4, job.DeckProgress); Assert.False(job.DeckProgressIndeterminate);
+        Assert.Contains("27", job.DeckProgressCaption); Assert.Contains("Depot 1/2", job.DeckProgressCaption);
+        job.Progress = 54.8;
+        Assert.Equal(54.8, job.DeckProgress);
+        job.HasWholeGameProgress = true;
+        Assert.DoesNotContain("Depot", job.DeckProgressCaption);
+        job.HasMeasuredProgress = false;
+        Assert.True(job.DeckProgressIndeterminate); Assert.Equal("Measuring…", job.DeckProgressCaption);
+        job.State = DownloadJobState.Completed;
+        Assert.False(job.DeckProgressIndeterminate); Assert.Equal("100 %", job.DeckProgressCaption);
+    }
+    [Fact]
     public void TransferHistoryIsBoundedAndRetainedWithoutAnOpenPage()
     {
         var job = new DownloadJob();

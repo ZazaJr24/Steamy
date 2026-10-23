@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Text.Json;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace Steamy.Services;
 
@@ -15,8 +16,14 @@ public sealed record GameAchievementSnapshot(IReadOnlyList<GameAchievement> Item
 }
 public sealed record GameScreenshot(Uri Thumbnail, Uri Full);
 public sealed record GameNews(string Title, string Summary, string DateLabel, Uri Link);
+public sealed record GameReviewSummary(long Positive, long Total, string Description)
+{
+    public double PositivePercent => Total > 0 ? Math.Clamp(Positive * 100d / Total, 0, 100) : 0;
+}
 public sealed record GameOverview(string Description = "", string Developer = "", string Publisher = "")
 {
+    public GameReviewSummary? Reviews { get; init; }
+    public string DeveloperStoreName { get; init; } = "";
     public string DetailedDescription { get; init; } = "";
     public string ReleaseDate { get; init; } = "";
     public string Genres { get; init; } = "";
@@ -31,30 +38,96 @@ public interface IGameDetailsDataService
     Task<GameOverview> ReadOverviewAsync(int appId, CancellationToken token = default);
     Task<GameAchievementSnapshot> ReadAchievementsAsync(int appId, CancellationToken token = default);
 }
+public interface IProgressiveGameDetailsDataService
+{
+    IAsyncEnumerable<GameOverview> ReadOverviewUpdatesAsync(int appId, CancellationToken token = default);
+}
 
 /// <summary>Only actual Steam player data is used for achievement counts and unlock states.</summary>
-public sealed class SteamGameDetailsService(ISettingsService settings, ISecureCredentialService credentials, HttpClient? httpClient = null, ISteamCatalogService? catalog = null) : IGameDetailsDataService, IDisposable
+public sealed class SteamGameDetailsService(ISettingsService settings, ISecureCredentialService credentials, HttpClient? httpClient = null, ISteamCatalogService? catalog = null) : IGameDetailsDataService, IProgressiveGameDetailsDataService, IDisposable
 {
     public const string CredentialKey = "steam-api-key";
     private readonly HttpClient _http = httpClient ?? new HttpClient(StableDnsHandler.Create()) { Timeout = TimeSpan.FromSeconds(12) };
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, GameOverview> _overviews = new();
+    private const int OverviewCapacity = 64;
+    private readonly object _overviewGate = new();
+    private readonly Dictionary<int, LinkedListNode<KeyValuePair<int, GameOverview>>> _overviews = [];
+    private readonly LinkedList<KeyValuePair<int, GameOverview>> _overviewLru = [];
+    private bool TryOverview(int appId, out GameOverview overview)
+    {
+        lock (_overviewGate)
+        {
+            if (!_overviews.TryGetValue(appId, out var node)) { overview = null!; return false; }
+            _overviewLru.Remove(node); _overviewLru.AddLast(node); overview = node.Value.Value; return true;
+        }
+    }
+    private void RememberOverview(int appId, GameOverview overview)
+    {
+        lock (_overviewGate)
+        {
+            if (_overviews.Remove(appId, out var old)) _overviewLru.Remove(old);
+            _overviews[appId] = _overviewLru.AddLast(new KeyValuePair<int, GameOverview>(appId, overview));
+            if (_overviews.Count <= OverviewCapacity) return;
+            _overviews.Remove(_overviewLru.First!.Value.Key); _overviewLru.RemoveFirst();
+        }
+    }
     public async Task<GameOverview> ReadOverviewAsync(int appId, CancellationToken token = default)
     {
-        if (appId <= 0) return new();
-        if (_overviews.TryGetValue(appId, out var cached)) return cached;
+        var latest = new GameOverview();
+        await foreach (var overview in ReadOverviewUpdatesAsync(appId, token).ConfigureAwait(false)) latest = overview;
+        return latest;
+    }
+    public async IAsyncEnumerable<GameOverview> ReadOverviewUpdatesAsync(int appId, [EnumeratorCancellation] CancellationToken token = default)
+    {
+        token.ThrowIfCancellationRequested();
+        if (appId <= 0) { yield return new(); yield break; }
+        if (TryOverview(appId, out var cached)) { yield return cached; yield break; }
+        var overview = await Task.Run(() => ReadBaseOverviewAsync(appId, token), token).ConfigureAwait(false);
+        if (overview is null) { yield return new(); yield break; }
+        using var requests = CancellationTokenSource.CreateLinkedTokenSource(token);
+        var requestToken = requests.Token;
+        var news = Task.Run(() => ReadNewsAsync(appId, requestToken), requestToken);
+        var reviews = Task.Run(() => ReadReviewsAsync(appId, requestToken), requestToken);
+        try
+        {
+            // Publish the ready Store data before waiting for optional servers.
+            yield return overview;
+            var pending = new List<Task> { news, reviews };
+            while (pending.Count > 0)
+            {
+                var completed = await Task.WhenAny(pending).WaitAsync(token).ConfigureAwait(false);
+                pending.Remove(completed);
+                overview = ReferenceEquals(completed, news)
+                    ? overview with { News = await news.ConfigureAwait(false) }
+                    : overview with { Reviews = await reviews.ConfigureAwait(false) };
+                token.ThrowIfCancellationRequested();
+                if (pending.Count == 0) RememberOverview(appId, overview);
+                yield return overview;
+            }
+        }
+        finally
+        {
+            requests.Cancel();
+            _ = ObserveCompletionAsync(news, reviews);
+        }
+    }
+    private static async Task ObserveCompletionAsync(Task news, Task reviews)
+    {
+        try { await Task.WhenAll(news, reviews).ConfigureAwait(false); }
+        catch (Exception) { /* Observe abandoned optional requests after navigation/cancellation. */ }
+    }
+    private async Task<GameOverview?> ReadBaseOverviewAsync(int appId, CancellationToken token)
+    {
         try
         {
             if (catalog is not null)
             {
-                var detailsTask = catalog.GetDetailsAsync(appId, token);
-                var newsTask = ReadNewsAsync(appId, token);
-                await Task.WhenAll(detailsTask, newsTask);
-                if (detailsTask.Result is { } details)
-                    return _overviews[appId] = new(details.ShortDescription, string.Join(", ", details.Developers), string.Join(", ", details.Publishers))
+                if (await catalog.GetDetailsAsync(appId, token).ConfigureAwait(false) is { } details)
+                    return new(details.ShortDescription, string.Join(", ", details.Developers), string.Join(", ", details.Publishers))
                     {
                         DetailedDescription = details.DetailedDescription, ReleaseDate = details.ReleaseDate,
                         Genres = details.GenresDisplay, SystemRequirements = details.SystemRequirements,
-                        Languages = details.Languages, Features = details.Features, News = newsTask.Result,
+                        Languages = details.Languages, Features = details.Features,
+                        DeveloperStoreName = details.Developers.FirstOrDefault() ?? "",
                         Screenshots = (details.Screenshots ?? []).Take(6).Select(item =>
                             SafeSteamUri(item.ThumbnailUrl, true) is { } thumb && SafeSteamUri(item.FullUrl, true) is { } full
                                 ? new GameScreenshot(thumb, full) : null).OfType<GameScreenshot>().ToArray()
@@ -65,13 +138,27 @@ public sealed class SteamGameDetailsService(ISettingsService settings, ISecureCr
             using var json = await GetJsonAsync("https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json=" + Uri.EscapeDataString(query), token);
             var item = json.RootElement.GetProperty("response").GetProperty("store_items").EnumerateArray()
                 .FirstOrDefault(row => row.TryGetProperty("appid", out var id) && id.GetInt32() == appId);
-            if (item.ValueKind != JsonValueKind.Object || !item.TryGetProperty("basic_info", out var info)) return new();
+            if (item.ValueKind != JsonValueKind.Object || !item.TryGetProperty("basic_info", out var info)) return null;
             string Names(string property) => info.TryGetProperty(property, out var values) && values.ValueKind == JsonValueKind.Array
                 ? string.Join(", ", values.EnumerateArray().Take(8).Select(value => Text(value, "name"))) : "";
-            return _overviews[appId] = new(Text(info, "short_description"), Names("developers"), Names("publishers"));
+            return new(Text(info, "short_description"), Names("developers"), Names("publishers"));
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
-        catch (Exception e) when (e is HttpRequestException or IOException or JsonException or InvalidOperationException or KeyNotFoundException or OperationCanceledException) { return new(); }
+        catch (Exception e) when (e is HttpRequestException or IOException or JsonException or InvalidOperationException or KeyNotFoundException or OperationCanceledException) { return null; }
+    }
+    private async Task<GameReviewSummary?> ReadReviewsAsync(int appId, CancellationToken token)
+    {
+        try
+        {
+            using var json = await GetJsonAsync($"https://store.steampowered.com/appreviews/{appId}?json=1&language=all&purchase_type=all&num_per_page=1", token);
+            var root = json.RootElement;
+            if (!root.TryGetProperty("success", out var success) || !success.TryGetInt32(out var code) || code != 1 || !root.TryGetProperty("query_summary", out var summary)) return null;
+            if (!summary.TryGetProperty("total_reviews", out var totalValue) || !totalValue.TryGetInt64(out var total) || total <= 0
+                || !summary.TryGetProperty("total_positive", out var positiveValue) || !positiveValue.TryGetInt64(out var positive) || positive < 0 || positive > total) return null;
+            return new(positive, total, Text(summary, "review_score_desc"));
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (Exception error) when (error is HttpRequestException or IOException or JsonException or InvalidOperationException or OperationCanceledException) { return null; }
     }
     private async Task<IReadOnlyList<GameNews>> ReadNewsAsync(int appId, CancellationToken token)
     {
@@ -100,7 +187,10 @@ public sealed class SteamGameDetailsService(ISettingsService settings, ISecureCr
         return (image ? uri.Host.EndsWith(".steamstatic.com", StringComparison.OrdinalIgnoreCase)
             : uri.Host is "store.steampowered.com" or "steamcommunity.com" or "steamstore-a.akamaihd.net") ? uri : null;
     }
-    public async Task<GameAchievementSnapshot> ReadAchievementsAsync(int appId, CancellationToken token = default)
+    public Task<GameAchievementSnapshot> ReadAchievementsAsync(int appId, CancellationToken token = default) =>
+        Task.Run(() => ReadAchievementsCoreAsync(appId, token), token);
+
+    private async Task<GameAchievementSnapshot> ReadAchievementsCoreAsync(int appId, CancellationToken token)
     {
         if (appId <= 0) return GameAchievementSnapshot.Unavailable("Steam achievements are not available for this local game.");
         var configuration = settings.Load();

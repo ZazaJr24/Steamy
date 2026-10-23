@@ -57,14 +57,18 @@ public sealed class DepotBoxImportTests
     }
 
     [Fact]
-    public async Task MissingApiKeyStopsBeforeAnyProviderRequest()
+    public async Task MissingPersonalKeyUsesRelayWithoutSendingCredentials()
     {
         using var fixture = new Fixture("zip", key: "");
         var result = await fixture.Backend.AddFromSourceAsync(fixture.Root, 480, ManifestSource.DepotBox);
-        Assert.False(result.Succeeded);
-        Assert.Contains("No DepotBox API key", result.Message);
-        Assert.Equal(0, fixture.Transport.Calls);
-        Assert.False(File.Exists(Path.Combine(fixture.Root, "config/stplug-in/480.lua")));
+        Assert.True(result.Succeeded, result.Message);
+        Assert.Equal(2, fixture.Transport.Calls);
+        Assert.True(File.Exists(Path.Combine(fixture.Root, "config/stplug-in/480.lua")));
+        Assert.All(fixture.Transport.Requests, request =>
+        {
+            Assert.Equal(new Uri(ProviderRelay.BaseUrl).Host, request.Host);
+            Assert.False(request.HasCredential);
+        });
     }
 
     private sealed class Fixture : IDisposable
@@ -104,11 +108,14 @@ public sealed class DepotBoxImportTests
     private sealed class Transport(string response) : HttpMessageHandler
     {
         public int Calls { get; private set; }
+        public List<(string Host, bool HasCredential)> Requests { get; } = [];
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
         {
             Calls++;
-            Assert.Equal("depotbox.org", request.RequestUri!.Host);
-            Assert.Equal("test-key", request.Headers.GetValues("X-API-Key").Single());
+            Requests.Add((request.RequestUri!.Host, request.Headers.Contains("X-API-Key") || request.Headers.Contains("X-Auth-Key") || request.Headers.Contains("Authorization")));
+            Assert.Contains(request.RequestUri.Host, new[] { "depotbox.org", new Uri(ProviderRelay.BaseUrl).Host });
+            if (request.RequestUri.Host == "depotbox.org") Assert.Equal("test-key", request.Headers.GetValues("X-API-Key").Single());
+            else Assert.False(request.Headers.Contains("X-API-Key"));
             Assert.False(request.Headers.Contains("Authorization"));
             if (request.RequestUri.AbsolutePath.EndsWith("/availability"))
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"available\":true}") });

@@ -3,33 +3,73 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
+using System.Diagnostics;
 
 namespace Steamy.Controls;
 
 public static class SmoothScroll
 {
     public static readonly DependencyProperty EnabledProperty = DependencyProperty.RegisterAttached("Enabled", typeof(bool), typeof(SmoothScroll), new PropertyMetadata(false, OnEnabledChanged));
+    public static readonly DependencyProperty HorizontalProperty = DependencyProperty.RegisterAttached("Horizontal", typeof(bool), typeof(SmoothScroll), new PropertyMetadata(false));
+    public static bool GetHorizontal(DependencyObject owner) => (bool)owner.GetValue(HorizontalProperty);
+    public static void SetHorizontal(DependencyObject owner, bool value) => owner.SetValue(HorizontalProperty, value);
     private static readonly DependencyProperty StateProperty = DependencyProperty.RegisterAttached("State", typeof(ScrollState), typeof(SmoothScroll));
-    private static readonly DependencyProperty OffsetProperty = DependencyProperty.RegisterAttached("Offset", typeof(double), typeof(SmoothScroll), new PropertyMetadata(0d, (owner, args) => ((ScrollViewer)owner).ScrollToVerticalOffset((double)args.NewValue)));
     public static bool GetEnabled(DependencyObject owner) => (bool)owner.GetValue(EnabledProperty);
     public static void SetEnabled(DependencyObject owner, bool value) => owner.SetValue(EnabledProperty, value);
 
+    internal static double SnapOffset(double offset, double maximum, double dpiScale)
+        => offset >= maximum ? Math.Max(0, maximum) : Math.Clamp(Math.Round(offset * dpiScale) / dpiScale, 0, Math.Max(0, maximum));
+
     private static void OnEnabledChanged(DependencyObject owner, DependencyPropertyChangedEventArgs args)
     {
+        if (owner is Control control && owner is not ScrollViewer)
+        {
+            control.Loaded -= ControlLoaded; control.Loaded += ControlLoaded;
+            if (control.IsLoaded) ControlLoaded(control, new RoutedEventArgs());
+            return;
+        }
         if (owner is not ScrollViewer viewer) return;
         if (viewer.GetValue(StateProperty) is ScrollState previous) previous.Detach();
         viewer.SetValue(StateProperty, (bool)args.NewValue ? new ScrollState(viewer) : null);
+    }
+    private static void ControlLoaded(object sender, RoutedEventArgs args)
+    {
+        if (sender is not Control control) return;
+        ScrollViewer? Find(DependencyObject parent)
+        {
+            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            { var child = VisualTreeHelper.GetChild(parent, i); if (child is ScrollViewer scroll) return scroll; if (Find(child) is { } nested) return nested; }
+            return null;
+        }
+        if (Find(control) is { } viewer) SetEnabled(viewer, GetEnabled(control));
+    }
+
+    private static bool PixelVirtualized(DependencyObject element)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(element); i++)
+        {
+            var child = VisualTreeHelper.GetChild(element, i);
+            if (child is VirtualizingGamePanel) return true;
+            if (child is VirtualizingStackPanel panel && ItemsControl.GetItemsOwner(panel) is { } owner && VirtualizingPanel.GetScrollUnit(owner) == ScrollUnit.Pixel) return true;
+            if (child is not ScrollViewer && PixelVirtualized(child)) return true;
+        }
+        return false;
     }
 
     private sealed class ScrollState
     {
         private readonly ScrollViewer _viewer;
         private double _target;
-        private int _generation;
+        private readonly ScrollMotion _motion = new();
+        private long _lastTick;
+        private TimeSpan? _lastRenderTime;
+        private double _expectedOffset;
+        private Window? _window;
         private bool _animating;
         private bool _preferencesAttached;
         private int _direction;
+        private double CurrentOffset => GetHorizontal(_viewer) ? _viewer.HorizontalOffset : _viewer.VerticalOffset;
+        private double MaximumOffset => GetHorizontal(_viewer) ? _viewer.ScrollableWidth : _viewer.ScrollableHeight;
         public ScrollState(ScrollViewer viewer)
         {
             _viewer = viewer;
@@ -39,6 +79,8 @@ public static class SmoothScroll
             viewer.PreviewMouseDown += OnMouseDown;
             viewer.PreviewKeyDown += OnKeyDown;
             viewer.SizeChanged += OnSizeChanged;
+            viewer.ScrollChanged += OnScrollChanged;
+            viewer.IsVisibleChanged += OnVisibilityChanged;
             if (viewer.IsLoaded) OnLoaded(viewer, new RoutedEventArgs());
         }
         public void Detach()
@@ -50,6 +92,9 @@ public static class SmoothScroll
             _viewer.PreviewMouseDown -= OnMouseDown;
             _viewer.PreviewKeyDown -= OnKeyDown;
             _viewer.SizeChanged -= OnSizeChanged;
+            _viewer.ScrollChanged -= OnScrollChanged;
+            _viewer.IsVisibleChanged -= OnVisibilityChanged;
+            DetachWindow();
             MotionPreferences.Changed -= OnPreferencesChanged;
             _preferencesAttached = false;
         }
@@ -57,81 +102,125 @@ public static class SmoothScroll
         private void OnMouseDown(object sender, MouseButtonEventArgs args) { if (_animating) Stop(); }
         private void OnKeyDown(object sender, KeyEventArgs args) { if (_animating) Stop(); }
         private void OnSizeChanged(object sender, SizeChangedEventArgs args) { if (_animating) Stop(); }
+        private void OnVisibilityChanged(object sender, DependencyPropertyChangedEventArgs args) { if (!_viewer.IsVisible) Stop(); }
+        private void WindowPaused(object? sender, EventArgs args) => Stop();
+        private void DetachWindow()
+        {
+            if (_window is null) return;
+            _window.Deactivated -= WindowPaused; _window.StateChanged -= WindowPaused; _window = null;
+        }
         private void OnLoaded(object sender, RoutedEventArgs args)
         {
             if (_preferencesAttached) return;
             MotionPreferences.Changed += OnPreferencesChanged;
             _preferencesAttached = true;
+            _window = Window.GetWindow(_viewer);
+            if (_window is not null) { _window.Deactivated += WindowPaused; _window.StateChanged += WindowPaused; }
         }
         private void OnUnloaded(object sender, RoutedEventArgs args)
         {
             Stop();
             MotionPreferences.Changed -= OnPreferencesChanged;
             _preferencesAttached = false;
+            DetachWindow();
         }
         private void Stop()
         {
-            _generation++;
-            var offset = _viewer.VerticalOffset;
-            CommitOffset(offset);
+            var offset = CurrentOffset;
+            CompositionTarget.Rendering -= OnRendering;
             _animating = false;
+            _lastRenderTime = null;
+            _motion.Reset(offset);
             _target = offset;
             _direction = 0;
         }
-        private void OnWheel(object sender, MouseWheelEventArgs args)
+        private void OnScrollChanged(object sender, ScrollChangedEventArgs args)
         {
-            if (args.Handled || Keyboard.Modifiers != ModifierKeys.None || _viewer.ScrollableHeight <= 0
-                || _viewer.CanContentScroll) return; // Logical/virtualized lists own their offset units.
+            if (!_animating || !ReferenceEquals(args.OriginalSource, _viewer)) return;
+            var change = GetHorizontal(_viewer) ? args.HorizontalChange : args.VerticalChange;
+            // Explicit section navigation, BringIntoView, or a native scroll command
+            // owns its new position. Ignore the pixel rounding of our own requests.
+            if (change != 0 && Math.Abs(CurrentOffset - _expectedOffset) > 1.5) Stop();
+        }
+        private void OnWheel(object sender, MouseWheelEventArgs args)
+            => OnWheelCore(sender, args, Keyboard.Modifiers);
+        private void OnWheelCore(object sender, MouseWheelEventArgs args, ModifierKeys modifiers)
+        {
+            if (args.Handled || modifiers != ModifierKeys.None || MaximumOffset <= 0
+) return;
+            // Our game panel and pixel-unit virtual stacks expose offsets in pixels.
+            // Other logical panels retain their own scrolling units.
+            if (_viewer.CanContentScroll && !PixelVirtualized(_viewer)) return;
             // A scrollable child or open dropdown owns the wheel. Closed selectors and
             // non-scrolling template viewers must not swallow the surrounding page's input.
             for (var element = args.OriginalSource as DependencyObject; element is not null && element != _viewer; element = element is Visual ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element))
             {
                 if (element is ComboBox { IsDropDownOpen: true } or TextBox { AcceptsReturn: true } or RichTextBox) return;
-                if (element is ScrollViewer child && (args.Delta < 0
-                    ? child.VerticalOffset < child.ScrollableHeight : child.VerticalOffset > 0)) return;
+                if (element is ScrollViewer child && (GetHorizontal(child)
+                    ? args.Delta < 0 ? child.HorizontalOffset < child.ScrollableWidth : child.HorizontalOffset > 0
+                    : args.Delta < 0 ? child.VerticalOffset < child.ScrollableHeight : child.VerticalOffset > 0)) return;
             }
-            var current = _viewer.VerticalOffset;
+            var current = CurrentOffset;
             var lines = SystemParameters.WheelScrollLines;
             if (lines == 0) return;
-            var distance = lines < 0 ? _viewer.ViewportHeight : Math.Max(1, lines) * 18;
+            var distance = lines < 0 ? (GetHorizontal(_viewer) ? _viewer.ViewportWidth : _viewer.ViewportHeight) : Math.Max(1, lines) * 18;
             var direction = Math.Sign(args.Delta);
             if (_animating && direction != _direction) Stop(); // Reversal responds immediately, without accumulated momentum.
             _direction = direction;
-            _target = Math.Clamp((_animating ? _target : current) - args.Delta / 120d * distance, 0, _viewer.ScrollableHeight);
+            _target = Math.Clamp((_animating ? _target : current) - args.Delta / 120d * distance, 0, MaximumOffset);
             if (Math.Abs(_target - current) < 0.5) return;
             args.Handled = true;
             if (!MotionPreferences.AnimationsEnabled)
             {
-                _generation++;
+                Stop();
+                _target = Math.Clamp(current - args.Delta / 120d * distance, 0, MaximumOffset);
                 CommitOffset(_target);
-                _animating = false;
                 return;
             }
             AnimateTo(_target);
         }
         private void AnimateTo(double target)
         {
-            var current = _viewer.VerticalOffset;
-            _target = Math.Clamp(target, 0, _viewer.ScrollableHeight);
-            var destination = _target;
-            var generation = ++_generation;
-            _animating = true;
-            var animation = new DoubleAnimation(current, _target, TimeSpan.FromMilliseconds(160)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-            animation.Completed += (_, _) =>
+            var current = CurrentOffset;
+            var destination = Math.Clamp(target, 0, MaximumOffset);
+            var now = Stopwatch.GetTimestamp();
+            if (!_animating)
             {
-                if (generation != _generation) return;
-                CommitOffset(destination);
-                _animating = false;
-            };
-            _viewer.BeginAnimation(OffsetProperty, animation, HandoffBehavior.SnapshotAndReplace);
+                _motion.Reset(current); _expectedOffset = current;
+                _lastRenderTime = null;
+                _animating = true; CompositionTarget.Rendering += OnRendering;
+            }
+            else
+                _motion.Advance(Stopwatch.GetElapsedTime(_lastTick, now).TotalSeconds);
+            _lastTick = now;
+            _target = destination;
+            _motion.Retarget(destination);
+            // Input only updates the target. Commit once on the next render frame;
+            // a burst of wheel messages must not invent extra animation time or
+            // cause multiple layout passes before a frame can be presented.
+        }
+        private void OnRendering(object? sender, EventArgs args)
+        {
+            if (!_animating) return;
+            if (!_viewer.IsLoaded || !_viewer.IsVisible) { Stop(); return; }
+            var time = ((RenderingEventArgs)args).RenderingTime;
+            if (_lastRenderTime == time) return;
+            _lastRenderTime = time;
+            var now = Stopwatch.GetTimestamp();
+            _motion.Advance(Stopwatch.GetElapsedTime(_lastTick, now).TotalSeconds);
+            _lastTick = now;
+            CommitOffset(_motion.Position);
+            if (_motion.IsResting)
+            { CompositionTarget.Rendering -= OnRendering; _animating = false; _lastRenderTime = null; }
         }
         private void CommitOffset(double offset)
         {
-            // Offset is private and unbound. Write its base value before removing the
-            // clock: SetCurrentValue on an animated value leaves the old base offset
-            // underneath, which makes the page jump back when the animation ends.
-            _viewer.SetValue(OffsetProperty, offset);
-            _viewer.BeginAnimation(OffsetProperty, null);
+            var dpi = VisualTreeHelper.GetDpi(_viewer);
+            var horizontal = GetHorizontal(_viewer);
+            _expectedOffset = SnapOffset(offset, MaximumOffset, horizontal ? dpi.DpiScaleX : dpi.DpiScaleY);
+            if (Math.Abs(CurrentOffset - _expectedOffset) < .001) return;
+            if (horizontal) _viewer.ScrollToHorizontalOffset(_expectedOffset);
+            else _viewer.ScrollToVerticalOffset(_expectedOffset);
         }
     }
 }

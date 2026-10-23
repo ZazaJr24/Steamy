@@ -1,0 +1,42 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+  <Style x:Key="SocialField" TargetType="ui:TextBox" BasedOn="{StaticResource {x:Type ui:TextBox}}">
+    <Setter Property="Background" Value="{DynamicResource SocialFieldBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SocialBorderBrush}" />
+    <Setter Property="MinHeight" Value="42" /><Setter Property="Padding" Value="12,9" /><Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style x:Key="SocialCombo" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+    <Setter Property="Background" Value="{DynamicResource SocialFieldBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SocialBorderBrush}" /><Setter Property="MinHeight" Value="42" /><Setter Property="Padding" Value="12,9" /><Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style x:Key="SocialQuietButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+    <Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Appearance" Value="Transparent" /><Setter Property="Padding" Value="11,8" /><Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /><Setter Property="MinHeight" Value="36" /><Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style x:Key="SocialPrimaryButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+    <Setter Property="Background" Value="{DynamicResource SocialActionBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SocialActionBrush}" /><Setter Property="Foreground" Value="{DynamicResource SocialOwnTextBrush}" /><Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="16,10" /><Setter Property="MinHeight" Value="42" /><Setter Property="FontSize" Value="13" /><Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style x:Key="SocialTab" TargetType="RadioButton">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /><Setter Property="FontSize" Value="11" /><Setter Property="Cursor" Value="Hand" /><Setter Property="Padding" Value="8,7" />
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+      <Border x:Name="Tab" CornerRadius="8" Padding="{TemplateBinding Padding}" Background="Transparent"><ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" /></Border>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Tab" Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" /></Trigger>
+        <Trigger Property="IsChecked" Value="True"><Setter TargetName="Tab" Property="Background" Value="{DynamicResource SocialAccentSoftBrush}" /><Setter Property="Foreground" Value="{DynamicResource SocialAccentBrush}" /></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Tab" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter TargetName="Tab" Property="BorderThickness" Value="1" /></Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style x:Key="SocialAttachmentButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Padding" Value="12" /><Setter Property="CornerRadius" Value="10" /><Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style x:Key="SocialDockTab" TargetType="Button">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/><Setter Property="Height" Value="32"/><Setter Property="FontSize" Value="12"/><Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+      <Border x:Name="Tab" CornerRadius="8" Padding="8,5" Background="Transparent" BorderThickness="1" BorderBrush="Transparent"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+      <ControlTemplate.Triggers><Trigger Property="Tag" Value="True"><Setter TargetName="Tab" Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="FontWeight" Value="SemiBold"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Tab" Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/></Trigger></ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
+</ResourceDictionary>

@@ -15,12 +15,12 @@
                     AutomationProperties.Name="Close navigation">
         <ToggleButton.Template><ControlTemplate TargetType="ToggleButton"><Border Background="#30000000" /></ControlTemplate></ToggleButton.Template>
       </ToggleButton>
-      <Border x:Name="PaneShadow" Panel.ZIndex="2" HorizontalAlignment="Left" Width="{TemplateBinding OpenPaneLength}" Margin="12" CornerRadius="24" Background="{DynamicResource SidebarBackgroundBrush}" IsHitTestVisible="False">
+      <Border x:Name="PaneShadow" Panel.ZIndex="2" HorizontalAlignment="Left" Width="{TemplateBinding OpenPaneLength}" Margin="12" CornerRadius="24" Background="#08000000" IsHitTestVisible="False">
         <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="5" Opacity="0.22" Color="#000000" /></Border.Effect>
       </Border>
       <Grid x:Name="PaneGrid" Panel.ZIndex="3" HorizontalAlignment="Left" Width="{TemplateBinding OpenPaneLength}" Margin="12" controls:RoundedClip.Radius="24" controls:SurfaceMotion.RevealOnShow="True" KeyboardNavigation.TabNavigation="Cycle">
-        <controls:ShellBackdropView IsGlass="True" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}" FadeColor="{DynamicResource WorkspaceColor}" />
-        <Border CornerRadius="24" Background="{DynamicResource SidebarBackgroundBrush}" BorderThickness="0">
+        <controls:ShellBackdropView IsGlass="True" SamplePageSurface="True" IncludePageContent="True" FrostRadius="18" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}" FadeColor="{DynamicResource WorkspaceColor}" />
+        <Border x:Name="DrawerSurface" CornerRadius="24" Background="{DynamicResource SidebarBackgroundBrush}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1">
           <Grid>
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid Height="88">
@@ -37,26 +37,40 @@
           </Grid>
         </Border>
       </Grid>
-      <Grid x:Name="HeaderBar" Panel.ZIndex="4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,10,0,0" Height="34">
+      <Grid x:Name="HeaderBar" Panel.ZIndex="4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,8,0,0" Height="36">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
         <ContentPresenter x:Name="DrawerHeader" Content="{TemplateBinding PaneHeader}" Visibility="Collapsed" VerticalAlignment="Center" Margin="0,0,8,0" />
-      <Grid x:Name="MenuLauncher" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Height="34" controls:RoundedClip.Radius="17"
+      <Grid x:Name="MenuLauncher" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Height="36" controls:RoundedClip.Radius="18"
             shell:WindowChrome.IsHitTestVisibleInChrome="True">
-        <controls:ShellBackdropView IsGlass="True" PreferSharpArtwork="True" GlassBlurIntensity="0.025" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}">
+        <controls:ShellBackdropView IsGlass="True" SamplePageSurface="True" PreferSharpArtwork="False" FrostRadius="8" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}">
           <controls:ShellBackdropView.Style><Style TargetType="controls:ShellBackdropView">
             <Setter Property="IsPageBackdrop" Value="True" />
             <Style.Triggers><DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Value="Home"><Setter Property="IsPageBackdrop" Value="False" /></DataTrigger></Style.Triggers>
           </Style></controls:ShellBackdropView.Style>
         </controls:ShellBackdropView>
-        <Border x:Name="LauncherSurface" Background="{DynamicResource LauncherBackgroundBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="17" Padding="3">
+        <Border x:Name="LauncherSurface" Background="{DynamicResource LauncherBackgroundBrush}" BorderBrush="{DynamicResource ShellChromeBorderBrush}" BorderThickness="1" CornerRadius="18" Padding="3">
+          <Grid>
+          <Border x:Name="LauncherSheen" CornerRadius="14" Background="{DynamicResource ShellChromeSheenBrush}" IsHitTestVisible="False" />
           <StackPanel Orientation="Horizontal">
             <StackPanel x:Name="LauncherBrand" Orientation="Horizontal" VerticalAlignment="Center" Margin="3,0,8,0" IsHitTestVisible="False">
               <Image Source="{StaticResource SteamyBrandImage}" Width="24" Height="24" />
-              <TextBlock Text="Steamy" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource LauncherForegroundBrush}" Margin="7,0,0,0" VerticalAlignment="Center" />
+              <TextBlock Text="Steamy" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource LauncherForegroundBrush}" Margin="7,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
-            <ui:Button x:Name="PART_ToggleButton" Icon="{ui:SymbolIcon Navigation24}" Width="24" Height="24" Padding="5" Appearance="Transparent"
-                       Foreground="{DynamicResource LauncherForegroundBrush}" ToolTip="Open or close navigation" AutomationProperties.Name="Open or close navigation" />
+            <ui:Button x:Name="PART_ToggleButton" Width="28" Height="28" Padding="5" Appearance="Transparent"
+                       Foreground="{DynamicResource LauncherForegroundBrush}" ToolTip="Open or close navigation" AutomationProperties.Name="Open or close navigation"
+                       FocusVisualStyle="{StaticResource GalleryKeyboardFocus}">
+              <ui:Button.Template><ControlTemplate TargetType="ui:Button">
+                <Border x:Name="ToggleSurface" Background="Transparent" CornerRadius="14">
+                  <ui:SymbolIcon Symbol="Navigation24" FontSize="14" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <ControlTemplate.Triggers>
+                  <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ToggleSurface" Property="Background" Value="{DynamicResource ControlHoverBrush}" /></Trigger>
+                  <Trigger Property="IsPressed" Value="True"><Setter TargetName="ToggleSurface" Property="Background" Value="{DynamicResource SidebarSelectedBrush}" /></Trigger>
+                </ControlTemplate.Triggers>
+              </ControlTemplate></ui:Button.Template>
+            </ui:Button>
           </StackPanel>
+          </Grid>
         </Border>
       </Grid>
       </Grid>

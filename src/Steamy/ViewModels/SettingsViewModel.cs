@@ -19,6 +19,9 @@ namespace Steamy.ViewModels;
 /// </summary>
 public sealed class SettingsViewModel : ViewModelBase
 {
+    // Navigation state belongs to the session, independently of the cached page visual.
+    internal string NavigationSearchText { get; set; } = string.Empty;
+    internal int NavigationCategoryIndex { get; set; }
     /// <summary>How long the page waits for further changes before it writes to disk.</summary>
     private static readonly TimeSpan AutosaveDelay = TimeSpan.FromMilliseconds(700);
 
@@ -36,15 +39,16 @@ public sealed class SettingsViewModel : ViewModelBase
     private readonly ISecureCredentialService _credentials;
     private readonly IDnsResolverService _dns;
     private readonly IEndpointProbeService _probe;
+    private readonly IDiscordSocialService? _discord;
 
     private CancellationTokenSource? _autosaveCts;
     private CancellationTokenSource? _credentialAutosaveCts;
     private System.ComponentModel.PropertyChangedEventHandler? _settingsChangedHandler;
     private string _status = "Saved";
     private string _steamCredentialStatus = "Not configured";
-    private string _ryuuCredentialStatus = "Not configured";
+    private string _ryuuCredentialStatus = "Steamy relay · no personal key needed";
     private string _hubcapCredentialStatus = "Not configured";
-    private string _depotBoxCredentialStatus = "Not configured";
+    private string _depotBoxCredentialStatus = "Steamy relay · no personal key needed";
     private string _manifestHubCredentialStatus = "Not configured";
     private string _mirrorCredentialStatus = "Not configured";
     private string _mirrorTestStatus = "Not checked yet.";
@@ -79,12 +83,14 @@ public sealed class SettingsViewModel : ViewModelBase
         ISettingsService settingsService,
         ISecureCredentialService credentials,
         IDnsResolverService dns,
-        IEndpointProbeService probe) : base(store, navigation, logging)
+        IEndpointProbeService probe,
+        IDiscordSocialService? discord = null) : base(store, navigation, logging)
     {
         _settingsService = settingsService;
         _credentials = credentials;
         _dns = dns;
         _probe = probe;
+        _discord = discord;
 
         Settings = _settingsService.Load();
         AttachSettings(Settings);
@@ -590,9 +596,11 @@ public sealed class SettingsViewModel : ViewModelBase
         try { mirror = await _credentials.ReadAsync(MirrorTokenName); } catch { }
 
         SteamCredentialStatus = DescribeCredential(steam);
-        RyuuCredentialStatus = DescribeCredential(ryuu);
+        RyuuCredentialStatus = string.IsNullOrWhiteSpace(ryuu) && string.IsNullOrWhiteSpace(Settings.RyuuApiKey)
+            ? "Steamy relay · no personal key needed" : DescribeCredential(ryuu, Settings.RyuuApiKey);
         HubcapCredentialStatus = DescribeCredential(hubcap, Settings.HubcapApiKey);
-        DepotBoxCredentialStatus = DescribeCredential(depotBox, Settings.DepotBoxApiKey);
+        DepotBoxCredentialStatus = string.IsNullOrWhiteSpace(depotBox) && string.IsNullOrWhiteSpace(Settings.DepotBoxApiKey)
+            ? "Steamy relay · no personal key needed" : DescribeCredential(depotBox, Settings.DepotBoxApiKey);
         ManifestHubCredentialStatus = DescribeCredential(manifestHub, Settings.ManifestHubApiKey);
         MirrorCredentialStatus = DescribeCredential(mirror);
 
@@ -608,6 +616,8 @@ public sealed class SettingsViewModel : ViewModelBase
 
     private async Task ClearCredentialsAsync()
     {
+        if (_discord is not null) await _discord.DisconnectAsync();
+        else await _credentials.DeleteAsync(DiscordSocialService.SessionCredentialKey);
         try { await _credentials.DeleteAsync(SteamApiKeyName); } catch { }
         try { await _credentials.DeleteAsync(RyuuAuthKeyName); } catch { }
         try { await _credentials.DeleteAsync(HubcapApiKeyName); } catch { }
@@ -701,10 +711,10 @@ public sealed class SettingsViewModel : ViewModelBase
 
         try
         {
-            var result = await _probe.ProbeAsync(Settings.RyuuBaseUrl);
-            var key = string.IsNullOrWhiteSpace(await _credentials.ReadAsync(RyuuAuthKeyName))
-                ? "No auth key is stored yet."
-                : "An auth key is stored; this check never sends it.";
+            var useRelay = string.IsNullOrWhiteSpace(await _credentials.ReadAsync(RyuuAuthKeyName)) && string.IsNullOrWhiteSpace(Settings.RyuuApiKey);
+            var result = await _probe.ProbeAsync(useRelay ? ProviderRelay.HealthUrl : Settings.RyuuBaseUrl);
+            var key = useRelay ? "Steamy relay · provider key stays on the server."
+                : "A personal auth key is stored; this check never sends it.";
 
             RyuuTestStatus = $"{result.Message} ({result.ElapsedMilliseconds} ms) {key}";
         }
@@ -786,6 +796,16 @@ public sealed class SettingsViewModel : ViewModelBase
         {
             using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("Steamy/1.0");
+
+            var personalKey = await _credentials.ReadAsync(DepotBoxApiKeyName);
+            if (string.IsNullOrWhiteSpace(personalKey) && string.IsNullOrWhiteSpace(Settings.DepotBoxApiKey))
+            {
+                using var relayResponse = await http.GetAsync(ProviderRelay.HealthUrl);
+                DepotBoxTestStatus = relayResponse.IsSuccessStatusCode
+                    ? "Steamy relay online · provider key stays on the server."
+                    : $"Steamy relay returned HTTP {(int)relayResponse.StatusCode}.";
+                return;
+            }
 
             // /api/stats is public, so it proves the service is reachable before the key is tested.
             var statsResponse = await http.GetAsync("https://depotbox.org/api/stats");

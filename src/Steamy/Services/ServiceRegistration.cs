@@ -24,10 +24,26 @@ public static class ServiceRegistration
         services.AddSingleton<IPlayTimeService, PlayTimeService>();
         services.AddSingleton<IGamePreferencesStore>(_ => new GamePreferencesStore());
         services.AddSingleton<IGameProcessStarter, GameProcessStarter>();
+        services.AddSingleton<IControllerBackend, ControllerBackendService>();
+        services.AddSingleton<IWindowsControllers, WindowsControllers>();
+        services.AddSingleton<IControllerDrivers, ControllerDrivers>();
+        services.AddSingleton<IControllerGameProfiles, ControllerGameProfiles>();
+        services.AddSingleton<ControllersViewModel>();
         services.AddSingleton<IGameLaunchService, GameLaunchService>();
         services.AddSingleton<IGameDetailsDataService, SteamGameDetailsService>();
         services.AddSingleton<GameDetailsViewModel>();
         services.AddSingleton<ISecureCredentialService, DpapiCredentialService>();
+        services.AddSingleton<NotificationCenterViewModel>();
+        if (DiscordIntegration.Enabled)
+        {
+        services.AddSingleton<IDiscordSocialService, DiscordSocialService>();
+        services.AddSingleton<ICommunityInviteService, CommunityInviteService>();
+        services.AddSingleton<CommunityViewModel>();
+        services.AddSingleton<DiscordFriendsViewModel>();
+        services.AddSingleton<DiscordVoiceViewModel>();
+        services.AddSingleton<IGifSearchService, GifSearchService>();
+        services.AddSingleton<GifPickerViewModel>();
+        }
         services.AddSingleton<UiTranslationService>();
         services.AddSingleton<ILogDispatcher, WpfLogDispatcher>();
         services.AddSingleton<ILoggingService, InMemoryLoggingService>();
@@ -52,8 +68,9 @@ public static class ServiceRegistration
         services.AddSingleton<IProviderHealthService, DemoProviderHealthService>();
         services.AddSingleton<IRyuuGeneratorService, DemoRyuuGeneratorService>();
         services.AddSingleton<IDiskSpaceService, SystemDiskSpaceService>();
-        services.AddSingleton<INotificationService, LoggingNotificationService>();
+        services.AddSingleton<INotificationService, DesktopNotificationService>();
         services.AddSingleton<IArtworkService>(_ => new SteamArtworkService());
+        services.AddSingleton<IImagePipeline>(_ => ImagePipeline.Shared);
         services.AddSingleton<ISteamCatalogService>(_ => new SteamCatalogService());
         services.AddSingleton<ISpotlightService>(_ => new SpotlightCatalogService());
         services.AddSingleton<ITrailerPreviewService>(_ => new TrailerPreviewService());

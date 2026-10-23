@@ -24,6 +24,7 @@ public partial class App : Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        StartupTimings.Mark("OnStartup");
         // A bootstrap preparation process has no window, navigation, game or Steam services.
         if (e.Args.Length == 2 && e.Args[0] == "--prepare-tools")
         {
@@ -127,10 +128,40 @@ public partial class App : Application
         base.OnStartup(e);
         ApplySavedAppearance();
 
-        var window = new MainWindow();
+        var openSocial = DiscordIntegration.Enabled && e.Args.Contains("--discord-join", StringComparer.Ordinal);
+        StartupTimings.Mark("Before MainWindow");
+        var window = new MainWindow(openSocial, e.Args.Contains("--controller-setup", StringComparer.Ordinal));
         MainWindow = window;
         ShutdownMode = ShutdownMode.OnMainWindowClose;
+        EventHandler? warmTools = null;
+        warmTools = async (_, _) =>
+        {
+            window.ContentRendered -= warmTools;
+            try
+            {
+                if (Services.GetRequiredService<ISettingsService>() is JsonSettingsService settings)
+                    await settings.WarmToolPathAsync();
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
+            { LogException("Optional tool discovery failed", error); }
+        };
+        window.ContentRendered += warmTools;
+        if (e.Args.Contains("--background-test", StringComparer.Ordinal))
+        {
+            // Keep the real render path active without taking focus or showing a taskbar entry.
+            window.ShowActivated = false;
+            window.ShowInTaskbar = false;
+            window.WindowStartupLocation = WindowStartupLocation.Manual;
+            window.Left = -32000;
+            window.Top = -32000;
+        }
         window.Show();
+        StartupTimings.Mark("After Show");
+        window.EnableControllerNavigation();
+        (Services.GetRequiredService<IControllerGameProfiles>() as ControllerGameProfiles)?.Start();
+        if (Services.GetRequiredService<ISettingsService>().Load().ControllerBackendEnabled) _ = RestoreControllersAsync();
+        if (DiscordIntegration.Enabled) _ = Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
+            _ = Services.GetRequiredService<DiscordFriendsViewModel>().InitializeAsync()));
         _responsivenessMonitor = new UiResponsivenessMonitor(window, Services.GetRequiredService<ILoggingService>());
 
         ApplySavedBackdrop();
@@ -235,11 +266,16 @@ public partial class App : Application
     {
         if (Services is null) { base.OnExit(e); return; }
         _responsivenessMonitor?.Dispose();
+        if (DiscordIntegration.Enabled) (Services.GetService<IDiscordSocialService>() as IDisposable)?.Dispose();
+        (Services.GetService<IControllerBackend>() as IDisposable)?.Dispose();
+        (Services.GetService<IControllerGameProfiles>() as IDisposable)?.Dispose();
         SaveAllDownloads();
         StopOwnedDownloads();
         FlushLogsOnExit();
         base.OnExit(e);
     }
+    private static async Task RestoreControllersAsync()
+    { try { await Services.GetRequiredService<IControllerBackend>().StartAsync(); } catch { /* Controller page retains the reconnect/driver error. */ } }
 
     private static void FlushLogsOnExit()
     {
@@ -386,15 +422,16 @@ public partial class App : Application
 
     private static void ApplySavedAppearance()
     {
-        var saved = "System";
+        var saved = "Light";
         try
         {
             var path = Path.Combine(Steamy.Storage.AppDataPaths.Root, "settings.json");
             if (File.Exists(path))
             {
                 using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
-                if (document.RootElement.TryGetProperty("Appearance", out var appearance)
-                    || document.RootElement.TryGetProperty("appearance", out appearance))
+                var currentDesign = document.RootElement.TryGetProperty("AppearanceDesignVersion", out var designVersion) && designVersion.TryGetInt32(out var version) && version >= 1;
+                if (currentDesign && (document.RootElement.TryGetProperty("Appearance", out var appearance)
+                    || document.RootElement.TryGetProperty("appearance", out appearance)))
                 {
                     saved = appearance.GetString() ?? saved;
                 }

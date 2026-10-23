@@ -1,16 +1,14 @@
 using System.IO;
+using System.IO.Compression;
+using System.Diagnostics;
 using System.Net.Http;
 
 namespace Steamy.Services;
 
 /// <summary>
-/// Downloads the full Ryuu archive for an app id from
-/// <c>https://generator.ryuu.lol/api/download/{appid}</c> using Ryuu's documented
-/// <c>X-Auth-Key</c> header.
-/// The response is a ZIP containing the game's Lua, manifests and keys. The archive is cached
-/// locally under the application's Ryuu download folder so the same app id is never downloaded
-/// twice in a row. This is the only place that touches the Ryuu secure endpoint; the Game Fixes
-/// workflow calls this, then hands the local archive path to DepotDownloaderMod/Zip extraction.
+/// Downloads a Ryuu archive through the Steamy relay without distributing its provider key.
+/// An explicitly supplied personal key uses the provider directly. Only complete, validated
+/// ZIPs are published atomically to the one-hour local cache.
 /// </summary>
 public interface IRyuuSecureDownloadService
 {
@@ -20,9 +18,8 @@ public interface IRyuuSecureDownloadService
     string CacheFolder { get; }
 
     /// <summary>
-    /// Downloads the Ryuu archive for <paramref name="appId"/> using <paramref name="authCode"/>.
-    /// If the archive already exists in the cache, the existing path is returned without a new
-    /// network request.
+    /// Downloads the Ryuu archive. An empty authCode selects the Steamy relay.
+    /// A fresh, verified cached archive is reused without a network request.
     /// </summary>
     Task<RyuuSecureDownloadResult> DownloadAsync(
         int appId,
@@ -55,11 +52,20 @@ public sealed class RyuuSecureDownloadService : IRyuuSecureDownloadService, IDis
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
     private readonly string _cacheFolder;
+    private readonly SemaphoreSlim _downloadGate = new(1, 1);
+    private const long MaximumArchiveBytes = 128L * 1024 * 1024;
+
+    private static HttpClient CreateClient()
+    {
+        var handler = StableDnsHandler.Create();
+        if (handler is SocketsHttpHandler sockets) sockets.AllowAutoRedirect = false;
+        return new HttpClient(handler);
+    }
 
     public RyuuSecureDownloadService(ISettingsService settings, HttpClient? httpClient = null, string? cacheFolder = null)
     {
         _settings = settings;
-        _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
+        _httpClient = httpClient ?? CreateClient();
         _ownsHttpClient = httpClient is null;
         _httpClient.Timeout = TimeSpan.FromMinutes(20);
         if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
@@ -79,32 +85,36 @@ public sealed class RyuuSecureDownloadService : IRyuuSecureDownloadService, IDis
         IProgress<RyuuSecureDownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(authCode))
-            return new RyuuSecureDownloadResult(false, string.Empty, "No Ryuu auth code configured.");
-
+        if (appId <= 0) return new(false, string.Empty, "Choose a valid app ID.");
         var archivePath = Path.Combine(_cacheFolder, $"{appId}.zip");
+        var partialPath = Path.Combine(_cacheFolder, $"{appId}-{Guid.NewGuid():N}.partial");
         TryEnsureFolder(_cacheFolder);
-
-        if (File.Exists(archivePath))
-            return new RyuuSecureDownloadResult(true, archivePath, $"Already cached: {archivePath}");
-
-        var url = $"https://generator.ryuu.lol/api/download/{appId}";
-
+        var acquired = false;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.TryAddWithoutValidation("X-Auth-Key", authCode);
+            await _downloadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            acquired = true;
+            if (File.Exists(archivePath) && DateTime.UtcNow - File.GetLastWriteTimeUtc(archivePath) < TimeSpan.FromHours(1)
+                && IsValidArchive(archivePath))
+                return new(true, archivePath, "Using the verified cached Ryuu archive.");
+
+            var useRelay = string.IsNullOrWhiteSpace(authCode);
+            using var request = useRelay ? ProviderRelay.CreateRequest("ryuu", appId, "archive")
+                : new HttpRequestMessage(HttpMethod.Get, $"https://generator.ryuu.lol/api/download/{appId}");
+            if (!useRelay) request.Headers.TryAddWithoutValidation("X-Auth-Key", authCode);
             using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return new RyuuSecureDownloadResult(false, string.Empty, $"Ryuu returned HTTP {(int)response.StatusCode}.");
 
             var totalBytes = response.Content.Headers.ContentLength;
+            if (totalBytes > MaximumArchiveBytes) return new(false, string.Empty, "Ryuu archive exceeds the size limit.");
             await using var networkStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            await using var fileStream = new FileStream(archivePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 1 << 16, useAsync: true);
+            await using var fileStream = new FileStream(partialPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, bufferSize: 1 << 16, useAsync: true);
             var buffer = new byte[1 << 16];
             var totalRead = 0L;
             var lastPercent = 0.0;
             var startTime = DateTimeOffset.UtcNow;
+            var lastReport = Stopwatch.GetTimestamp();
             var currentFile = $"appid {appId}.zip";
 
             while (true)
@@ -112,8 +122,13 @@ public sealed class RyuuSecureDownloadService : IRyuuSecureDownloadService, IDis
                 cancellationToken.ThrowIfCancellationRequested();
                 var read = await networkStream.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
                 if (read == 0) break;
-                await fileStream.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                 totalRead += read;
+                if (totalRead > MaximumArchiveBytes) throw new InvalidDataException("Ryuu archive exceeds the size limit.");
+                await fileStream.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+
+                // A fast transfer must not queue thousands of dispatcher callbacks.
+                if (Stopwatch.GetElapsedTime(lastReport) < TimeSpan.FromMilliseconds(100)) continue;
+                lastReport = Stopwatch.GetTimestamp();
 
                 var percent = totalBytes.HasValue && totalBytes.Value > 0
                     ? 100.0 * totalRead / totalBytes.Value
@@ -125,7 +140,7 @@ public sealed class RyuuSecureDownloadService : IRyuuSecureDownloadService, IDis
                 var downloadedLabel = FormatSize(totalRead);
                 var totalLabel = totalBytes.HasValue ? FormatSize(totalBytes.Value) : "—";
                 var etaLabel = speed > 0 && totalBytes.HasValue && totalBytes.Value > totalRead
-                    ? $"{(totalBytes.Value - totalRead) / speed / 1024.0:F0} min"
+                    ? $"{(totalBytes.Value - totalRead) / speed / 60.0:F0} min"
                     : "—";
                 var speedLabel = FormatSize((long)speed) + "/s";
 
@@ -138,25 +153,39 @@ public sealed class RyuuSecureDownloadService : IRyuuSecureDownloadService, IDis
                     etaLabel));
             }
 
-            if (fileStream.Length == 0)
-            {
-                TryDelete(archivePath);
-                return new RyuuSecureDownloadResult(false, string.Empty, "Download finished but no data was written.");
-            }
+            await fileStream.DisposeAsync().ConfigureAwait(false);
+            if (totalRead == 0 || totalBytes.HasValue && totalRead != totalBytes.Value || !IsValidArchive(partialPath))
+                return new(false, string.Empty, "Ryuu returned an incomplete or invalid ZIP archive.");
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(partialPath, archivePath, overwrite: true);
 
             progress?.Report(new RyuuSecureDownloadProgress(100, currentFile, FormatSize(totalRead), FormatSize(totalRead), "—", "Done"));
             return new RyuuSecureDownloadResult(true, archivePath, $"Downloaded {FormatSize(totalRead)} to {archivePath}.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            TryDelete(archivePath);
             return new RyuuSecureDownloadResult(false, string.Empty, "Download cancelled.");
         }
         catch (Exception exception)
         {
-            TryDelete(archivePath);
             return new RyuuSecureDownloadResult(false, string.Empty, $"Download failed: {exception.GetType().Name}.");
         }
+        finally
+        {
+            TryDelete(partialPath);
+            if (acquired) _downloadGate.Release();
+        }
+    }
+
+    private static bool IsValidArchive(string path)
+    {
+        try
+        {
+            if (new FileInfo(path).Length > MaximumArchiveBytes) return false;
+            using var archive = ZipFile.OpenRead(path);
+            return archive.Entries.Count is > 0 and <= 10000;
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { return false; }
     }
 
     private static void TryEnsureFolder(string path)

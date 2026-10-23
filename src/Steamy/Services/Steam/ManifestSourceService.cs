@@ -54,10 +54,10 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
 {
     private static readonly IReadOnlyList<ManifestSourceInfo> AllSources = new List<ManifestSourceInfo>
     {
-        new(ManifestSource.Ryuu, "Ryuu", "Ryuu Generator API (requires auth code)", "https://generator.ryuu.lol/", RequiresAuthCode: true),
+        new(ManifestSource.Ryuu, "Ryuu", "Ryuu via Steamy's secure relay · no personal key needed", ProviderRelay.BaseUrl, RequiresAuthCode: false),
         new(ManifestSource.Zaza, "Zaza", "ZazaJr24 Game-Files-UpdateR on GitHub", "https://raw.githubusercontent.com/ZazaJr24/Game-Files-UpdateR/main/", RequiresAuthCode: false),
         new(ManifestSource.Hubcap, "Hubcap", "Hubcap Manifest API (requires API key)", "https://hubcapmanifest.com/", RequiresAuthCode: true),
-        new(ManifestSource.DepotBox, "DepotBox", "DepotBox manifest generator (requires API key)", "https://depotbox.org/", RequiresAuthCode: true),
+        new(ManifestSource.DepotBox, "DepotBox", "DepotBox via Steamy's secure relay · no personal key needed", ProviderRelay.BaseUrl, RequiresAuthCode: false),
         new(ManifestSource.Sushi, "Sushi", "Free Lua metadata and depot manifests · no API key", FreeManifestCatalogService.SushiUrl, RequiresAuthCode: false),
     };
 
@@ -137,7 +137,7 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
             authCode = _settings.Load().RyuuApiKey;
 
         return string.IsNullOrWhiteSpace(authCode)
-            ? new ManifestAvailability(false, true, "No Ryuu auth code configured — add it in Settings → Ryuu Generator")
+            ? new ManifestAvailability(true, false, "Ryuu via Steamy relay · availability is confirmed when downloading")
             : new ManifestAvailability(true, true, "Available on Ryuu");
     }
 
@@ -256,14 +256,11 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         if (string.IsNullOrWhiteSpace(authCode))
             authCode = _settings.Load().RyuuApiKey;
 
-        if (string.IsNullOrWhiteSpace(authCode))
-            return new ManifestDownloadResult(false, "No Ryuu auth code configured. Set it in Settings → Ryuu Auth Key.");
-
         progress?.Report("Downloading manifest archive from Ryuu...");
         var downloadProgress = new Progress<RyuuSecureDownloadProgress>(p =>
             progress?.Report($"Downloading archive... {p.Downloaded} / {p.Total} ({p.Percent:F0}%)"));
 
-        var zipResult = await _ryuuDownload.DownloadAsync(appId, authCode, $"App {appId}", downloadProgress, ct);
+        var zipResult = await _ryuuDownload.DownloadAsync(appId, authCode ?? string.Empty, $"App {appId}", downloadProgress, ct);
         if (!zipResult.Succeeded)
             return new ManifestDownloadResult(false, $"Failed to download Ryuu archive: {zipResult.Message}");
 
@@ -398,16 +395,13 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
     private async Task<ManifestAvailability> CheckDepotBoxAvailabilityAsync(int appId, CancellationToken ct)
     {
         var key = await ResolveDepotBoxKeyAsync();
-        if (key is null)
-            return new ManifestAvailability(false, true, "No DepotBox API key configured — add it in Settings → DepotBox");
-
         try
         {
             // Lightweight availability endpoint — never the generator endpoint, which would
             // trigger a full file generation just to answer "is it there?".
-            using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"https://depotbox.org/api/games/{appId}/availability");
-            AddDepotBoxAuth(req, key);
+            using var req = key is null ? ProviderRelay.CreateRequest("depotbox", appId, "availability")
+                : new HttpRequestMessage(HttpMethod.Get, $"https://depotbox.org/api/games/{appId}/availability");
+            if (key is not null) AddDepotBoxAuth(req, key);
             using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             var body = await resp.Content.ReadAsStringAsync(ct);
 
@@ -557,9 +551,6 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         WithProviderPackageAsync("DepotBox", appId, ct, async appWorkDir =>
     {
         var key = await ResolveDepotBoxKeyAsync();
-        if (string.IsNullOrWhiteSpace(key))
-            return new ManifestDownloadResult(false, "No DepotBox API key configured. Set it in Settings → DepotBox API Key.");
-
 
         // /api/direct-download is DepotBox's documented "one request, one file" flow: the ZIP
         // carries the Lua *and* every depot .manifest for the app, which is exactly what
@@ -569,9 +560,9 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         string? packageError = null;
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"https://depotbox.org/api/direct-download?appid={appId}");
-            AddDepotBoxAuth(req, key);
+            using var req = key is null ? ProviderRelay.CreateRequest("depotbox", appId, "archive")
+                : new HttpRequestMessage(HttpMethod.Get, $"https://depotbox.org/api/direct-download?appid={appId}");
+            if (key is not null) AddDepotBoxAuth(req, key);
             using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (resp.IsSuccessStatusCode)
             {
@@ -591,7 +582,8 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
                 // paid endpoint call cannot repair them and may consume another request.
                 if (resp.StatusCode is System.Net.HttpStatusCode.Unauthorized
                     or System.Net.HttpStatusCode.Forbidden
-                    or System.Net.HttpStatusCode.TooManyRequests)
+                    or System.Net.HttpStatusCode.TooManyRequests
+                    || key is null && resp.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
                     return new ManifestDownloadResult(false, packageError);
             }
         }
@@ -607,9 +599,9 @@ public sealed class ManifestSourceService : IManifestSourceService, IDisposable
         progress?.Report("Trying the DepotBox Lua endpoint instead...");
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"https://depotbox.org/api/direct-lua?appid={appId}");
-            AddDepotBoxAuth(req, key);
+            using var req = key is null ? ProviderRelay.CreateRequest("depotbox", appId, "lua")
+                : new HttpRequestMessage(HttpMethod.Get, $"https://depotbox.org/api/direct-lua?appid={appId}");
+            if (key is not null) AddDepotBoxAuth(req, key);
             using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode)
             {

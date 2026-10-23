@@ -32,8 +32,8 @@
           <TextBlock Text="Leave any provider empty to skip it. Values are encrypted locally and never exported." Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,14" />
           <UniformGrid Columns="2">
             <StackPanel Margin="0,0,12,10"><TextBlock Text="Hubcap API key" Style="{StaticResource CaptionStyle}"/><PasswordBox x:Name="HubcapBox" PasswordChanged="SecretChanged" Margin="0,5,0,0"/></StackPanel>
-            <StackPanel Margin="0,0,0,10"><TextBlock Text="Ryuu auth key" Style="{StaticResource CaptionStyle}"/><PasswordBox x:Name="RyuuBox" PasswordChanged="SecretChanged" Margin="0,5,0,0"/></StackPanel>
-            <StackPanel Margin="0,0,12,10"><TextBlock Text="DepotBox API key" Style="{StaticResource CaptionStyle}"/><PasswordBox x:Name="DepotBox" PasswordChanged="SecretChanged" Margin="0,5,0,0"/></StackPanel>
+            <StackPanel Margin="0,0,0,10"><TextBlock Text="Ryuu personal key (optional)" Style="{StaticResource CaptionStyle}"/><PasswordBox x:Name="RyuuBox" PasswordChanged="SecretChanged" Margin="0,5,0,0"/></StackPanel>
+            <StackPanel Margin="0,0,12,10"><TextBlock Text="DepotBox personal key (optional)" Style="{StaticResource CaptionStyle}"/><PasswordBox x:Name="DepotBox" PasswordChanged="SecretChanged" Margin="0,5,0,0"/></StackPanel>
             <StackPanel Margin="0,0,0,10"><TextBlock Text="Custom key name" Style="{StaticResource CaptionStyle}"/><ui:TextBox x:Name="CustomNameBox" PlaceholderText="my-source" Margin="0,5,0,0"/></StackPanel>
           </UniformGrid>
           <TextBlock Text="Custom key" Style="{StaticResource CaptionStyle}" Margin="0,4,0,0"/><PasswordBox x:Name="CustomBox" PasswordChanged="SecretChanged" Margin="0,5,0,0" />

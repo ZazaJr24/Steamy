@@ -426,7 +426,7 @@ public sealed class LibrarySyncService : ILibrarySyncService
     {
         try
         {
-            await _artwork.LoadManyAsync(_store.Games.ToArray(), cancellationToken).ConfigureAwait(false);
+            await _artwork.PrefetchAsync(_store.Games.Take(24).ToArray(), cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

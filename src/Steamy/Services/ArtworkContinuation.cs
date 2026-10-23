@@ -10,15 +10,42 @@ internal static class ArtworkContinuation
 {
     internal const double HeightInHeroes = 4;
     private const int Width = 320;
-    private static readonly ConditionalWeakTable<ImageSource, Dictionary<int, BitmapSource>> Cache = new();
+    private static readonly ConditionalWeakTable<ImageSource, Dictionary<int, WeakReference<BitmapSource>>> Cache = new();
+    private static readonly object Gate = new();
+
+    internal static int AspectKey(double aspect) => (int)Math.Round(Math.Clamp(aspect, 1, 6) * 32);
+    private static BitmapSource? Cached(ImageSource artwork, int key)
+    {
+        lock (Gate)
+        {
+            if (!Cache.TryGetValue(artwork, out var variants) || !variants.TryGetValue(key, out var reference) || !reference.TryGetTarget(out var image)) return null;
+            ImagePipeline.Shared.RememberDerived(artwork, key, image);
+            return image;
+        }
+    }
+    private static void Store(ImageSource artwork, int key, BitmapSource image)
+    {
+        lock (Gate)
+        {
+            var variants = Cache.GetOrCreateValue(artwork);
+            if (variants.Count >= 2 && !variants.ContainsKey(key)) variants.Remove(variants.Keys.First());
+            variants[key] = new(image);
+        }
+        ImagePipeline.Shared.RememberDerived(artwork, key, image);
+    }
+    internal static Task<BitmapSource> ForAsync(ImageSource artwork, double aspect, CancellationToken token, bool smooth = false)
+    {
+        token.ThrowIfCancellationRequested();
+        if (Cached(artwork, AspectKey(aspect) + (smooth ? 1024 : 0)) is { } cached) return Task.FromResult(cached);
+        var frozen = artwork.IsFrozen ? artwork : (ImageSource)artwork.GetCurrentValueAsFrozen();
+        return ArtworkRenderWorker.RunAsync(() => For(frozen, aspect, smooth), token);
+    }
 
     internal static BitmapSource For(ImageSource artwork, double aspect, bool smooth = false)
     {
-        var aspectKey = (int)Math.Round(Math.Clamp(aspect, 1, 6) * 32);
+        var aspectKey = AspectKey(aspect);
         var key = aspectKey + (smooth ? 1024 : 0);
-        var variants = Cache.GetOrCreateValue(artwork);
-        if (variants.TryGetValue(key, out var bitmap)) return bitmap;
-        if (variants.Count >= 8) variants.Remove(variants.Keys.First());
+        if (Cached(artwork, key) is { } saved) return saved;
         var heroHeight = (int)Math.Round(Width / (aspectKey / 32d));
         var visual = new DrawingVisual();
         using (var drawing = visual.RenderOpen())
@@ -29,9 +56,45 @@ internal static class ArtworkContinuation
         crop.CopyPixels(pixels, Width * 4, 0);
         var height = (int)Math.Ceiling(heroHeight * HeightInHeroes);
         var continuation = ContinuePixels(pixels, Width, heroHeight, height, smooth);
-        bitmap = BitmapSource.Create(Width, height, 96, 96, PixelFormats.Pbgra32, null, continuation, Width * 4);
+        ExposeAmbient(continuation, Width, heroHeight, smooth);
+        var bitmap = BitmapSource.Create(Width, height, 96, 96, PixelFormats.Pbgra32, null, continuation, Width * 4);
         bitmap.Freeze();
-        return variants[key] = bitmap;
+        Store(artwork, key, bitmap);
+        return bitmap;
+    }
+
+    // Keep the source's regional hue, but treat it as reflected light rather
+    // than projecting a bright, enlarged photograph behind the card captions.
+    // The sharp hero is drawn separately. This runs once per cached texture.
+    private static readonly double[] LinearChannels = Enumerable.Range(0, 256).Select(value =>
+    {
+        var channel = value / 255d;
+        return channel <= .04045 ? channel / 12.92 : Math.Pow((channel + .055) / 1.055, 2.4);
+    }).ToArray();
+    private static byte Encoded(double value) => (byte)Math.Clamp(Math.Round(255 *
+        (value <= .0031308 ? value * 12.92 : 1.055 * Math.Pow(value, 1 / 2.4) - .055)), 0, 255);
+    private static void ExposeAmbient(byte[] pixels, int width, int heroHeight, bool preview)
+    {
+        var height = pixels.Length / (width * 4);
+        for (var y = 0; y < height; y++)
+        {
+            var amount = preview ? 1 : Math.Clamp((y / (double)heroHeight - .35) / .65, 0, 1);
+            amount = amount * amount * (3 - 2 * amount);
+            for (var x = 0; x < width; x++)
+            {
+                var i = (y * width + x) * 4;
+                var alpha = pixels[i + 3];
+                if (alpha == 0) continue;
+                double Channel(int index) => LinearChannels[Math.Clamp((pixels[i + index] * 255 + alpha / 2) / alpha, 0, 255)];
+                var r = Channel(2); var g = Channel(1); var b = Channel(0);
+                var luminance = .2126 * r + .7152 * g + .0722 * b;
+                var ceiling = preview ? .065 : .045;
+                var exposure = 1 - amount + amount * ceiling / (luminance + ceiling);
+                pixels[i] = (byte)((Encoded(b * exposure) * alpha + 127) / 255);
+                pixels[i + 1] = (byte)((Encoded(g * exposure) * alpha + 127) / 255);
+                pixels[i + 2] = (byte)((Encoded(r * exposure) * alpha + 127) / 255);
+            }
+        }
     }
 
     internal static byte[] ContinuePixels(byte[] crop, int width, int heroHeight, int height, bool smooth = false)
@@ -51,10 +114,13 @@ internal static class ArtworkContinuation
             Buffer.BlockCopy(crop, sourceY * width * 4, pixels, y * width * 4, width * 4);
         }
         // Three small separable box passes approximate a Gaussian, once per cached crop.
+        // Reuse these two local surfaces instead of allocating a new large-object
+        // buffer for each of the six passes. Only the result survives the call.
+        var scratch = new byte[pixels.Length];
         for (var pass = 0; pass < 3; pass++)
         {
-            pixels = Blur(pixels, width, height, smooth ? 24 : 8, horizontal: true);
-            pixels = Blur(pixels, width, height, smooth ? 24 : 8, horizontal: false);
+            Blur(pixels, scratch, width, height, smooth ? 24 : 8, horizontal: true);
+            Blur(scratch, pixels, width, height, smooth ? 24 : 8, horizontal: false);
         }
         if (!fade) return pixels;
         for (var y = 0; y < height; y++)
@@ -75,10 +141,8 @@ internal static class ArtworkContinuation
 
     internal static BitmapSource ForDownload(ImageSource artwork, double aspect)
     {
-        var key = (int)Math.Round(Math.Clamp(aspect, 1, 6) * 32);
-        var versions = Cache.GetOrCreateValue(artwork);
-        if (versions.TryGetValue(key + 2048, out var cached)) return cached;
-        if (versions.Count >= 8) versions.Remove(versions.Keys.First());
+        var key = AspectKey(aspect);
+        if (Cached(artwork, key + 2048) is { } cached) return cached;
         var heroHeight = (int)Math.Round(Width / (key / 32d));
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen()) dc.DrawRectangle(new ImageBrush(artwork) { Stretch = Stretch.UniformToFill }, null, new Rect(0, 0, Width, heroHeight));
@@ -110,28 +174,39 @@ internal static class ArtworkContinuation
         }
         var result = BitmapSource.Create(outputWidth, outputHeight, 96, 96, PixelFormats.Bgra32, null, pixels, outputWidth * 4);
         result.Freeze();
-        return versions[key + 2048] = result;
+        Store(artwork, key + 2048, result);
+        return result;
     }
 
-    private static byte[] Blur(byte[] input, int width, int height, int radius, bool horizontal)
+        private static void Blur(byte[] input, byte[] output, int width, int height, int radius, bool horizontal)
     {
-        var output = new byte[input.Length];
         var length = horizontal ? width : height;
         var lines = horizontal ? height : width;
+        var stride = horizontal ? 4 : width * 4;
+        var lineStride = horizontal ? width * 4 : 4;
         var samples = radius * 2 + 1;
         for (var line = 0; line < lines; line++)
-        for (var channel = 0; channel < 4; channel++)
         {
-            int Offset(int position) => ((horizontal ? line * width + position : position * width + line) * 4) + channel;
-            var sum = 0;
-            for (var i = -radius; i <= radius; i++) sum += input[Offset(Math.Clamp(i, 0, length - 1))];
-            for (var position = 0; position < length; position++)
+            var lineBase = line * lineStride;
+            for (var channel = 0; channel < 4; channel++)
             {
-                output[Offset(position)] = (byte)((sum + samples / 2) / samples);
-                sum += input[Offset(Math.Min(length - 1, position + radius + 1))]
-                     - input[Offset(Math.Max(0, position - radius))];
+                var baseOffset = lineBase + channel;
+                var sum = 0;
+                for (var i = -radius; i <= radius; i++)
+                {
+                    var clamped = i < 0 ? 0 : i >= length ? length - 1 : i;
+                    sum += input[baseOffset + clamped * stride];
+                }
+                for (var position = 0; position < length; position++)
+                {
+                    output[baseOffset + position * stride] = (byte)((sum + samples / 2) / samples);
+                    var addPos = position + radius + 1;
+                    if (addPos >= length) addPos = length - 1;
+                    var subPos = position - radius;
+                    if (subPos < 0) subPos = 0;
+                    sum += input[baseOffset + addPos * stride] - input[baseOffset + subPos * stride];
+                }
             }
         }
-        return output;
     }
 }

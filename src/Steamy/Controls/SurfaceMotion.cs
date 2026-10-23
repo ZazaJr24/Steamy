@@ -7,6 +7,15 @@ namespace Steamy.Controls;
 /// <summary>Soft panel entrances; transforms and animation clocks are released on completion.</summary>
 public static class SurfaceMotion
 {
+    public static readonly DependencyProperty DurationProperty=DependencyProperty.RegisterAttached("Duration",typeof(double),typeof(SurfaceMotion),new PropertyMetadata(320d),value=>value is double duration && double.IsFinite(duration) && duration>=0 && duration<=2000);
+    public static readonly DependencyProperty StartScaleProperty=DependencyProperty.RegisterAttached("StartScale",typeof(double),typeof(SurfaceMotion),new PropertyMetadata(1d),value=>value is double scale && double.IsFinite(scale) && scale>=.5 && scale<=1);
+    public static readonly DependencyProperty LiftProperty=DependencyProperty.RegisterAttached("Lift",typeof(double),typeof(SurfaceMotion),new PropertyMetadata(8d),value=>value is double lift && double.IsFinite(lift) && lift>=0 && lift<=40);
+    public static double GetDuration(DependencyObject element)=>(double)element.GetValue(DurationProperty);
+    public static void SetDuration(DependencyObject element,double value)=>element.SetValue(DurationProperty,value);
+    public static double GetStartScale(DependencyObject element)=>(double)element.GetValue(StartScaleProperty);
+    public static void SetStartScale(DependencyObject element,double value)=>element.SetValue(StartScaleProperty,value);
+    public static double GetLift(DependencyObject element)=>(double)element.GetValue(LiftProperty);
+    public static void SetLift(DependencyObject element,double value)=>element.SetValue(LiftProperty,value);
     public static readonly DependencyProperty RevealOnShowProperty = DependencyProperty.RegisterAttached(
         "RevealOnShow", typeof(bool), typeof(SurfaceMotion), new PropertyMetadata(false, Changed));
     private static readonly DependencyProperty StateProperty = DependencyProperty.RegisterAttached("State", typeof(State), typeof(SurfaceMotion));
@@ -37,7 +46,7 @@ public static class SurfaceMotion
     public static void Reveal(FrameworkElement element)
     {
         Reset(element);
-        if (!element.IsLoaded || !element.IsVisible || !MotionPreferences.AnimationsEnabled) return;
+        if (!element.IsLoaded || !element.IsVisible || !MotionPreferences.AnimationsEnabled || GetDuration(element)==0) return;
         var scale = new ScaleTransform(1, 1);
         var lift = new TranslateTransform();
         EventHandler preferences = (_, _) => { if (!MotionPreferences.AnimationsEnabled) Reset(element); };
@@ -51,12 +60,17 @@ public static class SurfaceMotion
         element.SetValue(StateProperty, state);
         element.Unloaded += Unloaded;
         MotionPreferences.Changed += preferences;
-        var opacity = new DoubleAnimation(0.35, 1, TimeSpan.FromMilliseconds(320)) { FillBehavior = FillBehavior.Stop };
+        var duration=TimeSpan.FromMilliseconds(GetDuration(element));
+        var startScale=GetStartScale(element);
+        var opacity = new DoubleAnimation(0.35, 1, duration) { FillBehavior = FillBehavior.Stop };
         opacity.Completed += (_, _) => { if (ReferenceEquals(element.GetValue(StateProperty), state)) Reset(element); };
-        var easing = new BackEase { Amplitude = 0.15, EasingMode = EasingMode.EaseOut };
-        scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.985, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = easing, FillBehavior = FillBehavior.Stop });
-        scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.985, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = easing, FillBehavior = FillBehavior.Stop });
-        lift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(8, 0, TimeSpan.FromMilliseconds(320)) { EasingFunction = easing, FillBehavior = FillBehavior.Stop });
+        IEasingFunction easing=startScale==1 ? new CubicEase {EasingMode=EasingMode.EaseOut} : new BackEase {Amplitude=.15,EasingMode=EasingMode.EaseOut};
+        if(startScale!=1)
+        {
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(startScale,1,duration){EasingFunction=easing,FillBehavior=FillBehavior.Stop});
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(startScale,1,duration){EasingFunction=easing,FillBehavior=FillBehavior.Stop});
+        }
+        lift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(GetLift(element), 0, duration) { EasingFunction = easing, FillBehavior = FillBehavior.Stop });
         element.BeginAnimation(UIElement.OpacityProperty, opacity, HandoffBehavior.SnapshotAndReplace);
     }
 

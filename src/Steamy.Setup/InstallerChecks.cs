@@ -22,10 +22,11 @@ namespace Steamy.Setup
             Directory.CreateDirectory(root);
             try
             {
-                Check(!InstallerCore.CompatibleRuntime("9.0.19"), "Old runtime must be upgraded to the packaged patch minimum.");
-                Check(InstallerCore.CompatibleRuntime("9.0.20"), "Current runtime can be reused.");
-                Check(InstallerCore.CompatibleRuntime("9.0.21"), "Compatible newer patch can be reused.");
-                Check(!InstallerCore.CompatibleRuntime("10.0.0"), "Different runtime major cannot satisfy the app target.");
+                Check(!InstallerCore.CompatibleRuntime("10.0.12"), "Old runtime must be upgraded to the packaged patch minimum.");
+                Check(InstallerCore.CompatibleRuntime("10.0.13"), "Current runtime can be reused.");
+                Check(InstallerCore.CompatibleRuntime("10.0.14"), "Compatible newer patch can be reused.");
+                Check(!InstallerCore.CompatibleRuntime("9.0.20"), "Different runtime major cannot satisfy the app target.");
+                Check(!InstallerCore.CompatibleRuntime("11.0.0"), "The next major cannot substitute for the app's .NET 10 target.");
                 var file = Path.Combine(root, "bytes"); var bytes = new byte[] { 1, 2, 3, 4, 5 }; File.WriteAllBytes(file, bytes);
                 string hash; using (var algorithm = SHA256.Create()) hash = BitConverter.ToString(algorithm.ComputeHash(bytes)).Replace("-", "");
                 InstallerCore.VerifyHash(file, hash, false); Check(true, "Valid hash");

@@ -25,7 +25,7 @@ public sealed partial class PageSmokeTests
         Assert.NotNull(page.FindName("UpcomingGameGrid"));
         var upcomingGrid = Descendants<Steamy.Controls.AdaptiveGridPanel>((ItemsControl)page.FindName("UpcomingGameGrid")).Single();
         Assert.All(upcomingGrid.Children.Cast<FrameworkElement>(), child => Assert.InRange(child.ActualWidth, 210, page.ActualWidth));
-        Assert.Equal(0.5, upcomingGrid.CoverRatio);
+        Assert.Equal(215d / 460, upcomingGrid.CoverRatio, 10); // Preserve the restored Steam header aspect ratio.
         Assert.Equal(52, upcomingGrid.FooterHeight);
         var firstRow = upcomingGrid.Children.Cast<FrameworkElement>().Take(3).ToArray();
         var strip = Descendants<Steamy.Controls.GameShortcutStrip>((ItemsControl)page.FindName("RecentlyOpenedStrip")).SingleOrDefault();
@@ -39,11 +39,11 @@ public sealed partial class PageSmokeTests
             if (strip.Children.Count == 8)
                 Assert.InRange(lastShortcut.TranslatePoint(new Point(lastShortcut.ActualWidth, 0), strip).X, strip.ActualWidth - 1, strip.ActualWidth + 1);
             Assert.InRange(firstShortcut.TranslatePoint(new Point(), page).X,
-                firstRow[0].TranslatePoint(new Point(), page).X - 1, firstRow[0].TranslatePoint(new Point(), page).X + 1);
+                upcomingGrid.TranslatePoint(new Point(), page).X - 1, upcomingGrid.TranslatePoint(new Point(), page).X + 1);
         }
         Assert.All(firstRow, child => Assert.InRange(child.ActualWidth, firstRow[0].ActualWidth - 1, firstRow[0].ActualWidth + 1));
         Assert.All(firstRow, child => Assert.Equal(firstRow[0].ActualHeight, child.ActualHeight));
-        Assert.All(Descendants<Button>(upcomingGrid), button => Assert.Null(button.ToolTip));
+        Assert.All(upcomingGrid.Children.Cast<FrameworkElement>(), child => Assert.Null(Descendants<Button>(child).First().ToolTip)); // Cover cards stay quiet; trailer controls retain their accessible hints.
         Assert.All(upcomingGrid.Children.Cast<FrameworkElement>(), child => Assert.True(child.ActualWidth > child.ActualHeight));
         Assert.All(((DashboardViewModel)page.DataContext).NewGames, feature => Assert.True(feature.Metadata.ComingSoon));
         Assert.Null(page.FindName("SpotlightPreviews")); // The countdown has no right-hand artwork rail.

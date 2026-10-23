@@ -5,11 +5,11 @@ using System.Windows.Media.Imaging;
 
 namespace Steamy.Controls;
 
-/// <summary>Shares decoded artwork across recycled rows with a bounded, UI-thread cache.</summary>
+/// <summary>Shares live artwork across recycled rows without retaining images from departed pages. Cache metadata is bounded.</summary>
 public sealed class ArtworkImageConverter : IValueConverter
 {
     private const int Capacity = 96;
-    private readonly Dictionary<(string Url, int Width), BitmapImage> _images = new();
+    private readonly Dictionary<(string Url, int Width), WeakReference<BitmapImage>> _images = new();
     private readonly Queue<(string Url, int Width)> _order = new();
 
     public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -18,7 +18,7 @@ public sealed class ArtworkImageConverter : IValueConverter
         if (uri.Scheme is not ("https" or "http")) return null;
         var width = int.TryParse(parameter?.ToString(), out var requested) ? Math.Clamp(requested, 64, 1920) : 320;
         var key = (url, width);
-        if (_images.TryGetValue(key, out var existing)) return existing;
+        if (_images.TryGetValue(key, out var reference) && reference.TryGetTarget(out var existing)) return existing;
         try
         {
             var image = new BitmapImage();
@@ -27,9 +27,12 @@ public sealed class ArtworkImageConverter : IValueConverter
             image.CacheOption = BitmapCacheOption.OnDemand;
             image.UriSource = uri;
             image.EndInit();
-            if (_images.Count >= Capacity) _images.Remove(_order.Dequeue());
-            _images.Add(key, image);
-            _order.Enqueue(key);
+            if (!_images.ContainsKey(key))
+            {
+                if (_images.Count >= Capacity) _images.Remove(_order.Dequeue());
+                _order.Enqueue(key);
+            }
+            _images[key] = new WeakReference<BitmapImage>(image);
             return image;
         }
         catch (Exception exception) when (exception is IOException or NotSupportedException or ArgumentException)

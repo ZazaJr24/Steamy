@@ -15,23 +15,32 @@ public sealed class ShellBackdropView : FrameworkElement
     public static readonly DependencyProperty IsGlassProperty = DependencyProperty.Register(nameof(IsGlass), typeof(bool), typeof(ShellBackdropView), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, AppearanceChanged));
     public static readonly DependencyProperty PreferSharpArtworkProperty = DependencyProperty.Register(nameof(PreferSharpArtwork), typeof(bool), typeof(ShellBackdropView), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
     public static readonly DependencyProperty IncludePageContentProperty = DependencyProperty.Register(nameof(IncludePageContent), typeof(bool), typeof(ShellBackdropView), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty SamplePageSurfaceProperty = DependencyProperty.Register(nameof(SamplePageSurface), typeof(bool), typeof(ShellBackdropView), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
     public static readonly DependencyProperty UseLiquidRefractionProperty = DependencyProperty.Register(nameof(UseLiquidRefraction), typeof(bool), typeof(ShellBackdropView), new FrameworkPropertyMetadata(true, AppearanceChanged));
     public static readonly DependencyProperty GlassBlurIntensityProperty = DependencyProperty.Register(nameof(GlassBlurIntensity), typeof(double), typeof(ShellBackdropView), new FrameworkPropertyMetadata(0.08d, FrameworkPropertyMetadataOptions.AffectsRender, AppearanceChanged), value => value is double intensity && double.IsFinite(intensity) && intensity is >= 0 and <= 2);
+    public static readonly DependencyProperty FrostRadiusProperty = DependencyProperty.Register(nameof(FrostRadius), typeof(double), typeof(ShellBackdropView), new FrameworkPropertyMetadata(0d, AppearanceChanged), value => value is double radius && double.IsFinite(radius) && radius is >= 0 and <= 40);
     public Brush BaseBrush { get => (Brush)GetValue(BaseBrushProperty); set => SetValue(BaseBrushProperty, value); }
     public Color FadeColor { get => (Color)GetValue(FadeColorProperty); set => SetValue(FadeColorProperty, value); }
     public bool IsGlass { get => (bool)GetValue(IsGlassProperty); set => SetValue(IsGlassProperty, value); }
     public bool PreferSharpArtwork { get => (bool)GetValue(PreferSharpArtworkProperty); set => SetValue(PreferSharpArtworkProperty, value); }
     public bool IncludePageContent { get => (bool)GetValue(IncludePageContentProperty); set => SetValue(IncludePageContentProperty, value); }
+    public bool SamplePageSurface { get => (bool)GetValue(SamplePageSurfaceProperty); set => SetValue(SamplePageSurfaceProperty, value); }
     public bool UseLiquidRefraction { get => (bool)GetValue(UseLiquidRefractionProperty); set => SetValue(UseLiquidRefractionProperty, value); }
     public double GlassBlurIntensity { get => (double)GetValue(GlassBlurIntensityProperty); set => SetValue(GlassBlurIntensityProperty, value); }
+    public double FrostRadius { get => (double)GetValue(FrostRadiusProperty); set => SetValue(FrostRadiusProperty, value); }
     public static readonly DependencyProperty IsPageBackdropProperty = DependencyProperty.Register(nameof(IsPageBackdrop), typeof(bool), typeof(ShellBackdropView), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
     public bool IsPageBackdrop { get => (bool)GetValue(IsPageBackdropProperty); set => SetValue(IsPageBackdropProperty, value); }
     private IShellBackdropService? _backdrop;
     private Window? _window;
+    private Pages.GameDetailsPage? _detailsPage;
     private GlassyEffect? _glassEffect;
     private readonly BlurEffect _clearGlassEffect = new() { Radius = 2.6, RenderingBias = RenderingBias.Quality };
     private ClearGlassEffect? _clearRefraction;
+    private BlurEffect? _frostEffect;
     private ImageSource? _artwork, _blurred, _previousArtwork, _previousBlurred;
+    private readonly DrawingVisual _frame = new();
+    private bool _hasFrame;
+    private bool _listening;
     private int _transitionRevision;
     private static readonly DependencyProperty TransitionProgressProperty = DependencyProperty.Register("TransitionProgress", typeof(double), typeof(ShellBackdropView), new FrameworkPropertyMetadata(1d, FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly Brush WashMask = VerticalMask((0, 0.9), (0.35, 0.8), (0.6, 0.35), (0.9, 0.05), (1, 0));
@@ -40,32 +49,47 @@ public sealed class ShellBackdropView : FrameworkElement
 
     public ShellBackdropView()
     {
+        AddVisualChild(_frame);
         IsHitTestVisible = false;
         Loaded += (_, _) =>
         {
             _backdrop = App.Services.GetService<IShellBackdropService>();
             _window = Window.GetWindow(this);
-            if (_backdrop is not null) _backdrop.Changed += Refresh;
-            if (_window is not null) _window.SizeChanged += WindowResized;
+            if (_window is not null)
+            {
+                _window.SizeChanged += WindowResized;
+                _window.StateChanged += WindowStateChanged;
+                _window.Deactivated += WindowDeactivated;
+            }
+            if (_window is MainWindow shell) shell.PageSurfaceChanged += PageSurfaceChanged;
+            AttachDetailsSurface();
             MotionPreferences.Changed += Refresh;
             Refresh(this, EventArgs.Empty);
         };
         Unloaded += (_, _) =>
         {
-            if (_backdrop is not null) _backdrop.Changed -= Refresh;
-            if (_window is not null) _window.SizeChanged -= WindowResized;
+            if (_detailsPage is not null) _detailsPage.ChromeSurfaceChanged -= DetailSurfaceChanged;
+            _detailsPage = null;
+            ReleaseFrame();
+            if (_window is not null)
+            {
+                _window.SizeChanged -= WindowResized;
+                _window.StateChanged -= WindowStateChanged;
+                _window.Deactivated -= WindowDeactivated;
+            }
+            if (_window is MainWindow shell) shell.PageSurfaceChanged -= PageSurfaceChanged;
             MotionPreferences.Changed -= Refresh;
             _backdrop = null; _window = null;
-            _artwork = _blurred = null;
-            StopTransition();
-            Effect = null;
         };
+        IsVisibleChanged += (_, _) => Refresh(this, EventArgs.Empty);
     }
 
     private static void AppearanceChanged(DependencyObject view, DependencyPropertyChangedEventArgs args) => ((ShellBackdropView)view).UpdateGlassEffect();
 
     private void Refresh(object? sender, EventArgs e)
     {
+        if (!CanDraw) { ReleaseFrame(); return; }
+        Listen(true);
         if (!ReferenceEquals(_artwork, _backdrop?.Artwork))
         {
             var previous = _artwork;
@@ -73,7 +97,7 @@ public sealed class ShellBackdropView : FrameworkElement
             StopTransition();
             _artwork = _backdrop?.Artwork;
             _blurred = _backdrop?.BlurredArtwork;
-            if (previous is not null && _artwork is not null && MotionPreferences.AnimationsEnabled)
+            if (previous is not null && _artwork is not null && MotionPreferences.AnimationsEnabled && _window?.IsActive != false)
             {
                 _previousArtwork = previous;
                 _previousBlurred = previousBlurred;
@@ -84,7 +108,7 @@ public sealed class ShellBackdropView : FrameworkElement
                 BeginAnimation(TransitionProgressProperty, transition);
             }
         }
-        if (!MotionPreferences.AnimationsEnabled) StopTransition();
+        if (!MotionPreferences.AnimationsEnabled || _window?.IsActive == false) StopTransition();
         UpdateGlassEffect();
         InvalidateVisual();
     }
@@ -94,10 +118,54 @@ public sealed class ShellBackdropView : FrameworkElement
         BeginAnimation(TransitionProgressProperty, null);
         _previousArtwork = _previousBlurred = null;
     }
-    private void WindowResized(object sender, SizeChangedEventArgs e) => InvalidateVisual();
+    private bool CanDraw => IsLoaded && IsVisible && _window?.WindowState != WindowState.Minimized;
+    private void Listen(bool enabled)
+    {
+        enabled &= _backdrop is not null;
+        if (_listening == enabled) return;
+        if (enabled) _backdrop!.Changed += Refresh; else _backdrop!.Changed -= Refresh;
+        _listening = enabled;
+    }
+    private void ReleaseFrame()
+    {
+        Listen(false);
+        StopTransition();
+        _artwork = _blurred = null;
+        // WPF retains drawing data while hidden. Clear the owned visual without
+        // waiting for another OnRender or constructing a managed drawing tree.
+        ClearDrawing();
+        Effect = null;
+    }
+    private void ClearDrawing()
+    {
+        if (!_hasFrame) return;
+        using (var drawing = _frame.RenderOpen()) { }
+        _hasFrame = false;
+    }
+    protected override int VisualChildrenCount => 1;
+    protected override Visual GetVisualChild(int index) => index == 0 ? _frame : throw new ArgumentOutOfRangeException(nameof(index));
+    private void WindowStateChanged(object? sender, EventArgs e) => Refresh(sender, e);
+    private void WindowDeactivated(object? sender, EventArgs e) { StopTransition(); if (CanDraw) InvalidateVisual(); }
+    private void WindowResized(object sender, SizeChangedEventArgs e) { if (CanDraw) InvalidateVisual(); }
+    private void PageSurfaceChanged(object? sender, EventArgs e) { AttachDetailsSurface(); if (CanDraw) InvalidateVisual(); }
+    private void AttachDetailsSurface()
+    {
+        var page = IsGlass && SamplePageSurface ? (_window as MainWindow)?.PageGlassSurface as Pages.GameDetailsPage : null;
+        if (ReferenceEquals(page, _detailsPage)) return;
+        if (_detailsPage is not null) _detailsPage.ChromeSurfaceChanged -= DetailSurfaceChanged;
+        _detailsPage = page;
+        if (page is not null) page.ChromeSurfaceChanged += DetailSurfaceChanged;
+    }
+    private void DetailSurfaceChanged(object? sender, EventArgs e) { if (CanDraw && IsGlass && SamplePageSurface) InvalidateVisual(); }
 
     private void UpdateGlassEffect()
     {
+        if (!CanDraw) { Effect = null; return; }
+        if (IsGlass && FrostRadius > 0 && MotionPreferences.BackdropBlurEnabled && !UiThemeService.IsHighContrastActive)
+        {
+            _frostEffect ??= new BlurEffect { RenderingBias = RenderingBias.Performance };
+            _frostEffect.Radius = FrostRadius; Effect = _frostEffect; return;
+        }
         if (IsGlass && !UseLiquidRefraction && MotionPreferences.BackdropBlurEnabled && !UiThemeService.IsHighContrastActive)
         {
             if ((RenderCapability.Tier >> 16) >= 2 && RenderCapability.IsPixelShaderVersionSupported(3, 0))
@@ -132,11 +200,50 @@ public sealed class ShellBackdropView : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         base.OnRender(dc);
+        if (!CanDraw || ActualWidth <= 0 || ActualHeight <= 0) { ClearDrawing(); return; }
+        using (var frame = _frame.RenderOpen()) DrawFrame(frame);
+        _hasFrame = true;
+    }
+    private void DrawFrame(DrawingContext dc)
+    {
         dc.PushClip(new RectangleGeometry(new Rect(RenderSize)));
         var origin = _window is null ? new Point() : TranslatePoint(new Point(), _window);
         var width = _window?.ActualWidth ?? ActualWidth;
         var height = _window?.ActualHeight ?? ActualHeight;
+        // At the top of Home this glass sees only the banner. A live brush of
+        // the entire page also invalidates it for unrelated countdown/stats
+        // changes below the toolbar. Reuse the already composed artwork here;
+        // keep live page sampling when scrolling actual cards underneath it.
+        var bannerOnly = false;
+        if (_window is MainWindow { DashboardSurface: { IsLoaded: true } hero })
+        {
+            var heroOrigin = hero.TranslatePoint(new Point(), _window);
+            bannerOnly = origin.Y >= heroOrigin.Y && origin.Y + ActualHeight <= heroOrigin.Y + hero.HeroHeight;
+        }
         dc.PushTransform(new TranslateTransform(-origin.X, -origin.Y));
+        if (IsGlass && SamplePageSurface && MotionPreferences.BackdropBlurEnabled && !UiThemeService.IsHighContrastActive
+            && _window is MainWindow { PageGlassSurface: { IsLoaded: true, ActualWidth: > 0, ActualHeight: > 0 } page }
+            && (page is not Pages.DashboardPage || IncludePageContent && !bannerOnly))
+        {
+            // Sample the page only, never the shell containing this visual. Cropping to
+            // the glass bounds avoids a window-sized render target and recursive capture.
+            var crop = TranslatePoint(new Point(), page);
+            var sampleBounds = new Rect(crop, RenderSize);
+            dc.DrawRectangle(BaseBrush, null, new Rect(origin, RenderSize));
+            // Most workspace pages start below the title bar. An empty crop must
+            // not attach their entire live visual tree to the toolbar's brush.
+            if (!sampleBounds.IntersectsWith(new Rect(page.RenderSize)))
+            { dc.Pop(); dc.Pop(); return; }
+            if (page is Pages.GameDetailsPage details)
+            {
+                details.DrawChromeSurface(dc, _window, new Rect(origin, RenderSize));
+                dc.Pop(); dc.Pop(); return;
+            }
+            var brush = new VisualBrush(page) { AutoLayoutContent = false, ViewboxUnits = BrushMappingMode.Absolute,
+                Viewbox = sampleBounds, Stretch = Stretch.Fill };
+            dc.DrawRectangle(brush, null, new Rect(origin, RenderSize));
+            dc.Pop(); dc.Pop(); return;
+        }
         if (TemplatedParent is Wpf.Ui.Controls.NavigationView { IsPaneOpen: true } navigation
             && navigation.Template.FindName("MenuLauncher", navigation) is FrameworkElement launcher && launcher.IsAncestorOf(this))
         {
@@ -145,8 +252,8 @@ public sealed class ShellBackdropView : FrameworkElement
         }
         if (!IsPageBackdrop && !UiThemeService.IsHighContrastActive && _window is MainWindow { DashboardSurface: { IsLoaded: true } dashboard })
         {
-            dashboard.DrawWindowSurface(dc, _window);
-            if (IncludePageContent && IsGlass && dashboard.Parent is FrameworkElement { Parent: FrameworkElement content })
+            dashboard.DrawWindowSurface(dc, _window, new Rect(origin, RenderSize));
+            if (IncludePageContent && !bannerOnly && IsGlass && dashboard.Parent is FrameworkElement { Parent: FrameworkElement content })
             {
                 // The toolbar is outside this page visual: no recursive capture, no
                 // full-window bitmap or blur. Sample only the strip behind the glass.
@@ -232,7 +339,7 @@ public sealed class ShellBackdropView : FrameworkElement
         var brush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
         brush.GradientStops.Add(new GradientStop(Color.FromArgb(72, 0, 0, 0), 0));
         brush.GradientStops.Add(new GradientStop(Color.FromArgb(24, 0, 0, 0), 0.5));
-        brush.GradientStops.Add(new GradientStop(Colors.Transparent, 1));
+        brush.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
         brush.Freeze();
         return brush;
     }

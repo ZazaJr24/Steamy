@@ -1,0 +1,20 @@
+# Ambient-Paletten im Hintergrund — 22. Oktober 2026
+
+Die Bibliothek, Downloads, die helle Spielseite und der Installations-/Steam-Dialog riefen `ArtworkPalette.FromImage` direkt auf. Bei einem neuen Bild erzeugte dieser Aufruf einen 96×54-Renderpuffer, las dessen Pixel zurück und berechnete zwei regionale Farben auf dem aufrufenden UI-Thread. Gerade ein asynchron geladener Bildwechsel konnte dadurch noch synchrone Zeichenarbeit auslösen.
+
+Alle produktiven Aufrufer verwenden jetzt `FromImageAsync`. Bereits berechnete und fehlende Paletten bleiben unmittelbar verfügbar. Neue Bilder werden auf dem vorhandenen STA-Render-Worker verarbeitet. Nicht eingefrorene Eingaben erhalten vorher einen eingefrorenen Snapshot. Die unveränderte schwache Bildschlüssel-Tabelle teilt die fertige Palette; eine abgeschlossene Palette hält ihr Quellbild nicht am Leben. Mehrere Wartende verwenden nach der ersten Berechnung dieselbe Palette, ohne dass der Abbruch eines Aufrufers einen anderen Aufrufer abbricht. Noch nicht begonnene Worker-Aufträge werden über ihren eigenen Token abgebrochen.
+
+Bibliothek, Downloads und Installationsdialog brechen veraltete Berechnungen bei neuen Bildern, Theme-Wechsel oder Verlassen/Schließen ab. Vor Veröffentlichung wird die Identität der Anfrage erneut geprüft. Die helle Spielseite verwendet dafür ihren bestehenden Aktivierungs-/Ambient-Abbruch. Während einer neuen Berechnung steht bereits eine zum ausgewählten Theme passende Fläche bereit. Die Bibliothek benötigt nur die linke Farbe des ersten und die rechte Farbe des letzten verfügbaren Bildes: vier bisher unnötige mittlere Palette-Berechnungen bei sechs Covern entfallen. Die resultierenden hellen und dunklen Hintergrundpixel werden gegen dieselbe bisherige Farbkombination geprüft.
+
+Der Installationsdialog hatte zusätzlich eine fest eingebaute dunkle Grundfarbe, auch bei schwarzer Schrift im weißen Theme. Der Tint verwendet jetzt eine nahezu weiße Glasfläche im hellen Theme; die dunkle Variante behält ihre bisherigen Farben. Ein offener Dialog reagiert auf Theme-Wechsel, auch wenn er als Installationsblatt in der Spielseite eingebettet ist. Hoher Kontrast und ausgeschaltetes Ambient verwenden weiter die Theme-/Systemflächen.
+
+## Prüfung
+
+- `checks/palette-dispatch-before.trx`: neun gezielte Fälle am synchronen Ausgangspfad und am bisherigen Dialogmaterial; vier Fehler. Für diese Vorher-Prüfung bildete der neu eingeführte Async-Einstieg zunächst lediglich den bisherigen synchronen Aufruf als bereits erfülltes Task ab. Die Abbruch-Fälle definieren die notwendige Semantik des neuen Einstiegs; sie sind keine Behauptung über eine zuvor existierende Async-API.
+- `PaletteDispatchTests`: 13 fensterlose Fälle. Ein absichtlich belegter Render-Worker beweist, dass ein Cache-Miss auf den Worker wartet; Cache-Hits und fehlende Bilder warten nicht. Weitere Fälle prüfen unabhängigen Abbruch, bereits abgebrochene Aufrufe, identische regionale Farben bei eingefrorenen und nicht eingefrorenen Eingaben, schwache Bildhaltung, unveränderte Bibliothekspixel und lesbare helle/dunkle Dialogflächen.
+- `checks/palette-dispatch-release.trx`: 170 ausgewählte fensterlose UI-/Modellprüfungen. Die vollständige interaktive WPF-Testreihe ist darin ausdrücklich nicht enthalten.
+- `checks/palette-core-all-release.trx`: vollständige Core-Testreihe, getrennt vom WPF-Bericht. Zahlen und Hashes stehen im Paketmanifest.
+
+Portable: `artifacts/performance-refresh/portable-palette-dispatch/Steamy.exe`. Den gesamten Ordner zusammenlassen. Das Paket enthält .NET 10.0.13; Discord bleibt deaktiviert und das frühere Backup wird unverändert geprüft. Paket-/Quellen-/Bericht-Hashes: `release-palette-dispatch-validation.json`.
+
+Es wurden weder Steamy noch Steam noch ein sichtbares Diagnosefenster gestartet. Die Änderung entfernt einen belegten synchronen UI-Pfad; sie beweist keine pauschale Scroll-FPS-, Startzeit- oder Gesamt-RAM-Verbesserung. Der vorhandene 32-MiB-Bildcache wird nicht vergrößert. Echte aktuelle App-Messungen und die vollständige visuelle Abnahme bleiben offen, das Gesamtziel bleibt unerreicht.

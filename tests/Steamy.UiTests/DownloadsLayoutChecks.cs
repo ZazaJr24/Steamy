@@ -7,31 +7,45 @@ public sealed partial class PageSmokeTests
     private static void CheckDownloadsLayout(DownloadsPage page)
     {
         var cover = Assert.IsType<Grid>(page.FindName("DownloadArtworkPane"));
-        Assert.True(cover.ActualWidth >= 100 && cover.ActualHeight >= 160, "Artwork must remain readable without consuming the content column.");
+        Assert.True(cover.ActualWidth >= 100 && cover.ActualHeight is >= 80 and <= 95, "The cover belongs in a compact horizontal download row.");
         var title = Assert.IsType<TextBlock>(page.FindName("DownloadHeroTitle"));
         Assert.Equal(Visibility.Visible, title.Visibility);
         Assert.True(title.ActualHeight > 0);
         var progress = Assert.IsType<Steamy.Controls.SmoothProgressBar>(page.FindName("FocusedProgress"));
-        Assert.True(progress.ActualWidth > page.ActualWidth * .45, "The primary progress bar must span the card's content, rather than a narrow metrics column.");
+        var content = Assert.IsType<Grid>(page.FindName("DownloadHeroContent"));
+        Assert.True(progress.ActualWidth > 80 && Math.Abs(progress.ActualWidth - content.ActualWidth) < 2, "The progress bar must fill the download row's content column.");
         var list = Descendants<ListBox>(page).Single();
         Assert.True(list.ActualHeight >= 60, $"The queue needs a finite, usable viewport below live metrics. Page={page.ActualWidth}×{page.ActualHeight}, queue={list.ActualHeight}, hero={((Border)page.FindName("DownloadHero")).ActualHeight}.");
         Assert.True(ScrollViewer.GetHorizontalScrollBarVisibility(list) == ScrollBarVisibility.Disabled);
         Assert.True(System.Windows.Controls.VirtualizingPanel.GetIsVirtualizing(list));
         Assert.DoesNotContain(Descendants<TextBlock>(page), text => text.Text == "NETWORK ACTIVITY");
         var hero = Assert.IsType<Border>(page.FindName("DownloadHero"));
-        Assert.True(hero.ActualWidth >= page.ActualWidth - 60, "The download artwork should span the workspace.");
-        Assert.IsType<System.Windows.Media.ImageBrush>(Assert.IsType<Border>(page.FindName("DownloadHeroArtwork")).Background);
-        foreach (var name in new[] { "DownloadAmbientA", "DownloadAmbientB" })
+        var job = Assert.IsType<Steamy.Models.DownloadJob>(hero.DataContext);
+        var saved = (job.State, job.Phase, job.Progress, job.HasMeasuredProgress, job.HasWholeGameProgress, job.TransferTotalBytes, job.CurrentDepotDetail);
+        try
         {
-            var ambient = Assert.IsType<Border>(page.FindName(name));
-            Assert.True(hero.IsAncestorOf(ambient), "Artwork colors must stay inside the installation card.");
+            job.State = Steamy.Models.DownloadJobState.Downloading; job.Phase = "downloading"; job.TransferTotalBytes = null;
+            job.CurrentDepotDetail = "Depot 1/2 · 27.4%"; job.Progress = 27.4; job.HasWholeGameProgress = false;
+            PumpDispatcher(TimeSpan.FromMilliseconds(30));
+            var percentage = Assert.IsType<TextBlock>(page.FindName("DownloadTransferPercentage"));
+            Assert.Contains("27", percentage.Text); Assert.Contains("Depot 1/2", percentage.Text);
+            Assert.Equal(27.4, progress.SmoothValue); Assert.False(progress.IsIndeterminate);
+            job.Progress = 54.8; PumpDispatcher(TimeSpan.FromMilliseconds(30));
+            Assert.Contains("54", percentage.Text); Assert.Equal(54.8, progress.SmoothValue);
         }
+        finally { (job.State, job.Phase, job.Progress, job.HasMeasuredProgress, job.HasWholeGameProgress, job.TransferTotalBytes, job.CurrentDepotDetail) = saved; }
+        PumpDispatcher(TimeSpan.FromMilliseconds(30));
+        Assert.True(hero.ActualWidth >= Math.Min(1120, page.ActualWidth - 60), "Downloads use a bounded readable workspace.");
+        var artwork = Assert.IsType<Image>(Assert.IsType<Border>(page.FindName("DownloadHeroArtwork")).Child);
+        Assert.Equal(job.HeaderArtUrl, Steamy.Controls.AsyncArtwork.GetUrl(artwork));
+        Assert.Equal(System.Windows.Media.Stretch.UniformToFill, artwork.Stretch);
+        Assert.Equal(Visibility.Collapsed, ((Border)page.FindName("DownloadHeroAmbient")).Visibility);
 
         var pageA=Assert.IsType<Border>(page.FindName("DownloadPageAmbientA"));
         var pageB=Assert.IsType<Border>(page.FindName("DownloadPageAmbientB"));
         Assert.False(hero.IsAncestorOf(pageA));
         Assert.True(pageA.ActualHeight>=page.ActualHeight-1 && pageB.ActualWidth>=page.ActualWidth-1);
-        Assert.True(pageA.Background is System.Windows.Media.DrawingBrush || pageB.Background is System.Windows.Media.DrawingBrush, "Artwork ambient must fill the workspace behind the queue.");
+        Assert.Equal(0, pageA.Opacity); Assert.Equal(0, pageB.Opacity);
         foreach (var button in Descendants<Button>(hero).Where(button => button.Visibility == Visibility.Visible && button.ActualWidth > 0))
         {
             var bounds = button.TransformToAncestor(hero).TransformBounds(new Rect(button.RenderSize));

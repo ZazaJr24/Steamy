@@ -15,13 +15,14 @@ public interface IGameLaunchService
     Task<GameLaunchResult> LaunchAsync(Game game, CancellationToken token = default);
 }
 public sealed class GameLaunchService(IAppDataStore store, ISettingsService settings, IPlayTimeService playtime,
-    IGameActivityService activity, IGamePreferencesStore preferences, IGameProcessStarter starter, ILoggingService logging) : IGameLaunchService
+    IGameActivityService activity, IGamePreferencesStore preferences, IGameProcessStarter starter, ILoggingService logging, IControllerGameProfiles? controllerProfiles = null) : IGameLaunchService
 {
     public async Task<GameLaunchResult> LaunchAsync(Game game, CancellationToken token = default)
     {
         if (game.AppId == 0 || game.InstallState != GameInstallState.Installed
             || !store.Games.Any(g => g.AppId == game.AppId && g.InstallState == GameInstallState.Installed))
             return new(false, "This game is no longer installed. Refresh your library.");
+        var profilePrepared = false;
         try
         {
             var options = await preferences.ReadAsync(game.AppId, token);
@@ -31,6 +32,7 @@ public sealed class GameLaunchService(IAppDataStore store, ISettingsService sett
             var request = BuildRequest(game, options.LaunchArguments, steamRoot, options.LaunchExecutable);
             if (request is null) return new(false, "The game or Steam executable is missing. Check its installation folder in Settings.");
             await playtime.ConfigureAsync(settings.Load(), store.Games);
+            if (controllerProfiles is not null) { profilePrepared = true; await controllerProfiles.PrepareLaunchAsync(game.AppId, token); }
             token.ThrowIfCancellationRequested();
             starter.Start(request);
             if (game.AppId != 0)
@@ -41,9 +43,11 @@ public sealed class GameLaunchService(IAppDataStore store, ISettingsService sett
             }
             return new(true, "Launch requested. Playtime updates when the game is running.");
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        { if (profilePrepared && controllerProfiles is not null) { try { await controllerProfiles.RestoreDefaultAsync(CancellationToken.None); } catch { } } throw; }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException)
         {
+            if (profilePrepared && controllerProfiles is not null) { try { await controllerProfiles.RestoreDefaultAsync(CancellationToken.None); } catch { } }
             logging.Add(LogLevel.Warning, "Library", "The game could not be started. Check its installation and launch options.");
             return new(false, "Could not start the game. Check its installation and launch options.");
         }

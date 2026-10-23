@@ -36,6 +36,7 @@ public partial class LibraryPage : Page
     private int _downloadRevision;
     private bool _downloadCompleted;
     private CancellationTokenSource? _artworkCts;
+    private CancellationTokenSource? _installationAmbientRender;
     private IInputElement? _previousFocus;
     private int _overlayRevision;
     private bool _overlayClosing;
@@ -91,22 +92,26 @@ public partial class LibraryPage : Page
         DataContext = App.Services.GetRequiredService<LibraryViewModel>();
         Loaded += (_, _) =>
         {
+            UiThemeService.PaletteChanged += InstallationPaletteChanged;
             if (_installationOnly) return;
+            ResizeLibraryPresentation();
             var model = (LibraryViewModel)DataContext;
             model.PagedCatalogItems.CollectionChanged -= GalleryItemsChanged;
             model.PagedCatalogItems.CollectionChanged += GalleryItemsChanged;
             AttachLibraryAmbient();
+            _ = model.OnNavigatedToAsync();
             if (model.RequestedDownload is not { } requested) return;
             model.RequestedDownload = null;
             OpenDownloadSetup(requested);
         };
-        if (!_installationOnly) _ = ((LibraryViewModel)DataContext).OnNavigatedToAsync();
         Unloaded += (_, _) =>
         {
+            UiThemeService.PaletteChanged -= InstallationPaletteChanged;
             if (!_installationOnly)
             {
                 ((LibraryViewModel)DataContext).PagedCatalogItems.CollectionChanged -= GalleryItemsChanged;
                 DetachLibraryAmbient();
+                _ = ((LibraryViewModel)DataContext).OnNavigatedFromAsync();
             }
             ResetOverlay();
         };
@@ -120,13 +125,14 @@ public partial class LibraryPage : Page
         {
             Background = LibraryScene.Background = Brushes.Transparent;
             MainContentGrid.Visibility = Visibility.Collapsed;
-            Resources["TextPrimaryBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush : Brushes.White;
-            Resources["TextSecondaryBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush : new SolidColorBrush(Color.FromRgb(196, 196, 196));
-            Resources["TextTertiaryBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush : new SolidColorBrush(Color.FromRgb(153, 153, 153));
-            Resources["DialogSurfaceBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowBrush : new SolidColorBrush(Color.FromRgb(20, 22, 26));
+            Resources["TextPrimaryBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush : UiThemeService.IsLight ? Brushes.Black : Brushes.White;
+            Resources["TextSecondaryBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush : new SolidColorBrush(UiThemeService.IsLight ? Color.FromRgb(55, 65, 81) : Color.FromRgb(196, 196, 196));
+            Resources["TextTertiaryBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush : new SolidColorBrush(UiThemeService.IsLight ? Color.FromRgb(87, 97, 113) : Color.FromRgb(153, 153, 153));
+            Resources["DialogSurfaceBrush"] = UiThemeService.IsHighContrastActive ? SystemColors.WindowBrush : new SolidColorBrush(UiThemeService.IsLight ? Colors.White : Color.FromRgb(8, 8, 10));
         }
         SizeChanged += (_, _) =>
         {
+            ResizeLibraryPresentation();
             DialogPanel.MaxWidth = Math.Max(0, ActualWidth - 32);
             DialogPanel.MaxHeight = Math.Max(0, ActualHeight - 32);
             DialogPanel.MinHeight = Math.Min(400, DialogPanel.MaxHeight);
@@ -146,11 +152,22 @@ public partial class LibraryPage : Page
 
     private void GalleryItemsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs args)
     {
-        WatchLibraryAmbientArtwork();
+        _galleryResetPending |= args.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset;
+        if (_galleryUpdateQueued) return;
+        _galleryUpdateQueued = true;
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
         {
-            if (LibraryGallery.IsLoaded && LibraryGallery.Template.FindName("GalleryScroll", LibraryGallery) is ScrollViewer scroll)
-                scroll.ScrollToTop();
+            _galleryUpdateQueued = false;
+            if (IsLoaded && !_installationOnly)
+            {
+                WatchLibraryAmbientArtwork();
+                if (LibraryGallery.Template.FindName("GalleryScroll", LibraryGallery) is ScrollViewer scroll)
+                {
+                    if (_galleryResetPending) scroll.ScrollToTop();
+                    UpdateLibraryScrollChrome(scroll);
+                }
+            }
+            _galleryResetPending = false;
         }));
     }
 
@@ -195,10 +212,23 @@ public partial class LibraryPage : Page
         App.Services.GetRequiredService<INavigationService>().Navigate<GameDetailsPage>();
     }
     public void OpenDownloadSetup(SteamCatalogItem item) => OpenGame(item, setup: true);
+    private bool _steamAddOnly;
+    private int _steamAddedAppId;
+    public void OpenSteamSetup(SteamCatalogItem item)
+    {
+        if (_overlayClosing || _downloadRunning || _wizardBusy) return;
+        OpenGame(item, setup: true, steamAddOnly: true);
+        SelectInstallMethod(GameInstallMethod.BetterSteamTools);
+        _steamAddOnly = true;
+        SelectDownloadSource(item.AppId > 0 ? _selectedSource : ManifestSource.Local);
+        OverlayStatus.Text = "Choose a source or your own ZIP / Lua package, then continue to add this game with BetterSteamTools.";
+    }
 
-    private void OpenGame(SteamCatalogItem item, bool setup)
+    private void OpenGame(SteamCatalogItem item, bool setup, bool steamAddOnly = false)
     {
         if (_overlayClosing || _downloadRunning) return;
+        _steamAddOnly = steamAddOnly;
+        _steamAddedAppId = 0;
         _steamToolsCts?.Cancel();
         ResetPreparedDownload();
         _localPackagePath = null;
@@ -259,7 +289,7 @@ public partial class LibraryPage : Page
         CustomArchiveText.Foreground = TertiaryText;
         // A paused download of this app resumes in the same folder with one click.
         var resumeFolder = TargetFolderFor(item, settings, _downloadPath);
-        var resumable = App.Services.GetRequiredService<IAppDataStore>().Downloads.FirstOrDefault(existing =>
+        var resumable = steamAddOnly ? null : App.Services.GetRequiredService<IAppDataStore>().Downloads.FirstOrDefault(existing =>
             existing.AppId == item.AppId
             && DownloadJobPolicy.UsesModDownloader(existing.DownloadMode, existing.DepotId, existing.TargetFolder)
             && string.Equals(existing.TargetFolder, resumeFolder, StringComparison.OrdinalIgnoreCase)
@@ -344,7 +374,7 @@ public partial class LibraryPage : Page
         {
             tools.GameInput = item.AppId.ToString(CultureInfo.InvariantCulture);
             tools.SelectedSource = tools.Sources[0];
-            tools.RefreshDetection();
+            await tools.RefreshDetectionAsync();
         }
         ResetOverlay();
         App.Services.GetRequiredService<INavigationService>().Navigate<BetterSteamToolsPage>();
@@ -456,22 +486,44 @@ public partial class LibraryPage : Page
         (_showingDownloadSetup ? SetupCloseButton : DialogCloseButton).Focus();
     }
 
-    private void UpdateInstallationSurface()
+    private void InstallationPaletteChanged(object? sender, EventArgs args)
     {
-        if (UiThemeService.IsHighContrastActive || !UiThemeService.AmbientEnabled)
+        if (_installationOnly)
         {
-            DialogPanel.SetResourceReference(Border.BackgroundProperty, "DialogSurfaceBrush");
-            return;
+            var highContrast = UiThemeService.IsHighContrastActive;
+            BrushResources.Set(Resources,"TextPrimaryBrush",highContrast ? SystemColors.WindowTextBrush : UiThemeService.IsLight ? Brushes.Black : Brushes.White);
+            BrushResources.SetColor(Resources,"TextSecondaryBrush",UiThemeService.IsLight ? Color.FromRgb(55,65,81) : Color.FromRgb(196,196,196));
+            BrushResources.SetColor(Resources,"TextTertiaryBrush",UiThemeService.IsLight ? Color.FromRgb(87,97,113) : Color.FromRgb(153,153,153));
+            if (highContrast)
+            {
+                BrushResources.Set(Resources,"TextSecondaryBrush",SystemColors.WindowTextBrush);
+                BrushResources.Set(Resources,"TextTertiaryBrush",SystemColors.WindowTextBrush);
+            }
+            BrushResources.Set(Resources,"DialogSurfaceBrush",highContrast ? SystemColors.WindowBrush : UiThemeService.IsLight ? Brushes.White : Brushes.Black);
         }
-        var palette = ArtworkPalette.FromImage(OverlayCover.Source);
-        var area = new RectangleGeometry(new Rect(0, 0, 1, 1));
-        var drawing = new DrawingGroup();
-        drawing.Children.Add(new GeometryDrawing(new SolidColorBrush(Color.FromArgb(230, 20, 22, 26)), null, area));
-        var tint = new LinearGradientBrush(Color.FromArgb(42, palette.Left.R, palette.Left.G, palette.Left.B), Color.FromArgb(28, palette.Right.R, palette.Right.G, palette.Right.B), 30);
-        drawing.Children.Add(new GeometryDrawing(tint, null, area));
-        var brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-        brush.Freeze();
-        DialogPanel.Background = brush;
+        if (OverlayGrid.Visibility == Visibility.Visible) UpdateInstallationSurface();
+    }
+    private void CancelInstallationAmbient()
+    { _installationAmbientRender?.Cancel(); _installationAmbientRender?.Dispose(); _installationAmbientRender = null; }
+    private async void UpdateInstallationSurface()
+    {
+        CancelInstallationAmbient();
+        if (OverlayGrid.Visibility != Visibility.Visible || _overlayClosing) return;
+        DialogPanel.SetResourceReference(Border.BackgroundProperty,"DialogSurfaceBrush");
+        if (UiThemeService.IsHighContrastActive || !UiThemeService.AmbientEnabled)
+            return;
+        var light = UiThemeService.IsLight;
+        var request = _installationAmbientRender = new CancellationTokenSource();
+        var token = request.Token;
+        try
+        {
+            var palette = await ArtworkPalette.FromImageAsync(OverlayCover.Source,token);
+            if (!ReferenceEquals(_installationAmbientRender,request) || token.IsCancellationRequested || OverlayGrid.Visibility != Visibility.Visible || _overlayClosing) return;
+            DialogPanel.Background = InstallationAmbient.Create(palette,light);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception error) when (error is InvalidOperationException or ArgumentException or NotSupportedException or System.Runtime.InteropServices.ExternalException) { }
+        finally { if (ReferenceEquals(_installationAmbientRender,request)) { _installationAmbientRender=null; request.Dispose(); } }
     }
 
     private void Animate(DependencyObject target, DependencyProperty property, double from, double to)
@@ -541,11 +593,13 @@ public partial class LibraryPage : Page
             ConfigureDownloadLocation(_downloadPath);
             _ = LoadInstallDrivesAsync();
         }
-        else _steamToolsModel?.RefreshDetection();
+        else _ = _steamToolsModel?.RefreshDetectionAsync();
     }
 
     public void SelectDownloadSource(ManifestSource source)
     {
+        if (_steamAddOnly && _selectedItem?.AppId <= 0 && source != ManifestSource.Local)
+        { OverlayStatus.Text = "Choose your own ZIP / Lua package to identify this local game in Steam."; return; }
         if (_installMethod is null) { OverlayStatus.Text = "Choose an installation method first."; return; }
         if (_resumingExisting || _downloadRunning || (_wizardBusy && _installMethod == GameInstallMethod.BetterSteamTools))
         {
@@ -755,6 +809,7 @@ public partial class LibraryPage : Page
     {
         if (_localPackagePickerOpen || _overlayClosing || OverlayGrid.Visibility != Visibility.Visible) return;
         _overlayClosing = true;
+        CancelInstallationAmbient();
         var revision = ++_overlayRevision;
         _availabilityCts?.Cancel();
         _artworkCts?.Cancel();
@@ -778,6 +833,7 @@ public partial class LibraryPage : Page
 
     private void ResetOverlay()
     {
+        CancelInstallationAmbient();
         var wasOpen = OverlayGrid.Visibility == Visibility.Visible;
         _backdropResizeTimer.Stop();
         _overlayRevision++;
@@ -838,16 +894,18 @@ public partial class LibraryPage : Page
         LocationStepPanel.Visibility = selected && step == 3 && !steam ? Visibility.Visible : Visibility.Collapsed;
         SteamToolsStepPanel.Visibility = selected && step == 2 && steam ? Visibility.Visible : Visibility.Collapsed;
         WizardSteps.Visibility = _showingDownloadSetup && step > 0 && !_resumingExisting ? Visibility.Visible : Visibility.Collapsed;
-        SourceOptions.Header = $"Download source · {_selectedSource}";
+        SourceOptions.Header = _steamAddOnly ? $"Source or your ZIP · {_selectedSource}" : $"Download source · {_selectedSource}";
         WizardStepText.Text = _resumingExisting ? "Resume download" : step switch
-        { 0 => "Where do you want to install?", 1 => "Choose a download source", 2 when steam => "Ready to add to Steam", 2 => "Choose the game files", _ => "Choose an installation folder" };
+        { 0 => "Where do you want to install?", 1 when _steamAddOnly => "Choose a source or your ZIP", 1 => "Choose a download source", 2 when steam => "Ready to add to Steam", 2 => "Choose the game files", _ => "Choose an installation folder" };
         WizardTrailText.Text = _resumingExisting ? "Your saved source, versions and existing files are retained."
             : step switch { 0 => "Download with Steamy, or let your Steam client manage the installation.",
                 1 => "Select the source for this game.", 2 when steam => "Check your Steam setup, then add the game to your client.",
                 2 => "Review the selected files and versions before continuing.", _ => "Choose a drive and review available space before starting." };
-        WizardSteps.Columns = steam ? 3 : 4;
+        WizardSteps.Columns = _steamAddOnly ? 2 : steam ? 3 : 4;
+        MethodStepMarker.Visibility = _steamAddOnly ? Visibility.Collapsed : Visibility.Visible;
+        ((TextBlock)SourceStepMarker.Child).Text = _steamAddOnly ? "1 · Source" : "2 · Source";
         DepotStepMarker.Visibility = steam ? Visibility.Collapsed : Visibility.Visible;
-        ((TextBlock)LocationStepMarker.Child).Text = steam ? "3 · Steam" : "4 · Location";
+        ((TextBlock)LocationStepMarker.Child).Text = _steamAddOnly ? "2 · Steam" : steam ? "3 · Steam" : "4 · Location";
         foreach (var (marker, index) in new[] { (MethodStepMarker, 0), (SourceStepMarker, 1), (DepotStepMarker, 2), (LocationStepMarker, steam ? 2 : 3) })
         {
             marker.CornerRadius = new CornerRadius(8);
@@ -858,7 +916,7 @@ public partial class LibraryPage : Page
             ((TextBlock)marker.Child).FontWeight = index == step ? FontWeights.SemiBold : FontWeights.Normal;
         }
         if (step == 3 && !steam) { ConfigureDownloadLocation(_downloadPath); _ = LoadInstallDrivesAsync(); }
-        if (step == 2 && steam) App.Services.GetRequiredService<BetterSteamToolsViewModel>().RefreshDetection();
+        if (step == 2 && steam) _ = App.Services.GetRequiredService<BetterSteamToolsViewModel>().RefreshDetectionAsync();
         UpdateWizardControls();
         // Only the dialog entrance animates; preparing metadata must not move the form.
     }
@@ -1028,7 +1086,9 @@ public partial class LibraryPage : Page
     private void OpenSteamInstall()
     {
         if (_selectedItem is not { } game) return;
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo($"steam://install/{game.AppId}") { UseShellExecute = true }); }
+        var appId = _steamAddedAppId > 0 ? _steamAddedAppId : game.AppId;
+        if (appId <= 0) { OverlayStatus.Text = "Open Steam to choose the game added from your package."; return; }
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo($"steam://install/{appId}") { UseShellExecute = true }); }
         catch (Exception exception) { OverlayStatus.Text = "Could not open Steam: " + exception.Message; }
     }
 
@@ -1037,7 +1097,6 @@ public partial class LibraryPage : Page
         if (_selectedItem is not { } game || _steamToolsModel is not { } model || model.IsBusy) return;
         var service = App.Services.GetRequiredService<IBetterSteamToolsService>();
         var root = model.SteamRoot;
-        if (!service.Detect(root).SteamDetected) { OverlayStatus.Text = "Select the Steam folder containing steam.exe."; return; }
         var source = _selectedSource;
         var package = _localPackagePath;
         var revision = _overlayRevision;
@@ -1050,21 +1109,26 @@ public partial class LibraryPage : Page
         var progress = new Progress<string>(message => { if (Current()) OverlayStatus.Text = message; });
         try
         {
-            if (!service.Detect(root).BackendInstalled)
+            var detection = await Task.Run(() => service.Detect(root), cancellation.Token);
+            if (!Current()) return;
+            if (!detection.SteamDetected) { OverlayStatus.Text = "Select the Steam folder containing steam.exe."; return; }
+            if (!detection.BackendInstalled)
             {
                 OverlayStatus.Text = "Preparing BetterSteamTools…";
-                var installed = await service.InstallBackendAsync(root, progress, cancellation.Token);
+                var installed = await Task.Run(() => service.InstallBackendAsync(root, progress, cancellation.Token), cancellation.Token);
                 cancellation.Token.ThrowIfCancellationRequested();
                 if (!installed.Succeeded) { if (Current()) OverlayStatus.Text = installed.Message; return; }
-                if (!service.Detect(root).BackendInstalled) { if (Current()) OverlayStatus.Text = "BetterSteamTools could not be verified. Try again before adding the game."; return; }
+                var verified = await Task.Run(() => service.Detect(root), cancellation.Token);
+                if (!verified.BackendInstalled) { if (Current()) OverlayStatus.Text = "BetterSteamTools could not be verified. Try again before adding the game."; return; }
             }
-            var result = source == ManifestSource.Local
-                ? await service.ImportAsync(root, [package!], game.AppId, cancellation.Token)
-                : await service.AddFromSourceAsync(root, game.AppId, source, progress, cancellation.Token);
+            var result = await Task.Run(() => source == ManifestSource.Local
+                ? service.ImportAsync(root, [package!], game.AppId > 0 ? game.AppId : null, cancellation.Token)
+                : service.AddFromSourceAsync(root, game.AppId, source, progress, cancellation.Token), cancellation.Token);
             if (!Current()) return;
             _downloadCompleted = result.Succeeded;
+            if (result.Succeeded) _steamAddedAppId = result.AppIds.FirstOrDefault(id => id > 0);
             OverlayStatus.Text = result.Succeeded ? "Game added. Open Steam to choose its library and install. " + result.Message : result.Message;
-            model.RefreshDetection();
+            await model.RefreshDetectionAsync();
         }
         catch (OperationCanceledException) { }
         catch (Exception exception) { if (Current()) OverlayStatus.Text = "Could not add the game: " + exception.Message; }
@@ -1095,6 +1159,7 @@ public partial class LibraryPage : Page
     private void WizardBackButton_Click(object sender, RoutedEventArgs args)
     {
         if (_downloadRunning || _wizardBusy || _resumingExisting) return;
+        if (_steamAddOnly && _wizardStep <= 1) { CloseOverlay(); return; }
         if (_wizardStep > 0) SetWizardStep(_wizardStep - 1);
     }
 

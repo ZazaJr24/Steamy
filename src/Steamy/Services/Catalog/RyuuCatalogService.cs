@@ -161,7 +161,7 @@ public sealed class RyuuCatalogService : IRyuuCatalogService, IDisposable
         "video" or "movie" or "series" => SteamCatalogAppType.Video,
         "music" => SteamCatalogAppType.Music,
         "hardware" => SteamCatalogAppType.Hardware,
-        _ => SteamCatalogAppType.Game
+        _ => SteamCatalogAppType.Unknown
     };
 
     public void Dispose()

@@ -5,6 +5,17 @@ namespace Steamy.Controls;
 
 public partial class FilterFlyout : UserControl
 {
+    public static readonly DependencyProperty TriggerStyleProperty = DependencyProperty.Register(
+        nameof(TriggerStyle), typeof(Style), typeof(FilterFlyout), new PropertyMetadata(null, (owner, args) =>
+        {
+            var view = (FilterFlyout)owner;
+            if (view.FilterToggle is not null)
+                view.FilterToggle.Style = args.NewValue as Style ?? (Style)view.FindResource("FilterToggleButtonStyle");
+        }));
+    public Style? TriggerStyle { get => (Style?)GetValue(TriggerStyleProperty); set => SetValue(TriggerStyleProperty, value); }
+    public static readonly DependencyProperty TriggerTextProperty = DependencyProperty.Register(nameof(TriggerText), typeof(string), typeof(FilterFlyout), new PropertyMetadata(string.Empty));
+    public string TriggerText { get => (string)GetValue(TriggerTextProperty); set => SetValue(TriggerTextProperty, value); }
+
     public FilterFlyout()
     {
         InitializeComponent();

@@ -22,9 +22,9 @@
         <StackPanel><TextBlock Text="DepotDownloader" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" /><TextBlock Text="Choose your game and version. Downloads keeps your queue and progress." Style="{StaticResource PageSubtitleStyle}" /></StackPanel>
         <WrapPanel Grid.Column="1" MaxWidth="180" HorizontalAlignment="Right"><ui:Button Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding CheckToolCommand}" ToolTip="Check downloader" AutomationProperties.Name="Check downloader" Margin="0,0,6,0"/><ui:Button Icon="{ui:SymbolIcon Settings24}" Command="{Binding OpenSettingsCommand}" ToolTip="Configure downloader and transfers" AutomationProperties.Name="Downloader settings"/></WrapPanel>
       </Grid>
-      <Border x:Name="SetupGamePreview" Background="#171A20" CornerRadius="18" MinHeight="124" Margin="0,0,0,18">
+      <Border x:Name="SetupGamePreview" Background="{DynamicResource GlassSurfaceBrush}" CornerRadius="18" MinHeight="124" Margin="0,0,0,18">
         <Grid>
-          <Border CornerRadius="18"><Border.Background><ImageBrush ImageSource="{Binding SelectedHeroUrl, Converter={StaticResource ArtworkImage}, ConverterParameter=1280}" Stretch="UniformToFill" /></Border.Background></Border>
+          <Border CornerRadius="18"><Image controls:AsyncArtwork.Width="1280" controls:AsyncArtwork.Url="{Binding SelectedHeroUrl}" Stretch="UniformToFill" /></Border>
           <Border CornerRadius="18" Background="{DynamicResource HeroShadeBrush}"/>
           <Border CornerRadius="18" Background="{DynamicResource HeroBottomShadeBrush}"/>
           <Grid Margin="18,16"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>

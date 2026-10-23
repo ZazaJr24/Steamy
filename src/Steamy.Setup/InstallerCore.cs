@@ -146,7 +146,7 @@ namespace Steamy.Setup
         public static bool CompatibleRuntime(string value)
         {
             Version version;
-            return Version.TryParse(value, out version) && version.Major == 9 && version.Minor == 0 && version >= new Version(9, 0, 20);
+            return Version.TryParse(value, out version) && version.Major == 10 && version.Minor == 0 && version >= new Version(10, 0, 13);
         }
         public static bool RuntimePresent()
         {
@@ -163,8 +163,9 @@ namespace Steamy.Setup
         {
             if (RuntimePresent()) return;
             progress.Report(new InstallProgress("Preparing your runtime", "Getting the Windows Desktop runtime from Microsoft.", 4));
-            var releases = await ReadJson("https://builds.dotnet.microsoft.com/dotnet/release-metadata/9.0/releases.json", token);
+            var releases = await ReadJson("https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json", token);
             var latest = Text(releases, "latest-runtime");
+            if (!CompatibleRuntime(latest)) throw new InvalidDataException("The Microsoft feed does not yet provide the required .NET 10 Windows Desktop runtime. Use the complete Steamy setup.");
             var release = ((IEnumerable)releases["releases"]).Cast<Dictionary<string, object>>()
                 .First(item => Text(item, "release-version") == latest);
             var desktop = (Dictionary<string, object>)release["windowsdesktop"];

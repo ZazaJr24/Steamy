@@ -13,7 +13,7 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="RadioButton">
-            <Border x:Name="Card" Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+            <Border x:Name="Card" Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1"
                     CornerRadius="10" Padding="{TemplateBinding Padding}">
               <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
             </Border>
@@ -33,7 +33,7 @@
     </Style>
   </UserControl.Resources>
   <Border x:Name="WizardPanel" Width="900" Height="620" MaxWidth="1100" MaxHeight="760" CornerRadius="24"
-          Background="{DynamicResource GlassSurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" SnapsToDevicePixels="True">
+          Background="{DynamicResource GlassSurfaceBrush}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" SnapsToDevicePixels="True">
     <Border.Effect>
       <DropShadowEffect BlurRadius="28" ShadowDepth="8" Opacity="0.34" Color="#000000" />
     </Border.Effect>
@@ -49,11 +49,11 @@
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
           <TextBlock Text="SETUP PREFERENCES" VerticalAlignment="Center" FontSize="10" FontWeight="Bold"
                      Foreground="{DynamicResource TextTertiaryBrush}" />
-          <TextBlock x:Name="StepCounter" Grid.Column="1" Text="01  /  04" VerticalAlignment="Center"
+          <TextBlock x:Name="StepCounter" Grid.Column="1" Text="01  /  06" VerticalAlignment="Center"
                      FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" />
         </Grid>
 
-        <ProgressBar x:Name="WizardProgress" Grid.Row="1" Minimum="0" Maximum="4" Value="1"
+        <ProgressBar x:Name="WizardProgress" Grid.Row="1" Minimum="0" Maximum="6" Value="1"
                      Height="3" Margin="0,15,0,0" IsHitTestVisible="False"
                      Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource SurfaceSubtleBrush}"
                      Style="{StaticResource JobProgressBar}" />
@@ -75,7 +75,7 @@
             </StackPanel.RenderTransform>
 
             <StackPanel x:Name="LanguageStep" Visibility="Visible">
-              <Border Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="9" Padding="14">
+              <Border Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="9" Padding="14">
                 <Grid>
                   <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                   <Grid>
@@ -125,12 +125,12 @@
                 <RadioButton x:Name="DarkAppearance" Style="{StaticResource SetupAppearanceChoice}"
                              Tag="Dark" Checked="AppearanceCard_Checked" Margin="0">
                   <StackPanel>
-                    <Border Height="66" CornerRadius="8" Background="#191A1F" Padding="7" Margin="0,0,0,14">
+                    <Border Height="66" CornerRadius="8" Background="#000000" Padding="7" Margin="0,0,0,14">
                       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                        <Border Background="#30323A" CornerRadius="4" />
+                        <Border Background="#08080A" CornerRadius="4" />
                         <StackPanel Grid.Column="1" Margin="7,5,0,0"><Border Height="4" Width="54" HorizontalAlignment="Left" Background="#E1E3EA" CornerRadius="2" />
-                          <Border Height="4" Width="92" HorizontalAlignment="Left" Background="#363840" CornerRadius="2" Margin="0,7,0,0" />
-                          <Border Height="4" Width="74" HorizontalAlignment="Left" Background="#363840" CornerRadius="2" Margin="0,5,0,0" /></StackPanel>
+                          <Border Height="4" Width="92" HorizontalAlignment="Left" Background="#17171A" CornerRadius="2" Margin="0,7,0,0" />
+                          <Border Height="4" Width="74" HorizontalAlignment="Left" Background="#17171A" CornerRadius="2" Margin="0,5,0,0" /></StackPanel>
                       </Grid>
                     </Border>
                     <TextBlock Text="Dark" FontSize="14" FontWeight="SemiBold" />
@@ -156,11 +156,11 @@
                          Foreground="{DynamicResource TextTertiaryBrush}" />
               <PasswordBox x:Name="HubcapKeyBox" MinHeight="42" Padding="11,8" Margin="0,0,0,16"
                            AutomationProperties.Name="Hubcap API key" />
-              <TextBlock Text="DEPOTBOX API KEY" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,6"
+              <TextBlock Text="DEPOTBOX PERSONAL KEY · OPTIONAL" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,6"
                          Foreground="{DynamicResource TextTertiaryBrush}" />
               <PasswordBox x:Name="DepotBoxKeyBox" MinHeight="42" Padding="11,8"
                            AutomationProperties.Name="DepotBox API key" />
-              <TextBlock Text="Interface translations are fetched when needed and cached on this PC. No translation API key is required."
+              <TextBlock Text="Ryuu and DepotBox use the Steamy relay automatically; no personal key is required. Interface translations are fetched when needed and cached on this PC."
                          FontSize="11" TextWrapping="Wrap" Margin="0,16,0,0" Foreground="{DynamicResource TextSecondaryBrush}" />
             </StackPanel>
 
@@ -241,6 +241,15 @@
             </StackPanel>
 
             </StackPanel></Expander>
+            <StackPanel x:Name="DiscordStep" Visibility="Collapsed">
+              <controls:DiscordConnectionCard x:Name="SetupDiscordConnection" />
+              <TextBlock Text="This step is optional. Continue without Discord and connect anytime from Friends or Settings."
+                         Margin="2,14,0,0" FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextTertiaryBrush}" />
+            </StackPanel>
+            <StackPanel x:Name="ControllerStep" Visibility="Collapsed">
+              <controls:ControllerDriverSetup x:Name="SetupControllerDrivers" />
+              <TextBlock Text="Optional. Xbox controllers use Windows XInput. You can continue now and set up PlayStation mapping later in Controllers." FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,14,0,0" />
+            </StackPanel>
             <StackPanel x:Name="ReadyStep" Visibility="Collapsed">
               <TextBlock x:Name="DependencyStatus" Text="Checking required files…"
                          Margin="0,0,0,12" FontSize="13" TextWrapping="Wrap"

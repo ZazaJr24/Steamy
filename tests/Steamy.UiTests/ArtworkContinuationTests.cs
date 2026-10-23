@@ -73,6 +73,63 @@ public sealed class ArtworkContinuationTests
         for (var channel = 0; channel < 3; channel++) Assert.True(result[offset + channel] <= result[offset + 3]);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ReusedBlurBuffersMatchTheReferencePixelsAndBoundTransientAllocations(bool smooth)
+    {
+        const int width = 31, heroHeight = 12, height = 48;
+        var crop = new byte[width * heroHeight * 4];
+        for (var offset = 0; offset < crop.Length; offset++) crop[offset] = (byte)((offset * 29 + offset / 7) % 256);
+        var original = crop.ToArray();
+        var expected = ReferenceContinuation(crop, width, heroHeight, height, smooth);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var result = ArtworkContinuation.ContinuePixels(crop, width, heroHeight, height, smooth);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Assert.Equal(expected, result); Assert.Equal(original, crop);
+        Assert.InRange(allocated, 0, result.LongLength * 2 + 1024);
+    }
+
+    // Intentionally simple independent box sums verify every byte, including edge
+    // clamping and integer rounding, against the optimized sliding-window passes.
+    private static byte[] ReferenceContinuation(byte[] crop, int width, int heroHeight, int height, bool smooth)
+    {
+        var pixels = new byte[width * height * 4];
+        for (var y = 0; y < height; y++)
+        {
+            var position = y / (double)heroHeight;
+            var source = position < .5 ? position : .5 + .38 * (1 - Math.Exp(-(position - .5) / .38));
+            var sourceY = Math.Clamp((int)(source * heroHeight), 0, heroHeight - 1);
+            Buffer.BlockCopy(crop, sourceY * width * 4, pixels, y * width * 4, width * 4);
+        }
+        var radius = smooth ? 24 : 8; var samples = radius * 2 + 1;
+        for (var pass = 0; pass < 6; pass++)
+        {
+            var output = new byte[pixels.Length]; var horizontal = pass % 2 == 0;
+            for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+            for (var channel = 0; channel < 4; channel++)
+            {
+                var sum = 0;
+                for (var delta = -radius; delta <= radius; delta++)
+                {
+                    var sx = horizontal ? Math.Clamp(x + delta, 0, width - 1) : x;
+                    var sy = horizontal ? y : Math.Clamp(y + delta, 0, height - 1);
+                    sum += pixels[(sy * width + sx) * 4 + channel];
+                }
+                output[(y * width + x) * 4 + channel] = (byte)((sum + samples / 2) / samples);
+            }
+            pixels = output;
+        }
+        for (var y = 0; y < height; y++)
+        {
+            var amount = Math.Clamp((ArtworkContinuation.HeightInHeroes - y / (double)heroHeight) / (ArtworkContinuation.HeightInHeroes - .65), 0, 1);
+            var opacity = .94 * amount * amount * (3 - 2 * amount);
+            for (var index = y * width * 4; index < (y + 1) * width * 4; index++) pixels[index] = (byte)Math.Round(pixels[index] * opacity);
+        }
+        return pixels;
+    }
+
     private static byte[] Crop(Func<int, int, (int R, int G, int B)> color)
     {
         var result = new byte[96 * 54 * 4];

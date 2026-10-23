@@ -60,6 +60,7 @@
       <EventSetter Event="MouseEnter" Handler="DashboardAmbient_Enter" />
       <EventSetter Event="MouseLeave" Handler="DashboardAmbient_Leave" />
       <EventSetter Event="GotKeyboardFocus" Handler="DashboardAmbient_Focus" />
+      <EventSetter Event="Unloaded" Handler="DashboardAmbient_Unloaded" />
       <EventSetter Event="LostKeyboardFocus" Handler="DashboardAmbient_Blur" />
     </Style>
     <Style x:Key="SectionTitle" TargetType="TextBlock">
@@ -86,7 +87,7 @@
       <Setter Property="Width" Value="{Binding RecentTileWidth, RelativeSource={RelativeSource AncestorType=Page}}" />
       <Setter Property="controls:CardMotion.CollapsedWidth" Value="{Binding RecentTileWidth, RelativeSource={RelativeSource AncestorType=Page}}" />
       <Setter Property="controls:CardMotion.ExpandedWidth" Value="248" />
-      <Setter Property="controls:CardMotion.HoverDuration" Value="180" />
+      <Setter Property="controls:CardMotion.HoverDuration" Value="280" />
       <Setter Property="controls:CardMotion.HoverScale" Value="1" />
       <Setter Property="controls:CardMotion.HoverLift" Value="-2" />
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
@@ -117,12 +118,12 @@
     </Style>
     <DataTemplate x:Key="InstalledTileTemplate">
       <Button Style="{StaticResource InstalledTileButton}" VerticalAlignment="Top"
-              Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding Game}"
+              Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding Game}" controls:ArtworkLease.Game="{Binding Game}"
               AutomationProperties.Name="{Binding Game.Name}" AutomationProperties.HelpText="{Binding ActionLabel}" AutomationProperties.ItemStatus="{Binding PlayTimeLabel}" />
     </DataTemplate>
     <DataTemplate x:Key="InstalledBannerTemplate">
               <Button VerticalAlignment="Top" Style="{StaticResource RecentCardButton}"
-                      Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding Game}"
+                      Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding Game}" controls:ArtworkLease.Game="{Binding Game}"
                       AutomationProperties.Name="{Binding Game.Name}" AutomationProperties.HelpText="{Binding ActionLabel}" AutomationProperties.ItemStatus="{Binding PlayTimeLabel}">
                 <Border Height="{Binding RecentCardHeight, RelativeSource={RelativeSource AncestorType=Page}}" CornerRadius="24" Background="{DynamicResource GlassSurfaceBrush}" controls:RoundedClip.Radius="24">
                   <Grid>
@@ -148,7 +149,7 @@
               </Button>
             </DataTemplate>
     <DataTemplate x:Key="DiscoveryCoverTemplate">
-      <Button Style="{StaticResource UpcomingCardButton}" CommandParameter="{Binding}"
+      <Button Style="{StaticResource UpcomingCardButton}" CommandParameter="{Binding}" controls:ArtworkLease.Feature="{Binding}"
               Command="{Binding DataContext.OpenSpotlightCommand, RelativeSource={RelativeSource AncestorType=Page}}"
               AutomationProperties.Name="{Binding Game.Name}">
         <Grid>
@@ -168,7 +169,7 @@
   </Page.Resources>
 
   <Grid>
-  <ScrollViewer x:Name="DashboardScroll" Style="{StaticResource DashboardScrollHostStyle}" Padding="0" ScrollChanged="DashboardScroll_Changed">
+  <ScrollViewer x:Name="DashboardScroll" Style="{StaticResource DashboardScrollHostStyle}" Padding="0" ScrollChanged="DashboardScroll_Changed" controls:SmoothScroll.Enabled="True">
     <Grid x:Name="DashboardContent">
       <Canvas IsHitTestVisible="False">
         <controls:DashboardBackdropView x:Name="DashboardBackdrop"
@@ -307,7 +308,7 @@
           <TextBlock Text="{Binding PcScanStatus}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" MaxWidth="500" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
           <Button Content="Cancel" Style="{StaticResource HeroPillButton}" Command="{Binding CancelPcScanCommand}" Margin="12,0,0,0" />
         </StackPanel>
-        <ScrollViewer x:Name="RecentScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" CanContentScroll="False" PanningMode="HorizontalOnly" PreviewMouseWheel="RecentScroll_MouseWheel">
+        <ScrollViewer x:Name="RecentScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" CanContentScroll="False" PanningMode="HorizontalOnly" controls:SmoothScroll.Enabled="True" controls:SmoothScroll.Horizontal="True">
           <ItemsControl x:Name="RecentlyOpenedStrip" ItemsSource="{Binding InstalledGames}" ItemTemplate="{StaticResource InstalledTileTemplate}">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:GameShortcutStrip TileWidth="{Binding RecentTileWidth, RelativeSource={RelativeSource AncestorType=Page}}" ViewportWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           </ItemsControl>
@@ -348,7 +349,7 @@
               <Button Grid.Column="2" Content="Stop" Style="{StaticResource HeroPillButton}" Command="{Binding CancelPcScanCommand}" Padding="14,7" Visibility="{Binding IsScanningPc, Converter={StaticResource BoolToVis}}" />
             </Grid>
               <Grid x:Name="InstalledLibraryResults" Grid.Row="3" Height="400">
-                <ItemsControl x:Name="AllInstalledGamesGrid" ItemsSource="{Binding FilteredInstalledGames}" ItemTemplate="{StaticResource InstalledBannerTemplate}">
+                <ItemsControl x:Name="AllInstalledGamesGrid" ItemsSource="{Binding FilteredInstalledGames}" ItemTemplate="{StaticResource InstalledBannerTemplate}" VirtualizingPanel.VirtualizationMode="Recycling">
                   <ItemsControl.Template><ControlTemplate TargetType="ItemsControl"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" CanContentScroll="True" Style="{StaticResource PageScrollHostStyle}"><ItemsPresenter /></ScrollViewer></ControlTemplate></ItemsControl.Template>
                   <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:VirtualizingGamePanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>

@@ -14,9 +14,14 @@ namespace Steamy.Models;
 /// </summary>
 public abstract class UiObservableObject : ObservableObject
 {
-    private readonly object _notificationGate = new();
-    private readonly HashSet<string?> _pendingProperties = new();
-    private bool _notificationQueued;
+    // Most public catalog entries are never bound or changed. Allocate batching
+    // state only when an actual cross-dispatcher notification needs it.
+    private NotificationBatch? _notifications;
+    private sealed class NotificationBatch
+    {
+        internal readonly HashSet<string?> Properties = new();
+        internal bool Queued;
+    }
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {
         var application = Application.Current;
@@ -24,23 +29,24 @@ public abstract class UiObservableObject : ObservableObject
 
         if (dispatcher is not null && !dispatcher.HasShutdownStarted && !dispatcher.CheckAccess())
         {
-            lock (_notificationGate)
+            var batch = System.Threading.LazyInitializer.EnsureInitialized(ref _notifications, static () => new NotificationBatch());
+            lock (batch)
             {
-                if (string.IsNullOrEmpty(e.PropertyName)) { _pendingProperties.Clear(); _pendingProperties.Add(null); }
-                else if (!_pendingProperties.Contains(null)) _pendingProperties.Add(e.PropertyName);
-                if (_notificationQueued) return;
-                _notificationQueued = true;
+                if (string.IsNullOrEmpty(e.PropertyName)) { batch.Properties.Clear(); batch.Properties.Add(null); }
+                else if (!batch.Properties.Contains(null)) batch.Properties.Add(e.PropertyName);
+                if (batch.Queued) return;
+                batch.Queued = true;
             }
             try
             {
                 dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
                 {
                     string?[] properties;
-                    lock (_notificationGate)
+                    lock (batch)
                     {
-                        properties = _pendingProperties.ToArray();
-                        _pendingProperties.Clear();
-                        _notificationQueued = false;
+                        properties = batch.Properties.ToArray();
+                        batch.Properties.Clear();
+                        batch.Queued = false;
                     }
                     foreach (var property in properties) base.OnPropertyChanged(new PropertyChangedEventArgs(property));
                 }));
@@ -54,7 +60,7 @@ public abstract class UiObservableObject : ObservableObject
             {
                 // Same: the dispatcher was shutting down between the check and the post.
             }
-            lock (_notificationGate) { _pendingProperties.Clear(); _notificationQueued = false; }
+            lock (batch) { batch.Properties.Clear(); batch.Queued = false; }
             return;
         }
         if (dispatcher is not null && dispatcher.HasShutdownStarted && !dispatcher.CheckAccess()) return;

@@ -1,14 +1,18 @@
 param(
     [string]$PortableDirectory = 'artifacts/distribution/portable',
-    [string]$ReportDirectory = '.probe-glass/portable-startup'
+    [string]$ReportDirectory = '.probe-glass/portable-startup',
+    [int]$ExpectedRuntimeMajor = 10,
+    [string]$PreviousPortableDirectory = ''
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $portable = [IO.Path]::GetFullPath((Join-Path $repoRoot $PortableDirectory))
 $reportRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot $ReportDirectory))
+$previousPortable = if ($PreviousPortableDirectory) { [IO.Path]::GetFullPath((Join-Path $repoRoot $PreviousPortableDirectory)) } else { '' }
+if ($previousPortable -and !(Test-Path -LiteralPath (Join-Path $previousPortable 'Steamy.exe'))) { throw 'The previous portable version is missing.' }
 New-Item -ItemType Directory -Path $reportRoot -Force | Out-Null
 $assembly = [Reflection.AssemblyName]::GetAssemblyName((Join-Path $portable 'WindowsBase.dll'))
-if ($assembly.Version.Major -ne 9) { throw 'WindowsBase.dll is not the WPF 9 runtime assembly.' }
+if ($assembly.Version.Major -ne $ExpectedRuntimeMajor) { throw "WindowsBase.dll is not the WPF $ExpectedRuntimeMajor runtime assembly." }
 if (-not ('SteamyStartupNative' -as [type])) {
     Add-Type @'
 using System;
@@ -30,18 +34,42 @@ foreach ($key in @('STEAMY_DATA_DIR','DOTNET_ROOT','DOTNET_ROOT_X64','DOTNET_MUL
     $savedEnvironment[$key] = [Environment]::GetEnvironmentVariable($key)
 }
 $results = @()
+$returningProfile = $null
+$preservedHashes = @{}
 try {
     # Exercise the actual shipping hosts without using a global .NET installation.
     $env:DOTNET_ROOT = Join-Path $reportRoot 'no-global-runtime'
     $env:DOTNET_ROOT_X64 = $env:DOTNET_ROOT
     $env:DOTNET_MULTILEVEL_LOOKUP = '0'
-    foreach ($scenario in @('returning-user','first-run')) {
-        $profile = Join-Path $reportRoot ($scenario + '-' + [Guid]::NewGuid().ToString('N'))
-        New-Item -ItemType Directory -Path $profile | Out-Null
-        @{ActiveRoot=$profile;LegacyImported=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $profile 'storage-location.json') -Encoding utf8
-        @{FirstRunCompleted=($scenario -eq 'returning-user');TransparencyAcknowledgement='transparency-2';AutoUpdate=$false;AutoRefresh=$false;AutoResume=$false;TrackPlayTime=$false;Language='en-US';ReduceEffects=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $profile 'settings.json') -Encoding utf8
+    $scenarios = @('returning-user','returning-user-restart','first-run')
+    if ($previousPortable) { $scenarios = @('previous-version') + $scenarios }
+    foreach ($scenario in $scenarios) {
+        $returning = $scenario -ne 'first-run'
+        if (!$returning -or !$returningProfile) {
+            $profile = Join-Path $reportRoot ($scenario + '-' + [Guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Path $profile | Out-Null
+            @{ActiveRoot=$profile;LegacyImported=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $profile 'storage-location.json') -Encoding utf8
+            $preferences = @{FirstRunCompleted=$returning;TransparencyAcknowledgement='transparency-2';AutoUpdate=$false;AutoRefresh=$false;AutoResume=$false;TrackPlayTime=$false;Language='English';Appearance='Dark';ReduceEffects=$true;DiscordAutoConnect=$false;ControllerBackendEnabled=$false;ParallelDownloads=3;DownloadFolder=(Join-Path $profile 'download-root')}
+            New-Item -ItemType Directory -Path $preferences.DownloadFolder -Force | Out-Null
+            $preferences | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $profile 'settings.json') -Encoding utf8
+            if ($returning) {
+                $returningProfile = $profile
+                New-Item -ItemType Directory -Path "$profile/preserved-game", "$profile/games", "$profile/credentials" -Force | Out-Null
+                'Local library preservation fixture; this is not an executable.' | Set-Content -LiteralPath "$profile/preserved-game/fixture.txt"
+                @(@{AppId=10;Name='Preserved library fixture';Folder=(Join-Path $profile 'preserved-game');Source='DepotDownloader';Executable=''}) | ConvertTo-Json -AsArray | Set-Content -LiteralPath "$profile/installed-downloads.json" -Encoding utf8
+                @{Notes='Keep this game note';LaunchArguments='-windowed';LaunchExecutable=''} | ConvertTo-Json | Set-Content -LiteralPath "$profile/games/10.json" -Encoding utf8
+                # A synthetic DPAPI credential exercises file preservation only. Auto-connect
+                # stays disabled, so no fixture token is submitted to Discord.
+                $credentialName = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes('discord-social-session'))).ToLowerInvariant()
+                $syntheticSession = '{"ApplicationId":1559657404994429101,"AccessToken":"fixture-not-a-discord-token","RefreshToken":"fixture-not-a-refresh-token","ExpiresAt":"2030-01-01T00:00:00Z"}'
+                $protectedSession = [Security.Cryptography.ProtectedData]::Protect([Text.Encoding]::UTF8.GetBytes($syntheticSession), $null, [Security.Cryptography.DataProtectionScope]::CurrentUser)
+                [IO.File]::WriteAllBytes("$profile/credentials/$credentialName", $protectedSession)
+                foreach ($relative in @('games/10.json', "credentials/$credentialName")) { $preservedHashes[$relative] = (Get-FileHash -LiteralPath (Join-Path $profile $relative) -Algorithm SHA256).Hash }
+            }
+        } else { $profile = $returningProfile }
         $env:STEAMY_DATA_DIR = $profile
-        $process = Start-Process -FilePath (Join-Path $portable 'Steamy.exe') -WorkingDirectory $portable -WindowStyle Hidden -PassThru -RedirectStandardError (Join-Path $profile 'stderr.txt')
+        $hostDirectory = if ($scenario -eq 'previous-version') { $previousPortable } else { $portable }
+        $process = Start-Process -FilePath (Join-Path $hostDirectory 'Steamy.exe') -WorkingDirectory $hostDirectory -WindowStyle Hidden -PassThru -RedirectStandardError (Join-Path $profile ($scenario + '-stderr.txt'))
         try {
             $timer = [Diagnostics.Stopwatch]::StartNew()
             do { Start-Sleep -Milliseconds 250; $process.Refresh() } while (-not $process.HasExited -and $process.MainWindowHandle -eq 0 -and $timer.Elapsed.TotalSeconds -lt 25)
@@ -55,7 +83,7 @@ try {
             Start-Sleep -Seconds 8
             $process.Refresh()
             if ($process.HasExited -or -not $process.Responding -or (Test-Path -LiteralPath (Join-Path $profile 'crash.log'))) { throw "$scenario failed after its first render. See $profile." }
-            $results += @{Scenario=$scenario;Passed=$true;StartupMilliseconds=$startupMs;WindowClass=$windowClass.ToString();Responding=$process.Responding;PerMonitorV2=$perMonitorV2;Profile=$profile}
+            $sample = @{Scenario=$scenario;Passed=$true;StartupMilliseconds=$startupMs;WindowClass=$windowClass.ToString();Responding=$process.Responding;PerMonitorV2=$perMonitorV2;Profile=$profile;FileVersion=([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $hostDirectory 'Steamy.exe')).FileVersion)}
         } finally {
             # Only this process belongs to the test; no existing app or tracker is stopped.
             if (-not $process.HasExited) {
@@ -64,6 +92,21 @@ try {
             }
             $process.Dispose()
         }
+        if ($returning) {
+            $after = Get-Content -LiteralPath (Join-Path $profile 'settings.json') -Raw | ConvertFrom-Json
+            if ($after.ParallelDownloads -ne 3 -or $after.Appearance -ne 'Dark' -or $after.DiscordAutoConnect -ne $false -or $after.DownloadFolder -ne $preferences.DownloadFolder) { throw "$scenario changed saved preferences." }
+            $catalog = @(Get-Content -LiteralPath (Join-Path $profile 'installed-downloads.json') -Raw | ConvertFrom-Json)
+            if (@($catalog | Where-Object { $_.AppId -eq 10 -and $_.Name -eq 'Preserved library fixture' -and [IO.Path]::GetFullPath($_.Folder) -eq (Join-Path $profile 'preserved-game') }).Count -ne 1) { throw "$scenario did not preserve the library entry." }
+            foreach ($relative in $preservedHashes.Keys) {
+                if (!(Test-Path -LiteralPath (Join-Path $profile $relative)) -or (Get-FileHash -LiteralPath (Join-Path $profile $relative) -Algorithm SHA256).Hash -ne $preservedHashes[$relative]) { throw "$scenario did not preserve $relative." }
+            }
+            $clear = [Security.Cryptography.ProtectedData]::Unprotect([IO.File]::ReadAllBytes("$profile/credentials/$credentialName"), $null, [Security.Cryptography.DataProtectionScope]::CurrentUser)
+            if ([Text.Encoding]::UTF8.GetString($clear) -cne $syntheticSession) { throw "$scenario changed the encrypted credential." }
+            $sample.ProfilePreserved = $true
+            $sample.LibraryEntryPreserved = $true
+            $sample.CredentialBytesPreserved = $true
+        }
+        $results += $sample
     }
     $trackerProfile = Join-Path $reportRoot ('tracker-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $trackerProfile | Out-Null

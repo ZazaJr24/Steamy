@@ -15,18 +15,18 @@ public partial class BetterSteamToolsPage : Page
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<BetterSteamToolsViewModel>();
         UpdateSetupVisibility();
-        Loaded += (_, _) => { Model.RefreshDetection(); UpdateSetupVisibility(); Model.PropertyChanged += Model_PropertyChanged; };
+        Loaded += async (_, _) => { Model.PropertyChanged += Model_PropertyChanged; UpdateSetupVisibility(); await Model.RefreshDetectionAsync(); };
         Unloaded += (_, _) => Model.PropertyChanged -= Model_PropertyChanged;
     }
-    private void SteamRoot_LostFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs args) => Model.RefreshDetection();
+    private async void SteamRoot_LostFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs args) => await Model.RefreshDetectionAsync();
     private void UpdateSetupVisibility()
     {
         if (!string.IsNullOrWhiteSpace(Model.GameInput)) GameExpander.IsExpanded = true;
-        if (!Model.BackendInstalled) SteamSetupExpander.IsExpanded = true;
+        if (!Model.IsDetecting && !Model.BackendInstalled) SteamSetupExpander.IsExpanded = true;
     }
     private void Model_PropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (args.PropertyName is nameof(BetterSteamToolsViewModel.GameInput) or nameof(BetterSteamToolsViewModel.BackendInstalled))
+        if (args.PropertyName is nameof(BetterSteamToolsViewModel.GameInput) or nameof(BetterSteamToolsViewModel.BackendInstalled) or nameof(BetterSteamToolsViewModel.IsDetecting))
             UpdateSetupVisibility();
     }
     private static bool Supports(DragEventArgs args) => args.Data.GetDataPresent(DataFormats.FileDrop)

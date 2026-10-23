@@ -11,8 +11,9 @@ namespace Steamy.Services;
 public static class UiThemeService
 {
     private const string PalettePackBase = "pack://application:,,,/Steamy;component/Resources/Themes/";
-    private static readonly ResourceDictionary DarkPalette = new() { Source = new Uri(PalettePackBase + "Dark.xaml") };
-    private static readonly ResourceDictionary LightPalette = new() { Source = new Uri(PalettePackBase + "Light.xaml") };
+    private static ResourceDictionary? _darkPalette, _lightPalette;
+    private static ResourceDictionary DarkPalette => _darkPalette ??= new() { Source = new Uri(PalettePackBase + "Dark.xaml") };
+    private static ResourceDictionary LightPalette => _lightPalette ??= new() { Source = new Uri(PalettePackBase + "Light.xaml") };
 
     private static string _currentBackdrop = "None";
     private static bool _isLight;
@@ -20,8 +21,9 @@ public static class UiThemeService
     internal static event EventHandler? PaletteChanged;
     internal static bool IsHighContrastActive { get; private set; }
     internal static bool AmbientEnabled { get; private set; } = true;
-    internal static Color BackgroundColor { get; private set; } = Color.FromRgb(9, 9, 11);
-    internal static Brush BackgroundBrush { get; private set; } = new SolidColorBrush(Color.FromRgb(9, 9, 11));
+    internal static Color BackgroundColor { get; private set; } = Colors.Black;
+    internal static Brush BackgroundBrush { get; private set; } = InitialBackground();
+    private static Brush InitialBackground() { var brush = new SolidColorBrush(Colors.Black); brush.Freeze(); return brush; }
     internal static bool StaticBackgroundIsLight => Luminance(BackgroundColor) > .179;
 
     internal static double Luminance(Color color)
@@ -31,7 +33,7 @@ public static class UiThemeService
     }
     public static bool TryBackgroundColor(string? text, out Color color)
     {
-        color = Color.FromRgb(9, 9, 11);
+        color = Colors.Black;
         var hex = text?.Trim().TrimStart('#') ?? "";
         if (hex.Length == 3) hex = string.Concat(hex.SelectMany(c => new[] { c, c }));
         if (hex.Length != 6 || !uint.TryParse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var rgb)) return false;
@@ -131,8 +133,8 @@ public static class UiThemeService
         if (app is null) return;
 
         app.Resources["AppBackgroundBrush"] = _isLight
-            ? new SolidColorBrush(Color.FromArgb(0xEA, 0xF4, 0xF6, 0xFA))
-            : new SolidColorBrush(Color.FromArgb(0xEF, 0x09, 0x09, 0x0B));
+            ? new SolidColorBrush(Color.FromArgb(0xFA, 0xFF, 0xFF, 0xFF))
+            : new SolidColorBrush(Color.FromArgb(0xEF, 0x00, 0x00, 0x00));
         ApplyGlassPolicy();
     }
 
@@ -169,16 +171,41 @@ public static class UiThemeService
         var contrast = highContrast ?? SystemParameters.HighContrast;
         IsHighContrastActive = contrast;
         var opaque = MotionPreferences.ReduceEffects || contrast;
-        var drawing = new DrawingGroup();
-        foreach (var key in new[] { "AppBackgroundBrush", "AmbientBlueBrush", "AmbientVioletBrush", "AmbientTealBrush" })
-            drawing.Children.Add(new GeometryDrawing((Brush)palette[key], null, new RectangleGeometry(new Rect(0, 0, 1, 1))));
-        app.Resources["WorkspaceBackgroundBrush"] = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-        foreach (var key in new[] { "SidebarBackgroundBrush", "GlassSurfaceBrush", "DialogSurfaceBrush", "SurfaceBrush", "SurfaceElevatedBrush", "SurfaceSubtleBrush", "TextPrimaryBrush", "TextSecondaryBrush", "TextTertiaryBrush", "GlassBorderBrush", "BorderSubtleBrush", "AccentBrush", "DownloadAccentBrush", "TextOnAccentBrush", "NavigationViewItemBackgroundSelected", "NavigationViewItemBackgroundPointerOver" })
+        foreach (var key in new[] { "SocialBackdropBrush", "SocialChromeBrush", "SocialEdgeBrush", "SocialCanvasBrush", "SocialSidebarBrush", "SocialCardBrush", "SocialFieldBrush", "SocialBorderBrush", "SocialAccentBrush", "SocialAccentSoftBrush", "SocialActionBrush", "SocialOwnTextBrush", "SocialOwnBubbleBrush", "SocialNotificationBrush" })
+            app.Resources[key] = palette[key];
+        if (opaque)
+        {
+            foreach (var key in new[] { "SocialBackdropBrush", "SocialChromeBrush", "SocialCanvasBrush", "SocialSidebarBrush", "SocialNotificationBrush" })
+                app.Resources[key] = palette["SolidSurfaceBrush"];
+            app.Resources["SocialCardBrush"] = app.Resources["SocialFieldBrush"] = palette["SolidBackgroundFillColorSecondaryBrush"];
+        }
+        if (contrast)
+        {
+            foreach (var key in new[] { "SocialBackdropBrush", "SocialChromeBrush", "SocialCanvasBrush", "SocialSidebarBrush", "SocialCardBrush", "SocialFieldBrush", "SocialNotificationBrush" })
+                app.Resources[key] = SystemColors.WindowBrush;
+            app.Resources["SocialEdgeBrush"] = app.Resources["SocialBorderBrush"] = app.Resources["SocialAccentBrush"] = SystemColors.WindowTextBrush;
+            app.Resources["SocialOwnBubbleBrush"] = app.Resources["SocialActionBrush"] = SystemColors.HighlightBrush;
+            app.Resources["SocialOwnTextBrush"] = SystemColors.HighlightTextBrush;
+            app.Resources["SocialAccentSoftBrush"] = SystemColors.WindowBrush;
+        }
+        if (_isLight)
+        {
+            var drawing = new DrawingGroup();
+            foreach (var key in new[] { "AppBackgroundBrush", "AmbientBlueBrush", "AmbientVioletBrush", "AmbientTealBrush" })
+                drawing.Children.Add(new GeometryDrawing((Brush)palette[key], null, new RectangleGeometry(new Rect(0, 0, 1, 1))));
+            var workspace = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
+            workspace.Freeze();
+            app.Resources["WorkspaceBackgroundBrush"] = workspace;
+        }
+        else app.Resources["WorkspaceBackgroundBrush"] = Brushes.Black;
+        foreach (var key in new[] { "SidebarBackgroundBrush", "GlassSurfaceBrush", "DialogSurfaceBrush", "GameDialogSurfaceBrush", "SurfaceBrush", "SurfaceElevatedBrush", "SurfaceSubtleBrush", "TextPrimaryBrush", "TextSecondaryBrush", "TextTertiaryBrush", "GlassBorderBrush", "BorderSubtleBrush", "AccentBrush", "DownloadAccentBrush", "TextOnAccentBrush", "NavigationViewItemBackgroundSelected", "NavigationViewItemBackgroundPointerOver", "ControlFillColorDefaultBrush", "ControlFillColorSecondaryBrush", "ControlFillColorInputActiveBrush", "CardBackgroundFillColorDefaultBrush", "CardBackgroundFillColorSecondaryBrush" })
             app.Resources[key] = palette[key];
         app.Resources["PageBackgroundBrush"] = Brushes.Transparent;
         app.Resources["SidebarSelectedForegroundBrush"] = palette["TextPrimaryBrush"];
         app.Resources["LauncherBackgroundBrush"] = contrast ? SystemColors.WindowBrush : palette["LauncherBackgroundBrush"];
         app.Resources["LauncherForegroundBrush"] = contrast ? SystemColors.WindowTextBrush : palette["LauncherForegroundBrush"];
+        app.Resources["ShellChromeSheenBrush"] = contrast || opaque ? Brushes.Transparent : palette["ShellChromeSheenBrush"];
+        app.Resources["ShellChromeBorderBrush"] = contrast ? SystemColors.WindowTextBrush : palette["ShellChromeBorderBrush"];
         foreach (var key in new[] { "HeroForegroundBrush", "HeroSecondaryForegroundBrush", "HeroControlBackgroundBrush", "HeroControlBorderBrush", "HeroShadeOpacity" })
             app.Resources[key] = palette[key];
         app.Resources["GameDetailsBackgroundBrush"] = palette["GameDetailsBackgroundBrush"];
@@ -188,12 +215,15 @@ public static class UiThemeService
             app.Resources["SidebarBackgroundBrush"] = palette["SolidSurfaceBrush"];
             app.Resources["GlassSurfaceBrush"] = palette["SolidSurfaceBrush"];
             app.Resources["DialogSurfaceBrush"] = palette["SolidSurfaceBrush"];
+            app.Resources["GameDialogSurfaceBrush"] = palette["SolidSurfaceBrush"];
+            app.Resources["SurfaceSubtleBrush"] = palette["SolidBackgroundFillColorSecondaryBrush"];
+            foreach (var key in new[] { "ControlFillColorDefaultBrush", "ControlFillColorSecondaryBrush", "ControlFillColorInputActiveBrush", "CardBackgroundFillColorDefaultBrush", "CardBackgroundFillColorSecondaryBrush" }) app.Resources[key] = palette["SolidSurfaceBrush"];
             app.Resources["SurfaceBrush"] = palette["SolidSurfaceBrush"];
             app.Resources["SurfaceElevatedBrush"] = palette["SolidSurfaceBrush"];
         }
         if (contrast)
         {
-            foreach (var key in new[] { "WorkspaceBackgroundBrush", "SidebarBackgroundBrush", "GlassSurfaceBrush", "DialogSurfaceBrush", "SurfaceBrush", "SurfaceElevatedBrush", "SurfaceSubtleBrush" })
+            foreach (var key in new[] { "WorkspaceBackgroundBrush", "SidebarBackgroundBrush", "GlassSurfaceBrush", "DialogSurfaceBrush", "GameDialogSurfaceBrush", "SurfaceBrush", "SurfaceElevatedBrush", "SurfaceSubtleBrush", "ControlFillColorDefaultBrush", "ControlFillColorSecondaryBrush", "ControlFillColorInputActiveBrush", "CardBackgroundFillColorDefaultBrush", "CardBackgroundFillColorSecondaryBrush" })
                 app.Resources[key] = SystemColors.WindowBrush;
             foreach (var key in new[] { "TextPrimaryBrush", "TextSecondaryBrush", "TextTertiaryBrush", "GlassBorderBrush", "BorderSubtleBrush" })
                 app.Resources[key] = SystemColors.WindowTextBrush;
@@ -214,7 +244,7 @@ public static class UiThemeService
             app.Resources["GameDetailsBackgroundBrush"] = BackgroundBrush;
             app.Resources["GameDetailsGradientBrush"] = Brushes.Transparent;
         }
-        if (app.MainWindow is MainWindow mainWindow) mainWindow.RefreshCaptionAppearance();
+        if (app.MainWindow is MainWindow mainWindow) mainWindow.RefreshCaptionAppearance(paletteChanged: true);
         PaletteChanged?.Invoke(null, EventArgs.Empty);
     }
 

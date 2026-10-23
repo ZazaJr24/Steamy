@@ -29,6 +29,13 @@ public interface IArtworkService
     Task LoadAsync(Game game, CancellationToken cancellationToken = default);
     Task LoadHeadersAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default);
     Task LoadManyAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default);
+    Task PrefetchAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default) => LoadManyAsync(games, cancellationToken);
+    async Task LoadSpotlightCoverAsync(SpotlightGame metadata, Game destination, ImagePriority priority, CancellationToken cancellationToken = default)
+    {
+        var header = LoadSpotlightHeaderAsync(metadata, cancellationToken); var portrait = LoadSpotlightPortraitAsync(metadata, cancellationToken);
+        await Task.WhenAll(header, portrait).ConfigureAwait(false);
+        destination.HeaderImage = header.Result; destination.ArtworkImage = portrait.Result;
+    }
 }
 
 /// <summary>
@@ -40,7 +47,9 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
     private readonly HttpClient _httpClient;
     private readonly string _cacheDirectory;
     private readonly bool _ownsHttpClient;
-    private readonly ConcurrentDictionary<string, WeakReference<BitmapImage>> _decodedImages = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ImagePipeline _images;
+    private readonly bool _ownsImages;
+    private readonly AsyncLocal<ImagePriority> _priority = new();
     private static readonly Lazy<IReadOnlyDictionary<int, string>> BundledLogos = new(() =>
         SpotlightCatalogService.LoadBundled().Games.Where(game => SpotlightCatalogService.IsArtworkUrl(game.LogoUrl))
             .ToDictionary(game => game.AppId, game => game.LogoUrl));
@@ -56,6 +65,8 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
         }
         _cacheDirectory = cacheDirectory ?? Path.Combine(Steamy.Storage.AppDataPaths.Root,
             "artwork");
+        _ownsImages = httpClient is not null || cacheDirectory is not null;
+        _images = _ownsImages ? new ImagePipeline(_httpClient, _cacheDirectory) : ImagePipeline.Shared;
     }
 
     public async Task<BitmapImage?> LoadHeroAsync(int appId, CancellationToken cancellationToken = default)
@@ -191,13 +202,32 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
         }));
     }
 
+    public async Task PrefetchAsync(IEnumerable<Game> games, CancellationToken cancellationToken = default)
+    {
+        var previous = _priority.Value; _priority.Value = ImagePriority.Prefetch;
+        try { await LoadManyAsync(games.Take(24), cancellationToken).ConfigureAwait(false); }
+        finally { _priority.Value = previous; }
+    }
+    public async Task LoadSpotlightCoverAsync(SpotlightGame metadata, Game destination, ImagePriority priority, CancellationToken cancellationToken = default)
+    {
+        var previous = _priority.Value; _priority.Value = priority;
+        try
+        {
+            var header = PublishImageAsync(LoadSpotlightHeaderAsync(metadata, cancellationToken), image => destination.HeaderImage = image, cancellationToken);
+            var portrait = PublishImageAsync(LoadSpotlightPortraitAsync(metadata, cancellationToken), image => destination.ArtworkImage = image, cancellationToken);
+            await Task.WhenAll(header, portrait).ConfigureAwait(false);
+        }
+        finally { _priority.Value = previous; }
+    }
+
     public async Task LoadAsync(Game game, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(game);
         if (game.AppId <= 0)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            game.ArtworkImage ??= LocalGameArtwork.Read(game.LaunchExecutable);
+            if (game.ArtworkImage is null && !string.IsNullOrWhiteSpace(game.LaunchExecutable) && Uri.TryCreate(game.LaunchExecutable, UriKind.Absolute, out var local) && local.IsFile)
+                game.ArtworkImage = await _images.LoadAsync(new ImageRequest(local, 256, CachePolicy: ImageCachePolicy.MemoryOnly), cancellationToken).ConfigureAwait(false);
             game.HeaderImage ??= game.ArtworkImage;
             return;
         }
@@ -224,12 +254,14 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
                 $"https://cdn.akamai.steamstatic.com/steam/apps/{game.AppId}/header.jpg",
             };
 
-            var portraitTask = LoadFirstAvailableAsync(portraitUrls, portraitCachePath, cancellationToken);
-            var headerTask = LoadFirstAvailableAsync(headerUrls, headerCachePath, cancellationToken);
+            void PublishPortrait(BitmapImage image) { game.ArtworkImage = image; game.HeaderImage ??= image; }
+            void PublishHeader(BitmapImage image) { game.HeaderImage = image; game.ArtworkImage ??= image; }
+            var portraitTask = PublishImageAsync(LoadFirstAvailableAsync(portraitUrls, portraitCachePath, cancellationToken), PublishPortrait, cancellationToken);
+            var headerTask = PublishImageAsync(LoadFirstAvailableAsync(headerUrls, headerCachePath, cancellationToken), PublishHeader, cancellationToken);
 
-            await Task.WhenAll(portraitTask, headerTask);
-            var portraitImage = await portraitTask;
-            var headerImage = await headerTask;
+            await Task.WhenAll(portraitTask, headerTask).ConfigureAwait(false);
+            var portraitImage = portraitTask.Result;
+            var headerImage = headerTask.Result;
 
             // Store art filenames can be versioned (hash-prefixed) for newer games.
             // Steam's public store metadata supplies the current asset URLs when the
@@ -238,15 +270,17 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
             {
                 var storeAssets = await GetStoreAssetUrlsAsync(game.AppId, cancellationToken).ConfigureAwait(false);
                 var storePortrait = portraitImage is null && storeAssets.Portrait.Length > 0
-                    ? await LoadFirstAvailableAsync(new[] { storeAssets.Portrait }, portraitCachePath, cancellationToken).ConfigureAwait(false)
-                    : null;
+                    ? PublishImageAsync(LoadFirstAvailableAsync(new[] { storeAssets.Portrait }, portraitCachePath, cancellationToken), PublishPortrait, cancellationToken)
+                    : Task.FromResult<BitmapImage?>(null);
                 var storeHeader = headerImage is null && storeAssets.Header.Length > 0
-                    ? await LoadFirstAvailableAsync(new[] { storeAssets.Header }, headerCachePath, cancellationToken).ConfigureAwait(false)
-                    : null;
-                portraitImage ??= storePortrait;
-                headerImage ??= storeHeader;
+                    ? PublishImageAsync(LoadFirstAvailableAsync(new[] { storeAssets.Header }, headerCachePath, cancellationToken), PublishHeader, cancellationToken)
+                    : Task.FromResult<BitmapImage?>(null);
+                await Task.WhenAll(storePortrait, storeHeader).ConfigureAwait(false);
+                portraitImage ??= storePortrait.Result;
+                headerImage ??= storeHeader.Result;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             portraitImage ??= headerImage is null ? LocalGameArtwork.Read(game.LaunchExecutable) : null;
             game.ArtworkImage = portraitImage ?? headerImage;
             game.HeaderImage = headerImage ?? portraitImage;
@@ -263,6 +297,14 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
         {
             game.IsArtworkLoading = false;
         }
+    }
+
+    internal static async Task<BitmapImage?> PublishImageAsync(Task<BitmapImage?> request, Action<BitmapImage> publish, CancellationToken token)
+    {
+        var image = await request.ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();
+        if (image is not null) publish(image);
+        return image;
     }
 
     private async Task<(string Portrait, string Header, string Hero)> GetStoreAssetUrlsAsync(int appId, CancellationToken cancellationToken)
@@ -319,110 +361,24 @@ public sealed class SteamArtworkService : IArtworkService, IDisposable
 
     private async Task<BitmapImage?> LoadFirstAvailableAsync(string[] urls, string cachePath, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        if (_decodedImages.TryGetValue(cachePath, out var reference) && reference.TryGetTarget(out var retained))
-            return retained;
-        if (File.Exists(cachePath))
-        {
-            try
-            {
-                var cached = await File.ReadAllBytesAsync(cachePath, cancellationToken);
-                var cachedImage = Decode(cached);
-                if (cachedImage is not null) return Remember(cachePath, cachedImage);
-            }
-            catch (OperationCanceledException) { throw; }
-            catch { /* stale cache, re-fetch */ }
-        }
-
+        var name = Path.GetFileName(cachePath);
+        var width = name.Contains("hero", StringComparison.OrdinalIgnoreCase) ? 2560
+            : name.Contains("logo", StringComparison.OrdinalIgnoreCase) ? 900
+            : name.Contains("header", StringComparison.OrdinalIgnoreCase) ? 600 : 360;
+        if (urls.Length == 0)
+            return await _images.LoadAsync(new ImageRequest(new Uri(Path.GetFullPath(cachePath)), width, Priority: _priority.Value, CachePath: cachePath), cancellationToken).ConfigureAwait(false);
         foreach (var url in urls)
         {
-            var image = await FetchAndCacheAsync(url, cachePath, cancellationToken);
-            if (image is not null) return Remember(cachePath, image);
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) continue;
+            var image = await _images.LoadAsync(new ImageRequest(uri, width, Priority: _priority.Value, CachePath: cachePath), cancellationToken).ConfigureAwait(false);
+            if (image is not null) return image;
         }
         return null;
     }
 
-    private BitmapImage Remember(string path, BitmapImage image)
-    {
-        // Frozen bitmaps can be shared across pages; weak references release unused art.
-        if (_decodedImages.Count >= 1024)
-            foreach (var entry in _decodedImages)
-                if (!entry.Value.TryGetTarget(out _)) _decodedImages.TryRemove(entry.Key, out _);
-        if (_decodedImages.Count < 1024) _decodedImages[path] = new(image);
-        return image;
-    }
-
-    private async Task<BitmapImage?> FetchAndCacheAsync(string url, string cachePath, CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            if (!response.IsSuccessStatusCode) return null;
-
-            const int maxImageBytes = 8 * 1024 * 1024;
-            if (response.Content.Headers.ContentLength > maxImageBytes) return null;
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var memory = new MemoryStream();
-            var buffer = new byte[8192];
-            int count;
-            while ((count = await stream.ReadAsync(buffer, cancellationToken)) > 0)
-            {
-                if (memory.Length + count > maxImageBytes) return null;
-                memory.Write(buffer, 0, count);
-            }
-            var bytes = memory.ToArray();
-            var image = Decode(bytes);
-            if (image is null) return null;
-
-            try
-            {
-                Directory.CreateDirectory(_cacheDirectory);
-                await File.WriteAllBytesAsync(cachePath, bytes, cancellationToken);
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            { /* A valid image remains usable when the optional disk cache is unavailable. */ }
-            return image;
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { return null; }
-        catch (OperationCanceledException) { throw; }
-        catch { return null; }
-    }
-
-    private static BitmapImage? Decode(byte[] bytes)
-    {
-        if (bytes.Length == 0) return null;
-        // Steam returns these generic gray JPEGs with HTTP 200 for obsolete asset URLs.
-        // Treat both downloaded and already-cached placeholders as missing artwork so
-        // the current hashed URLs from StoreBrowse can replace them. Exact fingerprints
-        // deliberately preserve legitimate minimal or monochrome game artwork.
-        if (bytes.Length <= 8192 && Convert.ToHexString(SHA256.HashData(bytes)) is
-            "574128283765E00DD4EEF95EFAA40F54AA60FDA25AD01A56B265A8B1D0C655CD" or
-            "9EA238901BE13C138C061365CC705840BB757FD076A66EC3731C1948BB2B6A44" or
-            "3514810F0A5A3F0D55D756924B16F33D5AAFAFC8996DBC501631ED534798F3A8" or
-            "CF39EAA2E57FE66C0B7B92F371F3E945BE5631CB96D9002F4DED1417E13843B8") return null;
-
-        try
-        {
-            using var stream = new MemoryStream(bytes, writable: false);
-            var nativeWidth = BitmapFrame.Create(stream, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None).PixelWidth;
-            stream.Position = 0;
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = Math.Min(2048, nativeWidth);
-            image.StreamSource = stream;
-            image.EndInit();
-            image.Freeze();
-            return image;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
     public void Dispose()
     {
+        if (_ownsImages) _images.Dispose();
         if (_ownsHttpClient) _httpClient.Dispose();
     }
 }

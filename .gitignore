@@ -5,6 +5,7 @@ publish/
 **/artifacts/
 .release-work/
 .cache/
+tools/DiscordSocialSdk/runtime/
 
 # IDE and local tooling
 .vs/
@@ -29,3 +30,19 @@ rename-to-steamy.bat
 # User-specific runtime data
 src/Steamy/Data/*.db
 src/Steamy/Data/*.db-*
+tools/ControllerHost/runtime/
+
+# Server secrets and SSH credentials never belong in source distributions.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_ed25519*
+id_rsa*
+**/secrets/
+
+# Downloaded optional-tool working cache.
+src/Steamy/Tools/Goldberg/current/

@@ -1,16 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Steamy</RootNamespace>
     <AssemblyName>Steamy</AssemblyName>
-    <Version>0.7.1.2</Version>
-    <FileVersion>0.7.1.2</FileVersion>
-    <AssemblyVersion>0.7.1.2</AssemblyVersion>
+    <Version>0.8.0</Version>
+    <FileVersion>0.8.0.0</FileVersion>
+    <AssemblyVersion>0.8.0.0</AssemblyVersion>
     <Product>Steamy</Product>
     <Company>ZazaJr24</Company>
     <Authors>ZazaJr24</Authors>
@@ -22,6 +22,8 @@
     <Deterministic>true</Deterministic>
     <Platforms>AnyCPU</Platforms>
     <LangVersion>latest</LangVersion>
+    <EnableDiscordIntegration Condition="'$(EnableDiscordIntegration)' == ''">false</EnableDiscordIntegration>
+    <DiscordApplicationId Condition="'$(DiscordApplicationId)' == ''">1559657404994429101</DiscordApplicationId>
   </PropertyGroup>
   <ItemGroup>
     <None Update="tool-preparation-capabilities.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
@@ -30,8 +32,23 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Steamy.RelayClient\Steamy.RelayClient.csproj" />
     <InternalsVisibleTo Include="Steamy.UiTests" />
+    <AssemblyMetadata Include="DiscordApplicationId" Value="$(DiscordApplicationId)" />
+    <AssemblyMetadata Include="DiscordIntegrationEnabled" Value="$(EnableDiscordIntegration)" />
     <ProjectReference Include="..\PlayTimeTracker\PlayTimeTracker.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(EnableDiscordIntegration)' == 'true' and Exists('$(MSBuildProjectDirectory)\..\..\tools\DiscordSocialSdk\runtime\Discord.Sdk.dll')">
+    <Content Include="..\..\tools\DiscordSocialSdk\runtime\**\*" Link="Tools\Discord\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\..\..\tools\ControllerHost\runtime\Steamy.ControllerHost.exe')">
+    <Content Include="..\..\tools\ControllerHost\runtime\**\*" Link="Tools\ControllerHost\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\licenses\**\*" Link="licenses\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="CopyPlayTimeTracker" AfterTargets="Build;Publish">
@@ -47,10 +64,10 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="XamlAnimatedGif" Version="2.3.2" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.20" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.20" />
     <PackageReference Include="SharpCompress" Version="0.50.4" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.20" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
     <PackageReference Include="WPF-UI" Version="4.2.0" />
   </ItemGroup>
@@ -65,6 +82,8 @@
     <Resource Include="Resources\steamless.png" />
     <Resource Include="Resources\Brand\steamy-256.png" />
     <Resource Include="Resources\Brand\steamy.ico" />
+    <Resource Include="Resources\GifProviders\*.png" />
+    <None Update="Resources\GifProviders\SOURCE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Resource Include="Resources\LiquidGlass\GlassyEffect.ps" />
     <Resource Include="Resources\LiquidGlass\ClearGlass.ps" />
     <None Update="Resources\LiquidGlass\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

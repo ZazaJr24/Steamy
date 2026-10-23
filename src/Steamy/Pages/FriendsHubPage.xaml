@@ -1,0 +1,82 @@
+<Page x:Class="Steamy.Pages.FriendsHubPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:controls="clr-namespace:Steamy.Controls" xmlns:system="clr-namespace:System;assembly=System.Runtime" Background="Transparent" FontFamily="{DynamicResource SteamyFontFamily}" UseLayoutRounding="True" SnapsToDevicePixels="True">
+ <Page.Resources><ResourceDictionary>
+  <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Steamy;component/Resources/SocialStyles.xaml"/></ResourceDictionary.MergedDictionaries>
+  <system:Int32 x:Key="HubPeopleColumns">2</system:Int32>
+  <Style x:Key="HubSurface" TargetType="Border">
+   <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}"/>
+   <Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="16"/>
+  </Style>
+  <Style x:Key="HubRow" TargetType="Button">
+   <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+   <Setter Property="Padding" Value="12"/><Setter Property="MinHeight" Value="62"/><Setter Property="Cursor" Value="Hand"/>
+   <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+    <Border x:Name="Face" Background="Transparent" CornerRadius="10" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/></Border>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Face" Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Face" Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
+ </ResourceDictionary></Page.Resources>
+ <Grid><controls:ShellBackdropView IsPageBackdrop="True" BaseBrush="{DynamicResource WorkspaceBackgroundBrush}"/>
+  <ScrollViewer Style="{StaticResource PageScrollHostStyle}">
+   <StackPanel x:Name="HubContent" MaxWidth="960" Margin="32,26,32,36">
+    <Grid Margin="4,0,4,24"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+     <StackPanel><TextBlock Text="Friends" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+      <TextBlock Text="{Binding Social.FriendSummary}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,6,0,0"/>
+     </StackPanel>
+     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+      <ui:Button Content="Party" Icon="{ui:SymbolIcon People24}" Click="Party_Click" Style="{StaticResource SocialQuietButton}" Visibility="{Binding Social.ConnectedVisibility}" Margin="0,0,8,0"/>
+      <ui:Button Content="Messages" Icon="{ui:SymbolIcon Chat24}" Click="Messages_Click" Style="{StaticResource SocialQuietButton}"/>
+     </StackPanel>
+    </Grid>
+    <Border x:Name="HubPeopleSurface" Style="{StaticResource HubSurface}" Padding="8" Visibility="{Binding Social.ConnectedVisibility}">
+     <StackPanel>
+      <Grid Margin="12,8,8,8"><TextBlock Text="Your friends" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+       <ui:Button Icon="{ui:SymbolIcon ChevronRight24}" Click="Friends_Click" Style="{StaticResource SocialQuietButton}" HorizontalAlignment="Right" ToolTip="All friends" AutomationProperties.Name="All friends"/>
+      </Grid>
+      <ItemsControl x:Name="HubPeople" ItemsSource="{Binding People}">
+       <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="{DynamicResource HubPeopleColumns}"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+       <ItemsControl.ItemTemplate><DataTemplate>
+        <Button Tag="{Binding}" Click="Person_Click" Style="{StaticResource HubRow}" AutomationProperties.Name="{Binding DisplayName}">
+         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="48"/><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/></Grid.ColumnDefinitions>
+          <Grid Width="36" Height="36" HorizontalAlignment="Left">
+           <Border CornerRadius="18" Background="{DynamicResource SocialAccentSoftBrush}" controls:RoundedClip.Radius="18"><Grid>
+            <TextBlock Text="{Binding Initial}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Image controls:AsyncArtwork.Private="True" controls:AsyncArtwork.Width="80" controls:AsyncArtwork.Height="80" controls:AsyncArtwork.Url="{Binding AvatarUrl}" Stretch="UniformToFill"/>
+           </Grid></Border>
+           <Ellipse Width="9" Height="9" Stroke="{DynamicResource WorkspaceBackgroundBrush}" StrokeThickness="2" HorizontalAlignment="Right" VerticalAlignment="Bottom"><Ellipse.Style><Style TargetType="Ellipse"><Setter Property="Fill" Value="{DynamicResource TextTertiaryBrush}"/><Style.Triggers><DataTrigger Binding="{Binding IsOnline}" Value="True"><Setter Property="Fill" Value="#58CB89"/></DataTrigger></Style.Triggers></Style></Ellipse.Style></Ellipse>
+          </Grid>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+           <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+           <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
+          </StackPanel>
+          <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight24" FontSize="14" Foreground="{DynamicResource TextTertiaryBrush}"/>
+         </Grid>
+        </Button>
+       </DataTemplate></ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock x:Name="PeopleEmpty" Text="Your friends will appear here." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="12,16,12,20"/>
+     </StackPanel>
+    </Border>
+    <Border Style="{StaticResource HubSurface}" Padding="24" Visibility="{Binding Social.DisconnectedVisibility}"><StackPanel>
+     <TextBlock Text="Connect with your friends" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+     <TextBlock Text="Bring your Discord conversations into Steamy." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,8,0,20" TextWrapping="Wrap"/>
+     <ui:Button Content="Connect Discord" Click="Friends_Click" Style="{StaticResource SocialPrimaryButton}" HorizontalAlignment="Left"/>
+    </StackPanel></Border>
+    <Expander x:Name="TogetherDisclosure" Header="Play together" Expanded="Games_Expanded" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,22,4,0" FontSize="13"><StackPanel Margin="0,12,0,0">
+     <ItemsControl x:Name="TogetherGames" ItemsSource="{Binding Games}"><ItemsControl.ItemTemplate><DataTemplate>
+      <Button Tag="{Binding}" Click="Game_Click" Style="{StaticResource HubRow}" AutomationProperties.Name="{Binding Name}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/></Grid.ColumnDefinitions>
+       <Border Width="62" Height="38" CornerRadius="6" controls:RoundedClip.Radius="6" Background="{Binding CoverColor}" HorizontalAlignment="Left"><Image Source="{Binding Image}" Stretch="UniformToFill"/></Border>
+       <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+       <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight24" FontSize="14" Foreground="{DynamicResource TextTertiaryBrush}"/>
+      </Grid></Button>
+     </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+     <Border x:Name="EmptyLibrary" Padding="12" Visibility="Collapsed"><TextBlock Text="Add a game to your library to plan a session." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/></Border>
+     <ui:Button Content="Browse games" Click="Browse_Click" Style="{StaticResource SocialQuietButton}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+    </StackPanel></Expander>
+   </StackPanel>
+  </ScrollViewer>
+ </Grid>
+</Page>

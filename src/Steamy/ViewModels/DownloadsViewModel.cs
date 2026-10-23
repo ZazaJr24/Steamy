@@ -93,18 +93,32 @@ public sealed class DownloadsViewModel : ViewModelBase
         if (!_pageVisible || _artwork is null || HeroJob is not { } job) return;
         _artworkLoad = new CancellationTokenSource();
         var token = _artworkLoad.Token;
-        try
+        var game = Store.Games.FirstOrDefault(item => item.AppId == job.AppId) ?? new Game { AppId = job.AppId, Name = job.GameName };
+        bool Current() => !token.IsCancellationRequested && ReferenceEquals(HeroJob, job) && _pageVisible;
+        await Task.WhenAll(LoadHeroAsync(), LoadLogoAsync());
+
+        async Task LoadHeroAsync()
         {
-            var game = Store.Games.FirstOrDefault(item => item.AppId == job.AppId) ?? new Game { AppId = job.AppId, Name = job.GameName };
-            var hero = _artwork.LoadHeroAsync(job.AppId, token);
-            var logo = _artwork.LoadGameLogoAsync(game, token);
-            await Task.WhenAll(hero, logo);
-            if (token.IsCancellationRequested || !ReferenceEquals(HeroJob, job) || !_pageVisible) return;
-            HeroArtwork = hero.Result;
-            HeroLogo = Controls.GameLogoLayout.Trim(logo.Result);
+            try
+            {
+                var hero = await _artwork.LoadHeroAsync(job.AppId, token);
+                if (Current()) HeroArtwork = hero;
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception exception) when (exception is IOException or HttpRequestException) { }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception exception) when (exception is IOException or HttpRequestException) { }
+        async Task LoadLogoAsync()
+        {
+            try
+            {
+                var logo = await _artwork.LoadGameLogoAsync(game, token);
+                if (!Current()) return;
+                var trimmed = await Controls.GameLogoLayout.TrimAsync(logo, token);
+                if (Current()) HeroLogo = trimmed;
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception exception) when (exception is IOException or HttpRequestException) { }
+        }
     }
 
     // Labels refresh twice a second without rebuilding the queue rows.

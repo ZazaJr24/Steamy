@@ -54,17 +54,21 @@ public sealed class DownloadQueueStore : IDownloadQueueStore, IDownloadQueueOrde
             return;
         }
 
-        var restored = 0;
+        cancellationToken.ThrowIfCancellationRequested();
+        var known = jobs.Select(job => job.Id).ToHashSet();
+        var additions = new List<DownloadJob>();
         foreach (var row in rows)
         {
-            if (jobs.Any(job => job.Id == row.Id)) continue;
-            jobs.Add(ToJob(row, autoResume));
-            restored++;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (known.Add(row.Id)) additions.Add(ToJob(row, autoResume));
         }
-
-        if (restored > 0)
+        if (additions.Count > 0)
         {
-            _logging.Add(LogLevel.Info, "DownloadManager", $"{restored} stored job(s) restored; interrupted jobs keep their target folder.");
+            // Restoring history is one queue update. Existing live jobs retain
+            // their identity, progress and active operations; only missing IDs append.
+            if (jobs is RangeObservableCollection<DownloadJob> range) range.ReplaceWith(jobs.Concat(additions));
+            else foreach (var job in additions) jobs.Add(job);
+            _logging.Add(LogLevel.Info, "DownloadManager", $"{additions.Count} stored job(s) restored; interrupted jobs keep their target folder.");
         }
     }
 

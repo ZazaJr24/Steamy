@@ -16,7 +16,6 @@ namespace Steamy.Pages;
 public partial class SettingsPage : Page
 {
     private string _selectedCategory = "general";
-    private readonly Dictionary<FrameworkElement, string> _sectionSearchText = new();
     private readonly System.Windows.Threading.DispatcherTimer _searchTimer = new(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(180) };
     private AppSettings? _motionSettings;
 
@@ -24,8 +23,11 @@ public partial class SettingsPage : Page
     {
         _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); FilterSections(); };
         Resources.Add("StringVis", new SettingsStringToVisibilityConverter());
+        Resources.MergedDictionaries.Add(SettingsPageResources.Current);
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<SettingsViewModel>();
+        SettingsSearch.Text = ViewModel.NavigationSearchText;
+        CategorySelector.SelectedIndex = Math.Clamp(ViewModel.NavigationCategoryIndex, 0, CategorySelector.Items.Count - 1);
 
         // After a save or a delete the typed secrets are gone from memory; the boxes have to match,
         // otherwise they would keep showing characters that no longer mean anything.
@@ -40,6 +42,8 @@ public partial class SettingsPage : Page
         };
         Unloaded += (_, _) =>
         {
+            ViewModel.NavigationSearchText = SettingsSearch.Text;
+            ViewModel.NavigationCategoryIndex = CategorySelector.SelectedIndex;
             _searchTimer.Stop();
             ViewModel.CredentialInputsCleared -= OnCredentialInputsCleared;
             ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
@@ -62,6 +66,9 @@ public partial class SettingsPage : Page
         dashboard.ShowAllGamesCommand.Execute(null);
         dashboard.ScanPcCommand.Execute(null);
     }
+
+    private void OpenFriends_Click(object sender, RoutedEventArgs args) =>
+        App.Services.GetRequiredService<INavigationService>().Navigate<FriendsPage>();
 
     private void ObserveMotionSettings()
     {
@@ -151,15 +158,14 @@ public partial class SettingsPage : Page
         var changed = false;
         foreach (FrameworkElement section in SectionsPanel.Children)
         {
-            if (!_sectionSearchText.TryGetValue(section, out var searchable))
-            {
-                searchable = string.Join(" ", StaticLabels(section));
-                _sectionSearchText[section] = searchable;
-            }
+            if (!DiscordIntegration.Enabled && section is DeferredSettingsSection { IsDiscordSection: true })
+            { section.Visibility = Visibility.Collapsed; continue; }
+            var searchable = section is DeferredSettingsSection deferred ? deferred.SearchLabels : string.Join(" ", StaticLabels(section));
             var visible = words.Length > 0
                 ? words.All(word => searchable.Contains(word, StringComparison.OrdinalIgnoreCase))
                 : _selectedCategory == "all" || string.Equals(section.Tag as string, _selectedCategory, StringComparison.Ordinal);
             var next = visible ? Visibility.Visible : Visibility.Collapsed;
+            if (visible && section is DeferredSettingsSection matching) matching.EnsureContent(this);
             changed |= section.Visibility != next;
             if (section.Visibility != next) section.Visibility = next;
             if (visible) count++;
@@ -184,12 +190,8 @@ public partial class SettingsPage : Page
 
     private void OnCredentialInputsCleared(object? sender, EventArgs e)
     {
-        SteamApiKeyBox.Clear();
-        RyuuAuthKeyBox.Clear();
-        HubcapApiKeyBox.Clear();
-        DepotBoxApiKeyBox.Clear();
-        ManifestHubApiKeyBox.Clear();
-        MirrorTokenBox.Clear();
+        foreach (var name in new[] { "SteamApiKeyBox", "RyuuAuthKeyBox", "HubcapApiKeyBox", "DepotBoxApiKeyBox", "ManifestHubApiKeyBox", "MirrorTokenBox" })
+            if (FindName(name) is PasswordBox box) box.Clear();
         if (IsLoaded && App.Services.GetService<UiTranslationService>() is { } translations)
             _ = translations.ApplyToAsync((DependencyObject?)Window.GetWindow(this) ?? this, ViewModel.Settings.Language);
     }

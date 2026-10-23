@@ -39,6 +39,14 @@ public sealed partial class PageSmokeTests
             Assert.InRange(viewer.VerticalOffset, 353, 355);
             PumpDispatcher(TimeSpan.FromMilliseconds(240));
             Assert.InRange(viewer.VerticalOffset, 353, 355);
+            // Section links/BringIntoView own the new offset immediately. A wheel
+            // tween must not pull the page back over that explicit navigation.
+            animate.Invoke(state, new object[] { 700d });
+            PumpDispatcher(TimeSpan.FromMilliseconds(35));
+            viewer.ScrollToVerticalOffset(1100); window.UpdateLayout();
+            PumpDispatcher(TimeSpan.FromMilliseconds(260));
+            Assert.InRange(viewer.VerticalOffset, 1099, 1101);
+            viewer.ScrollToVerticalOffset(354); window.UpdateLayout();
             animate.Invoke(state, new object[] { 408d });
             PumpUntil(() => Math.Abs(viewer.VerticalOffset - 408) < 1);
             Assert.InRange(viewer.VerticalOffset, 407, 409);
@@ -59,11 +67,11 @@ public sealed partial class PageSmokeTests
             finally { MotionPreferences.Configure(reduceEffects); }
             viewer.ScrollToVerticalOffset(300);
             PumpDispatcher(TimeSpan.FromMilliseconds(40));
-            PumpUntil(() => Keyboard.Modifiers == ModifierKeys.None && Math.Abs(viewer.VerticalOffset - 300) < 1);
+            PumpUntil(() => Math.Abs(viewer.VerticalOffset - 300) < 1);
             void Wheel(ScrollViewer target, int delta) => state.GetType()
-                .GetMethod("OnWheel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .GetMethod("OnWheelCore", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
                 .Invoke(state, new object[] { target, new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, delta)
-                    { RoutedEvent = UIElement.PreviewMouseWheelEvent } });
+                    { RoutedEvent = UIElement.PreviewMouseWheelEvent }, ModifierKeys.None });
             Wheel(viewer, -120); Wheel(viewer, -120); Wheel(viewer, -120);
             var reversal = viewer.VerticalOffset;
             Wheel(viewer, 120);
@@ -97,7 +105,7 @@ public sealed partial class PageSmokeTests
             var dashboard = Descendants<DashboardPage>(window).Single();
             dashboard.IsHitTestVisible = false; // Only the explicit synthetic wheel/command input below owns this fixture.
             var homeScroll = (ScrollViewer)dashboard.FindName("DashboardScroll");
-            Assert.False(SmoothScroll.GetEnabled(homeScroll));
+            Assert.True(SmoothScroll.GetEnabled(homeScroll));
             Assert.Same(homeScroll, Assert.Single(Descendants<ScrollViewer>(dashboard), viewer => viewer.IsVisible && viewer.ScrollableHeight > 0
                 && !ReferenceEquals(viewer, dashboard.FindName("SpotlightPreviewScroll"))));
             Assert.NotNull(homeScroll.Template.FindName("PART_ScrollContentPresenter", homeScroll));
@@ -142,7 +150,7 @@ public sealed partial class PageSmokeTests
             var bar = (ScrollBar)homeScroll.Template.FindName("PART_VerticalScrollBar", homeScroll);
             var presenter = (ScrollContentPresenter)homeScroll.Template.FindName("PART_ScrollContentPresenter", homeScroll);
             Assert.InRange(presenter.ActualWidth, homeScroll.ActualWidth - 1, homeScroll.ActualWidth + 1);
-            Assert.True(presenter.ClipToBounds);
+            Assert.True(Assert.IsType<Grid>(System.Windows.Media.VisualTreeHelper.GetParent(presenter)).ClipToBounds);
             Assert.InRange(bar.TranslatePoint(new Point(), window).Y, 58, window.ActualHeight);
             Assert.InRange(bar.TranslatePoint(new Point(bar.ActualWidth, 0), homeScroll).X, homeScroll.ActualWidth - 5, homeScroll.ActualWidth - 3);
             var viewportWidth = presenter.ActualWidth;
@@ -180,17 +188,17 @@ public sealed partial class PageSmokeTests
                 $"Several game rows must remain inside the Gallery scrolling viewport. extent={gallery.ExtentHeight}, viewport={gallery.ViewportHeight}, height={gallery.ActualHeight}, window={window.ActualWidth}x{window.ActualHeight}, cards={Descendants<Button>(library).Count(button => button.Tag is SteamCatalogItem)}, mode={model.SelectedMode}, genre={model.SelectedGenre}.");
             var card = Descendants<Button>(library).First(button => button.Tag is SteamCatalogItem);
             Assert.True(gallery.CanContentScroll);
-            Assert.False(SmoothScroll.GetEnabled(gallery));
+            Assert.True(SmoothScroll.GetEnabled(gallery));
             var panel = Descendants<VirtualizingGamePanel>(library).Single();
             Assert.True(panel.RealizedCount < model.PagedCatalogItems.Count, "Offscreen game covers must not all create controls.");
             PumpUntil(() => Keyboard.Modifiers == ModifierKeys.None && !ScrollNavigation.IsNavigationKeyDown(), TimeSpan.FromSeconds(15));
             var beforeWheel = gallery.VerticalOffset;
-            card.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, -120) { RoutedEvent = UIElement.MouseWheelEvent });
-            window.UpdateLayout();
+            card.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, -120) { RoutedEvent = UIElement.PreviewMouseWheelEvent });
+            PumpDispatcher(TimeSpan.FromMilliseconds(80)); window.UpdateLayout();
             Assert.True(gallery.VerticalOffset > beforeWheel, "Native wheel input must move the library immediately without a retained tween.");
             var movedOffset = gallery.VerticalOffset;
-            card.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, 120) { RoutedEvent = UIElement.MouseWheelEvent });
-            window.UpdateLayout();
+            card.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, 120) { RoutedEvent = UIElement.PreviewMouseWheelEvent });
+            PumpDispatcher(TimeSpan.FromMilliseconds(80)); window.UpdateLayout();
             Assert.True(gallery.VerticalOffset < movedOffset, "Reversing the wheel must take effect immediately.");
             gallery.ScrollToBottom();
             window.UpdateLayout();

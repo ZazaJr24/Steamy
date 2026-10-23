@@ -1,0 +1,927 @@
+<Page x:Class="Steamy.Pages.ControllersPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:Steamy.Controls"
+      Background="Transparent"
+      FontFamily="{DynamicResource SteamyFontFamily}" ScrollViewer.CanContentScroll="False"
+      UseLayoutRounding="True"
+      SnapsToDevicePixels="True"
+      TextOptions.TextFormattingMode="Display">
+
+  <Page.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Steamy;component/Resources/SocialStyles.xaml" />
+        <ResourceDictionary Source="/Steamy;component/Resources/ControllerStyles.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+
+      <Style x:Key="ControllerCard" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Padding" Value="28" />
+        <Setter Property="Margin" Value="0,0,0,18" />
+      </Style>
+
+      <Style x:Key="ControllerCombo" TargetType="ComboBox" BasedOn="{StaticResource SocialCombo}">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      </Style>
+
+      <Style x:Key="ControllerPrimary" TargetType="ui:Button" BasedOn="{StaticResource SocialPrimaryButton}">
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}" />
+        <Setter Property="Padding" Value="20,10" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+      </Style>
+
+      <Style x:Key="ControllerStep" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="RadioButton">
+              <Border x:Name="Face" Background="Transparent" CornerRadius="16" Padding="16,12">
+                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                  <Setter TargetName="Face" Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                  <Setter TargetName="Face" Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+                  <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                  <Setter Property="FontWeight" Value="SemiBold" />
+                </Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+
+      <!-- Button Badge Base Style -->
+      <Style x:Key="ButtonBadgeBase" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="Margin" Value="3" />
+        <Setter Property="MinWidth" Value="48" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+      </Style>
+
+    </ResourceDictionary>
+  </Page.Resources>
+
+  <ScrollViewer x:Name="ControllerScroll" Style="{StaticResource PageScrollHostStyle}" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel MaxWidth="920" Margin="40,32,40,40">
+
+      <!-- Page Header -->
+      <TextBlock Text="Controllers" Style="{StaticResource PageTitleStyle}" />
+      <TextBlock Text="Connect your gamepad, test sticks and triggers in real-time, and customize your layouts."
+                 Style="{StaticResource PageSubtitleStyle}" Margin="0,8,0,24" />
+
+      <!-- Step Navigation Bar -->
+      <Border Background="{DynamicResource GlassSurfaceBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}"
+              BorderThickness="1" CornerRadius="20" Padding="4" Margin="0,0,0,24">
+        <UniformGrid Columns="3">
+          <RadioButton x:Name="ConnectStep" Content="1  Connect" GroupName="ControllerSteps" Tag="0"
+                       IsChecked="True" Style="{StaticResource ControllerStep}" Checked="Step_Checked" />
+          <RadioButton x:Name="TestStep" Content="2  Test" GroupName="ControllerSteps" Tag="1"
+                       Style="{StaticResource ControllerStep}" Checked="Step_Checked" />
+          <RadioButton x:Name="CustomizeStep" Content="3  Customize" GroupName="ControllerSteps" Tag="2"
+                       Style="{StaticResource ControllerStep}" Checked="Step_Checked" />
+        </UniformGrid>
+      </Border>
+
+      <!-- ========================================== -->
+      <!-- STEP 1: CONNECT                            -->
+      <!-- ========================================== -->
+      <StackPanel x:Name="ConnectPanel">
+
+        <!-- Connected Device Hero Card -->
+        <Border Style="{StaticResource ControllerCard}">
+          <Grid>
+            <!-- When a controller is connected -->
+            <StackPanel Visibility="{Binding DeviceConnectedVisibility}">
+              <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Border Width="56" Height="56" CornerRadius="28" Background="{DynamicResource AccentSoftBrush}"
+                        BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,18,0">
+                  <ui:SymbolIcon Symbol="Games24" FontSize="28" Foreground="{DynamicResource AccentBrush}"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                  <WrapPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding DeviceDisplayName}" FontSize="20" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,12,0" />
+                    <Border Background="{DynamicResource SurfaceElevatedBrush}" CornerRadius="8"
+                            BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+                            Padding="8,2" VerticalAlignment="Center">
+                      <TextBlock Text="Active" FontSize="11" FontWeight="SemiBold" Foreground="#10B981" />
+                    </Border>
+                  </WrapPanel>
+                  <TextBlock Text="{Binding ConnectionBadge}" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                </StackPanel>
+
+                <!-- Battery & Charging Badge -->
+                <Border Grid.Column="2" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="12"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+                        Padding="14,8" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="BatteryCharge24" FontSize="18" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <StackPanel>
+                      <TextBlock Text="Battery" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" />
+                      <TextBlock Text="{Binding BatteryText}" FontSize="13" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </Grid>
+
+              <Separator Background="{DynamicResource BorderSubtleBrush}" Height="1" Margin="0,4,0,16" />
+
+              <!-- Device Selector Dropdown -->
+              <TextBlock Text="Select active controller" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,8" />
+              <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
+                        DisplayMemberPath="Name" Style="{StaticResource ControllerCombo}"
+                        AutomationProperties.Name="Controller to inspect" />
+              <TextBlock Text="{Binding DeviceInfo}" Foreground="{DynamicResource TextTertiaryBrush}"
+                         FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0" />
+            </StackPanel>
+
+            <!-- When NO controller is connected -->
+            <StackPanel Visibility="{Binding NoDeviceVisibility}" HorizontalAlignment="Center"
+                        Margin="0,16,0,16" MaxWidth="520">
+              <Border Width="64" Height="64" CornerRadius="32" Background="{DynamicResource SurfaceSubtleBrush}"
+                      BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1.5"
+                      HorizontalAlignment="Center" Margin="0,0,0,18">
+                <ui:SymbolIcon Symbol="Games24" FontSize="32" Foreground="{DynamicResource TextTertiaryBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <TextBlock Text="No controller detected" FontSize="20" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+              <TextBlock Text="Connect your gamepad with a USB cable or pair via Windows Bluetooth Settings. Xbox and PlayStation controllers are supported out of the box."
+                         Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" LineHeight="22"
+                         TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,20" />
+              <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="10" Padding="14,10"
+                      HorizontalAlignment="Center">
+                <TextBlock Text="Tip: If using Bluetooth, ensure the controller is paired in Windows Settings first."
+                           Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" />
+              </Border>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- PlayStation Backend & Driver Setup Card -->
+        <Border Style="{StaticResource ControllerCard}" Padding="24,18">
+          <StackPanel>
+            <Grid Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="PlayStation virtual Xbox mapper" FontSize="15" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="{Binding BackendStatus}" Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontSize="12" Margin="0,3,0,0" />
+              </StackPanel>
+              <ui:Button Grid.Column="1" Content="{Binding ToggleLabel}" Command="{Binding ToggleCommand}"
+                         Style="{StaticResource SocialQuietButton}" Padding="14,7" VerticalAlignment="Center" />
+            </Grid>
+
+            <Expander x:Name="ControllerSetupExpander" Header="PlayStation setup &amp; driver guide"
+                      Style="{StaticResource ControllerExpander}" FontSize="13" FontWeight="SemiBold" Margin="0,8,0,0">
+              <controls:ControllerDriverSetup />
+            </Expander>
+          </StackPanel>
+        </Border>
+
+        <!-- Continue Button -->
+        <ui:Button Content="Continue to test →" Click="NextStep_Click" Tag="1"
+                   Style="{StaticResource ControllerPrimary}" HorizontalAlignment="Right" />
+      </StackPanel>
+
+      <!-- ========================================== -->
+      <!-- STEP 2: TEST                               -->
+      <!-- ========================================== -->
+      <StackPanel x:Name="TestPanel" Visibility="Collapsed">
+
+        <!-- Live Gamepad Visualizer Card -->
+        <Border Style="{StaticResource ControllerCard}">
+          <StackPanel>
+            <Grid Margin="0,0,0,20">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Live Input Visualizer" FontSize="22" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="Move sticks, pull triggers, and press buttons to verify full gamepad responsiveness."
+                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,4,0,0" />
+              </StackPanel>
+              <Border Grid.Column="1" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="8"
+                      Padding="10,4" VerticalAlignment="Center">
+                <TextBlock Text="{Binding DeviceDisplayName}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+              </Border>
+            </Grid>
+
+            <!-- Dual Analog Stick Scopes -->
+            <Grid Margin="0,10,0,24">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="24" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+
+              <!-- Left Analog Stick Radar Scope -->
+              <Border Grid.Column="0" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="16"
+                      BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Padding="20">
+                <StackPanel HorizontalAlignment="Center">
+                  <TextBlock Text="Left Stick (L3)" FontWeight="SemiBold" FontSize="13"
+                             Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,12" />
+
+                  <!-- Circular Radar Area -->
+                  <Grid Width="130" Height="130">
+                    <!-- Outer Ring with L3 Click Glow Trigger -->
+                    <Ellipse Width="130" Height="130" Stroke="{DynamicResource BorderSubtleBrush}" StrokeThickness="1.5">
+                      <Ellipse.Fill>
+                        <RadialGradientBrush Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+                          <GradientStop Color="#18FFFFFF" Offset="0" />
+                          <GradientStop Color="#00FFFFFF" Offset="1" />
+                        </RadialGradientBrush>
+                      </Ellipse.Fill>
+                      <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsL3Down}" Value="True">
+                              <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+                              <Setter Property="StrokeThickness" Value="3" />
+                              <Setter Property="Effect">
+                                <Setter.Value>
+                                  <DropShadowEffect Color="#6573E8" BlurRadius="12" ShadowDepth="0" Opacity="0.8" />
+                                </Setter.Value>
+                              </Setter>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Ellipse.Style>
+                    </Ellipse>
+
+                    <!-- Inner Concentric Ring -->
+                    <Ellipse Width="65" Height="65" Stroke="#20FFFFFF" StrokeThickness="1" StrokeDashArray="2,2" />
+
+                    <!-- Crosshair Lines -->
+                    <Line X1="0" Y1="65" X2="130" Y2="65" Stroke="#1EFFFFFF" StrokeThickness="1" />
+                    <Line X1="65" Y1="0" X2="65" Y2="130" Stroke="#1EFFFFFF" StrokeThickness="1" />
+
+                    <!-- Moving Reticle Dot -->
+                    <Grid Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center">
+                      <Grid.RenderTransform>
+                        <TranslateTransform X="{Binding LeftStickOffsetX}" Y="{Binding LeftStickOffsetY}" />
+                      </Grid.RenderTransform>
+                      <Ellipse Width="22" Height="22" Fill="{DynamicResource AccentBrush}" Stroke="#FFFFFF" StrokeThickness="2">
+                        <Ellipse.Effect>
+                          <DropShadowEffect Color="#6573E8" BlurRadius="10" ShadowDepth="0" Opacity="0.9" />
+                        </Ellipse.Effect>
+                      </Ellipse>
+                    </Grid>
+                  </Grid>
+
+                  <!-- Numeric Readout -->
+                  <Border Background="{DynamicResource SurfaceElevatedBrush}" CornerRadius="8" Padding="10,4" Margin="0,14,0,0">
+                    <TextBlock Text="{Binding LeftStickCoordinatesText}" FontFamily="Consolas" FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                  </Border>
+                </StackPanel>
+              </Border>
+
+              <!-- Right Analog Stick Radar Scope -->
+              <Border Grid.Column="2" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="16"
+                      BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Padding="20">
+                <StackPanel HorizontalAlignment="Center">
+                  <TextBlock Text="Right Stick (R3)" FontWeight="SemiBold" FontSize="13"
+                             Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,12" />
+
+                  <!-- Circular Radar Area -->
+                  <Grid Width="130" Height="130">
+                    <!-- Outer Ring with R3 Click Glow Trigger -->
+                    <Ellipse Width="130" Height="130" Stroke="{DynamicResource BorderSubtleBrush}" StrokeThickness="1.5">
+                      <Ellipse.Fill>
+                        <RadialGradientBrush Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+                          <GradientStop Color="#18FFFFFF" Offset="0" />
+                          <GradientStop Color="#00FFFFFF" Offset="1" />
+                        </RadialGradientBrush>
+                      </Ellipse.Fill>
+                      <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsR3Down}" Value="True">
+                              <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+                              <Setter Property="StrokeThickness" Value="3" />
+                              <Setter Property="Effect">
+                                <Setter.Value>
+                                  <DropShadowEffect Color="#6573E8" BlurRadius="12" ShadowDepth="0" Opacity="0.8" />
+                                </Setter.Value>
+                              </Setter>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Ellipse.Style>
+                    </Ellipse>
+
+                    <!-- Inner Concentric Ring -->
+                    <Ellipse Width="65" Height="65" Stroke="#20FFFFFF" StrokeThickness="1" StrokeDashArray="2,2" />
+
+                    <!-- Crosshair Lines -->
+                    <Line X1="0" Y1="65" X2="130" Y2="65" Stroke="#1EFFFFFF" StrokeThickness="1" />
+                    <Line X1="65" Y1="0" X2="65" Y2="130" Stroke="#1EFFFFFF" StrokeThickness="1" />
+
+                    <!-- Moving Reticle Dot -->
+                    <Grid Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center">
+                      <Grid.RenderTransform>
+                        <TranslateTransform X="{Binding RightStickOffsetX}" Y="{Binding RightStickOffsetY}" />
+                      </Grid.RenderTransform>
+                      <Ellipse Width="22" Height="22" Fill="{DynamicResource AccentBrush}" Stroke="#FFFFFF" StrokeThickness="2">
+                        <Ellipse.Effect>
+                          <DropShadowEffect Color="#6573E8" BlurRadius="10" ShadowDepth="0" Opacity="0.9" />
+                        </Ellipse.Effect>
+                      </Ellipse>
+                    </Grid>
+                  </Grid>
+
+                  <!-- Numeric Readout -->
+                  <Border Background="{DynamicResource SurfaceElevatedBrush}" CornerRadius="8" Padding="10,4" Margin="0,14,0,0">
+                    <TextBlock Text="{Binding RightStickCoordinatesText}" FontFamily="Consolas" FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                  </Border>
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <!-- Analog Triggers Pressure Gauges -->
+            <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="16"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Padding="20,16" Margin="0,0,0,24">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="28" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left Trigger LT / L2 -->
+                <StackPanel Grid.Column="0">
+                  <Grid Margin="0,0,0,8">
+                    <TextBlock Text="Left Trigger (LT · L2)" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock Text="{Binding LeftTriggerText}" FontSize="12" FontWeight="Bold"
+                               Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Right" />
+                  </Grid>
+                  <ProgressBar Value="{Binding LeftTriggerPercent, Mode=OneWay}" Minimum="0" Maximum="100" Height="10" />
+                </StackPanel>
+
+                <!-- Right Trigger RT / R2 -->
+                <StackPanel Grid.Column="2">
+                  <Grid Margin="0,0,0,8">
+                    <TextBlock Text="Right Trigger (RT · R2)" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock Text="{Binding RightTriggerText}" FontSize="12" FontWeight="Bold"
+                               Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Right" />
+                  </Grid>
+                  <ProgressBar Value="{Binding RightTriggerPercent, Mode=OneWay}" Minimum="0" Maximum="100" Height="10" />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <!-- Reactive Button Matrix -->
+            <TextBlock Text="Gamepad Buttons" FontSize="14" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10" />
+            <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="16"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Padding="16,14" Margin="0,0,0,24">
+              <WrapPanel HorizontalAlignment="Center">
+
+                <!-- Face Button A / Cross -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsCrossDown}" Value="True">
+                          <Setter Property="Background" Value="#6573E8" />
+                          <Setter Property="BorderBrush" Value="#CCD4FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#8898FB" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="A" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock Text="✕" FontSize="9" HorizontalAlignment="Center" Foreground="#A9C6FA" Margin="0,-1,0,0" />
+                  </StackPanel>
+                </Border>
+
+                <!-- Face Button B / Circle -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsCircleDown}" Value="True">
+                          <Setter Property="Background" Value="#EF4444" />
+                          <Setter Property="BorderBrush" Value="#FCA5A5" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#EF4444" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="B" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock Text="○" FontSize="9" HorizontalAlignment="Center" Foreground="#EEABBA" Margin="0,-1,0,0" />
+                  </StackPanel>
+                </Border>
+
+                <!-- Face Button X / Square -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSquareDown}" Value="True">
+                          <Setter Property="Background" Value="#A855F7" />
+                          <Setter Property="BorderBrush" Value="#E9D5FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#A855F7" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="X" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock Text="□" FontSize="9" HorizontalAlignment="Center" Foreground="#D6A3E5" Margin="0,-1,0,0" />
+                  </StackPanel>
+                </Border>
+
+                <!-- Face Button Y / Triangle -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsTriangleDown}" Value="True">
+                          <Setter Property="Background" Value="#10B981" />
+                          <Setter Property="BorderBrush" Value="#A7F3D0" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#10B981" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="Y" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock Text="△" FontSize="9" HorizontalAlignment="Center" Foreground="#8DDDC2" Margin="0,-1,0,0" />
+                  </StackPanel>
+                </Border>
+
+                <!-- D-Pad Up -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsDpadUpDown}" Value="True">
+                          <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                          <Setter Property="BorderBrush" Value="#CCD4FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#8898FB" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="D · ↑" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Border>
+
+                <!-- D-Pad Down -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsDpadDownDown}" Value="True">
+                          <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                          <Setter Property="BorderBrush" Value="#CCD4FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#8898FB" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="D · ↓" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Border>
+
+                <!-- D-Pad Left -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsDpadLeftDown}" Value="True">
+                          <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                          <Setter Property="BorderBrush" Value="#CCD4FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#8898FB" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="D · ←" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Border>
+
+                <!-- D-Pad Right -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsDpadRightDown}" Value="True">
+                          <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                          <Setter Property="BorderBrush" Value="#CCD4FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#8898FB" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="D · →" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Border>
+
+                <!-- Shoulder LB / L1 -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsL1Down}" Value="True">
+                          <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                          <Setter Property="BorderBrush" Value="#CCD4FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#8898FB" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="LB · L1" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Border>
+
+                <!-- Shoulder RB / R1 -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsR1Down}" Value="True">
+                          <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                          <Setter Property="BorderBrush" Value="#CCD4FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#8898FB" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="RB · R1" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Border>
+
+                <!-- Back / Share -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBackDown}" Value="True">
+                          <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                          <Setter Property="BorderBrush" Value="#CCD4FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#8898FB" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="Back · Share" FontWeight="SemiBold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Border>
+
+                <!-- Start / Options -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsStartDown}" Value="True">
+                          <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                          <Setter Property="BorderBrush" Value="#CCD4FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#8898FB" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="Start · Options" FontWeight="SemiBold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Border>
+
+                <!-- Guide / Xbox / PS -->
+                <Border>
+                  <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ButtonBadgeBase}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsGuideDown}" Value="True">
+                          <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                          <Setter Property="BorderBrush" Value="#CCD4FF" />
+                          <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#8898FB" BlurRadius="12" ShadowDepth="0" Opacity="0.9" /></Setter.Value></Setter>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="Guide · PS" FontWeight="SemiBold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Border>
+
+              </WrapPanel>
+            </Border>
+
+            <!-- Haptic Vibration & Steamy Navigation Row -->
+            <Grid Margin="0,0,0,16">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+
+              <!-- Vibration Test Card -->
+              <Border Grid.Column="0" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="16"
+                      BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Padding="18,16">
+                <StackPanel>
+                  <TextBlock Text="Haptic Feedback" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="Send a test rumble burst to your gamepad's dual vibration motors."
+                             Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" LineHeight="18" TextWrapping="Wrap" Margin="0,4,0,14" />
+                  <ui:Button Content="Test vibration" Command="{Binding RumbleCommand}"
+                             Style="{StaticResource SocialQuietButton}" HorizontalAlignment="Left" />
+                </StackPanel>
+              </Border>
+
+              <!-- Steamy App Navigation Toggle Card -->
+              <Border Grid.Column="2" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="16"
+                      BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Padding="18,16">
+                <StackPanel>
+                  <CheckBox Content="Navigate Steamy with gamepad" IsChecked="{Binding NavigationEnabled}"
+                            FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="D-pad / stick to move · A / Cross to select · B / Circle to go back · LB / RB to change tabs"
+                             Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" LineHeight="17" TextWrapping="Wrap" Margin="0,8,0,0" />
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <!-- Collapsible Raw Telemetry Expander for Technical Diagnostics -->
+            <Expander Header="Raw telemetry &amp; packet diagnostics" Style="{StaticResource ControllerExpander}"
+                      FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,8,0,0">
+              <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="12" Padding="16" Margin="0,8,0,0">
+                <TextBlock Text="{Binding InputText}" Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontFamily="Consolas" FontSize="12" LineHeight="22" TextWrapping="Wrap" />
+              </Border>
+            </Expander>
+
+          </StackPanel>
+        </Border>
+
+        <!-- Continue Button -->
+        <ui:Button Content="Customize →" Click="NextStep_Click" Tag="2"
+                   Style="{StaticResource ControllerPrimary}" HorizontalAlignment="Right" />
+      </StackPanel>
+
+      <!-- ========================================== -->
+      <!-- STEP 3: CUSTOMIZE                          -->
+      <!-- ========================================== -->
+      <StackPanel x:Name="CustomizePanel" Visibility="Collapsed">
+
+        <!-- Native XInput Device Notice -->
+        <Border Style="{StaticResource ControllerCard}" Visibility="{Binding NativeDeviceVisibility}">
+          <StackPanel>
+            <TextBlock Text="Ready to play" FontSize="23" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock Text="Windows handles this controller natively. If you use Steam Input or another mapper, change your layout there."
+                       Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" LineHeight="22" TextWrapping="Wrap" Margin="0,10,0,0" />
+          </StackPanel>
+        </Border>
+
+        <!-- PlayStation Virtual Xbox Mapper Section -->
+        <Border Style="{StaticResource ControllerCard}" Visibility="{Binding MapperVisibility}">
+          <StackPanel>
+            <TextBlock Text="Make it yours" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock Text="Select a button on the controller to change its output. Save your customizations as a profile."
+                       Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" TextWrapping="Wrap" Margin="0,6,0,16" />
+
+            <!-- Interactive Controller Diagram -->
+            <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="16"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" Padding="12" Margin="0,0,0,18">
+              <controls:ControllerDiagram x:Name="MappingDiagram" SelectedSource="{Binding MappingSource, Mode=TwoWay}" />
+            </Border>
+
+            <!-- Selected Button Mapping Output Selector -->
+            <Border CornerRadius="14" Background="{DynamicResource SurfaceSubtleBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+                    Padding="16" Margin="0,0,0,24">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="190" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{Binding SelectedMapping.Source}" Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="15" FontWeight="SemiBold" />
+                  <TextBlock Text="Virtual Xbox controller output" Foreground="{DynamicResource TextSecondaryBrush}"
+                             FontSize="12" Margin="0,3,0,0" />
+                </StackPanel>
+                <ComboBox x:Name="SelectedMappingOutput" Grid.Column="1" ItemsSource="{Binding Outputs}"
+                          SelectedItem="{Binding SelectedMapping.Output}" Style="{StaticResource ControllerCombo}"
+                          AutomationProperties.Name="Output for the selected controller button" />
+              </Grid>
+            </Border>
+
+            <!-- Profiles Management -->
+            <Grid Margin="0,0,0,8">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Text="Profiles" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+              <ui:Button Grid.Column="1" Content="New" Command="{Binding NewProfileCommand}"
+                         Style="{StaticResource SocialQuietButton}" Padding="14,4" />
+            </Grid>
+
+            <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}"
+                      DisplayMemberPath="Name" Style="{StaticResource ControllerCombo}"
+                      Margin="0,4,0,10" AutomationProperties.Name="Saved controller profile" />
+
+            <ui:TextBox Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
+                        PlaceholderText="Profile name" Style="{StaticResource SocialField}"
+                        MaxLength="64" AutomationProperties.Name="Controller profile name" />
+
+            <!-- Stick Response & RGB Lightbar Expander -->
+            <Expander Header="Stick response, deadzones &amp; RGB lightbar"
+                      Style="{StaticResource ControllerExpander}" FontSize="13" FontWeight="SemiBold" Margin="0,16,0,12">
+              <StackPanel Margin="0,12,0,0">
+
+                <!-- Deadzones Section -->
+                <TextBlock Text="Stick Deadzones" FontWeight="SemiBold" FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,6" />
+                <Grid Margin="0,0,0,16">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0">
+                    <TextBlock Text="{Binding LeftDeadzone, StringFormat=Left stick deadzone · {0}%}"
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,4" />
+                    <Slider Minimum="0" Maximum="95" TickFrequency="1" IsSnapToTickEnabled="True"
+                            Value="{Binding LeftDeadzone}" AutomationProperties.Name="Left stick deadzone percent" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="2">
+                    <TextBlock Text="{Binding RightDeadzone, StringFormat=Right stick deadzone · {0}%}"
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,4" />
+                    <Slider Minimum="0" Maximum="95" TickFrequency="1" IsSnapToTickEnabled="True"
+                            Value="{Binding RightDeadzone}" AutomationProperties.Name="Right stick deadzone percent" />
+                  </StackPanel>
+                </Grid>
+
+                <!-- Stick Response Curve -->
+                <TextBlock Text="Stick Response Curve" FontWeight="SemiBold" FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4,0,6" />
+                <ComboBox ItemsSource="{Binding Curves}" SelectedItem="{Binding Curve}"
+                          Style="{StaticResource ControllerCombo}" Margin="0,0,0,20"
+                          AutomationProperties.Name="Stick response curve" />
+
+                <!-- RGB Lightbar Section with Live Glowing Preview -->
+                <TextBlock Text="PlayStation Lightbar RGB" FontWeight="SemiBold" FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4,0,6" />
+
+                <!-- Glowing Lightbar LED Preview Bar -->
+                <Border CornerRadius="12" Background="{DynamicResource SurfaceSubtleBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+                        Padding="16" Margin="0,0,0,14">
+                  <StackPanel>
+                    <Grid Margin="0,0,0,10">
+                      <TextBlock Text="Live LED Bar Preview" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Text="{Binding LightbarHex}" FontFamily="Consolas" FontSize="12" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Right" />
+                    </Grid>
+
+                    <!-- Glowing LED Bar -->
+                    <Border Height="18" CornerRadius="9" Background="{Binding LightbarBrush}" Margin="0,2,0,12">
+                      <Border.Effect>
+                        <DropShadowEffect Color="{Binding LightbarBrush.Color}" BlurRadius="18" ShadowDepth="0" Opacity="0.85" />
+                      </Border.Effect>
+                    </Border>
+
+                    <!-- Quick Preset Colors -->
+                    <TextBlock Text="Color Presets" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,8" />
+                    <WrapPanel>
+                      <Button Style="{StaticResource ColorPresetChip}" Background="#3B82F6"
+                              Command="{Binding SetColorPresetCommand}" CommandParameter="#3B82F6" ToolTip="Steamy Blue" />
+                      <Button Style="{StaticResource ColorPresetChip}" Background="#1D4ED8"
+                              Command="{Binding SetColorPresetCommand}" CommandParameter="#1D4ED8" ToolTip="PlayStation Deep Blue" />
+                      <Button Style="{StaticResource ColorPresetChip}" Background="#EF4444"
+                              Command="{Binding SetColorPresetCommand}" CommandParameter="#EF4444" ToolTip="Crimson Red" />
+                      <Button Style="{StaticResource ColorPresetChip}" Background="#10B981"
+                              Command="{Binding SetColorPresetCommand}" CommandParameter="#10B981" ToolTip="Emerald Green" />
+                      <Button Style="{StaticResource ColorPresetChip}" Background="#F59E0B"
+                              Command="{Binding SetColorPresetCommand}" CommandParameter="#F59E0B" ToolTip="Amber Gold" />
+                      <Button Style="{StaticResource ColorPresetChip}" Background="#A855F7"
+                              Command="{Binding SetColorPresetCommand}" CommandParameter="#A855F7" ToolTip="Neon Purple" />
+                      <Button Style="{StaticResource ColorPresetChip}" Background="#EC4899"
+                              Command="{Binding SetColorPresetCommand}" CommandParameter="#EC4899" ToolTip="Hot Pink" />
+                      <Button Style="{StaticResource ColorPresetChip}" Background="#FFFFFF"
+                              Command="{Binding SetColorPresetCommand}" CommandParameter="#FFFFFF" ToolTip="Pure White" />
+                    </WrapPanel>
+                  </StackPanel>
+                </Border>
+
+                <!-- R, G, B Sliders -->
+                <Grid Margin="0,4,0,8">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+
+                  <!-- Red -->
+                  <StackPanel Grid.Column="0">
+                    <TextBlock Text="{Binding Red, StringFormat=Red · {0}}" Foreground="#EF4444" FontSize="12" Margin="0,0,0,4" />
+                    <Slider Value="{Binding Red}" Maximum="255" AutomationProperties.Name="Lightbar red" />
+                  </StackPanel>
+
+                  <!-- Green -->
+                  <StackPanel Grid.Column="2">
+                    <TextBlock Text="{Binding Green, StringFormat=Green · {0}}" Foreground="#10B981" FontSize="12" Margin="0,0,0,4" />
+                    <Slider Value="{Binding Green}" Maximum="255" AutomationProperties.Name="Lightbar green" />
+                  </StackPanel>
+
+                  <!-- Blue -->
+                  <StackPanel Grid.Column="4">
+                    <TextBlock Text="{Binding Blue, StringFormat=Blue · {0}}" Foreground="#3B82F6" FontSize="12" Margin="0,0,0,4" />
+                    <Slider Value="{Binding Blue}" Maximum="255" AutomationProperties.Name="Lightbar blue" />
+                  </StackPanel>
+                </Grid>
+
+              </StackPanel>
+            </Expander>
+
+            <!-- All Button Mappings Table Expander -->
+            <Expander Style="{StaticResource ControllerExpander}" Header="All button mappings"
+                      Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" Margin="0,8,0,16">
+              <ItemsControl ItemsSource="{Binding Mappings}" Margin="0,10,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="170" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Text="{Binding Source}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                 FontSize="13" VerticalAlignment="Center" />
+                      <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Outputs, RelativeSource={RelativeSource AncestorType=Page}}"
+                                SelectedItem="{Binding Output}" Style="{StaticResource ControllerCombo}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Expander>
+
+            <ui:Button Content="Save and use profile" Command="{Binding SaveProfileCommand}"
+                       Style="{StaticResource ControllerPrimary}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
+
+        <!-- Assign Profile to Installed Game Card -->
+        <Expander Header="Assign a profile to a game" Style="{StaticResource ControllerExpander}" Margin="0,0,0,16">
+          <Border Style="{StaticResource ControllerCard}">
+            <StackPanel>
+              <TextBlock Text="Automatically apply this profile whenever the selected game is running."
+                         Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10" />
+              <ComboBox ItemsSource="{Binding Games}" SelectedItem="{Binding SelectedGame}"
+                        DisplayMemberPath="Name" Style="{StaticResource ControllerCombo}"
+                        Margin="0,0,0,14" AutomationProperties.Name="Game for controller profile" />
+              <WrapPanel>
+                <ui:Button Content="Assign selected profile" Command="{Binding AssignGameCommand}"
+                           Style="{StaticResource SocialQuietButton}" Margin="0,0,8,0" />
+                <ui:Button Content="Remove assignment" Command="{Binding ClearGameCommand}"
+                           Style="{StaticResource SocialQuietButton}" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+        </Expander>
+
+      </StackPanel>
+
+      <!-- Status and Busy Indicators -->
+      <TextBlock Text="{Binding Status}" Foreground="{DynamicResource TextSecondaryBrush}"
+                 FontSize="12" TextWrapping="Wrap" Margin="0,16,0,12" AutomationProperties.LiveSetting="Polite" />
+      <ProgressBar IsIndeterminate="True" Height="2" Visibility="{Binding BusyVisibility}" />
+
+    </StackPanel>
+  </ScrollViewer>
+</Page>

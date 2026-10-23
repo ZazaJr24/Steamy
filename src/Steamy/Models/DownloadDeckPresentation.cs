@@ -39,11 +39,12 @@ public sealed partial class DownloadJob
         PropertyChanged += (_, change) =>
         {
             if (change.PropertyName is not (nameof(State) or nameof(Phase) or nameof(BytesPerSecond)
-                or nameof(DiskSpeed) or nameof(Progress) or nameof(HasMeasuredProgress)
+                or nameof(DiskSpeed) or nameof(Progress) or nameof(HasMeasuredProgress) or nameof(HasWholeGameProgress)
                 or nameof(TransferredBytes) or nameof(TransferTotalBytes) or nameof(ContentBytes)
                 or nameof(InstallationBytes) or nameof(Downloaded) or nameof(TotalSize)
                 or nameof(EtaSeconds) or nameof(Eta) or nameof(CurrentDepotDetail))) return;
             foreach (var property in DeckProperties) OnPropertyChanged(property);
+            OnPropertyChanged(nameof(DeckProgress)); OnPropertyChanged(nameof(DeckProgressIndeterminate)); OnPropertyChanged(nameof(DeckProgressCaption));
         };
     }
 
@@ -63,6 +64,18 @@ public sealed partial class DownloadJob
         : DownloadFormat.TryParseSize(DiskSpeed) is > 0 and var rate ? FormatBitrate(rate) : "0.0 Mbit/s";
     [JsonIgnore] public double DeckTransferProgress => State == DownloadJobState.Completed ? 100
         : TransferTotalBytes is > 0 ? Math.Clamp(TransferredBytes * 100d / TransferTotalBytes.Value, 0, 100) : 0;
+    // The download header shows measured content progress even when the compressed
+    // network total is unavailable. Never present an unknown total as a frozen 0%.
+    [JsonIgnore] public double DeckProgress => State == DownloadJobState.Completed ? 100
+        : HasMeasuredProgress ? Progress : DeckTransferProgress;
+    [JsonIgnore] public bool DeckProgressIndeterminate => IsActive
+        && (!HasMeasuredProgress && TransferTotalBytes is not > 0 || Phase is "checking" or "finalizing" || State is DownloadJobState.Preparing or DownloadJobState.Verifying);
+    [JsonIgnore] public string DeckProgressCaption => State == DownloadJobState.Completed ? "100 %"
+        : IsActive && (Phase is "checking" or "finalizing" || State is DownloadJobState.Preparing or DownloadJobState.Verifying) ? PhaseLabel + "…"
+        : !HasMeasuredProgress && TransferTotalBytes is not > 0 ? IsActive ? "Measuring…" : "—"
+        : DeckProgress.ToString("0.#", CultureInfo.CurrentCulture) + " %"
+            + (HasMeasuredProgress && !HasWholeGameProgress && CurrentDepotDetail.StartsWith("Depot ", StringComparison.Ordinal)
+                ? " · " + CurrentDepotDetail.Split('·')[0].Trim() : "");
     [JsonIgnore] public double DeckContentProgress => State == DownloadJobState.Completed ? 100
         : InstallationBytes > 0 ? Math.Clamp(ContentBytes * 100d / InstallationBytes, 0, 100) : 0;
     [JsonIgnore] public bool DeckTransferIndeterminate => IsActive && Phase != "finalizing" && TransferTotalBytes is not > 0;

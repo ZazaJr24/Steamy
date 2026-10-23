@@ -1,0 +1,13 @@
+# Ambient und kompakte Aktionen — 16.10.2026
+
+Die vorherige Spielseite verwendete eine einzelne aus dem Banner gewonnene Akzentfarbe. Der neue Hintergrund verwendet stattdessen das tatsächliche Bannerbild: weichgezeichnete helle, dunkle und farbige Regionen bleiben horizontal und vertikal erhalten, auch bis in die unteren Informationsbereiche. Das Banner oben und die Inhaltsanordnung bleiben bestehen.
+
+Die Fortsetzung wird einmal pro Banner und quantisiertem Seitenverhältnis in einem eingefrorenen 320×320-Pixel-Bild berechnet. Pro Banner werden höchstens sechs Varianten in einem schwachen Cache gehalten. Beim Scrollen verändert sich nur der Ausschnitt des Hintergrundpinsels für den oberen Glassaum; es gibt keinen Live-Blur des gesamten Dokuments. Eine weiche Belichtungskurve erhält Bildstrukturen und hält den Hintergrund für helle Schrift dunkel genug. Hoher Kontrast und ein explizit deaktivierter Ambient-Modus behalten ihren eigenen Hintergrund.
+
+Play und View in Steam verwenden dieselbe 42-Pixel-Aktion mit 21-Pixel-Rundung. Play benötigt nur noch mindestens 112 statt 172 Pixel Breite und verwendet kleinere Innenabstände. Spielzeit und zuletzt gespielt werden daneben aus den vorhandenen Spieldaten angezeigt; die Zeile kann bei weniger Platz umbrechen.
+
+Verifikation: `artifacts/steamy-0.8/ambient-refresh/checks/ambient-suite-final.trx` — 263 Tests bestanden, einschließlich des WPF-Spielseitentests. Dieser prüft mehrere erhaltene Bildfarben an unterschiedlichen vertikalen Positionen, eingefrorenen Cache und Wiederverwendung beim Scrollen, Glas-Kontrast, gleiche Button-Höhen und Rundungen, den kompakten Play-Button sowie die beiden sichtbaren Spieldaten bei unterschiedlichen Fenstergrößen und Themes. Ein vorheriger paralleler Lauf meldete einen Controller-Host-Start-Timeout, während dessen Ausgabe neu gebaut wurde; der anschließende serielle Gesamtlauf bestand unverändert.
+
+Aktualisierter Build und Screenshots: `artifacts/steamy-0.8/ambient-refresh/`. Die Bilder zeigen die kompilierte WPF-Oberfläche mit markierten Testdaten. Die vorherige Ausgabe unter `details-refresh/` wurde nicht durch diesen Build überschrieben.
+
+Finales Paket: `release/portable/Steamy.exe` und `release/Steamy-FullSetup.exe`. Fünf isolierte Startprüfungen einschließlich Upgrade, Neustart und Erststart bestanden (`startup/startup-report.json`); gespeicherte Bibliothek, Notizen und synthetische Zugangsdaten blieben erhalten. Online- und Vollsetup bestanden 32 beziehungsweise 36 Selbstprüfungen. Die Paket-Hashes stimmen mit dem lokalen Manifest überein; die DLL im portablen ZIP stimmt mit der geprüften portablen Ausgabe überein. Es wurde kein Release veröffentlicht.

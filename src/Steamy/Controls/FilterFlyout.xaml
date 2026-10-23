@@ -8,6 +8,7 @@
     <ToggleButton x:Name="FilterToggle"
                   Style="{StaticResource FilterToggleButtonStyle}"
                   AutomationProperties.Name="Open filters">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
       <Grid Width="20" Height="20">
         <ui:SymbolIcon Symbol="Filter24"
                        FontSize="18"
@@ -24,6 +25,10 @@
                  StrokeThickness="1.5"
                  Visibility="Collapsed" />
       </Grid>
+      <TextBlock Text="{Binding TriggerText, ElementName=Root}" VerticalAlignment="Center" Margin="8,0,0,0">
+        <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger></Style.Triggers></Style></TextBlock.Style>
+      </TextBlock>
+      </StackPanel>
     </ToggleButton>
 
     <Popup x:Name="FilterPopup"

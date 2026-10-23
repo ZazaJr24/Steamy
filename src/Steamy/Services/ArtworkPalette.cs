@@ -13,6 +13,17 @@ internal sealed record ArtworkPalette(Color Left, Color Right)
 
     public static ArtworkPalette FromImage(ImageSource? source) => source is null ? Neutral : Cache.GetValue(source, Sample);
 
+    internal static Task<ArtworkPalette> FromImageAsync(ImageSource? source, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (source is null) return Task.FromResult(Neutral);
+        if (Cache.TryGetValue(source, out var cached)) return Task.FromResult(cached);
+        // WPF drawing/readback belongs to the existing STA worker. A frozen
+        // snapshot is safe there; the weak key still belongs to the caller's image.
+        var frozen = source.IsFrozen ? source : (ImageSource)source.GetCurrentValueAsFrozen();
+        return ArtworkRenderWorker.RunAsync(() => Cache.GetValue(source, _ => Sample(frozen)), token);
+    }
+
     private static ArtworkPalette Sample(ImageSource source)
     {
         const int width = 96, height = 54;

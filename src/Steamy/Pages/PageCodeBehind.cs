@@ -38,8 +38,8 @@ public partial class DashboardPage : Page
         {
             var viewModel = (DashboardViewModel)DataContext;
             viewModel.RefreshSearchPreference();
+            viewModel.ResumeSearch();
             viewModel.RefreshCountdowns();
-            viewModel.StartLiveStats();
             viewModel.PropertyChanged += SpotlightChanged;
             Controls.MotionPreferences.Changed += MotionChanged;
             UiThemeService.PaletteChanged += DashboardAmbientChanged;
@@ -53,10 +53,10 @@ public partial class DashboardPage : Page
             {
                 _carouselWindow.Activated += CarouselActivated;
                 _carouselWindow.Deactivated += CarouselDeactivated;
+                _carouselWindow.StateChanged += CarouselStateChanged;
             }
             _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
-            if (_carouselWindow?.IsActive == true) _spotlightTimer.Start();
-            _countdownTimer.Start();
+            RefreshCarouselActivity();
             _ = viewModel.EnsureDiscoveryArtworkAsync();
             _ = viewModel.RefreshActivityAsync();
             _ = viewModel.RefreshAsync(force: false);
@@ -82,6 +82,7 @@ public partial class DashboardPage : Page
             {
                 _carouselWindow.Activated -= CarouselActivated;
                 _carouselWindow.Deactivated -= CarouselDeactivated;
+                _carouselWindow.StateChanged -= CarouselStateChanged;
                 _carouselWindow = null;
             }
             HideSpotlightLoader();
@@ -90,6 +91,7 @@ public partial class DashboardPage : Page
         };
         _countdownTimer.Tick += (_, _) => ((DashboardViewModel)DataContext).RefreshCountdowns();
         _spotlightTimer.Tick += CarouselTick;
+        IsVisibleChanged += (_, _) => { if (IsLoaded) RefreshCarouselActivity(); };
         DashboardHero.SizeChanged += (_, _) => { UpdateShellViewport(); UpdateDashboardAmbient(); };
         RecentScroll.SizeChanged += (_, e) =>
         {
@@ -133,7 +135,12 @@ public partial class DashboardPage : Page
         if (args.PropertyName == nameof(DashboardFeature.HeroArtwork)) UpdateShellArtwork();
     }
 
-    private void DashboardScroll_Changed(object sender, ScrollChangedEventArgs args) => UpdateShellViewport();
+    private void DashboardScroll_Changed(object sender, ScrollChangedEventArgs args)
+    {
+        if (!ReferenceEquals(args.OriginalSource, DashboardScroll)) return;
+        UpdateShellViewport();
+        if (DashboardScroll.VerticalOffset >= DashboardHero.ActualHeight) HideSpotlightLoader();
+    }
 
     private void UpdateShellViewport()
     {
@@ -143,14 +150,24 @@ public partial class DashboardPage : Page
     }
 
     private void CarouselActivated(object? sender, EventArgs args)
+        => RefreshCarouselActivity();
+    private void CarouselStateChanged(object? sender, EventArgs args)
+        => RefreshCarouselActivity();
+    private void RefreshCarouselActivity()
     {
+        if (!IsLoaded || !IsVisible || _carouselWindow is not { IsActive: true, WindowState: not WindowState.Minimized })
+        { CarouselDeactivated(this, EventArgs.Empty); return; }
+        var starting = !_spotlightTimer.IsEnabled;
         _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
-        if (IsLoaded) _spotlightTimer.Start();
+        _spotlightTimer.Start(); _countdownTimer.Start();
+        if (starting) ((DashboardViewModel)DataContext).StartLiveStats();
     }
 
     private void CarouselDeactivated(object? sender, EventArgs args)
     {
         _spotlightTimer.Stop();
+        _countdownTimer.Stop();
+        ((DashboardViewModel)DataContext).StopLiveStats();
         HideSpotlightLoader();
     }
 
@@ -159,7 +176,7 @@ public partial class DashboardPage : Page
         var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(_lastSlideTick);
         _lastSlideTick = System.Diagnostics.Stopwatch.GetTimestamp();
         var model = (DashboardViewModel)DataContext;
-        if (!IsVisible || _carouselWindow?.IsActive != true || model.SpotlightPaused || model.HasSearchQuery || model.HasSelectedDiscovery || model.IsInstalledLibraryOpen)
+        if (!IsVisible || DashboardScroll.VerticalOffset >= DashboardHero.ActualHeight || _carouselWindow is not { IsActive: true, WindowState: not WindowState.Minimized } || model.SpotlightPaused || model.HasSearchQuery || model.HasSelectedDiscovery || model.IsInstalledLibraryOpen)
         {
             HideSpotlightLoader();
             return;
@@ -298,13 +315,6 @@ public partial class DashboardPage : Page
     }
 
     private void DashboardHome_Click(object sender, RoutedEventArgs args) => DashboardScroll.ScrollToTop();
-    private void RecentScroll_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs args)
-    {
-        var next = Math.Clamp(RecentScroll.HorizontalOffset - args.Delta, 0, RecentScroll.ScrollableWidth);
-        if (Math.Abs(next - RecentScroll.HorizontalOffset) < 1) return;
-        RecentScroll.ScrollToHorizontalOffset(next);
-        args.Handled = true;
-    }
     private void DashboardTools_Click(object sender, RoutedEventArgs args) => (Window.GetWindow(this) as MainWindow)?.ToggleToolsMenu();
     private void DashboardFixes_Click(object sender, RoutedEventArgs args) => (Window.GetWindow(this) as MainWindow)?.ToggleToolsMenu(fixes: true);
 
@@ -381,25 +391,15 @@ public partial class DownloadsPage : Page
         Unloaded += (_, _) => { viewModel.StopLiveStats(); DetachDeckInput(); DetachDownloadAmbient(); };
         SizeChanged += (_, e) =>
         {
-            var compact = e.NewSize.Width < 700;
-            Tag = e.NewSize.Width < 980 ? "Compact" : "Wide";
-            DownloadArtworkColumn.Width = new GridLength(compact ? 136 : 180);
-
-            DownloadHero.Height = compact ? 236 : 252;
-
-            DownloadHero.Margin = new Thickness(24,16,24,0);
-
-            DownloadArtworkPane.Margin = new Thickness(compact ? 14 : 20);
-
-            ((FrameworkElement)DownloadArtworkPane.Children[0]).Height = compact ? 168 : 204;
-
-            DownloadHeroContent.Margin = compact ? new Thickness(4,22,20,22) : new Thickness(10,24,28,24);
-
-            DownloadHeroTitle.FontSize = compact ? 21 : 25;
-
-            DownloadNetworkRate.FontSize = compact ? 17 : 20;
-
-            DeckAutomation.Visibility = e.NewSize.Width < 1050 ? Visibility.Collapsed : Visibility.Visible;
+            var compact = e.NewSize.Width < 760;
+            Tag = e.NewSize.Width < 1000 ? "Compact" : "Wide";
+            DownloadArtworkColumn.Width = new GridLength(compact ? 112 : 152);
+            DownloadHero.Height = compact ? 206 : 214;
+            DownloadArtworkPane.Margin = new Thickness(0, 0, compact ? 12 : 18, 0);
+            DownloadHeroTitle.FontSize = compact ? 16 : 18;
+            DownloadNetworkRate.FontSize = compact ? 14 : 16;
+            DeckContent.Margin = new Thickness(compact ? 18 : 24, 18, compact ? 18 : 24, 20);
+            DeckAutomation.Visibility = e.NewSize.Width < 700 ? Visibility.Collapsed : Visibility.Visible;
             DownloadOptionsPanel.Width = Math.Min(520, Math.Max(280, e.NewSize.Width - 48));
             DownloadOptionsPanel.MaxHeight = Math.Max(240, e.NewSize.Height - 48);
             RefreshDownloadAmbientGeometry();

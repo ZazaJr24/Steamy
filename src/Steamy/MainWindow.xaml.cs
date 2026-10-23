@@ -42,53 +42,81 @@ public partial class MainWindow : FluentWindow
     private readonly IShellBackdropService? _shellBackdrop;
     private readonly ViewModels.ShellDownloadViewModel _shellDownloads;
     private bool _maximizeOnFirstRender;
+    private System.Windows.Threading.DispatcherOperation? _pendingCaptionRefresh;
+    private System.Windows.Threading.DispatcherTimer? _captionRefreshDelay;
+    private long _lastCaptionRefresh;
+    private System.Windows.Threading.DispatcherOperation? _pendingNavigationForeground;
+    private Controls.ChromeSurfaceSample? _pageChromeSample;
+    private bool? _drawerPaletteDashboard;
     private IInputElement? _toolsPreviousFocus;
-    private Effect? _toolsPreviousEffect;
-    private bool _toolsWorkspaceEnabled;
     private int _toolsPreviousSelection;
+    internal bool IsToolsMenuOpen=>ToolsMenuLayer.Visibility==Visibility.Visible;
     private bool _closingAfterNotes, _waitingForNotes;
-    internal bool IsToolsMenuOpen => ToolsMenuLayer.Visibility == Visibility.Visible;
     internal Controls.DashboardBackdropView? DashboardSurface { get; private set; }
+    internal FrameworkElement? PageGlassSurface { get; private set; }
+    internal event EventHandler? PageSurfaceChanged;
     private Pages.DashboardPage? _dashboardPage;
     private readonly System.ComponentModel.DependencyPropertyDescriptor _paneDescriptor = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(NavigationView.IsPaneOpenProperty, typeof(NavigationView));
 
-    public MainWindow()
+    public MainWindow() : this(false) { }
+    private Controls.GamepadNavigation? _gamepad;
+    internal void EnableControllerNavigation() => _gamepad ??= new(this, App.Services.GetRequiredService<IControllerBackend>(), App.Services.GetRequiredService<ISettingsService>());
+    internal void RefreshControllerNavigation() => _gamepad?.RefreshEnabled();
+    internal MainWindow(bool openSocialOnStartup, bool openControllersOnStartup = false)
     {
+        StartupTimings.Mark("Before window XAML");
         InitializeComponent();
+        AddHandler(System.Windows.Controls.ScrollViewer.ScrollChangedEvent,
+            new System.Windows.Controls.ScrollChangedEventHandler(WindowScrolled), true);
+        StartupTimings.Mark("After window XAML");
+        Width = Math.Min(Width, Math.Max(MinWidth, SystemParameters.WorkArea.Width * .92));
+        Height = Math.Min(Height, Math.Max(MinHeight, SystemParameters.WorkArea.Height * .92));
+        InitializeNotificationWorkspace();
+        if (DiscordIntegration.Enabled) ShellFriendsButton.DataContext = App.Services.GetRequiredService<ViewModels.DiscordFriendsViewModel>();
         OverlayLayer.SizeChanged += (_, _) => ConstrainOverlay();
         _paneDescriptor.AddValueChanged(RootNavigation, PaneAppearanceChanged);
         _shellDownloads = new ViewModels.ShellDownloadViewModel(App.Services.GetRequiredService<IAppDataStore>(), App.Services.GetRequiredService<IArtworkService>());
-        ShellQuickDownloadsButton.DataContext = _shellDownloads;
+        ShellDownloadsButton.DataContext = _shellDownloads;
         _shellBackdrop = App.Services.GetRequiredService<IShellBackdropService>();
         _shellBackdrop.Changed += ShellBackdropChanged;
         App.Services.GetRequiredService<UiTranslationService>().Observe(this);
         VersionLabel.Text = $"Version {BuildStamp.Version}";
-        RootNavigation.SetPageProviderService(App.Services.GetRequiredService<INavigationViewPageProvider>());
+        var pageProvider = App.Services.GetRequiredService<INavigationViewPageProvider>();
+        RootNavigation.SetPageProviderService(pageProvider is NavigationViewPageProvider provider ? provider.CreateWindowScope(RootNavigation.ReleasePage) : pageProvider);
         RootNavigation.Navigated += (_, args) =>
         {
-            CloseToolsMenu(restoreFocus: false);
+            _routeRevision++;
+            CloseToolsMenu(restoreFocus:false);
             RootNavigation.Tag = args.Page is Pages.DashboardPage or Pages.GameDetailsPage ? "Home" : "Page";
             DashboardSurface = args.Page is Pages.DashboardPage home ? (Controls.DashboardBackdropView)home.FindName("DashboardBackdrop") : null;
+            PageGlassSurface = args.Page as FrameworkElement;
+            if(args.Page is Pages.BetterSteamToolsPage or Pages.SteamlessPage or Pages.DenuvoActivationPage or Pages.CreamApiPage or Pages.FamilySharePage or Pages.GoldbergPage or Pages.UcOnlinePage)
+            {
+                Controls.SurfaceMotion.SetDuration(PageGlassSurface!,160);
+                Controls.SurfaceMotion.SetStartScale(PageGlassSurface!,1);
+                Controls.SurfaceMotion.SetLift(PageGlassSurface!,0);
+                Controls.SurfaceMotion.SetRevealOnShow(PageGlassSurface!,true);
+                if(PageGlassSurface!.IsLoaded) Controls.SurfaceMotion.Reveal(PageGlassSurface);
+            }
+            _friendsPage = args.Page as Pages.FriendsPage;
+            if (_friendsPage is null) _socialReturnRoute = args.Page.GetType();
+            PageSurfaceChanged?.Invoke(this, EventArgs.Empty);
             _dashboardPage = args.Page as Pages.DashboardPage;
+            if (args.Page is not (Pages.DashboardPage or Pages.GameDetailsPage)) _shellBackdrop?.Clear();
             PersistentNavigation.Visibility = Visibility.Visible;
             PersistentNavigation.Tag = args.Page is Pages.DashboardPage dashboard ? dashboard.DataContext : null;
             WorkspaceBackdrop.IsPageBackdrop = args.Page is not Pages.DashboardPage;
-            UpdateCaptionForeground();
+            QueueCaptionAppearance();
             Controls.PillMotion.SetSelectedIndex(ShellPillItems, args.Page is Pages.DashboardPage ? 0 : args.Page is Pages.LibraryPage or Pages.GameDetailsPage ? 1
-                : args.Page is Pages.DownloadsPage ? 2 : args.Page is Pages.SettingsPage ? 6
+                : args.Page is Pages.FriendsHubPage or Pages.FriendsPage ? 2 : args.Page is Pages.DownloadsPage ? 7 : args.Page is Pages.FriendsPage or Pages.CommunityPage ? 5 : args.Page is Pages.SettingsPage ? 6
                 : args.Page is Pages.GameFixesPage or Pages.HypervisorFixesPage ? 4 : 3);
             RootNavigation.IsPaneOpen = false;
-            if (args.Page is FrameworkElement page)
-                Dispatcher.BeginInvoke(() => Controls.SurfaceMotion.Reveal(page));
         };
         PreviewKeyDown += (_, args) =>
         {
-            if (IsToolsMenuOpen && args.Key == Key.Escape)
-            {
-                CloseToolsMenu();
-                args.Handled = true;
-                return;
-            }
+            if(IsToolsMenuOpen && args.Key==Key.Escape) {CloseToolsMenu(); args.Handled=true; return;}
+            if (IsSocialDockOpen && args.Key == Key.Escape && _friendsPage?.IsKeyboardFocusWithin == true)
+            { if (_friendsPage?.CloseTransientPanels() == true) { args.Handled = true; return; } }
             if (RootNavigation.IsPaneOpen && args.Key == System.Windows.Input.Key.Escape)
             {
                 RootNavigation.IsPaneOpen = false;
@@ -96,9 +124,17 @@ public partial class MainWindow : FluentWindow
             }
         };
         _navigationService = (NavigationService)App.Services.GetService(typeof(INavigationService))!;
-        _navigationService.Attach(route => RootNavigation.Navigate(route));
+        PreviewMouseDown+=(_,_)=>
+        {if(IsToolsMenuOpen && !ToolsDropdown.IsMouseOver && !ShellToolsButton.IsMouseOver && !ShellFixesButton.IsMouseOver) CloseToolsMenu(restoreFocus:false);};
+        Deactivated+=(_,_)=>CloseToolsMenu(restoreFocus:false);
+        _navigationService.Attach(route =>
+        {
+            if (DiscordIntegration.Enabled || !DiscordIntegration.IsSocialPage(route))
+                RootNavigation.Navigate(route == typeof(Pages.FriendsHubPage) ? typeof(Pages.FriendsPage) : route);
+        });
         ContentRendered += (_, _) =>
         {
+            StartupTimings.Mark("ContentRendered");
             // The custom WindowChrome can initially report restored bounds even when XAML
             // requested Maximized. Re-apply the ordinary Windows maximize state after the
             // HWND and chrome are live; this keeps the taskbar available (it is not fullscreen).
@@ -110,7 +146,8 @@ public partial class MainWindow : FluentWindow
             // guarantees the navigation surface has completed its first layout pass.
             RootNavigation.ApplyTemplate();
             RootNavigation.UpdateLayout();
-            RootNavigation.Navigate(typeof(Pages.DashboardPage));
+            RootNavigation.Navigate(openControllersOnStartup ? typeof(Pages.ControllersPage) : typeof(Pages.DashboardPage));
+            if (openSocialOnStartup) OpenSocialDock();
             void ContinueStartup()
             {
             if (App.ShouldShowFirstRunSetup)
@@ -138,8 +175,7 @@ public partial class MainWindow : FluentWindow
         };
         Activated += (_, _) => ApplyFrameAppearance();
         StateChanged += (_, _) => ApplyFrameAppearance();
-        SizeChanged += (_, _) => { PersistentNavigation.Width = Math.Clamp(ActualWidth * 0.40 + 36, 536, 680); Dispatcher.BeginInvoke(new Action(UpdateCaptionForeground)); };
-        Deactivated += (_, _) => CloseToolsMenu();
+        SizeChanged += (_, _) => { PersistentNavigation.Width = DiscordIntegration.Enabled ? Math.Clamp(ActualWidth - 500, 440, 540) : Math.Clamp(ActualWidth - 500, 400, 456); QueueCaptionAppearance(); };
         Closing += SaveNotesBeforeClose;
 
     }
@@ -159,50 +195,45 @@ public partial class MainWindow : FluentWindow
     {
         if (sender is FrameworkElement { Tag: Type route })
         {
-            CloseToolsMenu(restoreFocus: false);
-            RootNavigation.Navigate(route);
+            CloseToolsMenu(restoreFocus:false);
+            NavigateWithFeedback(route);
         }
     }
-
-    private void ShellTools_Click(object sender, RoutedEventArgs args) => ToggleToolsMenu();
-    private void ShellFixes_Click(object sender, RoutedEventArgs args) => ToggleToolsMenu(fixes: true);
-    private void ToolsDismiss_Click(object sender, MouseButtonEventArgs args) { CloseToolsMenu(); args.Handled = true; }
-
-    internal void ToggleToolsMenu(bool fixes = false)
+    private int _routeRevision;
+    internal void NavigateWithFeedback(Type route)
     {
-        if (IsToolsMenuOpen && (FixesMenuSection.Visibility == Visibility.Visible) == fixes) { CloseToolsMenu(); return; }
-        if (IsToolsMenuOpen) CloseToolsMenu(restoreFocus: false);
-        FixesMenuSection.Visibility = fixes ? Visibility.Visible : Visibility.Collapsed;
-        ToolsMenuSection.Visibility = fixes ? Visibility.Collapsed : Visibility.Visible;
-        RootNavigation.IsPaneOpen = false;
-        _toolsPreviousFocus = Keyboard.FocusedElement;
-        _toolsPreviousEffect = WorkspaceLayer.Effect;
-        _toolsWorkspaceEnabled = WorkspaceLayer.IsEnabled;
-        _toolsPreviousSelection = Controls.PillMotion.GetSelectedIndex(ShellPillItems);
-        Controls.PillMotion.SetSelectedIndex(ShellPillItems, fixes ? 4 : 3);
-        if (Controls.MotionPreferences.BackdropBlurEnabled)
-        {
-            var blur = new BlurEffect { Radius = 12, RenderingBias = RenderingBias.Performance };
-            WorkspaceLayer.Effect = blur;
-            if (Controls.MotionPreferences.AnimationsEnabled)
-                blur.BeginAnimation(BlurEffect.RadiusProperty, new DoubleAnimation(0, 12, TimeSpan.FromMilliseconds(180))
-                { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop });
-        }
-        WorkspaceLayer.IsEnabled = false;
-        ToolsMenuLayer.Visibility = Visibility.Visible;
+        if (route == typeof(Pages.FriendsHubPage)) route = typeof(Pages.FriendsPage);
+        if (!DiscordIntegration.Enabled && DiscordIntegration.IsSocialPage(route)) return;
+        var revision = ++_routeRevision;
+        Controls.PillMotion.SetSelectedIndex(ShellPillItems, route == typeof(Pages.DashboardPage) ? 0 : route == typeof(Pages.LibraryPage) ? 1
+            : route == typeof(Pages.FriendsPage) ? 2 : route == typeof(Pages.DownloadsPage) ? 7 : route == typeof(Pages.FriendsPage) || route == typeof(Pages.CommunityPage) ? 5 : route == typeof(Pages.SettingsPage) ? 6 : route == typeof(Pages.GameFixesPage) || route == typeof(Pages.HypervisorFixesPage) ? 4 : 3);
+        if (PageGlassSurface?.GetType() == route) return;
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() =>
+        { if (revision == _routeRevision && IsLoaded) RootNavigation.Navigate(route); }));
+    }
+
+    private void ShellTools_Click(object sender,RoutedEventArgs args)=>ToggleToolsMenu();
+    private void ShellFixes_Click(object sender,RoutedEventArgs args)=>ToggleToolsMenu(fixes:true);
+    internal void ToggleToolsMenu(bool fixes=false)
+    {
+        if(IsToolsMenuOpen && (FixesMenuSection.Visibility==Visibility.Visible)==fixes) {CloseToolsMenu(); return;}
+        if(IsToolsMenuOpen) CloseToolsMenu(restoreFocus:false);
+        _toolsPreviousFocus=Keyboard.FocusedElement;
+        _toolsPreviousSelection=Controls.PillMotion.GetSelectedIndex(ShellPillItems);
+        FixesMenuSection.Visibility=fixes ? Visibility.Visible : Visibility.Collapsed;
+        ToolsMenuSection.Visibility=fixes ? Visibility.Collapsed : Visibility.Visible;
+        RootNavigation.IsPaneOpen=false;
+        Controls.PillMotion.SetSelectedIndex(ShellPillItems,fixes ? 4 : 3);
+        ToolsMenuLayer.Visibility=Visibility.Visible;
         (fixes ? GameFixesMenuButton : SteamToolsMenuButton).Focus();
     }
-
-    internal void CloseToolsMenu(bool restoreFocus = true)
+    internal void CloseToolsMenu(bool restoreFocus=true)
     {
-        if (!IsToolsMenuOpen) return;
-        ToolsMenuLayer.Visibility = Visibility.Collapsed;
-        WorkspaceLayer.Effect = _toolsPreviousEffect;
-        WorkspaceLayer.IsEnabled = _toolsWorkspaceEnabled;
-        Controls.PillMotion.SetSelectedIndex(ShellPillItems, _toolsPreviousSelection);
-        if (restoreFocus && _toolsPreviousFocus is not null) Keyboard.Focus(_toolsPreviousFocus);
-        _toolsPreviousFocus = null;
-        _toolsPreviousEffect = null;
+        if(!IsToolsMenuOpen) return;
+        ToolsMenuLayer.Visibility=Visibility.Collapsed;
+        Controls.PillMotion.SetSelectedIndex(ShellPillItems,_toolsPreviousSelection);
+        if(restoreFocus && _toolsPreviousFocus is UIElement {IsVisible:true,IsEnabled:true} element) element.Focus();
+        _toolsPreviousFocus=null;
     }
 
     private async Task ApplySelectedLanguageAsync()
@@ -250,16 +281,81 @@ public partial class MainWindow : FluentWindow
     }
 
     internal void RefreshFrameAppearance() => ApplyFrameAppearance();
-    internal void RefreshCaptionAppearance() => UpdateCaptionForeground();
+    internal void RefreshCaptionAppearance(bool paletteChanged = false)
+    {
+        if (paletteChanged) { _drawerPaletteDashboard = null; UpdateCaptionForeground(); }
+        else QueueCaptionAppearance();
+    }
 
-    private void ShellBackdropChanged(object? sender, EventArgs args) => UpdateCaptionForeground();
+    internal void QueueCaptionAppearance()
+    {
+        if (_pendingCaptionRefresh?.Status == System.Windows.Threading.DispatcherOperationStatus.Pending || Dispatcher.HasShutdownStarted) return;
+        if (_captionRefreshDelay?.IsEnabled == true) return;
+        var elapsed = _lastCaptionRefresh == 0 ? 80 : System.Diagnostics.Stopwatch.GetElapsedTime(_lastCaptionRefresh).TotalMilliseconds;
+        if (elapsed < 80)
+        {
+            EnsureCaptionRefreshDelay();
+            // Contrast sampling performs synchronous bitmap rendering. Keep the
+            // latest scroll position, but do not repeat that work every frame.
+            _captionRefreshDelay!.Interval = TimeSpan.FromMilliseconds(Math.Max(1, 80 - elapsed));
+            _captionRefreshDelay.Start();
+            return;
+        }
+        _pendingCaptionRefresh = Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
+        { _pendingCaptionRefresh = null; if (IsLoaded) UpdateCaptionForeground(); }));
+    }
+    private void EnsureCaptionRefreshDelay()
+    {
+        if (_captionRefreshDelay is not null) return;
+        _captionRefreshDelay = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background, Dispatcher);
+        _captionRefreshDelay.Tick += (_, _) => { _captionRefreshDelay.Stop(); QueueCaptionAppearance(); };
+    }
+    private void WindowScrolled(object sender, System.Windows.Controls.ScrollChangedEventArgs args)
+    {
+        if (!IsLoaded || !IsVisible || Dispatcher.HasShutdownStarted ||
+            (args.VerticalChange == 0 && args.HorizontalChange == 0) ||
+            args.ViewportHeightChange != 0 || args.ViewportWidthChange != 0 ||
+            args.ExtentHeightChange != 0 || args.ExtentWidthChange != 0) return;
+        // Bitmap readback blocks the UI thread. Keep the existing contrast while
+        // moving and sample the final position once scrolling has settled.
+        _pendingCaptionRefresh?.Abort(); _pendingCaptionRefresh = null;
+        _pendingNavigationForeground?.Abort(); _pendingNavigationForeground = null;
+        EnsureCaptionRefreshDelay();
+        _captionRefreshDelay!.Stop();
+        _captionRefreshDelay.Interval = TimeSpan.FromMilliseconds(140);
+        _captionRefreshDelay.Start();
+    }
+    private void ShellBackdropChanged(object? sender, EventArgs args)
+    {
+        if (_captionRefreshDelay?.IsEnabled == true) return;
+        QueueCaptionAppearance();
+    }
+    private void QueueNavigationForeground()
+    {
+        if (_pendingNavigationForeground?.Status == System.Windows.Threading.DispatcherOperationStatus.Pending || Dispatcher.HasShutdownStarted) return;
+        // Sample after the changed glass brushes have rendered, rather than sampling
+        // the previous frame from inside the brush-update callback.
+        _pendingNavigationForeground = Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        { _pendingNavigationForeground = null; if (IsLoaded && !UiThemeService.IsHighContrastActive) UpdateNavigationForeground(); }));
+    }
     private void PaneAppearanceChanged(object? sender, EventArgs args) => UpdateCaptionForeground();
 
     private void UpdateCaptionForeground()
     {
         if (WindowTitleBar is null) return;
+        _lastCaptionRefresh = System.Diagnostics.Stopwatch.GetTimestamp();
+        Controls.ChromeSurfaceSample? detailSample = null;
+        if (PageGlassSurface is Pages.GameDetailsPage { IsLoaded: true, ActualWidth: > 0, ActualHeight: > 0 } details
+            && Controls.MotionPreferences.BackdropBlurEnabled && !UiThemeService.IsHighContrastActive)
+        {
+            if (_pageChromeSample is null) _pageChromeSample = new Controls.ChromeSurfaceSample(details);
+            else _pageChromeSample.Capture(details);
+            detailSample = _pageChromeSample;
+        }
         double LuminanceBehind(FrameworkElement element)
         {
+            if (detailSample is not null && PageGlassSurface is { } page)
+                return detailSample.Luminance(new Rect(element.TranslatePoint(new Point(), page), new Size(Math.Max(1, element.ActualWidth), Math.Max(1, element.ActualHeight))));
             if (DashboardSurface is not { IsLoaded: true, ActualWidth: > 0 } surface) return (!UiThemeService.AmbientEnabled ? UiThemeService.StaticBackgroundIsLight : UiThemeService.IsLight) ? 1 : 0;
             var origin = element.TranslatePoint(new Point(), surface);
             var region = new Rect(origin, new Size(Math.Max(1, element.ActualWidth), Math.Max(1, element.ActualHeight)));
@@ -268,10 +364,9 @@ public partial class MainWindow : FluentWindow
         }
         bool LightBehind(FrameworkElement element) => LuminanceBehind(element) > .179;
         var launcher = RootNavigation.Template?.FindName("MenuLauncher", RootNavigation) as FrameworkElement ?? RootNavigation;
-        var launcherLight = RootNavigation.IsPaneOpen ? UiThemeService.IsLight : LightBehind(launcher);
-        var navigationLight = LightBehind(PersistentNavigation);
+        var launcherLight = UiThemeService.IsLight;
         NavigationSheen.Visibility = UiThemeService.IsHighContrastActive ? Visibility.Collapsed : Visibility.Visible;
-        var launcherBackground = UiThemeService.IsHighContrastActive ? SystemColors.WindowBrush : launcherLight ? LightChrome : DarkChrome;
+        var launcherBackground = UiThemeService.IsHighContrastActive ? SystemColors.WindowBrush : launcherLight ? FrostedLightChrome : FrostedDarkChrome;
         var launcherForeground = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush
             : launcherLight ? System.Windows.Media.Brushes.Black : System.Windows.Media.Brushes.White;
         if (!ReferenceEquals(Application.Current.Resources["LauncherBackgroundBrush"], launcherBackground))
@@ -280,25 +375,24 @@ public partial class MainWindow : FluentWindow
             Application.Current.Resources["LauncherForegroundBrush"] = launcherForeground;
         if (!UiThemeService.IsHighContrastActive)
         {
-            foreach (var button in ShellPillItems.Children.OfType<System.Windows.Controls.Button>())
-                button.Foreground = FrostedLuminance(LuminanceBehind(button), navigationLight) > .179 ? System.Windows.Media.Brushes.Black : System.Windows.Media.Brushes.White;
-            NavigationSurface.Background = navigationLight ? FrostedLightChrome : FrostedDarkChrome;
-            NavigationHighlight.Background = navigationLight ? LightSelection : DarkSelection;
+            NavigationHighlight.Background = launcherLight ? LightSelection : DarkSelection;
+            QueueNavigationForeground();
             WindowTitleBar.Foreground = LightBehind(WindowTitleBar) ? System.Windows.Media.Brushes.Black : System.Windows.Media.Brushes.White;
-            ShellQuickDownloadsButton.Foreground = LightBehind(ShellQuickDownloadsButton) ? System.Windows.Media.Brushes.Black : System.Windows.Media.Brushes.White;
+            ShellFriendsButton.Foreground = LightBehind(ShellFriendsButton) ? System.Windows.Media.Brushes.Black : System.Windows.Media.Brushes.White;
         }
         else
         {
             foreach (var button in ShellPillItems.Children.OfType<System.Windows.Controls.Button>()) button.SetResourceReference(ForegroundProperty, "TextPrimaryBrush");
-            NavigationSurface.Background = SystemColors.WindowBrush;
             NavigationHighlight.Background = SystemColors.HighlightBrush;
             WindowTitleBar.SetResourceReference(ForegroundProperty, "TextSecondaryBrush");
-            ShellQuickDownloadsButton.Foreground = SystemColors.WindowTextBrush;
+            ShellFriendsButton.Foreground = SystemColors.WindowTextBrush;
         }
-        RootNavigation.SetResourceReference(ForegroundProperty, "TextPrimaryBrush");
         // The dashboard body is black in both themes. WPF-UI's themed item styles
         // otherwise keep dark text when the glass drawer sits over this surface.
-        var dashboardDrawer = DashboardSurface is not null && !UiThemeService.IsHighContrastActive;
+        var dashboardDrawer = DashboardSurface is not null && !UiThemeService.IsLight && !UiThemeService.IsHighContrastActive;
+        if (_drawerPaletteDashboard == dashboardDrawer) return;
+        _drawerPaletteDashboard = dashboardDrawer;
+        RootNavigation.SetResourceReference(ForegroundProperty, "TextPrimaryBrush");
         void UpdateDrawerItems(System.Collections.IEnumerable items)
         {
             foreach (var item in items.OfType<NavigationViewItem>())
@@ -331,33 +425,29 @@ public partial class MainWindow : FluentWindow
         }
     }
 
-    private static readonly System.Windows.Media.Brush LightChrome = ChromeBrush(0x30, 0x18, System.Windows.Media.Colors.White);
-    private static readonly System.Windows.Media.Brush FrostedLightChrome = ChromeBrush(0x60, 0x40, System.Windows.Media.Colors.White);
-    private static readonly System.Windows.Media.Brush FrostedDarkChrome = ChromeBrush(0x80, 0x60, System.Windows.Media.Color.FromRgb(26, 30, 36));
-    private static double FrostedLuminance(double source, bool light)
+    private static readonly System.Windows.Media.Brush FrostedLightChrome = ChromeBrush(0xD0, System.Windows.Media.Colors.White);
+    private static readonly System.Windows.Media.Brush FrostedDarkChrome = ChromeBrush(0xB8, System.Windows.Media.Color.FromRgb(24, 24, 27));
+    private void UpdateNavigationForeground()
     {
-        // Include the frosted tint when choosing text contrast; source artwork alone
-        // can be dark even when the white glass coating makes the button area light.
-        var encoded = source <= .0031308 ? source * 12.92 : 1.055 * Math.Pow(source, 1 / 2.4) - .055;
-        var alpha = light ? (0x60 + 0x40) / 510d : (0x80 + 0x60) / 510d;
-        var tint = light ? 1 : (.2126 * 26 + .7152 * 30 + .0722 * 36) / 255;
-        var result = encoded * (1 - alpha) + tint * alpha;
-        return result <= .04045 ? result / 12.92 : Math.Pow((result + .055) / 1.055, 2.4);
+        // Both themes now own a stable frosted material. Labels do not need a
+        // synchronous GPU readback after each scroll or palette update.
+        foreach (var button in ShellPillItems.Children.OfType<System.Windows.Controls.Button>())
+            button.Foreground = UiThemeService.IsHighContrastActive ? SystemColors.WindowTextBrush
+                : UiThemeService.IsLight ? System.Windows.Media.Brushes.Black : System.Windows.Media.Brushes.White;
     }
-    private static readonly System.Windows.Media.Brush DarkChrome = ChromeBrush(0x48, 0x24, System.Windows.Media.Colors.Black);
-    private static readonly System.Windows.Media.Brush LightSelection = ChromeBrush(0x24, 0x14, System.Windows.Media.Colors.Black);
-    private static readonly System.Windows.Media.Brush DarkSelection = ChromeBrush(0x48, 0x20, System.Windows.Media.Colors.White);
-    private static System.Windows.Media.Brush ChromeBrush(byte top, byte bottom, System.Windows.Media.Color color)
+    private static readonly System.Windows.Media.Brush LightSelection = ChromeBrush(0x18, System.Windows.Media.Colors.Black);
+    private static readonly System.Windows.Media.Brush DarkSelection = ChromeBrush(0x30, System.Windows.Media.Colors.White);
+    private static System.Windows.Media.Brush ChromeBrush(byte opacity, System.Windows.Media.Color color)
     {
-        var brush = new System.Windows.Media.LinearGradientBrush(System.Windows.Media.Color.FromArgb(top, color.R, color.G, color.B), System.Windows.Media.Color.FromArgb(bottom, color.R, color.G, color.B), 90);
+        var brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(opacity, color.R, color.G, color.B));
         brush.Freeze(); return brush;
     }
 
     private int _overlayRevision;
     public void ShowOverlay(UIElement content)
     {
+        CloseToolsMenu(restoreFocus:false);
         ++_overlayRevision;
-        CloseToolsMenu(restoreFocus: false);
         OverlayHost.Content = content;
         SetupBackdrop.Visibility = content is FirstRunSetup or TransparencyNotice ? Visibility.Visible : Visibility.Collapsed;
         ConstrainOverlay();
@@ -395,8 +485,13 @@ public partial class MainWindow : FluentWindow
 
     protected override void OnClosed(EventArgs e)
     {
+        _captionRefreshDelay?.Stop();
+        _pendingCaptionRefresh?.Abort(); _pendingCaptionRefresh = null;
+        _pendingNavigationForeground?.Abort(); _pendingNavigationForeground = null;
+        _pageChromeSample = null;
         _paneDescriptor.RemoveValueChanged(RootNavigation, PaneAppearanceChanged);
         _shellDownloads.Dispose();
+        _gamepad?.Dispose();
         if (_shellBackdrop is not null) _shellBackdrop.Changed -= ShellBackdropChanged;
         _navigationService.Detach();
         base.OnClosed(e);

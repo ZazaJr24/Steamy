@@ -1,0 +1,35 @@
+<UserControl x:Class="Steamy.Controls.GifPicker"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:controls="clr-namespace:Steamy.Controls" FontFamily="{DynamicResource SteamyFontFamily}">
+ <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Steamy;component/Resources/SocialStyles.xaml" /></ResourceDictionary.MergedDictionaries><BooleanToVisibilityConverter x:Key="BoolVis" /></ResourceDictionary></UserControl.Resources>
+ <Border Width="414" MaxHeight="490" Padding="18" Background="{DynamicResource SocialNotificationBrush}" BorderBrush="{DynamicResource SocialEdgeBrush}" BorderThickness="1" CornerRadius="18">
+  <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+   <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="GIFs" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" /><CheckBox Grid.Column="1" Content="★ Favorites" IsChecked="{Binding ShowFavorites}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" /></Grid>
+   <ui:TextBox Grid.Row="1" Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" MaxLength="50" PlaceholderText="{Binding SearchPlaceholder}" Style="{StaticResource SocialField}" AutomationProperties.Name="Search GIFs" />
+   <Grid Grid.Row="2" MinHeight="96" MaxHeight="230" Margin="0,12,0,4">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Style="{StaticResource PageScrollHostStyle}">
+     <ItemsControl ItemsSource="{Binding Items}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate>
+      <Grid Width="115" Height="104" Margin="0,0,6,8">
+       <Button Command="{Binding DataContext.PickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" ToolTip="{Binding Title}" Padding="0" BorderThickness="0" Background="{DynamicResource SocialFieldBrush}">
+        <controls:ChatImagePreview Url="{Binding PreviewUrl}" Width="115" Height="104" MinWidth="0" Margin="0" IsHitTestVisible="False" />
+       </Button>
+       <ui:Button Content="★" Style="{StaticResource SocialQuietButton}" Command="{Binding DataContext.FavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Padding="6,2" MinHeight="24" Background="{DynamicResource SocialNotificationBrush}" ToolTip="Add or remove favorite" AutomationProperties.Name="Favorite GIF" />
+      </Grid>
+     </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+    </ScrollViewer>
+    <ProgressBar IsIndeterminate="True" Height="2" VerticalAlignment="Top" Visibility="{Binding Busy, Converter={StaticResource BoolVis}}" />
+   </Grid>
+   <StackPanel Grid.Row="3">
+    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Status}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,8,6" AutomationProperties.LiveSetting="Polite" /><ui:Button Grid.Column="1" Content="More" Command="{Binding MoreCommand}" Style="{StaticResource SocialQuietButton}" Padding="8,2" MinHeight="24" /></Grid>
+    <Grid Margin="0,6,0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><ui:TextBox Text="{Binding Link, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Paste a direct GIF or image link" Style="{StaticResource SocialField}" FontSize="11" MinHeight="34" Padding="9,6" /><ui:Button Grid.Column="1" Content="Add" Command="{Binding UseLinkCommand}" Style="{StaticResource SocialQuietButton}" Margin="4,0,0,0" /></Grid>
+    <Expander Header="GIF search settings" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0">
+     <StackPanel Margin="0,8,0,6"><ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding Provider}" FontSize="12" /><ui:TextBox Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="App API key" Style="{StaticResource SocialField}" Margin="0,6,0,6" /><WrapPanel><ui:Button Content="Save key" Command="{Binding SaveKeyCommand}" Style="{StaticResource SocialQuietButton}" /><ui:Button Content="Open GIF website ↗" Command="{Binding OpenProviderCommand}" Style="{StaticResource SocialQuietButton}" /></WrapPanel></StackPanel>
+    </Expander>
+   </StackPanel>
+   <Grid Grid.Row="4" Margin="0,10,0,0" HorizontalAlignment="Right">
+    <TextBlock Text="{Binding Attribution}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" FontWeight="SemiBold"><TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding Provider}" Value="GIPHY"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+    <Image Source="{DynamicResource GiphyAttributionImage}" Width="200" Height="26" Stretch="Uniform" AutomationProperties.Name="Powered by GIPHY"><Image.Style><Style TargetType="Image"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding Provider}" Value="GIPHY"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></Image.Style></Image>
+   </Grid>
+  </Grid>
+ </Border>
+</UserControl>

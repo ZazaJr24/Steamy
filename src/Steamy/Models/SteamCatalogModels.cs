@@ -21,11 +21,6 @@ public enum SteamCatalogAppType
 /// </summary>
 public sealed class SteamCatalogItem : UiObservableObject
 {
-    public SteamCatalogItem()
-    {
-        Screenshots.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasScreenshots));
-    }
-
     private string _shortDescription = string.Empty;
     private string _developersDisplay = string.Empty;
     private string _publishersDisplay = string.Empty;
@@ -43,8 +38,8 @@ public sealed class SteamCatalogItem : UiObservableObject
     private bool _screenshotsLoaded;
     private bool _isScreenshotsLoading;
     private string _screenshotStatus = "Screenshots not loaded";
-    private System.Windows.Media.Imaging.BitmapImage? _artworkImage;
-    private System.Windows.Media.Imaging.BitmapImage? _headerImage;
+    private WeakReference<System.Windows.Media.Imaging.BitmapImage>? _artworkImage;
+    private WeakReference<System.Windows.Media.Imaging.BitmapImage>? _headerImage;
     private SteamCatalogAppType _appType;
     private bool _isInstalled;
 
@@ -52,6 +47,7 @@ public sealed class SteamCatalogItem : UiObservableObject
     public bool IsReleaseVerified { get; set; }
     public string CardLabel => IsUpcoming ? "UPCOMING" : TypeLabel;
     public int AppId { get; init; }
+    public string PlatformLabel => AppId > 0 ? "STEAM" : "PC";
     public string Name { get; init; } = string.Empty;
     public SteamCatalogAppType AppType
     {
@@ -69,11 +65,28 @@ public sealed class SteamCatalogItem : UiObservableObject
         get => _nsfw;
         set => SetProperty(ref _nsfw, value);
     }
-    public string HeaderImageUrl { get; set; } = string.Empty;
-    public string CapsuleImageUrl { get; set; } = string.Empty;
-    public string PortraitImageUrl { get; set; } = string.Empty;
-    public string LibraryImageUrl { get; set; } = string.Empty;
-    public ObservableCollection<SteamCatalogScreenshot> Screenshots { get; } = new();
+    // Public catalogs contain hundreds of thousands of entries. Generate CDN addresses
+    // only for entries whose artwork is actually requested; custom providers keep their URLs.
+    internal bool UseSteamArtworkDefaults { get; init; }
+    private string? _headerImageUrl, _capsuleImageUrl, _portraitImageUrl, _libraryImageUrl, _defaultPortraitUrl;
+    public string HeaderImageUrl { get => _headerImageUrl ??= SteamArtworkUrl("header.jpg"); set => _headerImageUrl = value; }
+    public string CapsuleImageUrl { get => _capsuleImageUrl ??= SteamArtworkUrl("capsule_616x353.jpg"); set => _capsuleImageUrl = value; }
+    public string PortraitImageUrl { get => _portraitImageUrl ??= DefaultPortraitUrl; set => _portraitImageUrl = value; }
+    public string LibraryImageUrl { get => _libraryImageUrl ??= DefaultPortraitUrl; set => _libraryImageUrl = value; }
+    private string DefaultPortraitUrl => _defaultPortraitUrl ??= SteamArtworkUrl("library_600x900.jpg");
+    private string SteamArtworkUrl(string file) => UseSteamArtworkDefaults
+        ? $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{AppId}/{file}" : string.Empty;
+    private ObservableCollection<SteamCatalogScreenshot>? _screenshots;
+    public ObservableCollection<SteamCatalogScreenshot> Screenshots
+    {
+        get
+        {
+            if (_screenshots is not null) return _screenshots;
+            _screenshots = new();
+            _screenshots.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasScreenshots));
+            return _screenshots;
+        }
+    }
 
     public string TypeLabel => AppType switch
     {
@@ -205,7 +218,7 @@ public sealed class SteamCatalogItem : UiObservableObject
         set => SetProperty(ref _screenshotStatus, value);
     }
 
-    public bool HasScreenshots => Screenshots.Count > 0;
+    public bool HasScreenshots => _screenshots?.Count > 0;
 
     public string ScreenshotCountLabel => Screenshots.Count == 0
         ? "No screenshots"
@@ -213,23 +226,26 @@ public sealed class SteamCatalogItem : UiObservableObject
 
     public System.Windows.Media.Imaging.BitmapImage? ArtworkImage
     {
-        get => _artworkImage;
+        get => _artworkImage is not null && _artworkImage.TryGetTarget(out var image) ? image : null;
         set
         {
-            if (SetProperty(ref _artworkImage, value)) OnPropertyChanged(nameof(IsArtworkFallback));
+            if (ReferenceEquals(ArtworkImage, value)) return;
+            _artworkImage = value is null ? null : new(value); OnPropertyChanged(nameof(ArtworkImage)); OnPropertyChanged(nameof(IsArtworkFallback)); OnPropertyChanged(nameof(IsArtworkLandscape));
         }
     }
 
     public System.Windows.Media.Imaging.BitmapImage? HeaderImage
     {
-        get => _headerImage;
+        get => _headerImage is not null && _headerImage.TryGetTarget(out var image) ? image : null;
         set
         {
-            if (SetProperty(ref _headerImage, value)) OnPropertyChanged(nameof(IsHeaderFallback));
+            if (ReferenceEquals(HeaderImage, value)) return;
+            _headerImage = value is null ? null : new(value); OnPropertyChanged(nameof(HeaderImage)); OnPropertyChanged(nameof(IsHeaderFallback));
         }
     }
 
     public bool IsArtworkFallback => ArtworkImage is null;
+    public bool IsArtworkLandscape => ArtworkImage is { PixelHeight: > 0 } image && image.PixelWidth > image.PixelHeight * 1.1;
     public bool IsHeaderFallback => HeaderImage is null;
 }
 
@@ -297,7 +313,8 @@ public static class SteamCatalogQuery
         string? sortOption,
         LibraryNsfwScope nsfwScope = LibraryNsfwScope.Hide,
         CancellationToken cancellationToken = default,
-        bool includeUpcoming = false)
+        bool includeUpcoming = false,
+        IReadOnlyDictionary<int, bool>? releaseStatus = null)
     {
         ArgumentNullException.ThrowIfNull(items);
 
@@ -306,7 +323,8 @@ public static class SteamCatalogQuery
         IEnumerable<SteamCatalogItem> query = items.Where(item =>
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return (includeUpcoming || !item.IsUpcoming) && (search.Length == 0 || MatchesSearch(item.Name, item.AppId, search, words));
+            var upcoming = releaseStatus is not null && releaseStatus.TryGetValue(item.AppId, out var knownUpcoming) ? knownUpcoming : item.IsUpcoming;
+            return (includeUpcoming || !upcoming) && (search.Length == 0 || MatchesSearch(item.Name, item.AppId, search, words));
         });
 
         if (nsfwScope == LibraryNsfwScope.Hide)
@@ -314,7 +332,7 @@ public static class SteamCatalogQuery
 
         query = typeFilter?.Trim() switch
         {
-            "Game" or "Games" => query.Where(item => item.AppType == SteamCatalogAppType.Game),
+            "Game" or "Games" => query.Where(item => item.AppType == SteamCatalogAppType.Game || item.IsUpcoming),
             "DLC" or "Dlc" => query.Where(item => item.AppType == SteamCatalogAppType.Dlc),
             "Software" => query.Where(item => item.AppType == SteamCatalogAppType.Software),
             "Video" => query.Where(item => item.AppType == SteamCatalogAppType.Video),

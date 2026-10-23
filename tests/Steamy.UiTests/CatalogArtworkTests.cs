@@ -10,6 +10,37 @@ namespace Steamy.UiTests;
 public sealed class CatalogArtworkTests
 {
     [Fact]
+    public async Task CachedFallbackBypassesBusyWorkersEvenWhenThePreferredImageIsMissing()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "Steamy-cached-fallback-queue-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var handler = new CoverHandler { PreferredMissing = true };
+            using var http = new HttpClient(handler); using var service = new SteamCatalogService(http, folder);
+            var initial = Item(480); Assert.True(await service.EnsureArtworkAsync(initial));
+            handler.Hold = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var slow = Enumerable.Range(481, 4).Select(id => service.EnsureArtworkAsync(Item(id))).ToArray();
+            using var lookup = new CancellationTokenSource();
+            Task<bool>? cached = null;
+            try
+            {
+                await handler.FourBlocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                var requests = handler.Requests; var restored = Item(480);
+                cached = service.EnsureArtworkAsync(restored, cancellationToken: lookup.Token);
+                Assert.True(await cached.WaitAsync(TimeSpan.FromSeconds(2)));
+                Assert.Same(initial.ArtworkImage, restored.ArtworkImage);
+                Assert.Equal(requests, handler.Requests);
+                Assert.All(slow, task => Assert.False(task.IsCompleted));
+            }
+            finally
+            {
+                lookup.Cancel(); handler.Hold.TrySetResult(); await Task.WhenAll(slow);
+                if (cached is not null) try { await cached; } catch (OperationCanceledException) { }
+            }
+        }
+        finally { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
+    }
+    [Fact]
     public async Task CachedCoverDoesNotWaitForFourSlowNetworkRequests()
     {
         var folder = Path.Combine(Path.GetTempPath(), "Steamy-cache-queue-" + Guid.NewGuid().ToString("N"));

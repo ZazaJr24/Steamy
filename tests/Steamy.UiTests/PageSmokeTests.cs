@@ -21,6 +21,15 @@ namespace Steamy.UiTests;
 public sealed partial class PageSmokeTests
 {
     private static volatile string _phase = "Starting";
+    private static void TracePhase(string phase)
+    {
+        _phase = phase;
+        if (Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS") is { Length: > 0 } folder)
+        {
+            Directory.CreateDirectory(folder);
+            File.AppendAllText(Path.Combine(folder, "phases.txt"), $"{DateTimeOffset.Now:O} {phase}{Environment.NewLine}");
+        }
+    }
     [Fact]
     public void RealPagesLoadTheirResourcesAndLayoutInBothThemes()
     {
@@ -38,6 +47,8 @@ public sealed partial class PageSmokeTests
 
     private static void ExercisePages()
     {
+        DiscordIntegration.TestOverride = Environment.GetEnvironmentVariable("STEAMY_UI_DISCORD_REMOVED_ONLY") != "1";
+        TracePhase("Creating WPF application");
         // A plain test Application avoids production startup/exit side effects. Load the
         // same compiled dictionaries as App.xaml; WPF cannot load App.xaml into a subclass
         // declared in a different assembly.
@@ -48,11 +59,13 @@ public sealed partial class PageSmokeTests
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Steamy;component/Resources/Themes/Dark.xaml") });
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Steamy;component/Resources/Styles.xaml") });
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Steamy;component/Resources/Shell.xaml") });
+        TracePhase("WPF resources loaded");
         var services = new ServiceCollection().AddSteamyServices();
         // Real view models, no downloader processes, network clients, database or user credentials.
         foreach (var type in services.Select(s => s.ServiceType).Where(t => t.IsInterface && t.IsVisible).Distinct().ToArray())
             services.AddSingleton(type, _ => OfflineServiceProxy.Create(type));
         var store = new AppDataStore();
+        services.AddSingleton<IWindowsControllers>(new NoWindowsControllers());
         store.Downloads.Add(new DownloadJob { GameName = "A game ready to continue", State = DownloadJobState.Paused, Progress = 42.5, Status = "Paused — existing files are retained", TargetFolder = "C:\\Games\\Example", DownloadMode = "DepotDownloaderMod (Zaza)" });
         store.Downloads.Add(new DownloadJob { GameName = "A completed download", State = DownloadJobState.Completed, Progress = 100, Status = "Download completed", DownloadMode = "DepotDownloader" });
         store.Downloads.Add(new DownloadJob { GameName = "A free Sushi source download", State = DownloadJobState.Paused, Progress = 61, Status = "Paused · resume keeps the saved manifests", DownloadMode = "DepotDownloaderMod (Sushi)" });
@@ -60,6 +73,7 @@ public sealed partial class PageSmokeTests
         services.AddSingleton<IBetterSteamToolsService>(betterSteamTools);
         var fixtureArtwork = new FixtureArtwork();
         services.AddSingleton<IArtworkService>(fixtureArtwork);
+        services.AddSingleton<IImagePipeline>(new ScreenshotImagePipeline());
         services.AddSingleton<ISpotlightService>(new FixtureSpotlight());
         services.AddSingleton<ITrailerPreviewService>(new FixtureTrailers());
         var wizardQueue = new WizardQueueFixture();
@@ -77,37 +91,127 @@ public sealed partial class PageSmokeTests
             _ => new NavigationViewPageProvider(App.Services));
         services.AddSingleton<IAppDataStore>(store);
         services.AddSingleton<ISettingsService>(new MemorySettings());
+        if (Environment.GetEnvironmentVariable("STEAMY_UI_SETTINGS_OFFSCREEN_ONLY") == "1")
+            services.AddSingleton<ISecureCredentialService>(new SettingsCredentialsFixture());
+        services.AddSingleton<IControllerBackend>(new ControllerOfflineFixture());
+        if (DiscordIntegration.Enabled) services.AddSingleton<IDiscordSocialService>(Environment.GetEnvironmentVariable("STEAMY_UI_ACCEPTANCE_ONLY") == "1" || Environment.GetEnvironmentVariable("STEAMY_UI_DISCORD_ONLY") == "1" || Environment.GetEnvironmentVariable("STEAMY_UI_WINDOWED_ONLY") == "1" || Environment.GetEnvironmentVariable("STEAMY_UI_REWORK_ONLY") == "1" || Environment.GetEnvironmentVariable("STEAMY_UI_PERFORMANCE_ONLY") == "1" ? new DiscordUiFixture() : new DiscordOfflineFixture());
         var detailsFixture = new GameDetailsFixture();
         services.AddSingleton<IGameDetailsDataService>(detailsFixture);
         services.AddSingleton<IGamePreferencesStore>(detailsFixture);
         services.AddSingleton<IGameLaunchService>(detailsFixture);
-        if (Environment.GetEnvironmentVariable("STEAMY_UI_GAME_DETAILS_ONLY") == "1")
+        if (Environment.GetEnvironmentVariable("STEAMY_UI_GAME_DETAILS_ONLY") == "1" || Environment.GetEnvironmentVariable("STEAMY_UI_ACCEPTANCE_ONLY") == "1" || Environment.GetEnvironmentVariable("STEAMY_UI_FLOW_OFFSCREEN_ONLY") == "1")
             services.AddSingleton<IPlayTimeService>(detailsFixture);
+        TracePhase("Test services registered");
         using var provider = services.BuildServiceProvider();
         typeof(App).GetProperty(nameof(App.Services))!.SetValue(null, provider);
         var bindingLog = new BindingLog();
         PresentationTraceSources.DataBindingSource.Listeners.Add(bindingLog);
         try
         {
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_SMOOTH_ONLY") == "1")
+            {
+                CheckLibrarySmoothnessOffscreen(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_DETAILS_FADE_ONLY") == "1")
+            {
+                CheckDetailsFadeAndStickyBack(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_LIBRARY_COLLAPSE_ONLY") == "1")
+            {
+                CheckLibraryCollapseOffscreen(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_FLOW_OFFSCREEN_ONLY") == "1")
+            {
+                CheckPageFlowsOffscreen(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_DISCOVERY_OFFSCREEN_ONLY") == "1")
+            {
+                CheckDiscoveryLifetimeOffscreen(provider);
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_SETTINGS_OFFSCREEN_ONLY") == "1")
+            {
+                CheckSettingsOffscreen(provider);
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_CHROME_ONLY") == "1")
+            {
+                CheckChromeVisuals(provider, store, fixtureArtwork);
+                return;
+            }
+            if (!DiscordIntegration.Enabled)
+            {
+                CheckDiscordRemoved(provider);
+                if (Environment.GetEnvironmentVariable("STEAMY_UI_GAME_DETAILS_ONLY") == "1") CheckGameDetails(provider, store, fixtureArtwork);
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_SHELL_SCREENSHOTS_ONLY") == "1")
+            {
+                AddScreenshotLibrary(store, fixtureArtwork);
+                SaveShellScreenshots(provider, fixtureArtwork);
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_ACCEPTANCE_ONLY") == "1")
+            {
+                TracePhase("Acceptance: game details and image viewer"); CheckGameDetails(provider, store, fixtureArtwork);
+                TracePhase("Acceptance: windowed shell and retained search"); CheckWindowedShell(provider, store, fixtureArtwork);
+                TracePhase("Acceptance: GIF playback and release"); CheckGifRuntime();
+                TracePhase("Acceptance: Discord and voice controls"); CheckDiscordFriends(); CheckVoiceUi(provider);
+                TracePhase("Acceptance: theme, size and render-scale matrix"); CheckReworkShell(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                TracePhase("Acceptance complete"); return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_WINDOWED_ONLY") == "1")
+            {
+                CheckWindowedShell(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_PERFORMANCE_ONLY") == "1") { CheckResponsiveness(provider); return; }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_REWORK_ONLY") == "1")
+            {
+                CheckReworkShell(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_DISCORD_ONLY") == "1")
+            {
+                CheckGifRuntime();
+                if (Environment.GetEnvironmentVariable("STEAMY_DISCORD_SDK_CHECK") == "1") { CheckDiscordSdkRuntime(); CheckHostedDiscordSdkRuntime(); }
+                CheckFirstRunSetup();
+                CheckDiscordFriends();
+                CheckVoiceUi(provider);
+                CheckNativeFriendsNavigation(provider);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
             if (Environment.GetEnvironmentVariable("STEAMY_UI_LIBRARY_INSTALL_OFFSCREEN_ONLY") == "1" || Environment.GetEnvironmentVariable("STEAMY_UI_LIBRARY_BLACK_OFFSCREEN_ONLY") == "1")
             {
                 AddScreenshotLibrary(store,fixtureArtwork);
                 OfflineServiceProxy.ScreenshotCatalog=store.Games.Select(game=>new SteamCatalogItem
                 { AppId=game.AppId,Name=game.Name,AppType=SteamCatalogAppType.Game,ArtworkImage=game.ArtworkImage,IsReleaseVerified=true }).Concat(new[] { (1808500,"ARC Raiders"), (945360,"Among Us"), (553850,"HELLDIVERS 2"), (958520,"Construction Simulator"), (812140,"Assassin's Creed Odyssey"), (4435490,"Fable"), (48190,"Assassin's Creed Brotherhood"), (33230,"Assassin's Creed 2") }.Select(game=>new SteamCatalogItem
                 { AppId=game.Item1,Name=game.Item2,AppType=game.Item1==33230 ? SteamCatalogAppType.Unknown : SteamCatalogAppType.Game,ArtworkImage=FixtureArtwork.Read(game.Item1,"portrait") })).ToArray();
-                var catalogSize=OfflineServiceProxy.ScreenshotCatalog.Length;
+                var catalogSize=OfflineServiceProxy.ScreenshotCatalog.Count(item => item.AppType == SteamCatalogAppType.Game);
                 var releaseGate=new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 OfflineServiceProxy.ReleaseMetadataGate=releaseGate.Task;
                 var model=provider.GetRequiredService<LibraryViewModel>();
                 Assert.Equal("Browse all",model.SelectedMode);
-                Assert.Equal("All games",model.SelectedTypeFilter);
+                Assert.Equal("Game",model.SelectedTypeFilter);
                 var library=new LibraryPage();
                 library.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
                 try
                 {
                     var refresh=((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)model.RefreshCatalogCommand).ExecuteAsync(null);
                     PumpUntil(()=>model.PagedCatalogItems.Count==catalogSize);
-                    Assert.Contains(model.PagedCatalogItems,item=>item.AppId==33230 && !item.IsReleaseVerified);
+                    Assert.DoesNotContain(model.PagedCatalogItems,item=>item.AppType != SteamCatalogAppType.Game);
                     releaseGate.SetResult(); OfflineServiceProxy.ReleaseMetadataGate=null;
                     PumpUntil(()=>refresh.IsCompleted);
                     foreach(var theme in new[] { "Dark","Light" })
@@ -116,8 +220,8 @@ public sealed partial class PageSmokeTests
                         var size=new Size(1280,800);
                         library.Measure(size); library.Arrange(new Rect(size)); library.UpdateLayout();
                         PumpDispatcher(TimeSpan.FromMilliseconds(200));
-                        Assert.True(Assert.IsType<DrawingBrush>(((ShellBackdropView)library.FindName("LibraryAmbientBackdrop")).BaseBrush).IsFrozen);
-                        Assert.Equal(Colors.White,Assert.IsType<SolidColorBrush>(library.Resources["TextPrimaryBrush"]).Color);
+                        Assert.True(((ShellBackdropView)library.FindName("LibraryAmbientBackdrop")).BaseBrush.IsFrozen);
+                        Assert.Equal(theme == "Light" ? Colors.Black : Colors.White,Assert.IsType<SolidColorBrush>(library.Resources["TextPrimaryBrush"]).Color);
                         Assert.Contains(Descendants<Button>(library),button=>button.Tag is SteamCatalogItem);
                         var image=new RenderTargetBitmap(1280,800,96,96,PixelFormats.Pbgra32); image.Render(library);
                         var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(image));
@@ -248,6 +352,7 @@ public sealed partial class PageSmokeTests
             }
             if (Environment.GetEnvironmentVariable("STEAMY_UI_SCROLL_ONLY") == "1")
             {
+                CheckScrollReversal();
                 provider.GetRequiredService<LibraryViewModel>().SelectedMode = "Browse all";
                 CheckShellScrolling(provider);
                 return;
@@ -262,6 +367,17 @@ public sealed partial class PageSmokeTests
             if (Environment.GetEnvironmentVariable("STEAMY_UI_GAME_DETAILS_ONLY") == "1")
             {
                 CheckGameDetails(provider, store, fixtureArtwork);
+                Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+            if (Environment.GetEnvironmentVariable("STEAMY_UI_HOME_VIRTUALIZATION_ONLY") == "1")
+            {
+                AddScreenshotLibrary(store, fixtureArtwork);
+                foreach (var (game, index) in store.Games.Select((game, index) => (game, index)))
+                    activity.RecordLaunchAsync(game.AppId, DateTimeOffset.UtcNow.AddHours(-index - 1)).GetAwaiter().GetResult();
+                TracePhase("Home virtualization: trailers"); CheckTrailerPreviews(provider);
+                TracePhase("Home virtualization: ambient and glass"); CheckGlassShell(provider);
+                TracePhase("Home virtualization: scrolling"); CheckShellScrolling(provider);
                 Assert.DoesNotContain(bindingLog.Lines, line => line.Contains("Error:", StringComparison.OrdinalIgnoreCase));
                 return;
             }
@@ -288,6 +404,8 @@ public sealed partial class PageSmokeTests
             CheckSettingsCache();
             _phase = "CheckFirstRunSetup()";
             CheckFirstRunSetup();
+            _phase = "CheckDiscordFriends()";
+            CheckDiscordFriends();
             _phase = "CheckArtworkDecoding()";
             CheckArtworkDecoding();
             _phase = "CheckScrollReversal()";
@@ -384,6 +502,13 @@ public sealed partial class PageSmokeTests
                         Assert.Equal(1, pageChanges);
                         viewModel.SearchText = string.Empty;
                         PumpUntil(() => viewModel.PagedCatalogItems.Count == 1);
+                        PumpUntil(() => viewModel.FilteredGames.Count == viewModel.Games.Count);
+                        var unfilteredLocalOrder = viewModel.FilteredGames.ToArray();
+                        viewModel.SearchText = " \t\r\n";
+                        PumpDispatcher(TimeSpan.FromMilliseconds(350));
+                        PumpUntil(() => !viewModel.IsSearchBusy && viewModel.FilteredGames.Count == viewModel.Games.Count);
+                        Assert.Equal(unfilteredLocalOrder, viewModel.FilteredGames);
+                        viewModel.SearchText = string.Empty;
                     }
                     if (page is DownloadsPage)
                     {
@@ -397,17 +522,17 @@ public sealed partial class PageSmokeTests
                     }
                     if (page is SettingsPage settings)
                     {
-                        var categories = Assert.IsType<ComboBox>(settings.FindName("CategorySelector"));
-                        categories.SelectedItem = categories.Items.Cast<ComboBoxItem>().Single(item => Equals(item.Tag, "services"));
+                        var categories = Assert.IsType<ListBox>(settings.FindName("CategorySelector"));
+                        categories.SelectedItem = categories.Items.Cast<ListBoxItem>().Single(item => Equals(item.Tag, "services"));
                         settings.Measure(new Size(settings.Width, settings.Height));
                         settings.Arrange(new Rect(0, 0, settings.Width, settings.Height));
                         settings.UpdateLayout();
                         foreach (var name in new[] { "SteamApiKeyBox", "RyuuAuthKeyBox", "HubcapApiKeyBox", "DepotBoxApiKeyBox", "ManifestHubApiKeyBox", "MirrorTokenBox" })
                         {
                             var box = Assert.IsType<PasswordBox>(settings.FindName(name));
-                            Assert.Equal(((SolidColorBrush)settings.FindResource("SolidSurfaceBrush")).Color, Assert.IsType<SolidColorBrush>(box.Background).Color);
-                            Assert.Equal(((SolidColorBrush)settings.FindResource("BorderStrongBrush")).Color, Assert.IsType<SolidColorBrush>(box.BorderBrush).Color);
-                            Assert.True(((SolidColorBrush)box.Background).Color.A > 0);
+                            Assert.Same(settings.FindResource("SurfaceElevatedBrush"), box.Background);
+                            Assert.Equal(((SolidColorBrush)settings.FindResource("TextTertiaryBrush")).Color, Assert.IsType<SolidColorBrush>(box.BorderBrush).Color);
+                            Assert.True(box.Background.Opacity > 0);
                             Assert.True(((SolidColorBrush)box.BorderBrush).Color.A > 0);
                             Assert.True(box.ActualWidth >= 160);
                             Assert.True(box.ActualHeight >= 36);
@@ -443,6 +568,7 @@ public sealed partial class PageSmokeTests
         {
             PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingLog);
             app.Shutdown();
+            DiscordIntegration.TestOverride = null;
         }
     }
 
@@ -455,6 +581,12 @@ public sealed partial class PageSmokeTests
         Assert.True(model.DiscoverGames.Count >= 3);
         var firstId = model.DiscoverGames[0].Game.AppId;
         Assert.Equal(firstId, model.FeaturedGame!.Game.AppId);
+        // Keep a deterministic fixture image alive like a visible Image control.
+        // Offscreen weak artwork from earlier checks may already be collected.
+        var firstHero = BitmapSource.Create(1, 1, 96, 96, PixelFormats.Bgra32, null, new byte[] { 80, 100, 140, 255 }, 4);
+        firstHero.Freeze();
+        model.FeaturedGame.HeroArtwork = firstHero;
+        var firstHeroRequests = artwork.HeroRequests[firstId];
         Assert.Contains(model.DiscoverGames, feature => feature.Metadata.ComingSoon);
         Assert.Equal("UPCOMING", model.DiscoverGames.First(feature => feature.Metadata.ComingSoon).ReleaseStatus);
         model.SelectFeaturedCommand.Execute(model.DiscoverGames[2]);
@@ -471,7 +603,8 @@ public sealed partial class PageSmokeTests
         Assert.Equal(model.DiscoverGames[1].Game.AppId, model.FeaturedGame!.Game.AppId);
         model.PreviousFeaturedCommand.Execute(null);
         PumpDispatcher(TimeSpan.FromMilliseconds(100));
-        Assert.Equal(1, artwork.HeroRequests[firstId]); // Returning to a slide reuses its image task.
+        Assert.Same(firstHero, model.FeaturedGame!.HeroArtwork);
+        Assert.Equal(firstHeroRequests, artwork.HeroRequests[firstId]);
         var library = provider.GetRequiredService<Steamy.ViewModels.LibraryViewModel>();
         library.SelectedSourceFilter = "Sushi";
         library.SelectedTypeFilter = "DLC";
@@ -481,7 +614,7 @@ public sealed partial class PageSmokeTests
         Assert.Equal(typeof(LibraryPage), route);
         Assert.Equal(firstId.ToString(System.Globalization.CultureInfo.InvariantCulture), library.SearchText);
         Assert.Equal("All sources", library.SelectedSourceFilter);
-        Assert.Equal("All games", library.SelectedTypeFilter);
+        Assert.Equal("Game", library.SelectedTypeFilter);
         model.DownloadFeaturedCommand.Execute(null);
         Assert.Equal(typeof(LibraryPage), route);
         Assert.Equal(firstId, library.RequestedDownload!.AppId);
@@ -553,7 +686,28 @@ public sealed partial class PageSmokeTests
         PumpDispatcher(TimeSpan.FromMilliseconds(150));
         window.UpdateLayout();
         var discoveryPanel = (Border)dashboardPage.FindName("DiscoveryDetailsPanel");
-        Assert.Equal(255, Assert.IsType<System.Windows.Media.SolidColorBrush>(discoveryPanel.Background).Color.A);
+        Assert.NotNull(discoveryPanel.Background);
+        // The modal is glass now. Verify readability over both extremes instead
+        // of requiring the obsolete opaque, single-color implementation.
+        var dialogText = ((SolidColorBrush)discoveryPanel.FindResource("TextPrimaryBrush")).Color;
+        foreach (var behind in new[] { Brushes.Black, Brushes.White })
+        {
+            var visual = new DrawingVisual();
+            using (var drawing = visual.RenderOpen())
+            {
+                drawing.DrawRectangle(behind, null, new Rect(0, 0, 3, 3));
+                drawing.DrawRectangle(discoveryPanel.Background, null, new Rect(0, 0, 3, 3));
+            }
+            var rendered = new RenderTargetBitmap(3, 3, 96, 96, PixelFormats.Pbgra32); rendered.Render(visual);
+            var pixels = new byte[36]; rendered.CopyPixels(pixels, 12, 0);
+            for (var pixel = 0; pixel < pixels.Length; pixel += 4)
+            {
+                var background = ChromeLuminance(Color.FromRgb(pixels[pixel + 2], pixels[pixel + 1], pixels[pixel]));
+                var foreground = ChromeLuminance(dialogText);
+                Assert.True((Math.Max(background, foreground) + .05) / (Math.Min(background, foreground) + .05) >= 4.5,
+                    "The discovery dialog text must remain readable on glass.");
+            }
+        }
         Assert.False(discoveryScroll.IsEnabled);
         SaveVisual(window, "upcoming-details.png");
         dashboard.CloseDiscoveryCommand.Execute(null);
@@ -713,6 +867,16 @@ public sealed partial class PageSmokeTests
         window.Close();
     }
 
+    private sealed class ScreenshotImagePipeline : IImagePipeline
+    {
+        public Task<BitmapImage?> LoadAsync(ImageRequest request, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (request.Source.IsFile)
+                return Task.FromResult(ImagePipeline.Decode(File.ReadAllBytes(request.Source.LocalPath), request.PixelWidth, request.PixelHeight));
+            return Task.FromResult(new ScreenshotArtworkConverter().Convert(request.Source.AbsoluteUri, typeof(BitmapImage), request.PixelWidth, System.Globalization.CultureInfo.InvariantCulture) as BitmapImage);
+        }
+    }
     private sealed class ScreenshotArtworkConverter : System.Windows.Data.IValueConverter
     {
         public object? Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
@@ -911,7 +1075,7 @@ public sealed partial class PageSmokeTests
             Assert.Equal(16, cached!.PixelWidth);
             Assert.Equal(1, handler.Requests); // Revisiting a game reads the local cache.
             var large = Task.Run(() => service.LoadHeroAsync(2)).GetAwaiter().GetResult();
-            Assert.Equal(2048, large!.PixelWidth);
+            Assert.Equal(1600, large!.PixelWidth);
             var spotlight = SpotlightCatalogService.LoadBundled().Games[0];
             var hero = Task.Run(() => service.LoadSpotlightHeroAsync(spotlight)).GetAwaiter().GetResult();
             Assert.True(hero!.IsFrozen);
@@ -1152,6 +1316,18 @@ public sealed partial class PageSmokeTests
     }
 }
 
+internal sealed class ControllerOfflineFixture : IControllerBackend
+{
+    public bool IsInstalled => false;
+    public Steamy.ControllerProtocol.ControllerState State => new(false, "Stopped", "Not checked", false, []);
+    public event EventHandler? Changed { add { } remove { } }
+    public Task StartAsync(CancellationToken token = default) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken token = default) => Task.CompletedTask;
+    public Task CheckDriversAsync(CancellationToken token = default) => Task.CompletedTask;
+    public Task ApplyProfileAsync(Steamy.ControllerProtocol.ControllerProfile profile, CancellationToken token = default) => Task.CompletedTask;
+    public Task RumbleAsync(int slot, CancellationToken token = default) => Task.CompletedTask;
+}
+
 // Constructors may subscribe to events and read optional credentials. Any real operation is rejected.
 public class OfflineServiceProxy : DispatchProxy
 {
@@ -1201,6 +1377,8 @@ public class OfflineServiceProxy : DispatchProxy
             return Task.CompletedTask;
         }
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.PrepareArtworkAsync)) return Task.CompletedTask;
+        if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.GetDetailsAsync))
+            return Task.FromResult<SteamCatalogDetails?>(null); // Offline hub previews retain the already-loaded headers.
         if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.EnsureDetailsAsync))
         {
             if (ReleaseMetadataGate is { } gate)
@@ -1218,7 +1396,7 @@ public class OfflineServiceProxy : DispatchProxy
             item.IsReleaseVerified = true;
             return Task.FromResult(true);
         }
-        if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name == nameof(ISteamCatalogService.EnsureArtworkAsync))
+        if (method.DeclaringType == typeof(ISteamCatalogService) && method.Name is nameof(ISteamCatalogService.EnsureArtworkAsync) or nameof(ISteamCatalogService.PrefetchArtworkAsync))
         {
             var item = (SteamCatalogItem)args![0]!;
             item.ArtworkImage ??= PageSmokeTests.FixtureArtwork.Read(item.AppId, "portrait");

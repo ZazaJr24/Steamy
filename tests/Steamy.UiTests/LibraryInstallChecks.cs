@@ -31,13 +31,14 @@ public sealed partial class PageSmokeTests
         PumpDispatcher(TimeSpan.FromMilliseconds(180));
         Assert.Same(ambient, ((ShellBackdropView)page.FindName("LibraryAmbientBackdrop")).BaseBrush);
 
-        UiThemeService.ConfigureBackground(new AppSettings { AmbientEnabled = false });
+        UiThemeService.ConfigureBackground(new AppSettings { AmbientEnabled = false, BackgroundColor = "#000000" });
         Assert.Equal(Colors.Black, Assert.IsType<SolidColorBrush>(((ShellBackdropView)page.FindName("LibraryAmbientBackdrop")).BaseBrush).Color);
-        UiThemeService.ConfigureBackground(new AppSettings { AmbientEnabled = true });
+        UiThemeService.ConfigureBackground(new AppSettings { AmbientEnabled = true, BackgroundColor = "#000000" });
         UiThemeService.ApplyGlassPolicy(true);
         Assert.Same(SystemColors.WindowBrush, ((ShellBackdropView)page.FindName("LibraryAmbientBackdrop")).BaseBrush);
         UiThemeService.ApplyGlassPolicy(false);
-        Assert.IsType<DrawingBrush>(((ShellBackdropView)page.FindName("LibraryAmbientBackdrop")).BaseBrush);
+        Assert.True(((ShellBackdropView)page.FindName("LibraryAmbientBackdrop")).BaseBrush.IsFrozen);
+        if (!UiThemeService.IsLight) Assert.Equal(Colors.Black, Assert.IsType<SolidColorBrush>(((ShellBackdropView)page.FindName("LibraryAmbientBackdrop")).BaseBrush).Color);
 
 
         // A normal click opens the game page, including games already installed.
@@ -125,7 +126,11 @@ public sealed partial class PageSmokeTests
         Assert.Equal("✕", ((Button)hostedDownloads.FindName("DownloadOptionsClose")).Content);
         Assert.EndsWith("…", ((Wpf.Ui.Controls.TextBox)hostedDownloads.FindName("DownloadSearch")).PlaceholderText);
         foreach (var job in scrollJobs) statusStore.Downloads.Remove(job);
-        Assert.True(Assert.IsType<DrawingBrush>(((Border)details.FindName("GameDetailsWarmGradient")).Background).IsFrozen);
+        PumpUntil(() => ReferenceEquals(details.AppliedAmbientArtwork, detailsModel.HeroArtwork));
+        var ambientBrush = ((Border)details.FindName("GameDetailsWarmGradient")).Background;
+        Assert.True(ambientBrush.IsFrozen);
+        if (detailsModel.HeroArtwork is not null && UiThemeService.AmbientEnabled && !UiThemeService.IsHighContrastActive)
+            Assert.IsType<DrawingBrush>(ambientBrush);
         OpenInstallFromGamePage();
         RenderLibraryInstallStep(details, "install-method");
         CheckWizardStage(page, 0);

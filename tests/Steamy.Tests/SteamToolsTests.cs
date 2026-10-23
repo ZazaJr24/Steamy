@@ -286,7 +286,7 @@ public sealed class SteamToolsTests
         var linked = Path.Combine(temp.Path,"config", "stplug-in");
         if (OperatingSystem.IsWindows())
         {
-            var info = new System.Diagnostics.ProcessStartInfo("cmd.exe") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            var info = new System.Diagnostics.ProcessStartInfo("cmd.exe") { UseShellExecute = false, CreateNoWindow = true, WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden, RedirectStandardOutput = true, RedirectStandardError = true };
             foreach (var argument in new[] { "/d", "/c", "mklink", "/J", linked, outside.Path }) info.ArgumentList.Add(argument);
             using var process = System.Diagnostics.Process.Start(info)!;
             Assert.True(process.WaitForExit(5000));

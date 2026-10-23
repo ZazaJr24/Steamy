@@ -14,11 +14,14 @@ namespace Steamy.Services;
 public interface ISteamCatalogService : IDisposable
 {
     Task<SteamCatalogSnapshot> GetCatalogAsync(bool forceRefresh = false, CancellationToken cancellationToken = default);
+    async Task<IReadOnlyList<SteamCatalogItem>> GetRecommendationCandidatesAsync(CancellationToken cancellationToken = default)
+        => (await GetCatalogAsync(cancellationToken: cancellationToken)).Items;
     Task<SteamCatalogDetails?> GetDetailsAsync(int appId, CancellationToken cancellationToken = default);
     Task<bool> EnsureDetailsAsync(SteamCatalogItem item, CancellationToken cancellationToken = default);
     Task PrepareReleaseStatusAsync(IReadOnlyList<SteamCatalogItem> items, CancellationToken cancellationToken = default);
     Task PrepareArtworkAsync(IReadOnlyList<SteamCatalogItem> items, CancellationToken cancellationToken = default) => Task.CompletedTask;
     Task<bool> EnsureArtworkAsync(SteamCatalogItem item, bool includeHeader = false, CancellationToken cancellationToken = default);
+    Task<bool> PrefetchArtworkAsync(SteamCatalogItem item, CancellationToken cancellationToken = default) => EnsureArtworkAsync(item, cancellationToken: cancellationToken);
     Task<bool> EnsureScreenshotsAsync(SteamCatalogItem item, CancellationToken cancellationToken = default);
 }
 
@@ -41,8 +44,10 @@ public sealed class SteamCatalogService : ISteamCatalogService
     private readonly SemaphoreSlim _detailsGate = new(4, 4);
     private readonly SemaphoreSlim _artworkGate = new(4, 4);
     private readonly SemaphoreSlim _cachedArtworkGate = new(4, 4);
-    private readonly ConcurrentDictionary<string, BitmapImage> _decodedArtwork = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentQueue<string> _decodedArtworkOrder = new();
+    private readonly ImagePipeline _images;
+    private readonly bool _ownsImages;
+    private readonly RecentMetadataMisses _unavailableDetails;
+    private readonly RecentMetadataMisses _unavailableArtwork;
     private readonly object _catalogItemsLock = new();
     private readonly object _bundledNamesLock = new();
     private readonly object _backgroundRefreshLock = new();
@@ -51,12 +56,18 @@ public sealed class SteamCatalogService : ISteamCatalogService
     private CatalogCache? _catalogCache;
     private CatalogCache? _catalogItemsSource;
     private SteamCatalogItem[]? _catalogItems;
+    private SteamCatalogItem[]? _recommendationItems;
     private Task<Dictionary<int, string>>? _bundledNamesTask;
     private int _catalogCacheLoaded;
     private bool _disposed;
 
     public SteamCatalogService(HttpClient? httpClient = null, string? cacheDirectory = null, string? bundledAppIdJsonPath = null)
+        : this(httpClient, cacheDirectory, bundledAppIdJsonPath, TimeProvider.System) { }
+
+    internal SteamCatalogService(HttpClient? httpClient, string? cacheDirectory, string? bundledAppIdJsonPath, TimeProvider timeProvider)
     {
+        _unavailableDetails = new(timeProvider);
+        _unavailableArtwork = new(timeProvider);
         _httpClient = httpClient ?? new HttpClient(StableDnsHandler.Create());
         _ownsHttpClient = httpClient is null;
         if (_ownsHttpClient) _httpClient.Timeout = TimeSpan.FromSeconds(12);
@@ -68,11 +79,15 @@ public sealed class SteamCatalogService : ISteamCatalogService
         _cacheDirectory = cacheDirectory ?? Path.Combine(Steamy.Storage.AppDataPaths.Root,
             "steam-catalog");
         _bundledAppIdJsonPath = bundledAppIdJsonPath;
+        _ownsImages = httpClient is not null || cacheDirectory is not null;
+        _images = _ownsImages ? new ImagePipeline(_httpClient, _cacheDirectory) : ImagePipeline.Shared;
     }
 
     public async Task<SteamCatalogSnapshot> GetCatalogAsync(bool forceRefresh = false, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        StartupTimings.CatalogRequest();
+        if (forceRefresh) { _unavailableDetails.Clear(); _unavailableArtwork.Clear(); }
         await Task.Yield();
         var cachePath = Path.Combine(_cacheDirectory, "app-list.json");
         var cached = Volatile.Read(ref _catalogCache);
@@ -374,20 +389,39 @@ public sealed class SteamCatalogService : ISteamCatalogService
             }
         }, cancellationToken);
 
+    public Task<IReadOnlyList<SteamCatalogItem>> GetRecommendationCandidatesAsync(CancellationToken cancellationToken = default) =>
+        Task.Run<IReadOnlyList<SteamCatalogItem>>(() =>
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            cancellationToken.ThrowIfCancellationRequested();
+            lock (_catalogItemsLock)
+            {
+                // Only enriched game entries can match the existing recommendation filters.
+                // Unknown entries in the full app list have no genre/developer metadata.
+                if (_catalogItems is not null) return _catalogItems;
+                return _recommendationItems ??= CreateItems(SpotlightCatalogService.LoadBundled().Games
+                    .Select(game => new CatalogEntry(game.AppId, game.Name)));
+            }
+        }, cancellationToken);
+
     public async Task<SteamCatalogDetails?> GetDetailsAsync(int appId, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (appId <= 0) return null;
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         var cachePath = Path.Combine(_cacheDirectory, "details", $"{appId.ToString(CultureInfo.InvariantCulture)}.json");
         var cached = await ReadDetailsCacheAsync(cachePath, cancellationToken).ConfigureAwait(false);
         if (cached is { Schema: 1 } && DateTimeOffset.UtcNow - cached.FetchedAt < DetailsLifetime) return cached.Details;
+        if (_unavailableDetails.Contains(appId)) return cached?.Details;
 
         await _detailsGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             cached = await ReadDetailsCacheAsync(cachePath, cancellationToken).ConfigureAwait(false);
             if (cached is { Schema: 1 } && DateTimeOffset.UtcNow - cached.FetchedAt < DetailsLifetime) return cached.Details;
+            if (_unavailableDetails.Contains(appId)) return cached?.Details;
 
             try
             {
@@ -396,7 +430,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
                     cancellationToken).ConfigureAwait(false);
                 var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 var details = ParseDetails(json, appId);
-                if (details is null) return cached?.Details;
+                if (details is null) { _unavailableDetails.Remember(appId); return cached?.Details; }
                 await WriteJsonAsync(cachePath, new DetailsCache(DateTimeOffset.UtcNow, details, 1), cancellationToken).ConfigureAwait(false);
                 return details;
             }
@@ -465,6 +499,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
             var path = Path.Combine(_cacheDirectory, "artwork-assets.json");
             _artworkAssets ??= await ReadJsonAsync<Dictionary<int, ArtworkAssets>>(path, cancellationToken).ConfigureAwait(false) ?? new();
             var missing = items.Where(item =>
+                item.AppId > 0 && !_unavailableArtwork.Contains(item.AppId) &&
                 (!_artworkAssets.TryGetValue(item.AppId, out var saved) || DateTimeOffset.UtcNow - saved.FetchedAt > DetailsLifetime
                     || (requireRelease && saved.ComingSoon is null))
                 && ((requireRelease && !item.IsReleaseVerified) || (item.ArtworkImage is null
@@ -483,11 +518,15 @@ public sealed class SteamCatalogService : ISteamCatalogService
                     var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
                     if (bytes.Length > 2_000_000) throw new InvalidDataException("Artwork metadata is too large.");
                     using var document = JsonDocument.Parse(bytes);
-                    if (document.RootElement.TryGetProperty("response", out var root) && root.TryGetProperty("store_items", out var rows))
+                    var received = new HashSet<int>();
+                    var understood = document.RootElement.TryGetProperty("response", out var root) && root.ValueKind == JsonValueKind.Object
+                        && (!root.EnumerateObject().Any() || (root.TryGetProperty("store_items", out var storeRows) && storeRows.ValueKind == JsonValueKind.Array));
+                    if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("store_items", out var rows) && rows.ValueKind == JsonValueKind.Array)
                     foreach (var row in rows.EnumerateArray())
                     {
                         if (!row.TryGetProperty("appid", out var idValue) || !idValue.TryGetInt32(out var id) || !missing.Contains(id)
                             || (row.TryGetProperty("success", out var success) && success.GetInt32() != 1)) continue;
+                        received.Add(id);
                         bool? comingSoon = null;
                         if (row.TryGetProperty("release", out var release))
                         {
@@ -512,10 +551,17 @@ public sealed class SteamCatalogService : ISteamCatalogService
                             }
                             return "";
                         }
-                        var portrait = Resolve("library_capsule_2x", "library_capsule");
+                        var portrait = Resolve("library_capsule", "library_capsule_2x");
                         var header = Resolve("header_2x", "header");
                         if (portrait.Length > 0) _artworkAssets[id] = new(portrait, header, DateTimeOffset.UtcNow, comingSoon);
                     }
+                    if (understood)
+                        foreach (var id in missing)
+                        {
+                            var available = received.Contains(id) && _artworkAssets.TryGetValue(id, out var asset)
+                                && (requireRelease ? asset.ComingSoon.HasValue : !string.IsNullOrWhiteSpace(asset.Portrait));
+                            if (!available) _unavailableArtwork.Remember(id);
+                        }
                     await WriteJsonAsync(path, _artworkAssets, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception exception) when (IsNetworkException(exception) || exception is InvalidDataException or IOException or UnauthorizedAccessException)
@@ -536,6 +582,15 @@ public sealed class SteamCatalogService : ISteamCatalogService
         finally { _assetLookupGate.Release(); }
     }
 
+    private readonly AsyncLocal<ImagePriority> _artworkPriority = new();
+    private readonly SemaphoreSlim _prefetchArtworkGate = new(2);
+    public async Task<bool> PrefetchArtworkAsync(SteamCatalogItem item, CancellationToken cancellationToken = default)
+    {
+        await _prefetchArtworkGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var previous = _artworkPriority.Value; _artworkPriority.Value = ImagePriority.Prefetch;
+        try { return await EnsureArtworkAsync(item, cancellationToken: cancellationToken).ConfigureAwait(false); }
+        finally { _artworkPriority.Value = previous; _prefetchArtworkGate.Release(); }
+    }
     public async Task<bool> EnsureArtworkAsync(SteamCatalogItem item, bool includeHeader = false, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -557,10 +612,10 @@ public sealed class SteamCatalogService : ISteamCatalogService
         try
         {
             var capsuleTask = item.ArtworkImage is null
-                ? LoadArtworkWithFallbackAsync(item, cancellationToken)
+                ? SteamArtworkService.PublishImageAsync(LoadArtworkWithFallbackAsync(item, cancellationToken), image => item.ArtworkImage = image, cancellationToken)
                 : Task.FromResult<BitmapImage?>(item.ArtworkImage);
             var headerTask = includeHeader && item.HeaderImage is null
-                ? LoadImageAsync(item.HeaderImageUrl, Path.Combine(_cacheDirectory, "artwork", $"{item.AppId}_header.jpg"), cancellationToken)
+                ? SteamArtworkService.PublishImageAsync(LoadImageAsync(item.HeaderImageUrl, Path.Combine(_cacheDirectory, "artwork", $"{item.AppId}_header.jpg"), cancellationToken), image => item.HeaderImage = image, cancellationToken)
                 : Task.FromResult<BitmapImage?>(item.HeaderImage);
 
             var images = await Task.WhenAll(capsuleTask, headerTask).ConfigureAwait(false);
@@ -606,7 +661,8 @@ public sealed class SteamCatalogService : ISteamCatalogService
         foreach (var url in urls)
         {
             var cache = CacheFor(url);
-            if (!File.Exists(cache) && !_decodedArtwork.ContainsKey(cache + "|400|" + url)) continue;
+            // The shared pipeline checks memory first, then probes disk off the
+            // caller thread. A decoded fallback can outlive its disk-cache file.
             var cached = await LoadImageAsync(url, cache, cancellationToken, decodeWidth: 400, cacheOnly: true).ConfigureAwait(false);
             if (cached is not null) return cached;
         }
@@ -700,43 +756,11 @@ public sealed class SteamCatalogService : ISteamCatalogService
         return null;
     }
 
-    private async Task<BitmapImage?> LoadImageAsync(string url, string cachePath, CancellationToken cancellationToken, int decodeWidth = 0, bool cacheOnly = false)
+    private Task<BitmapImage?> LoadImageAsync(string url, string cachePath, CancellationToken cancellationToken, int decodeWidth = 0, bool cacheOnly = false)
     {
-        if (string.IsNullOrWhiteSpace(url)) return null;
-        cancellationToken.ThrowIfCancellationRequested();
-        var key = cachePath + "|" + decodeWidth + "|" + url;
-        if (_decodedArtwork.TryGetValue(key, out var retained)) return retained;
-        try
-        {
-            if (File.Exists(cachePath))
-            {
-                var cached = Decode(await File.ReadAllBytesAsync(cachePath, cancellationToken).ConfigureAwait(false), decodeWidth);
-                if (cached is not null) return Remember(cached);
-            }
-            if (cacheOnly) return null;
-
-            using var response = await SendWithRetryAsync(
-                () => new HttpRequestMessage(HttpMethod.Get, url), cancellationToken).ConfigureAwait(false);
-            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-            var image = Decode(bytes, decodeWidth);
-            if (image is null) return null;
-            Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
-            await File.WriteAllBytesAsync(cachePath, bytes, cancellationToken).ConfigureAwait(false);
-            return Remember(image);
-        }
-        catch (Exception exception) when (IsNetworkException(exception) || exception is InvalidDataException or IOException)
-        {
-            return null;
-        }
-
-        BitmapImage Remember(BitmapImage image)
-        {
-            if (_decodedArtwork.TryAdd(key, image)) _decodedArtworkOrder.Enqueue(key);
-            // At most 64 decoded covers/headers; disk cache remains available after eviction.
-            while (_decodedArtwork.Count > 64 && _decodedArtworkOrder.TryDequeue(out var oldest))
-                _decodedArtwork.TryRemove(oldest, out _);
-            return _decodedArtwork.TryGetValue(key, out var shared) ? shared : image;
-        }
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return Task.FromResult<BitmapImage?>(null);
+        return _images.LoadAsync(new ImageRequest(uri, decodeWidth > 0 ? decodeWidth : 600,
+            Priority: cacheOnly ? ImagePriority.CacheOnly : _artworkPriority.Value, CachePath: cachePath), cancellationToken);
     }
 
     private async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessage> createRequest, CancellationToken cancellationToken)
@@ -871,10 +895,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
         AppId = entry.AppId,
         Name = entry.Name,
         AppType = SteamCatalogAppType.Unknown,
-        HeaderImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/header.jpg",
-        CapsuleImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/capsule_616x353.jpg",
-        PortraitImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/library_600x900_2x.jpg",
-        LibraryImageUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{entry.AppId}/library_600x900_2x.jpg"
+        UseSteamArtworkDefaults = true
     }).ToArray();
         foreach (var item in items)
             if (discovered.TryGetValue(item.AppId, out var game))
@@ -1132,6 +1153,7 @@ public sealed class SteamCatalogService : ISteamCatalogService
         _lifetimeCancellation.Dispose();
         // Active catalog, detail and artwork requests still need to release these gates.
         // SemaphoreSlim is managed and can be left for collection after the service is disposed.
+        if (_ownsImages) _images.Dispose();
         if (_ownsHttpClient) _httpClient.Dispose();
     }
 

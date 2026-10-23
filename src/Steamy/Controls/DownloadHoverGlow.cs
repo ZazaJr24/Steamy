@@ -19,21 +19,29 @@ public static class DownloadHoverGlow
         if (target is not FrameworkElement overlay) return;
         if (overlay.GetValue(StateProperty) is GlowState old) old.Stop();
         if ((bool)change.NewValue) overlay.SetValue(StateProperty, new GlowState(overlay));
+        else overlay.ClearValue(StateProperty);
     }
     private sealed class GlowState
     {
         private readonly FrameworkElement _overlay;
         private UIElement? _owner;
         private int _revision;
-        public GlowState(FrameworkElement overlay) { _overlay = overlay; overlay.Loaded += Load; overlay.Unloaded += Unload; }
+        public GlowState(FrameworkElement overlay)
+        {
+            _overlay = overlay; overlay.Loaded += Load; overlay.Unloaded += Unload;
+            if (overlay.IsLoaded) Load(overlay, new RoutedEventArgs());
+        }
         private void Load(object sender, RoutedEventArgs args)
         {
+            // Loaded can be delivered again when a template is reattached.
+            // Remove the previous owner and observer before binding the new one.
+            Unload(this, new RoutedEventArgs());
             DependencyObject? parent = _overlay;
             while (parent is not null && parent is not (ButtonBase or ListBoxItem)) parent = VisualTreeHelper.GetParent(parent);
             _owner = parent as UIElement;
             if (_owner is null) return;
             _owner.MouseEnter += Hover; _owner.MouseLeave += Hover;
-            MotionPreferences.Changed += PreferencesChanged;
+            MotionPreferences.AddWeakChangedHandler(PreferencesChanged);
             SetHighlight(false);
         }
         private void Hover(object sender, System.Windows.Input.MouseEventArgs args) => SetHighlight(true);
@@ -52,7 +60,7 @@ public static class DownloadHoverGlow
         private void Unload(object sender, RoutedEventArgs args)
         {
             if (_owner is not null) { _owner.MouseEnter -= Hover; _owner.MouseLeave -= Hover; }
-            _owner = null; MotionPreferences.Changed -= PreferencesChanged;
+            _owner = null; MotionPreferences.RemoveWeakChangedHandler(PreferencesChanged);
             ++_revision; _overlay.BeginAnimation(UIElement.OpacityProperty, null); _overlay.Opacity = 0;
         }
         public void Stop() { Unload(this, new RoutedEventArgs()); _overlay.Loaded -= Load; _overlay.Unloaded -= Unload; }

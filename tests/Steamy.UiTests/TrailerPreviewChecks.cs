@@ -97,12 +97,14 @@ public sealed partial class PageSmokeTests
             isolatedPage = page;
             page.IsHitTestVisible = false; // Physical desktop input cannot start unrelated card requests.
             var scroll = (ScrollViewer)page.FindName("DashboardScroll");
-            scroll.ScrollToVerticalOffset(500);
+            var upcoming = (ItemsControl)page.FindName("UpcomingGameGrid");
+            ((FrameworkElement)upcoming.ItemContainerGenerator.ContainerFromIndex(0)).BringIntoView();
             window.UpdateLayout();
-            PumpDispatcher(TimeSpan.FromMilliseconds(50));
+            PumpDispatcher(TimeSpan.FromMilliseconds(120));
             foreach (var cardPreview in Descendants<TrailerPreview>(page)) cardPreview.StopPreview();
             MotionPreferences.ConfigureTrailers(true);
-            var preview = Descendants<TrailerPreview>(page).First();
+            var preview = Descendants<TrailerPreview>((DependencyObject)upcoming.ItemContainerGenerator.ContainerFromIndex(0)).Single();
+            Assert.Equal(ImagePriority.Visible, ArtworkViewport.Priority(preview));
             if (Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK") is not null)
                 Assert.NotNull(preview.Poster ?? preview.Children.OfType<Image>().Single().Source);
             var before = fixture.Requests;
@@ -114,22 +116,35 @@ public sealed partial class PageSmokeTests
 
             if (MotionPreferences.AnimationsEnabled)
             {
-                fixture.Pending = new TaskCompletionSource<Uri?>(TaskCreationOptions.RunContinuationsAsynchronously);
-                preview.BeginPreview();
-                PumpUntil(() => fixture.Requests > before);
-                preview.StopPreview();
-                fixture.Pending.SetResult(new Uri("https://video.akamai.steamstatic.com/late.mp4"));
-                PumpDispatcher(TimeSpan.FromMilliseconds(100));
-                Assert.Null(preview.Player); // A late result cannot resurrect media after mouse leave.
-                fixture.Pending = null;
-
-                fixture.Missing = true;
-                preview.BeginPreview();
-                var missingRequests = fixture.Requests;
-                PumpUntil(() => fixture.Requests > missingRequests);
-                Assert.Null(preview.Player);
-                preview.StopPreview();
-                fixture.Missing = false;
+                // Cancellation and missing-media responses need a loaded visual,
+                // not desktop activation. An isolated host prevents unrelated
+                // foreground changes from cancelling these requests mid-assertion.
+                using (var lifecycleHost = new System.Windows.Interop.HwndSource(new System.Windows.Interop.HwndSourceParameters("Trailer request lifecycle QA")
+                    { Width = 480, Height = 270, WindowStyle = unchecked((int)0x80000000) }))
+                {
+                    var lifecyclePreview = new TrailerPreview { AppId = preview.AppId, Width = 480, Height = 270 };
+                    var lifecycleCard = new Button { Content = lifecyclePreview, Width = 480, Height = 270 };
+                    lifecycleHost.RootVisual = lifecycleCard;
+                    lifecycleCard.Measure(new Size(480, 270)); lifecycleCard.Arrange(new Rect(0, 0, 480, 270)); lifecycleCard.UpdateLayout();
+                    PumpDispatcher(TimeSpan.FromMilliseconds(100));
+                    fixture.Pending = new TaskCompletionSource<Uri?>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    var pendingRequests = fixture.Requests;
+                    lifecyclePreview.BeginPreview();
+                    PumpUntil(() => fixture.Requests > pendingRequests);
+                    lifecyclePreview.StopPreview();
+                    fixture.Pending.SetResult(new Uri("https://video.akamai.steamstatic.com/late.mp4"));
+                    PumpDispatcher(TimeSpan.FromMilliseconds(100));
+                    Assert.Null(lifecyclePreview.Player); // Late responses cannot resurrect stopped media.
+                    fixture.Pending = null;
+                    fixture.Missing = true;
+                    var missingRequests = fixture.Requests;
+                    lifecyclePreview.BeginPreview();
+                    PumpUntil(() => fixture.Requests > missingRequests);
+                    Assert.Null(lifecyclePreview.Player);
+                    lifecyclePreview.StopPreview(); fixture.Missing = false;
+                    lifecycleHost.RootVisual = null;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(40));
+                }
 
                 var folder = Environment.GetEnvironmentVariable("STEAMY_SCREENSHOT_ARTWORK");
                 if (folder is not null && File.Exists(Path.Combine(folder, "trailer-preview.mp4")))

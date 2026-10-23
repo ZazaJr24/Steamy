@@ -57,9 +57,13 @@ public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObjec
 {
     private readonly SpotlightGame _dateOnly = metadata with { ReleaseTime = null };
     public string ReleaseBadge => ReleaseCountdown.Label(_dateOnly, DateTimeOffset.Now);
-    private ImageSource? _heroArtwork;
-    private ImageSource? _logoArtwork;
-    public ImageSource? LogoArtwork { get => _logoArtwork; set { if (SetProperty(ref _logoArtwork, value)) { OnPropertyChanged(nameof(HasLogo)); OnPropertyChanged(nameof(Eyebrow)); } } }
+    private WeakReference<ImageSource>? _heroArtwork;
+    private WeakReference<ImageSource>? _logoArtwork;
+    public ImageSource? LogoArtwork
+    {
+        get => _logoArtwork?.TryGetTarget(out var image) == true ? image : null;
+        set { if (ReferenceEquals(LogoArtwork, value)) return; _logoArtwork = value is null ? null : new(value); OnPropertyChanged(); OnPropertyChanged(nameof(HasLogo)); OnPropertyChanged(nameof(Eyebrow)); }
+    }
     public bool HasLogo => LogoArtwork is not null;
     public string FeatureActionLabel => Metadata.ComingSoon ? "Release details" : "View game";
     private bool _isSelected;
@@ -102,7 +106,11 @@ public sealed class DashboardFeature(SpotlightGame metadata) : UiObservableObjec
             nameof(CountdownHours), nameof(CountdownMinutes), nameof(CountdownSeconds) }) OnPropertyChanged(name);
     }
     public string Publisher => Metadata.Publisher;
-    public ImageSource? HeroArtwork { get => _heroArtwork; set => SetProperty(ref _heroArtwork, value); }
+    public ImageSource? HeroArtwork
+    {
+        get => _heroArtwork?.TryGetTarget(out var image) == true ? image : null;
+        set { if (ReferenceEquals(HeroArtwork, value)) return; _heroArtwork = value is null ? null : new(value); OnPropertyChanged(); }
+    }
 }
 
 public sealed class DashboardViewModel : ViewModelBase
@@ -166,6 +174,13 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand OpenSearchResultCommand { get; }
     public ICommand OpenSearchCommand { get; }
     public void StopSearch() { _searchCancellation?.Cancel(); IsSearchBusy = false; }
+    public void ResumeSearch()
+    {
+        if (!DashboardSearchEnabled || !HasSearchQuery || _searchCancellation is { IsCancellationRequested: false }) return;
+        _searchCancellation?.Dispose();
+        _searchCancellation = new CancellationTokenSource();
+        _ = SearchAsync(SearchText.Trim(), _searchCancellation.Token);
+    }
 
     private async Task SearchAsync(string query, CancellationToken cancellationToken)
     {
@@ -289,21 +304,25 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly IArtworkService _artwork;
     private readonly ISpotlightService _spotlight;
     private Task? _discoveryArtworkTask;
+    private CancellationTokenSource _discoveryArtworkLifetime = new();
+    private bool _discoveryArtworkStopped;
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _heroLoads = new();
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _logoLoads = new();
     private async Task LoadLogoAsync(DashboardFeature feature)
     {
+        if (_discoveryArtworkStopped || feature.LogoArtwork is not null) return;
+        var token = _discoveryArtworkLifetime.Token;
         try
         {
             if (!_logoLoads.TryGetValue(feature.Metadata, out var task) || task.IsCompletedSuccessfully && task.Result is null)
-                _logoLoads[feature.Metadata] = task = Task.Run(() => _artwork.LoadSpotlightLogoAsync(feature.Metadata));
-            feature.LogoArtwork = await task;
+                _logoLoads[feature.Metadata] = task = Task.Run(() => _artwork.LoadSpotlightLogoAsync(feature.Metadata, token), token);
+            await PublishDiscoveryImageAsync(feature, task, image => feature.LogoArtwork = image, token);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Logo unavailable: {exception.GetType().Name}."); }
+        finally { ReleaseCompletedImageTasks(); }
     }
     private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _headerLoads = new();
-    private readonly Dictionary<SpotlightGame, Task<BitmapImage?>> _portraitLoads = new();
-    private readonly SemaphoreSlim _discoveryArtworkGate = new(3, 3);
     private int _featuredIndex;
     public IReadOnlyList<DashboardFeature> DiscoverGames { get; private set; } = Array.Empty<DashboardFeature>();
     public IReadOnlyList<DashboardFeature> SpotlightPreviews => DiscoverGames.Take(8).ToArray();
@@ -344,11 +363,49 @@ public sealed class DashboardViewModel : ViewModelBase
     public ICommand DownloadFeaturedCommand { get; }
     public ICommand OpenSpotlightCommand { get; }
 
-    public Task EnsureDiscoveryArtworkAsync(bool force = false) => _discoveryArtworkTask is { IsCompleted: false }
-        ? _discoveryArtworkTask : _discoveryArtworkTask = LoadDiscoveryArtworkAsync(force);
+    private void ReleaseCompletedImageTasks()
+    {
+        foreach (var cache in new[] { _heroLoads, _headerLoads, _logoLoads })
+            foreach (var key in cache.Where(pair => pair.Value.IsCompleted).Select(pair => pair.Key).ToArray()) cache.Remove(key);
+    }
+    public Task EnsureDiscoveryArtworkAsync(bool force = false) => _discoveryArtworkStopped ? Task.CompletedTask
+        : _discoveryArtworkTask is { IsCompleted: false } ? _discoveryArtworkTask : _discoveryArtworkTask = LoadDiscoveryArtworkAsync(force);
+
+    private void StopDiscoveryArtwork()
+    {
+        if (_discoveryArtworkStopped) return;
+        _discoveryArtworkStopped = true;
+        _discoveryArtworkLifetime.Cancel(); _discoveryArtworkLifetime.Dispose();
+        _heroLoads.Clear(); _headerLoads.Clear(); _logoLoads.Clear();
+        _discoveryArtworkTask = null;
+    }
+
+    private void ResumeDiscoveryArtwork()
+    {
+        if (!_discoveryArtworkStopped) return;
+        _discoveryArtworkLifetime = new(); _discoveryArtworkStopped = false;
+    }
+
+    private static async Task<T> WaitForDiscoveryWorkAsync<T>(Task<T> work, CancellationToken token)
+    {
+        // A provider may ignore cancellation and fail after the page has left.
+        // Release the consumer now while keeping that eventual failure observed.
+        _ = work.ContinueWith(static completed => { _ = completed.Exception; }, CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        return await work.WaitAsync(token).ConfigureAwait(false);
+    }
+
+    private async Task PublishDiscoveryImageAsync(DashboardFeature feature, Task<BitmapImage?> work,
+        Action<BitmapImage> publish, CancellationToken token)
+    {
+        var image = await WaitForDiscoveryWorkAsync(work, token);
+        token.ThrowIfCancellationRequested();
+        if (image is not null && DiscoverGames.Contains(feature)) publish(image);
+    }
 
     private async Task LoadDiscoveryArtworkAsync(bool force)
     {
+        var token = _discoveryArtworkLifetime.Token;
         // Retry optional failures on an explicit refresh, without refetching successful images.
         if (force)
         {
@@ -356,27 +413,23 @@ public sealed class DashboardViewModel : ViewModelBase
                 (!pair.Value.IsCompletedSuccessfully || pair.Value.Result is null)).Select(pair => pair.Key).ToArray()) _heroLoads.Remove(key);
             foreach (var key in _headerLoads.Where(pair => pair.Value.IsCompleted &&
                 (!pair.Value.IsCompletedSuccessfully || pair.Value.Result is null)).Select(pair => pair.Key).ToArray()) _headerLoads.Remove(key);
-            foreach (var key in _portraitLoads.Where(pair => pair.Value.IsCompleted &&
-                (!pair.Value.IsCompletedSuccessfully || pair.Value.Result is null)).Select(pair => pair.Key).ToArray()) _portraitLoads.Remove(key);
         }
         // Show cached artwork immediately; checking the feed must not delay the first paint.
         var savedArtwork = LoadVisibleArtworkAsync();
-        try { ApplySpotlight(await _spotlight.GetAsync(force)); }
+        try
+        {
+            var snapshot = await WaitForDiscoveryWorkAsync(_spotlight.GetAsync(force, token), token);
+            token.ThrowIfCancellationRequested(); ApplySpotlight(snapshot);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
         catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Using saved discoveries: {exception.GetType().Name}."); }
+        if (token.IsCancellationRequested) return;
         await LoadVisibleArtworkAsync();
         await savedArtwork;
+        ReleaseCompletedImageTasks();
     }
 
-    private async Task LoadVisibleArtworkAsync()
-    {
-        var cards = LoadDiscoveryHeadersAsync();
-        await LoadFeaturedArtworkAsync();
-        try { await cards; }
-        catch (Exception exception)
-        {
-            Logging.Add(LogLevel.Debug, "Dashboard", $"Optional card artwork unavailable: {exception.GetType().Name}.");
-        }
-    }
+    private Task LoadVisibleArtworkAsync() => LoadFeaturedArtworkAsync();
 
     private void ApplySpotlight(SpotlightSnapshot snapshot)
     {
@@ -392,7 +445,6 @@ public sealed class DashboardViewModel : ViewModelBase
         _heroLoads.Clear();
         _logoLoads.Clear();
         _headerLoads.Clear();
-        _portraitLoads.Clear();
         OnPropertyChanged(nameof(DiscoverGames));
         OnPropertyChanged(nameof(NewGames));
         OnPropertyChanged(nameof(SpotlightPreviews));
@@ -407,57 +459,49 @@ public sealed class DashboardViewModel : ViewModelBase
         (DownloadFeaturedCommand as RelayCommand)?.NotifyCanExecuteChanged();
     }
 
-    private Task LoadDiscoveryHeadersAsync() => Task.WhenAll(DiscoverGames.Select(LoadDiscoveryCoverAsync));
-
-    private async Task LoadDiscoveryCoverAsync(DashboardFeature feature)
-    {
-        await _discoveryArtworkGate.WaitAsync();
-        try
-        {
-            if (!_headerLoads.TryGetValue(feature.Metadata, out var header))
-                _headerLoads[feature.Metadata] = header = Task.Run(() => _artwork.LoadSpotlightHeaderAsync(feature.Metadata));
-            if (!_portraitLoads.TryGetValue(feature.Metadata, out var portrait))
-                _portraitLoads[feature.Metadata] = portrait = Task.Run(() => _artwork.LoadSpotlightPortraitAsync(feature.Metadata));
-            feature.Game.HeaderImage = await header;
-            feature.Game.ArtworkImage = await portrait;
-        }
-        catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Optional card artwork unavailable: {exception.GetType().Name}."); }
-        finally { _discoveryArtworkGate.Release(); }
-    }
-
     private async Task LoadFeaturedArtworkAsync()
     {
+        if (_discoveryArtworkStopped) return;
         var feature = FeaturedGame;
         if (feature is null) return;
+        if (feature.HeroArtwork is not null) { _ = LoadLogoAsync(feature); _ = WarmNextSpotlightArtworkAsync(); return; }
+        var token = _discoveryArtworkLifetime.Token;
         _ = LoadLogoAsync(feature);
         try
         {
             if (!_heroLoads.TryGetValue(feature.Metadata, out var task))
-                _heroLoads[feature.Metadata] = task = Task.Run(() => _artwork.LoadSpotlightHeroAsync(feature.Metadata));
-            feature.HeroArtwork = await task;
-            _ = WarmNextSpotlightArtworkAsync();
+                _heroLoads[feature.Metadata] = task = Task.Run(() => _artwork.LoadSpotlightHeroAsync(feature.Metadata, token), token);
+            await PublishDiscoveryImageAsync(feature, task, image => feature.HeroArtwork = image, token);
+            if (ReferenceEquals(feature, FeaturedGame)) _ = WarmNextSpotlightArtworkAsync();
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception exception)
         {
             Logging.Add(LogLevel.Debug, "Dashboard", $"Optional artwork unavailable: {exception.GetType().Name}.");
         }
+        finally { ReleaseCompletedImageTasks(); }
     }
 
     private async Task WarmNextSpotlightArtworkAsync()
     {
-        if (DiscoverGames.Count < 2) return;
+        if (_discoveryArtworkStopped || DiscoverGames.Count < 2) return;
+        var token = _discoveryArtworkLifetime.Token;
         var next = DiscoverGames[(_featuredIndex + 1) % DiscoverGames.Count];
+        if (next.HeroArtwork is not null && next.Game.HeaderImage is not null) return;
         try
         {
             if (!_heroLoads.TryGetValue(next.Metadata, out var hero))
-                _heroLoads[next.Metadata] = hero = Task.Run(() => _artwork.LoadSpotlightHeroAsync(next.Metadata));
+                _heroLoads[next.Metadata] = hero = Task.Run(() => _artwork.LoadSpotlightHeroAsync(next.Metadata, token), token);
             if (!_headerLoads.TryGetValue(next.Metadata, out var header))
-                _headerLoads[next.Metadata] = header = Task.Run(() => _artwork.LoadSpotlightHeaderAsync(next.Metadata));
+                _headerLoads[next.Metadata] = header = Task.Run(() => _artwork.LoadSpotlightHeaderAsync(next.Metadata, token), token);
             _ = LoadLogoAsync(next);
-            next.HeroArtwork = await hero;
-            next.Game.HeaderImage = await header;
+            await Task.WhenAll(
+                PublishDiscoveryImageAsync(next, hero, image => next.HeroArtwork = image, token),
+                PublishDiscoveryImageAsync(next, header, image => next.Game.HeaderImage = image, token));
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Optional next image unavailable: {exception.GetType().Name}."); }
+        finally { ReleaseCompletedImageTasks(); }
     }
 
     private void UpdateSpotlightSelection()
@@ -533,6 +577,8 @@ public sealed class DashboardViewModel : ViewModelBase
 
     public void StartLiveStats()
     {
+        ResumeDiscoveryArtwork();
+        _ = EnsureDiscoveryArtworkAsync();
         _personalArtworkCancellation?.Cancel();
         _personalArtworkCancellation?.Dispose();
         _personalArtworkCancellation = new CancellationTokenSource();
@@ -546,6 +592,7 @@ public sealed class DashboardViewModel : ViewModelBase
 
     public void StopLiveStats()
     {
+        StopDiscoveryArtwork();
         _statsTimer.Stop();
         _playTimeTimer.Stop();
         _personalArtworkCancellation?.Cancel();
@@ -1112,7 +1159,7 @@ public sealed class DashboardViewModel : ViewModelBase
     private void LoadPersonalArtwork()
     {
         if (_personalArtworkCancellation is not { IsCancellationRequested: false } cancellation) return;
-        var visible = PersonalLibrary.Concat(FavoriteGames).Concat(IsInstalledLibraryOpen ? AllInstalledGames : InstalledGames).Select(entry => entry.Game).DistinctBy(game => game.AppId).ToArray();
+        var visible = PersonalLibrary.Concat(FavoriteGames).Concat(IsInstalledLibraryOpen ? AllInstalledGames.Take(24) : InstalledGames).Select(entry => entry.Game).DistinctBy(game => game.AppId).ToArray();
         _personalArtworkRequested.RemoveWhere(game => !visible.Contains(game));
         foreach (var game in visible)
             if ((game.HeaderImage is null || game.ArtworkImage is null && InstalledGames.Any(entry => ReferenceEquals(entry.Game, game))) && _personalArtworkRequested.Add(game))

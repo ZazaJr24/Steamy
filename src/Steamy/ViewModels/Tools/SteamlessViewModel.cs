@@ -36,6 +36,7 @@ public sealed class SteamlessViewModel : ObservableObject
     private bool _isInfoVisible;
     private bool _showLog;
     private bool _showAdvanced;
+    private int _statusRevision;
 
     public SteamlessViewModel(ISteamlessService steamless, ISettingsService settings, IGitHubToolDownloadService? toolDownload = null)
     {
@@ -150,6 +151,9 @@ public sealed class SteamlessViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _steamlessPath, value)) return;
+            Interlocked.Increment(ref _statusRevision);
+            Status = "Not checked";
+            ToolVersion = "—";
             OnPropertyChanged(nameof(DisplaySteamlessPath));
             OnPropertyChanged(nameof(EffectiveSteamlessPath));
             OnPropertyChanged(nameof(UsingBundledBuild));
@@ -362,17 +366,23 @@ public sealed class SteamlessViewModel : ObservableObject
     /// </summary>
     public async Task RefreshStatusAsync()
     {
+        var path = SteamlessPath;
+        var revision = Interlocked.Increment(ref _statusRevision);
+        bool IsCurrent() => revision == Volatile.Read(ref _statusRevision) && string.Equals(path, SteamlessPath, StringComparison.Ordinal);
         try
         {
-            var status = await _steamless.CheckAsync(SteamlessPath).ConfigureAwait(false);
+            // Implementations can perform file/version checks before returning a Task.
+            var status = await Task.Run(() => _steamless.CheckAsync(path));
+            if (!IsCurrent()) return;
             Status = status.IsReady
-                ? (string.IsNullOrWhiteSpace(SteamlessPath) ? "Bundled build ready" : "Ready to run")
+                ? (string.IsNullOrWhiteSpace(path) ? "Bundled build ready" : "Ready to run")
                 : "Needs attention";
             ToolVersion = string.IsNullOrWhiteSpace(status.Version) ? "—" : status.Version;
             if (!status.IsReady) LastMessage = status.Message;
         }
         catch (Exception exception)
         {
+            if (!IsCurrent()) return;
             Status = "Error";
             LastMessage = $"The Steamless build could not be checked: {exception.Message}";
         }

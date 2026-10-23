@@ -22,8 +22,15 @@ public sealed class UcOnlineViewModel : ObservableObject
     private PatchOptions _options = new() { QuarantineCompetingFiles = false, UnlockAllDlc = false, ForceOwnership = false };
     private BackupSnapshot? _backup;
     private SteamSearchResult? _match;
+    private int _preferencesEdits;
+    internal Task PreferencesLoaded { get; }
     public UcOnlineViewModel(UcOnlineService service, ISecureCredentialService? credentials = null,
         Func<string, CancellationToken, Task<IReadOnlyList<SteamSearchResult>>>? search = null, string? dataRoot = null)
+        : this(service, credentials, search, dataRoot, ReadPreferencesFileAsync) { }
+
+    internal UcOnlineViewModel(UcOnlineService service, ISecureCredentialService? credentials,
+        Func<string, CancellationToken, Task<IReadOnlyList<SteamSearchResult>>>? search, string? dataRoot,
+        Func<string, CancellationToken, Task<string?>> readPreferences)
     {
         _service = service;
         _credentials = credentials;
@@ -34,21 +41,39 @@ public sealed class UcOnlineViewModel : ObservableObject
         ApplyCommand = new AsyncRelayCommand(() => PlanAsync(true), () => CanEdit && _scan is not null);
         RestoreCommand = new AsyncRelayCommand(RestoreAsync, () => CanEdit && SelectedBackup is not null);
         CancelCommand = new RelayCommand(() => _cancel?.Cancel(), () => IsBusy);
+        PreferencesLoaded = LoadPreferencesAsync(readPreferences);
+    }
+    private async Task LoadPreferencesAsync(Func<string, CancellationToken, Task<string?>> readPreferences)
+    {
         try
         {
-            var path = Path.Combine(_dataRoot, "uc-online.preferences.json");
-            if (File.Exists(path) && new FileInfo(path).Length < 8192)
+            var saved = await Task.Run(async () =>
             {
-                var saved = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(path));
-                if (saved is not null) { _folder = saved.Folder; _appId = saved.AppId; _networkId = saved.NetworkAppId; }
-            }
+                var text = await readPreferences(Path.Combine(_dataRoot, "uc-online.preferences.json"), CancellationToken.None).ConfigureAwait(false);
+                return text is null ? null : JsonSerializer.Deserialize<Preferences>(text);
+            });
+            // A slow disk must never replace a folder or IDs already entered by
+            // the user, nor reset a scan/install started since the page opened.
+            if (saved is null || Volatile.Read(ref _preferencesEdits) != 0 || IsBusy) return;
+            _folder = saved.Folder ?? ""; _appId = saved.AppId ?? ""; _networkId = saved.NetworkAppId ?? "480";
+            OnPropertyChanged(nameof(Folder)); OnPropertyChanged(nameof(AppId)); OnPropertyChanged(nameof(NetworkAppId));
+            NotifyCommands();
         }
-        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { }
+        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
     }
-    public string Folder { get => _folder; set { if (SetProperty(ref _folder, value)) { _scan = null; Executable = ""; AppId = ""; NetworkAppId = "480"; Review = ""; Backups.Clear(); Matches.Clear(); SelectedBackup = null; SelectedMatch = null; Options = new() { QuarantineCompetingFiles = false, UnlockAllDlc = false, ForceOwnership = false }; Status = "Choose Inspect game to check this folder."; NotifyCommands(); } } }
+    private static async Task<string?> ReadPreferencesFileAsync(string path, CancellationToken token)
+    {
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 4096, useAsync: true);
+        if (stream.Length >= 8192) return null;
+        using var reader = new StreamReader(stream);
+        var buffer = new char[8192];
+        var count = await reader.ReadBlockAsync(buffer.AsMemory(), token).ConfigureAwait(false);
+        return count >= buffer.Length ? null : new string(buffer, 0, count);
+    }
+    public string Folder { get => _folder; set { if (SetProperty(ref _folder, value)) { Interlocked.Increment(ref _preferencesEdits); _scan = null; Executable = ""; AppId = ""; NetworkAppId = "480"; Review = ""; Backups.Clear(); Matches.Clear(); SelectedBackup = null; SelectedMatch = null; Options = new() { QuarantineCompetingFiles = false, UnlockAllDlc = false, ForceOwnership = false }; Status = "Choose Inspect game to check this folder."; NotifyCommands(); } } }
     public string Executable { get => _executable; set => SetProperty(ref _executable, value); }
-    public string AppId { get => _appId; set => SetProperty(ref _appId, value); }
-    public string NetworkAppId { get => _networkId; set => SetProperty(ref _networkId, value); }
+    public string AppId { get => _appId; set { if (SetProperty(ref _appId, value)) Interlocked.Increment(ref _preferencesEdits); } }
+    public string NetworkAppId { get => _networkId; set { if (SetProperty(ref _networkId, value)) Interlocked.Increment(ref _preferencesEdits); } }
     public string Status { get => _status; private set => SetProperty(ref _status, value); }
     public string Review { get => _review; private set => SetProperty(ref _review, value); }
     public bool IsBusy { get => _busy; private set { if (SetProperty(ref _busy, value)) { OnPropertyChanged(nameof(CanEdit)); NotifyCommands(); } } }

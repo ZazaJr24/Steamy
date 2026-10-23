@@ -12,6 +12,32 @@ namespace Steamy.UiTests;
 public sealed class SteamArtworkTests
 {
     [Fact]
+    public async Task LibraryCoversDecodeAtDisplayResolutionAndReuseTheDecodedImage()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "Steamy-cover-memory-" + Guid.NewGuid().ToString("N"));
+        var bitmap = BitmapSource.Create(600, 900, 96, 96, PixelFormats.Bgra32, null, new byte[600 * 900 * 4], 600 * 4);
+        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var output = new MemoryStream(); encoder.Save(output);
+        using var handler = new ImageHandler(output.ToArray()); using var http = new HttpClient(handler);
+        using var artwork = new SteamArtworkService(http, folder);
+        try
+        {
+            var game = new Game { AppId = 42 }; await artwork.LoadAsync(game);
+            Assert.NotNull(game.ArtworkImage); Assert.Equal(360, game.ArtworkImage.PixelWidth); Assert.Equal(540, game.ArtworkImage.PixelHeight);
+            Assert.True(game.ArtworkImage.IsFrozen);
+            var second = new Game { AppId = 42 }; await artwork.LoadAsync(second);
+            Assert.Same(game.ArtworkImage, second.ArtworkImage); Assert.Equal(2, handler.Requests);
+            Assert.Equal(.36, game.ArtworkImage.PixelWidth * (double)game.ArtworkImage.PixelHeight / (600 * 900), 2);
+        }
+        finally { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
+    }
+    private sealed class ImageHandler(byte[] bytes) : HttpMessageHandler
+    {
+        public int Requests;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+        { Interlocked.Increment(ref Requests); return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) }); }
+    }
+    [Fact]
     public async Task OnlineSpotlightWithoutBundledLogoResolvesSteamWordmarkAndCachesIt()
     {
         var root = Path.Combine(Path.GetTempPath(), "Steamy-online-logo-" + Guid.NewGuid().ToString("N"));
@@ -148,7 +174,7 @@ public sealed class SteamArtworkTests
         public int CurrentAssets, Requests;
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
         {
-            Requests++;
+            Interlocked.Increment(ref Requests);
             var url = request.RequestUri!;
             if (url.Host == "api.steampowered.com")
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""
@@ -157,7 +183,7 @@ public sealed class SteamArtworkTests
             byte[] bytes;
             if (url.AbsolutePath.Contains("/current/"))
             {
-                CurrentAssets++;
+                Interlocked.Increment(ref CurrentAssets);
                 var pixels = Enumerable.Repeat((byte)200, 16 * 16 * 4).ToArray();
                 var image = BitmapSource.Create(16, 16, 96, 96, PixelFormats.Bgra32, null, pixels, 64);
                 var png = new PngBitmapEncoder();

@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
@@ -7,15 +8,15 @@ using Steamy.Services;
 namespace Steamy.Controls;
 
 /// <summary>One coordinate system for artwork, its continuation and the logo scrim.</summary>
-public sealed class DashboardBackdropView : FrameworkElement
+public sealed partial class DashboardBackdropView : FrameworkElement
 {
     public static readonly DependencyProperty ArtworkProperty = DependencyProperty.Register(nameof(Artwork), typeof(ImageSource), typeof(DashboardBackdropView), new FrameworkPropertyMetadata(null, ArtworkChanged));
     public static readonly DependencyProperty HeroHeightProperty = DependencyProperty.Register(nameof(HeroHeight), typeof(double), typeof(DashboardBackdropView), new FrameworkPropertyMetadata(480d, FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty BlendProperty = DependencyProperty.Register(nameof(Blend), typeof(double), typeof(DashboardBackdropView), new FrameworkPropertyMetadata(1d, FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty PreviewAmountProperty = DependencyProperty.Register("PreviewAmount", typeof(double), typeof(DashboardBackdropView), new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty PreviewBlendProperty = DependencyProperty.Register("PreviewBlend", typeof(double), typeof(DashboardBackdropView), new FrameworkPropertyMetadata(1d, FrameworkPropertyMetadataOptions.AffectsRender));
-    private static readonly Brush DarkBase = Freeze(new SolidColorBrush(Color.FromRgb(13, 17, 23)));
-    private static readonly Brush LightBase = Freeze(new SolidColorBrush(Color.FromRgb(232, 236, 241)));
+    private static readonly Brush DarkBase = Freeze(new SolidColorBrush(Colors.Black));
+    private static readonly Brush LightBase = Brushes.White;
     private static readonly Brush PreviewReveal = CreatePreviewReveal();
     private ImageSource? _previous;
     private ImageSource? _previewArtwork;
@@ -26,30 +27,105 @@ public sealed class DashboardBackdropView : FrameworkElement
     private Size _chromeSize;
     private bool _chromeLight;
     private int _chromeHeight;
+    private ScrollViewer? _scrollHost;
+    private ScrollContentPresenter? _scrollViewport;
+    private BitmapSource? _ambientBitmap, _previousAmbientBitmap;
+    private ImageSource? _ambientArtwork;
+    private int _ambientAspectKey;
+    private CancellationTokenSource? _ambientRender, _previewRender;
     internal BitmapSource? ChromeSnapshot { get; private set; }
     public ImageSource? Artwork { get => (ImageSource?)GetValue(ArtworkProperty); set => SetValue(ArtworkProperty, value); }
     public double HeroHeight { get => (double)GetValue(HeroHeightProperty); set => SetValue(HeroHeightProperty, value); }
     private double Blend { get => (double)GetValue(BlendProperty); set => SetValue(BlendProperty, value); }
-    internal BitmapSource? AmbientBitmap => Artwork is null || ActualWidth <= 0 ? null : ArtworkContinuation.For(Artwork, ActualWidth / Math.Max(1, HeroHeight));
+    internal BitmapSource? AmbientBitmap => _ambientBitmap;
 
     public DashboardBackdropView()
     {
         IsHitTestVisible = false;
         RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.HighQuality);
-        Loaded += (_, _) => { UiThemeService.PaletteChanged += ThemeChanged; MotionPreferences.Changed += MotionChanged; InvalidateVisual(); };
-        Unloaded += (_, _) => { UiThemeService.PaletteChanged -= ThemeChanged; MotionPreferences.Changed -= MotionChanged; FinishTransition(); SetPreviewArtwork(null); FinishPreview(); };
+        Loaded += (_, _) =>
+        {
+            UiThemeService.PaletteChanged += ThemeChanged; MotionPreferences.Changed += MotionChanged;
+            for (DependencyObject? parent = VisualTreeHelper.GetParent(this); parent is not null; parent = VisualTreeHelper.GetParent(parent))
+            {
+                if (parent is ScrollContentPresenter viewport) _scrollViewport = viewport;
+                if (parent is ScrollViewer scroll) { _scrollHost = scroll; scroll.ScrollChanged += ViewportChanged; break; }
+            }
+            UpdateAmbient(); InvalidateVisual();
+        };
+        Unloaded += (_, _) =>
+        {
+            UiThemeService.PaletteChanged -= ThemeChanged; MotionPreferences.Changed -= MotionChanged;
+            if (_scrollHost is not null) _scrollHost.ScrollChanged -= ViewportChanged;
+            _scrollHost = null; _scrollViewport = null;
+            FinishTransition(); SetPreviewArtwork(null); FinishPreview(); Artwork = null; ClearChromeSnapshot();
+        };
     }
-    private void ThemeChanged(object? sender, EventArgs args) { ClearChromeSnapshot(); InvalidateVisual(); }
+    private void ViewportChanged(object sender, ScrollChangedEventArgs args)
+    {
+        if (ReferenceEquals(args.OriginalSource, _scrollHost)) InvalidateVisual();
+    }
+    private Rect? VisibleRegion()
+    {
+        if (_scrollViewport is { ActualWidth: > 0, ActualHeight: > 0 } viewport)
+            try { return new Rect(viewport.TranslatePoint(new Point(), this), viewport.RenderSize); }
+            catch (InvalidOperationException) { return null; }
+        if (_scrollHost is not { ViewportWidth: > 0, ViewportHeight: > 0 } host) return null;
+        try { return new Rect(host.TranslatePoint(new Point(), this), new Size(host.ViewportWidth, host.ViewportHeight)); }
+        catch (InvalidOperationException) { return null; }
+    }
+    private void ThemeChanged(object? sender, EventArgs args) { ClearFramePaint(); ClearChromeSnapshot(); UpdateAmbient(); InvalidateVisual(); }
     private void ClearChromeSnapshot() { _chromePixels = null; ChromeSnapshot = null; }
     protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs args)
     {
         base.OnPropertyChanged(args);
-        if (args.Property == ArtworkProperty || args.Property == HeroHeightProperty) ClearChromeSnapshot();
+        if (args.Property == ArtworkProperty || args.Property == HeroHeightProperty) { ClearFramePaint(); ClearChromeSnapshot(); }
+        if (args.Property == HeroHeightProperty) UpdateAmbient();
     }
     protected override void OnRenderSizeChanged(SizeChangedInfo info)
     {
         base.OnRenderSizeChanged(info);
         ClearChromeSnapshot();
+        ClearFramePaint();
+        UpdateAmbient();
+    }
+
+    private static void CancelRender(ref CancellationTokenSource? request)
+    { request?.Cancel(); request?.Dispose(); request = null; }
+
+    private async void UpdateAmbient()
+    {
+        var artwork = Artwork;
+        if (!IsLoaded || artwork is null || ActualWidth <= 0 || !UiThemeService.AmbientEnabled || UiThemeService.IsHighContrastActive)
+        {
+            CancelRender(ref _ambientRender);
+            _ambientArtwork = null; _ambientBitmap = null;
+            return;
+        }
+        var aspect = ActualWidth / Math.Max(1, HeroHeight);
+        var key = ArtworkContinuation.AspectKey(aspect);
+        if (ReferenceEquals(_ambientArtwork, artwork) && _ambientAspectKey == key) return;
+        CancelRender(ref _ambientRender);
+        _ambientArtwork = artwork; _ambientAspectKey = key;
+        var request = _ambientRender = new CancellationTokenSource();
+        var token = request.Token;
+        void Apply(BitmapSource bitmap)
+        {
+            if (_ambientRender != request || !IsLoaded) return;
+            _ambientBitmap = bitmap;
+            ClearChromeSnapshot(); InvalidateVisual();
+            if (Window.GetWindow(this) is MainWindow window) window.QueueCaptionAppearance();
+        }
+        try
+        {
+            var pending = ArtworkContinuation.ForAsync(artwork, aspect, token);
+            if (pending.IsCompletedSuccessfully) { Apply(pending.Result); return; }
+            var bitmap = await pending.ConfigureAwait(false);
+            await Dispatcher.InvokeAsync(() => Apply(bitmap), System.Windows.Threading.DispatcherPriority.Normal, token);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception error) when (error is InvalidOperationException or ArgumentException or NotSupportedException)
+        { }
     }
 
     // Sample the composed artwork AND readability gradient, not the source image alone.
@@ -87,29 +163,48 @@ public sealed class DashboardBackdropView : FrameworkElement
         return sum / 21;
     }
 
-    internal void DrawWindowSurface(DrawingContext drawing, Window window)
+    internal void DrawWindowSurface(DrawingContext drawing, Window window, Rect surfaceBounds)
     {
         var origin = TranslatePoint(new Point(), window);
+        surfaceBounds.Offset(-origin.X, -origin.Y);
         drawing.PushTransform(new TranslateTransform(origin.X, origin.Y));
-        DrawFrame(drawing, transition: true);
+        DrawFrame(drawing, transition: true, surfaceBounds);
         drawing.Pop();
     }
     private void MotionChanged(object? sender, EventArgs args) { if (!MotionPreferences.AnimationsEnabled) { FinishTransition(); FinishPreview(); } }
 
-    internal void SetPreviewArtwork(ImageSource? artwork, double? top = null)
+    internal async void SetPreviewArtwork(ImageSource? artwork, double? top = null)
     {
         _previewTop = Math.Max(HeroHeight, top ?? HeroHeight);
         if (ReferenceEquals(artwork, _previewArtwork)) return;
+        CancelRender(ref _previewRender);
         _previewArtwork = artwork;
         var revision = ++_previewRevision;
         if (artwork is not null)
         {
-            _previousPreviewBrush = _previewBrush;
-            var imageBrush = new ImageBrush(ArtworkContinuation.For(artwork, Math.Max(1, ActualWidth) / Math.Max(1, HeroHeight), smooth: true))
-            { Stretch = Stretch.Fill };
-            imageBrush.Freeze();
-            _previewBrush = imageBrush;
-            AnimatePreview(PreviewBlendProperty, _previousPreviewBrush is null ? 1 : 0, 1, revision);
+            var request = _previewRender = new CancellationTokenSource();
+            var token = request.Token;
+            BitmapSource bitmap;
+            var aspect = Math.Max(1, ActualWidth) / Math.Max(1, HeroHeight);
+                        void ApplyPreview(BitmapSource source)
+            {
+                if (_previewRender != request || !IsLoaded) return;
+                revision = ++_previewRevision;
+                _previousPreviewBrush = _previewBrush;
+                var imageBrush = new ImageBrush(source) { Stretch = Stretch.Fill };
+                imageBrush.Freeze(); _previewBrush = imageBrush;
+                AnimatePreview(PreviewBlendProperty, _previousPreviewBrush is null ? 1 : 0, 1, revision);
+                AnimatePreview(PreviewAmountProperty, (double)GetValue(PreviewAmountProperty), 1, revision);
+            }
+            try
+            {
+                var pending = ArtworkContinuation.ForAsync(artwork, aspect, token, smooth: true);
+                if (pending.IsCompletedSuccessfully) { ApplyPreview(pending.Result); return; }
+                bitmap = await pending.ConfigureAwait(false);
+                await Dispatcher.InvokeAsync(() => ApplyPreview(bitmap), System.Windows.Threading.DispatcherPriority.Normal, token);
+            }            catch (OperationCanceledException) { return; }
+            catch (Exception error) when (error is InvalidOperationException or ArgumentException or NotSupportedException) { return; }
+            return;
         }
         AnimatePreview(PreviewAmountProperty, (double)GetValue(PreviewAmountProperty), artwork is null ? 0 : 1, revision);
     }
@@ -117,21 +212,22 @@ public sealed class DashboardBackdropView : FrameworkElement
     {
         SetValue(property, to);
         if (!IsLoaded || !MotionPreferences.AnimationsEnabled)
-        { BeginAnimation(property, null); if (property == PreviewAmountProperty && to == 0) _previewBrush = _previousPreviewBrush = null; return; }
-        var animation = new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(360))
+        { BeginAnimation(property, null); if (property == PreviewAmountProperty && to == 0) { _previewBrush = _previousPreviewBrush = null; _previewPaint = null; } return; }
+        var animation = new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(160))
         { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }, FillBehavior = FillBehavior.Stop };
         animation.Completed += (_, _) =>
         {
             if (revision != _previewRevision) return;
             BeginAnimation(property, null);
-            if (property == PreviewBlendProperty) _previousPreviewBrush = null;
+            if (property == PreviewBlendProperty) { _previousPreviewBrush = null; _previewPaint = null; }
             if (property == PreviewAmountProperty && to == 0)
-            { BeginAnimation(PreviewBlendProperty, null); _previewBrush = _previousPreviewBrush = null; }
+            { BeginAnimation(PreviewBlendProperty, null); _previewBrush = _previousPreviewBrush = null; _previewPaint = null; }
         };
         BeginAnimation(property, animation, HandoffBehavior.SnapshotAndReplace);
     }
     private void FinishPreview()
     {
+        _previewPaint = null;
         ++_previewRevision;
         BeginAnimation(PreviewAmountProperty, null); BeginAnimation(PreviewBlendProperty, null);
         SetValue(PreviewAmountProperty, _previewArtwork is null ? 0d : 1d); SetValue(PreviewBlendProperty, 1d);
@@ -141,104 +237,98 @@ public sealed class DashboardBackdropView : FrameworkElement
     private static void ArtworkChanged(DependencyObject owner, DependencyPropertyChangedEventArgs args)
     {
         var view = (DashboardBackdropView)owner;
+        var previousAmbient = view._ambientBitmap;
         view.FinishTransition();
+        view._ambientBitmap = null;
         if (view.IsLoaded && view.IsVisible && MotionPreferences.AnimationsEnabled && args.OldValue is ImageSource previous && args.NewValue is ImageSource)
         {
             view._previous = previous;
+            view._previousAmbientBitmap = previousAmbient;
             var animation = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(280)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
             animation.Completed += (_, _) => view.FinishTransition();
             view.BeginAnimation(BlendProperty, animation);
         }
-        view.InvalidateVisual();
+        view.UpdateAmbient(); view.InvalidateVisual();
     }
-    private void FinishTransition() { BeginAnimation(BlendProperty, null); Blend = 1; _previous = null; }
+    private void FinishTransition() { BeginAnimation(BlendProperty, null); Blend = 1; _previous = null; _previousAmbientBitmap = null; _previousPaint = null; }
     protected override void OnRender(DrawingContext drawing)
     {
         base.OnRender(drawing);
         if (RenderSize.Width <= 0 || RenderSize.Height <= 0) return;
-        DrawFrame(drawing, transition: true);
+        // Retain full layout/scroll coordinates, but do not record offscreen
+        // backdrop masks. ScrollChanged invalidates this crop before rendering
+        // the next offset, including jumps and viewport resizes.
+        DrawFrame(drawing, transition: true, region: VisibleRegion());
     }
-    private void DrawFrame(DrawingContext drawing, bool transition)
+    private void DrawFrame(DrawingContext drawing, bool transition, Rect? region = null)
     {
         var bounds = new Rect(RenderSize);
+        // Keep the artwork's coordinate system while recording only the strip
+        // requested by shell glass. A parent clip alone still records full-page
+        // opacity-mask layers inside every small glass surface.
+        if (region is { } requested)
+            bounds.Intersect(requested);
+        if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0) return;
         drawing.PushClip(new RectangleGeometry(bounds));
         drawing.DrawRectangle(UiThemeService.IsHighContrastActive ? SystemColors.WindowBrush : !UiThemeService.AmbientEnabled ? UiThemeService.BackgroundBrush : UiThemeService.IsLight ? LightBase : DarkBase, null, bounds);
         if (!UiThemeService.IsHighContrastActive && HeroHeight > 0)
         {
-            if (transition && _previous is not null && Blend < 1) DrawArtwork(drawing, _previous, 1);
-            if (Artwork is not null) DrawArtwork(drawing, Artwork, !transition || _previous is null ? 1 : Blend);
+            var paint = GetFramePaint();
+            if (transition && _previous is not null && Blend < 1) DrawArtwork(drawing, _previous, 1, bounds, paint);
+            if (Artwork is not null) DrawArtwork(drawing, Artwork, !transition || _previous is null ? 1 : Blend, bounds, paint);
             if (!UiThemeService.AmbientEnabled) { drawing.Pop(); return; }
             // Retain the banner's ambient through the upper body; black begins near
             // the middle of the complete page and settles in the lower third.
-            var end = Math.Min(ActualHeight, Math.Max(HeroHeight * 1.95, ActualHeight * .72));
-            var black = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute,
-                StartPoint = new Point(0, Math.Min(end, Math.Max(HeroHeight * 1.12, ActualHeight * .45))), EndPoint = new Point(0, end) };
-            black.GradientStops.Add(new GradientStop(Colors.Transparent, 0));
-            black.GradientStops.Add(new GradientStop(Color.FromArgb(160, 0, 0, 0), .5));
-            black.GradientStops.Add(new GradientStop(Colors.Black, 1)); black.Freeze();
-            drawing.DrawRectangle(black, null, bounds);
+            drawing.DrawRectangle(paint.BodyFade, null, bounds);
             if (transition && _previewBrush is not null && (double)GetValue(PreviewAmountProperty) > 0)
             {
-                var body = new Rect(0, _previewTop, ActualWidth, Math.Max(0, ActualHeight - _previewTop));
-                var amount = (double)GetValue(PreviewAmountProperty) * .58;
+                var body = new Rect(0, _previewTop, ActualWidth, Math.Max(0, Math.Min(HeroHeight * 2.4, ActualHeight - _previewTop)));
+                var visible = Rect.Intersect(body, bounds);
+                if (visible.IsEmpty || visible.Height <= 0 || visible.Width <= 0) { drawing.Pop(); return; }
+                var preview = GetPreviewPaint(body);
+                var amount = (double)GetValue(PreviewAmountProperty) * (UiThemeService.IsLight ? .20 : .65);
                 var blend = (double)GetValue(PreviewBlendProperty);
-                drawing.PushOpacityMask(PreviewReveal);
-                if (_previousPreviewBrush is not null) { drawing.PushOpacity(amount * (1 - blend)); drawing.DrawRectangle(_previousPreviewBrush, null, body); drawing.Pop(); }
-                drawing.PushOpacity(amount * blend); drawing.DrawRectangle(_previewBrush, null, body); drawing.Pop();
+                drawing.PushOpacityMask(preview.Reveal);
+                if (preview.Previous is not null) { drawing.PushOpacity(amount * (1 - blend)); drawing.DrawRectangle(preview.Previous, null, visible); drawing.Pop(); }
+                drawing.PushOpacity(amount * blend); drawing.DrawRectangle(preview.Current, null, visible); drawing.Pop();
                 drawing.Pop();
             }
         }
         drawing.Pop();
     }
-    private void DrawArtwork(DrawingContext drawing, ImageSource artwork, double opacity)
+    private void DrawArtwork(DrawingContext drawing, ImageSource artwork, double opacity, Rect bounds, FramePaint paint)
     {
-        var hero = new Rect(0, 0, ActualWidth, HeroHeight);
-        var ambient = new Rect(0, 0, ActualWidth, HeroHeight * ArtworkContinuation.HeightInHeroes);
+        var continuation = ReferenceEquals(artwork, _previous) ? _previousAmbientBitmap : _ambientBitmap ?? _previousAmbientBitmap;
+        var images = GetArtworkPaint(artwork, UiThemeService.AmbientEnabled ? continuation : null, paint);
         drawing.PushOpacity(opacity);
         // The full backdrop is composited as one frame during a carousel crossfade.
-        drawing.DrawRectangle(!UiThemeService.AmbientEnabled ? UiThemeService.BackgroundBrush : UiThemeService.IsLight ? LightBase : DarkBase, null, new Rect(RenderSize));
-        if (UiThemeService.IsLight && UiThemeService.AmbientEnabled)
+        drawing.DrawRectangle(!UiThemeService.AmbientEnabled ? UiThemeService.BackgroundBrush : UiThemeService.IsLight ? LightBase : DarkBase, null, bounds);
+        if (UiThemeService.AmbientEnabled && images.Ambient is { } ambient)
         {
-            // Continue into a dark body without a hard seam or white text on a pale base.
-            var bodyBase = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute,
-                StartPoint = new Point(0, HeroHeight * .65), EndPoint = new Point(0, HeroHeight) };
-            bodyBase.GradientStops.Add(new GradientStop(Colors.Transparent, 0));
-            bodyBase.GradientStops.Add(new GradientStop(Colors.Black, 1)); bodyBase.Freeze();
-            drawing.DrawRectangle(bodyBase, null, new Rect(RenderSize));
+            drawing.PushOpacity(UiThemeService.IsLight ? .32 : .30);
+            DrawImageRegion(drawing, ambient, paint.AmbientBounds, bounds);
+            drawing.Pop();
         }
-        if (UiThemeService.AmbientEnabled)
+        if (paint.HeroBounds.IntersectsWith(bounds))
         {
-            if (UiThemeService.IsLight) drawing.PushOpacity(.65);
-            drawing.DrawImage(ArtworkContinuation.For(artwork, ActualWidth / HeroHeight), ambient);
-            if (UiThemeService.IsLight) drawing.Pop();
+            drawing.PushOpacityMask(paint.HeroFade);
+            DrawImageRegion(drawing, images.Hero, paint.HeroBounds, bounds);
+            drawing.Pop();
         }
-        var fade = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(), EndPoint = new Point(0, HeroHeight) };
-        fade.GradientStops.Add(new GradientStop(Colors.White, 0));
-        fade.GradientStops.Add(new GradientStop(Colors.White, .4));
-        fade.GradientStops.Add(new GradientStop(Color.FromArgb(210, 255, 255, 255), .6));
-        fade.GradientStops.Add(new GradientStop(Color.FromArgb(45, 255, 255, 255), .85));
-        fade.GradientStops.Add(new GradientStop(Colors.Transparent, 1));
-        fade.Freeze();
-        drawing.PushOpacityMask(fade);
-        drawing.DrawRectangle(new ImageBrush(artwork) { Stretch = Stretch.UniformToFill }, null, hero);
+        var scrimBounds = Rect.Intersect(paint.ScrimBounds, bounds);
+        if (!scrimBounds.IsEmpty)
+        {
+            drawing.PushOpacityMask(paint.ScrimFade);
+            drawing.DrawRectangle(paint.Scrim, null, scrimBounds);
+            drawing.Pop();
+        }
         drawing.Pop();
-        var scrim = new LinearGradientBrush { StartPoint = new Point(), EndPoint = new Point(1, 0) };
-        scrim.GradientStops.Add(new GradientStop(Color.FromArgb(215, 7, 11, 17), 0));
-        scrim.GradientStops.Add(new GradientStop(Color.FromArgb(180, 7, 11, 17), .3));
-        scrim.GradientStops.Add(new GradientStop(Color.FromArgb(45, 7, 11, 17), .65));
-        scrim.GradientStops.Add(new GradientStop(Colors.Transparent, 1));
-        scrim.Freeze();
-        if (!UiThemeService.AmbientEnabled) ambient = hero;
-        var scrimFade = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(), EndPoint = new Point(0, ambient.Height) };
-        scrimFade.GradientStops.Add(new GradientStop(Colors.White, 0));
-        scrimFade.GradientStops.Add(new GradientStop(Colors.White, .22));
-        scrimFade.GradientStops.Add(new GradientStop(Color.FromArgb(130, 255, 255, 255), .45));
-        scrimFade.GradientStops.Add(new GradientStop(Colors.Transparent, 1));
-        scrimFade.Freeze();
-        drawing.PushOpacityMask(scrimFade);
-        drawing.DrawRectangle(scrim, null, ambient);
-        drawing.Pop();
-        drawing.Pop();
+    }
+    private static void DrawImageRegion(DrawingContext drawing, ImageBrush brush, Rect imageBounds, Rect bounds)
+    {
+        var visible = Rect.Intersect(imageBounds, bounds);
+        if (visible.IsEmpty || visible.Width <= 0 || visible.Height <= 0) return;
+        drawing.DrawRectangle(brush, null, visible);
     }
     private static T Freeze<T>(T value) where T : Freezable { value.Freeze(); return value; }
     private static Brush CreatePreviewReveal()
@@ -248,7 +338,7 @@ public sealed class DashboardBackdropView : FrameworkElement
         radial.GradientStops.Add(new GradientStop(Color.FromArgb(220, 255, 255, 255), .5));
         radial.GradientStops.Add(new GradientStop(Colors.Transparent, 1));
         var topFade = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
-        foreach (var (offset, alpha) in new[] { (0d, (byte)0), (.03, (byte)40), (.06, (byte)128), (.09, (byte)215), (.12, (byte)255) })
+        foreach (var (offset, alpha) in new[] { (0d, (byte)0), (.03, (byte)40), (.06, (byte)128), (.09, (byte)215), (.12, (byte)255), (.72, (byte)255), (.9, (byte)100), (1d, (byte)0) })
             topFade.GradientStops.Add(new GradientStop(Color.FromArgb(alpha, 255, 255, 255), offset));
         var group = new DrawingGroup { OpacityMask = topFade };
         group.Children.Add(new GeometryDrawing(radial, null, new RectangleGeometry(new Rect(0, 0, 1, 1))));

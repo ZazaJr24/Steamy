@@ -12,6 +12,34 @@ namespace Steamy.UiTests;
 public sealed class BetterSteamToolsServiceTests
 {
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task OwnZipCanAddAKnownGameOrIdentifyAnUnmatchedLocalGame(bool knownAppId)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "steamy-bst-own-zip-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(root); Directory.CreateDirectory(Path.Combine(root, "config"));
+            File.WriteAllText(Path.Combine(root, "steam.exe"), "offline fixture; never executed");
+            var payload = SteamToolsBackend.Official104.Keys.ToDictionary(name => name, _ => System.Text.Encoding.UTF8.GetBytes("MZoffline test fixture; never executed"));
+            foreach (var item in payload) File.WriteAllBytes(Path.Combine(root, item.Key), item.Value);
+            File.WriteAllBytes(Path.Combine(root, SteamToolsBackend.ReceiptPath), SteamToolsBackend.CreateReceipt("test", payload));
+            var package = Path.Combine(root, "my-package.zip");
+            using (var zip = ZipFile.Open(package, ZipArchiveMode.Create))
+            {
+                using (var script = new StreamWriter(zip.CreateEntry("metadata/480.lua").Open())) script.Write("addappid(480)\nsetManifestid(481,\"123\")");
+                using var manifest = new StreamWriter(zip.CreateEntry("metadata/481_123.manifest").Open()); manifest.Write("own package manifest");
+            }
+            var service = new BetterSteamToolsService(new Settings(), new Source(root), isSteamRunning: () => false);
+            var result = await service.ImportAsync(root, [package], knownAppId ? 480 : null);
+            Assert.True(result.Succeeded, result.Message); Assert.Contains(480, result.AppIds);
+            Assert.Contains("addappid(480)", File.ReadAllText(Path.Combine(root, "config", "stplug-in", "480.lua")));
+            Assert.Equal("own package manifest", File.ReadAllText(Path.Combine(root, "depotcache", "481_123.manifest")));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task InstallationUsesVerifiedBytesAndNeverReportsDamagedFilesAsInstalled(bool wrongDigest)

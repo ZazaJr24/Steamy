@@ -398,6 +398,14 @@ public sealed partial class PageSmokeTests
             page.ConfigureDownloadLocation(directory);
             Assert.Equal(0, page.DownloadWizardStep);
             var preparationsBeforeInstall = downloads.PreparationCalls.Count;
+            // Follow the visible Next actions through source, depots and destination.
+            // The handoff assertion belongs to the final Install action, not the method picker.
+            for (var step = 1; step <= 3; step++)
+            {
+                ((Button)page.FindName("StartButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                var targetStep = step; PumpUntil(() => page.DownloadWizardStep == targetStep);
+            }
+            PumpUntil(() => ((Button)page.FindName("StartButton")).IsEnabled);
             var beforeAttempts = queue.SaveAttempts.Count;
             var beforeDownloads = downloads.Downloads.Count;
             queue.SaveOverride = (_, _) => saved.Task;

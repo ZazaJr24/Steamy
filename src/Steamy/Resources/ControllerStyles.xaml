@@ -1,0 +1,83 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+  <!-- Expander Style for Controller Page -->
+  <Style x:Key="ControllerExpander" TargetType="Expander">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Expander">
+          <StackPanel>
+            <ToggleButton HorizontalAlignment="Stretch"
+                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                          Foreground="{TemplateBinding Foreground}"
+                          FontSize="{TemplateBinding FontSize}"
+                          FontWeight="{TemplateBinding FontWeight}"
+                          HorizontalContentAlignment="Stretch">
+              <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                  <Border x:Name="Header" Padding="0,8" Background="Transparent" CornerRadius="8">
+                    <Grid>
+                      <ContentPresenter Content="{Binding Header, RelativeSource={RelativeSource AncestorType=Expander}}"
+                                        Margin="0,0,24,0" VerticalAlignment="Center" />
+                      <Path x:Name="Arrow" Data="M 0,0 L 4,4 L 8,0" Width="8" Height="4"
+                            Stroke="{TemplateBinding Foreground}" StrokeThickness="1.2"
+                            HorizontalAlignment="Right" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5" />
+                    </Grid>
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsChecked" Value="True">
+                      <Setter TargetName="Arrow" Property="RenderTransform">
+                        <Setter.Value>
+                          <RotateTransform Angle="180" />
+                        </Setter.Value>
+                      </Setter>
+                    </Trigger>
+                    <Trigger Property="IsKeyboardFocused" Value="True">
+                      <Setter TargetName="Header" Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </ToggleButton.Template>
+            </ToggleButton>
+            <ContentPresenter x:Name="Body" ContentSource="Content" Visibility="Collapsed" HorizontalAlignment="Stretch" />
+          </StackPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsExpanded" Value="True">
+              <Setter TargetName="Body" Property="Visibility" Value="Visible" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Color Preset Chip Button -->
+  <Style x:Key="ColorPresetChip" TargetType="Button">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Margin" Value="0,0,8,0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="ChipBorder" CornerRadius="14" Background="{TemplateBinding Background}"
+                  BorderBrush="#40FFFFFF" BorderThickness="1.5">
+            <Border.Effect>
+              <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.3" />
+            </Border.Effect>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="ChipBorder" Property="BorderBrush" Value="#FFFFFF" />
+              <Setter TargetName="ChipBorder" Property="BorderThickness" Value="2.5" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+</ResourceDictionary>

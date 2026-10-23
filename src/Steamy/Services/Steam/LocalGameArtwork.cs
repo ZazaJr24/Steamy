@@ -15,7 +15,7 @@ internal static class LocalGameArtwork
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool DestroyIcon(IntPtr icon);
 
-    public static BitmapImage? Read(string executable)
+    public static BitmapImage? Read(string executable, int pixelWidth = 256, int pixelHeight = 0)
     {
         if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable)) return null;
         IntPtr large = IntPtr.Zero, small = IntPtr.Zero;
@@ -27,14 +27,9 @@ internal static class LocalGameArtwork
             {
                 var path = Path.Combine(folder, asset);
                 if (!File.Exists(path)) continue;
-                var packaged = new BitmapImage();
-                packaged.BeginInit();
-                packaged.CacheOption = BitmapCacheOption.OnLoad;
-                packaged.DecodePixelWidth = 512;
-                packaged.UriSource = new Uri(path);
-                packaged.EndInit();
-                packaged.Freeze();
-                return packaged;
+                if (new FileInfo(path).Length > ImagePipeline.MaxDownloadBytes) continue;
+                var packaged = ImagePipeline.Decode(File.ReadAllBytes(path), pixelWidth, pixelHeight);
+                if (packaged is not null) return packaged;
             }
             if (SHDefExtractIcon(executable, 0, 0, out large, out small, 256) != 0 || large == IntPtr.Zero) return null;
             var bitmap = Imaging.CreateBitmapSourceFromHIcon(large, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
@@ -42,14 +37,7 @@ internal static class LocalGameArtwork
             var encoder = new PngBitmapEncoder();
             encoder.Frames.Add(BitmapFrame.Create(bitmap));
             encoder.Save(stream);
-            stream.Position = 0;
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.StreamSource = stream;
-            image.EndInit();
-            image.Freeze();
-            return image;
+            return ImagePipeline.Decode(stream.ToArray(), pixelWidth, pixelHeight);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Runtime.InteropServices.ExternalException) { return null; }
         finally

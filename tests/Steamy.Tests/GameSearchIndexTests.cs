@@ -2,10 +2,37 @@ using Steamy.Services;
 
 namespace Steamy.Tests;
 
-public sealed class GameSearchIndexTests
+public sealed partial class GameSearchIndexTests
 {
     private sealed record App(int Id, string Name, bool Visible = true);
     private static GameSearchIndex<App> Index(params App[] apps) => new(apps, app => app.Id, app => app.Name);
+
+    [Fact]
+    public void CancelledConstructionDoesNotEnumerateOrReadTitles()
+    {
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        var reads = 0;
+        IEnumerable<App> Apps()
+        { reads++; yield return new(1, "Fixture"); }
+        Assert.Throws<OperationCanceledException>(() => new GameSearchIndex<App>(Apps(), app => app.Id, app => app.Name, cancellation.Token));
+        Assert.Equal(0, reads);
+    }
+
+    [Fact]
+    public void CancellingConstructionStopsBeforeTheRemainingTitlesAreNormalized()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var reads = 0;
+        var apps = Enumerable.Range(1, 100_000).Select(id => new App(id, $"Fixture {id}"));
+        Assert.Throws<OperationCanceledException>(() => new GameSearchIndex<App>(apps, app => app.Id, app =>
+        {
+            if (++reads == 16) cancellation.Cancel();
+            return app.Name;
+        }, cancellation.Token));
+        Assert.Equal(16, reads);
+        // Cancellation of one build must not poison a later independent search.
+        Assert.Equal(42, Assert.Single(Index(new App(42, "Pokémon Legend")).Find("pokemon legend").Items).Id);
+    }
 
     [Theory]
     [InlineData("offlien library")]

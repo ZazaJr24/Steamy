@@ -3,6 +3,15 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.8.0
+
+- Route default DepotBox and Ryuu requests through the HTTPS VPS relay; shared provider keys remain on the server.
+- Build the public relay connection as a separate open-source Steamy.RelayClient.dll, included in the app and available as a release asset. Cloning the repository rebuilds it without any server secrets.
+- Improve wheel timing and reduce repeated gallery layout work, retain pinned filters and the game-page Back button, and render text without forced ClearType color fringes.
+- Prepare higher-resolution game banners with a subtle fade and keep image caching bounded.
+- Mark the planned Hypervisor feature as coming in version 0.8.2.
+- Publish the application source under MIT; retain the licenses and source obligations of bundled third-party components.
+
 ## 0.7.1.2
 
 - Cover the entire window with first-run overlays instead of cutting the navigation bar in half; keep window controls available.

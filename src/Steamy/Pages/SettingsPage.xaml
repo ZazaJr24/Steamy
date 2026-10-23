@@ -8,86 +8,6 @@
       UseLayoutRounding="True" SnapsToDevicePixels="True"
       TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="Auto" RenderOptions.ClearTypeHint="Auto"
       Background="{DynamicResource PageBackgroundBrush}">
-  <Page.Resources>
-    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-    <Style x:Key="CredentialBoxStyle" TargetType="PasswordBox">
-      <Setter Property="MinHeight" Value="44"/>
-      <Setter Property="FontSize" Value="15"/>
-      <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}"/>
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource TextTertiaryBrush}"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Tag" Value="Empty"/>
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="PasswordBox">
-        <Border x:Name="Field" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9">
-          <Grid>
-            <ScrollViewer x:Name="PART_ContentHost" Margin="12,8" VerticalAlignment="Center"/>
-            <TextBlock x:Name="Placeholder" Text="Put Api Key …" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" Margin="12,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
-          </Grid>
-        </Border>
-        <ControlTemplate.Triggers>
-          <Trigger Property="Tag" Value="Filled"><Setter TargetName="Placeholder" Property="Visibility" Value="Collapsed"/></Trigger>
-          <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Placeholder" Property="Visibility" Value="Collapsed"/><Setter TargetName="Field" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger>
-          <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Field" Property="Opacity" Value="0.5"/></Trigger>
-        </ControlTemplate.Triggers>
-      </ControlTemplate></Setter.Value></Setter>
-    </Style>
-    <Style x:Key="SettingsCard" TargetType="Border" BasedOn="{StaticResource SurfaceCardStyle}">
-      <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
-      <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Style.Triggers>
-        <Trigger Property="IsKeyboardFocusWithin" Value="True">
-          <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-        </Trigger>
-      </Style.Triggers>
-    </Style>
-    <Style x:Key="SectionChip" TargetType="Border">
-      <Setter Property="Width" Value="24" /><Setter Property="Height" Value="24" />
-      <Setter Property="CornerRadius" Value="10" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-    <Style x:Key="SectionHeading" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="19" /><Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-    <Style x:Key="SectionHint" TargetType="TextBlock" BasedOn="{StaticResource TertiaryTextStyle}">
-      <Setter Property="FontSize" Value="12" /><Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Margin" Value="12,4,0,0" /><Setter Property="TextWrapping" Value="Wrap" />
-    </Style>
-    <Style x:Key="SettingsGroupLabel" TargetType="TextBlock" BasedOn="{StaticResource OverlineStyle}">
-      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="Margin" Value="0,0,0,18" />
-    </Style>
-    <Style x:Key="RowIcon" TargetType="Border">
-      <Setter Property="Width" Value="24" /><Setter Property="Height" Value="24" />
-      <Setter Property="CornerRadius" Value="11" /><Setter Property="Margin" Value="0,0,12,0" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-    <Style x:Key="TestButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-      <Setter Property="Appearance" Value="Secondary" /><Setter Property="CornerRadius" Value="10" />
-    </Style>
-    <Style x:Key="SettingsCategoryItem" TargetType="ListBoxItem">
-      <Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="20,20" />
-      <Setter Property="Margin" Value="0,2" /><Setter Property="FontSize" Value="18" />
-      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-      <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}" />
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
-        <Border x:Name="Chrome" Padding="{TemplateBinding Padding}" CornerRadius="5" Background="Transparent" BorderBrush="Transparent" BorderThickness="1">
-          <ContentPresenter VerticalAlignment="Center" />
-        </Border>
-        <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource CardHoverGlassBrush}" /></Trigger>
-          <Trigger Property="IsSelected" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource GlassSurfaceBrush}" /><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /><Setter Property="FontWeight" Value="SemiBold" /></Trigger>
-          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource DownloadAccentBrush}" /></Trigger>
-        </ControlTemplate.Triggers>
-      </ControlTemplate></Setter.Value></Setter>
-    </Style>
-  </Page.Resources>
 
   <Grid Margin="38,24,32,16" HorizontalAlignment="Stretch" MaxWidth="1480">
     <Grid.ColumnDefinitions><ColumnDefinition Width="264" /><ColumnDefinition Width="32" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
@@ -134,14 +54,44 @@
                     controls:SmoothScroll.Enabled="False"
                     HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="0,0,4,20">
         <StackPanel x:Name="SectionsPanel">
-          <controls:StorageTransparencyView x:Name="TransparencyView" Tag="transparency" />
-          <Border Tag="services" Style="{StaticResource SettingsCard}" Margin="0,0,0,16">
+          <controls:DeferredSettingsSection Tag="transparency" SearchLabels="Storage &amp; transparency See where Steamy stores data, when files are created and what changes can affect your PC. Your Steamy data folder Preferences, credentials, library, playtime, caches, tool downloads and Steamy temporary files share this folder. The default is Roaming. Choose an empty folder to change it. The transfer happens after you close Steamy and start it again. Original data is kept as a recovery copy. Game installations, download destinations and the app executable retain their configured locations. A small folder locator stays in Roaming. Your file locations This view checks whether listed paths exist. It does not create folders, scan whole drives or read stored keys. The report includes local paths, never file contents or credential values. Built-in storage locations and current configured targets are shown here, including up to 256 game/download destinations. External tools can write additional files in their own directories or selected game folders. This is a current snapshot, not a history of every file write. Background activity &amp; connections Game discovery reads installed-game folders, executable names and Steam manifests. Selecting Scan PC searches additional folders; detection does not install a fix or change game binaries. Starting a selected game launches its configured executable or Steam and records a local launch timestamp. Public game information and artwork are requested from Steam. Achievement sync sends your Steam ID and API key to Steam over HTTPS. Optional download providers receive the requests and credentials needed for the service you select. Interface translations send interface text to the translation service when needed. Sharing sends the package you select to the configured repository when you choose Share. Optional tools and fixes can install executables or change game/Steam DLLs and configuration. The selected operation and target determine the changes. Cache cleanup does not automatically uninstall those changes; deleting a cache is different from restoring a modified game file. Understanding antivirus alerts A false positive means legitimate software was incorrectly detected. A warning alone cannot establish that: it may also identify a real threat or a potentially unwanted application. Steamy does not label a detected file safe just because it is bundled or linked by a tool. Some optional tools patch binaries, replace DLLs or inject code into a game/client. Such behavior can resemble malware techniques and may be detected. SmartScreen reputation warnings are also different from a malware verdict. Check the exact file, original release/source and detection name before deciding what happened. Use a SHA-256 hash to identify the exact file in a vendor review. A matching hash identifies bytes; it does not prove a file is safe. The inspection below reads your selected file locally without running it or uploading it. Review links open the official website. Steamy does not submit your file, change antivirus settings or add an exclusion from this view." ExportedNames="TransparencyView">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <controls:StorageTransparencyView x:Name="TransparencyView" Tag="transparency" />
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="services" SearchLabels="Discord Your friends, conversations and game invitations, in one place. Sign in securely through Discord. You can disconnect at any time. Connect automatically Reconnect your saved Discord account in the background when Steamy starts. Public Application ID For custom builds. Enable the Social SDK and Public Client for this application in the Discord Developer Portal." ExportedNames="SettingsDiscordConnection" x:Name="DiscordSettingsSection" IsDiscordSection="True">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="services" Margin="0,0,0,20">
+            <TextBlock Text="Discord" Style="{StaticResource SectionHeading}" Margin="0,8,0,12" />
+            <controls:DiscordConnectionCard x:Name="SettingsDiscordConnection" />
+            <Grid Margin="0,16,0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel Margin="0,0,20,0"><TextBlock Text="Connect automatically" Style="{StaticResource CardTitleStyle}" /><TextBlock Text="Reconnect your saved Discord account in the background when Steamy starts." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap" /></StackPanel><ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.DiscordAutoConnect}" VerticalAlignment="Center" /></Grid>
+            <ui:Button Content="Open friends" Appearance="Secondary" Click="OpenFriends_Click" HorizontalAlignment="Left" Margin="0,12,0,0" />
+            <Expander Header="Discord application · developer configuration" Margin="0,12,0,0">
+              <StackPanel Margin="12">
+                <TextBlock Text="Public Application ID" Style="{StaticResource CardTitleStyle}" />
+                <ui:TextBox Text="{Binding Settings.DiscordApplicationId, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Discord Application ID"
+                            IsEnabled="{Binding Model.CanEditApplication, ElementName=SettingsDiscordConnection}"
+                            AutomationProperties.Name="Discord Application ID" Margin="0,8,0,0" />
+                <TextBlock Text="For custom builds. Enable the Social SDK and Public Client for this application in the Discord Developer Portal."
+                           Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" FontSize="11" Margin="0,8,0,0" />
+              </StackPanel>
+            </Expander>
+          </StackPanel>
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="services" SearchLabels="Free manifest sources Sushi and Zaza work without an API key. Select the source when opening a game, or filter your library by source.">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <Border Tag="services" Style="{StaticResource SettingsCard}" Margin="0,0,0,16">
             <StackPanel>
               <TextBlock Text="Free manifest sources" Style="{StaticResource SectionHeading}" />
               <TextBlock Text="Sushi and Zaza work without an API key. Select the source when opening a game, or filter your library by source." Style="{StaticResource BodyTextStyle}" Margin="0,8,0,12" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
-          <StackPanel Tag="general" controls:EntranceMotion.Delay="0">
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="general" SearchLabels="Appearance Theme, backdrop and language Theme System, light or dark. Artwork ambient Use game artwork colors, or switch off for a fixed background. Background color Choose any color · #RRGGBB Enter a valid color, for example #182838. Window Backdrop Windows 11 background style. Dashboard search Show search on Discover. Playtime tracking Track running installed games locally. Continues after Steamy closes; switching this off stops the background tracker. Trailer previews Play muted trailers when hovering over upcoming games. Reduce effects Instant transitions. Respects Windows animation preferences. Language Applied on next start. Interface translations Translated online when needed, then cached on this PC. No API key required. First-run setup Reopen preferences, folders, controller and download setup." ExportedNames="BackgroundPreferences DashboardSearchToggle PlayTimeTrackingToggle TrailerPreviewsToggle ReduceEffectsToggle">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="general" controls:EntranceMotion.Delay="0">
       <!-- ===== Appearance ============================================================== -->
       <WrapPanel Margin="0,8,0,12">
         <Border Style="{StaticResource SectionChip}">
@@ -235,7 +185,7 @@
               <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
               <StackPanel Margin="41,0,20,0" VerticalAlignment="Center">
                 <TextBlock Text="First-run setup" Style="{StaticResource CardTitleStyle}" />
-                <TextBlock Text="Reopen preferences, folders, download options and dependency setup." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="Reopen preferences, folders, controller and download setup." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
               </StackPanel>
               <ui:Button Grid.Column="1" Content="Run setup again" Appearance="Secondary" Click="RunSetupAgain_Click" />
             </Grid>
@@ -244,7 +194,11 @@
       </Border>
 
           </StackPanel>
-          <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="services" SearchLabels="Steam connection API key, SteamID64 and endpoint Steam API key Leave the box empty to keep the stored key unchanged. SteamID64 API endpoint Only use an official or explicitly authorized endpoint." ExportedNames="SteamApiKeyBox">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
       <!-- ===== Steam connection ======================================================== -->
       <WrapPanel Margin="0,8,0,12">
         <Border Style="{StaticResource SectionChip}">
@@ -297,7 +251,11 @@
       </Border>
 
           </StackPanel>
-          <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="services" SearchLabels="Ryuu Generator Base URL and auth key Base URL The address the app calls for generated manifests. Auth key Stored separately, never written into logs or exports. Empty means: keep the current key." ExportedNames="RyuuAuthKeyBox">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
       <!-- ===== Ryuu Generator =========================================================== -->
       <WrapPanel Margin="0,8,0,12">
         <Border Style="{StaticResource SectionChip}">
@@ -313,7 +271,7 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
               <TextBlock Text="Base URL" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="The address the app calls for generated manifests." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              <TextBlock Text="Ryuu catalog address. Downloads use the Steamy relay by default." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
             </StackPanel>
             <ui:TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Settings.RyuuBaseUrl, UpdateSourceTrigger=PropertyChanged}" />
           </Grid>
@@ -328,7 +286,7 @@
               </StackPanel></Grid>
             <PasswordBox x:Name="RyuuAuthKeyBox" AutomationProperties.Name="Ryuu auth key" ToolTip="Auth key eingeben" Style="{StaticResource CredentialBoxStyle}" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="RyuuAuthKeyBox_PasswordChanged" />
           </Grid>
-          <TextBlock Text="Stored separately, never written into logs or exports. Empty means: keep the current key."
+          <TextBlock Text="Optional personal key. Without one, Steamy uses its secure relay automatically. Saved personal keys stay encrypted on this PC."
                      Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="41,0,0,14" />
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
@@ -341,7 +299,11 @@
       </Border>
 
           </StackPanel>
-          <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="services" SearchLabels="Fixes source fixes.json catalog and archives Where the Game Fixes page loads its catalog (fixes.json) and archives from. Leave the URL empty to use the built-in source; private repositories need an access token. Source URL Empty uses the built-in source. Or paste another GitHub repository / web folder. Access token Required for private repositories. Encrypted with DPAPI, never exported. Empty means: keep the current token." ExportedNames="MirrorTokenBox">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
       <!-- ===== Fixes source ============================================================= -->
       <WrapPanel Margin="0,8,0,12">
         <Border Style="{StaticResource SectionChip}">
@@ -393,7 +355,11 @@
       </Border>
 
           </StackPanel>
-          <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="services" SearchLabels="Hubcap Manifest Games, Lua and depot manifests Hubcap provides fast game search and manifest downloads for Denuvo Activation. An API key from hubcapmanifest.com is required. Base URL The Hubcap manifest API endpoint. API key Encrypted with DPAPI, never written into logs or exports. Empty means: keep the current key. Daily API Usage" ExportedNames="HubcapApiKeyBox">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
       <!-- ===== Hubcap Manifest ========================================================== -->
       <WrapPanel Margin="0,8,0,12">
         <Border Style="{StaticResource SectionChip}">
@@ -462,7 +428,11 @@
       </Border>
 
           </StackPanel>
-          <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="services" SearchLabels="DepotBox Lua plus depot manifests in one package DepotBox builds the Lua script and every depot manifest for an app in one request. An API key from depotbox.org is required. API key Encrypted with DPAPI, never written into logs or exports. Empty means: keep the current key." ExportedNames="DepotBoxApiKeyBox">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
       <!-- ===== DepotBox ================================================================= -->
       <WrapPanel Margin="0,8,0,12">
         <Border Style="{StaticResource SectionChip}">
@@ -478,7 +448,7 @@
             <StackPanel Orientation="Horizontal">
               <ui:SymbolIcon Symbol="Info24" FontSize="14" Foreground="{DynamicResource AccentBrush}"
                              VerticalAlignment="Top" Margin="0,1,9,0" />
-              <TextBlock Text="DepotBox builds the Lua script and every depot manifest for an app in one request. An API key from depotbox.org is required." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
+              <TextBlock Text="DepotBox builds the Lua script and depot manifests in one package. Steamy's secure relay works without a personal API key." Style="{StaticResource MutedTextStyle}" FontSize="12" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
           <Grid Margin="0,0,0,6">
@@ -491,7 +461,7 @@
                 <TextBlock Text="{Binding DepotBoxCredentialStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,3,0,0" />
               </StackPanel></Grid>
             <PasswordBox x:Name="DepotBoxApiKeyBox" Style="{StaticResource CredentialBoxStyle}" Grid.Column="1" VerticalAlignment="Center" PasswordChanged="DepotBoxApiKeyBox_PasswordChanged"
-                         ToolTip="Type your DepotBox API key and save; encrypted with DPAPI, never exported." />
+                         ToolTip="Optional personal key. Leave unconfigured to use the Steamy relay. Saved personal keys are encrypted with DPAPI." />
           </Grid>
           <TextBlock Text="Encrypted with DPAPI, never written into logs or exports. Empty means: keep the current key."
                      Style="{StaticResource TertiaryTextStyle}" FontSize="11" Margin="41,0,0,14" />
@@ -516,7 +486,11 @@
       </Border>
 
           </StackPanel>
-          <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="services" SearchLabels="ManifestHub Free exact depot manifests ManifestHub hands out the exact .manifest for a depot over a free, always-on API (a key is valid for 24 h). Whenever a manifest is missing while downloading, Steamy asks ManifestHub for it before falling back to Steam. API key Optional. Encrypted with DPAPI, never written into logs or exports. Empty means: keep the current key." ExportedNames="ManifestHubApiKeyBox">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="services" controls:EntranceMotion.Delay="0">
       <!-- ===== ManifestHub =============================================================== -->
       <WrapPanel Margin="0,8,0,12">
         <Border Style="{StaticResource SectionChip}">
@@ -553,7 +527,11 @@
       </Border>
 
           </StackPanel>
-          <StackPanel Tag="downloads" controls:EntranceMotion.Delay="0">
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="downloads" SearchLabels="DepotDownloader &amp; downloads Paths, queue limits and transfer options FOLDERS &amp; ENGINE Find installed games Search all local drives, with progress and cancellation. Steam folder Optional. Empty means the app detects your Steam installation automatically. DepotDownloader executable Used by the DepotDownloader tool page. Library downloads use the managed DepotDownloaderMod. Working directory Optional process directory; the target folder is used when empty. Default download folder Files are never deleted silently. Steam account (optional) Passed to the tool as -username for content your account is licensed for. The app never asks for, passes or stores your password or Steam Guard code. no password Show DepotDownloader's console window Required when the tool must ask you for a password or Steam Guard code. Progress is then shown in that window instead of in the app; the exit code and local check still count. Retries are disabled for those runs. TRANSFER CONTROLS Queue limits Parallel jobs · retries · timeout seconds Connections per download How many chunks each job fetches from Steam's CDN servers at the same time (-max-downloads). More connections usually mean higher speed on fast lines; lower it if your connection or disk struggles. Speed limit · MiB/s Per game with the bundled Mod. 0 = unlimited; applies on next start or resume. Use Lancache Route downloads through a Lancache server on your network when one is detected (-use-lancache). VERIFY &amp; RECOVERY Verify after download Validate the local target folder after a job completes. Recover interrupted downloads Restore interrupted jobs after restarting Steamy, ready for you to resume. Refresh manifests on resume A resumed download re-fetches the Lua and depot manifests first, so a pause that lasted days does not continue with outdated data. Delay in seconds between refresh and continue. Cache &amp; temp Cleans artwork cache, manifest work folder, Ryuu archives and update packages. Your DepotDownloaderMod download and your dumps are kept.">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="downloads" controls:EntranceMotion.Delay="0">
       <!-- ===== DepotDownloader & downloads ============================================== -->
       <WrapPanel Margin="0,8,0,12">
         <Border Style="{StaticResource SectionChip}">
@@ -747,7 +725,11 @@
       </Border>
 
           </StackPanel>
-          <StackPanel Tag="network" controls:EntranceMotion.Delay="0">
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="network" SearchLabels="App DNS Encrypted resolver used by the app only App only — Windows DNS and other applications remain unchanged. No administrator privileges are used. Resolver mode Applied to every request Steamy makes: catalogs, sources, updates and artwork. A resolver that cannot be reached falls back to the system one. HTTPS DNS endpoint Host diagnostic Resolve a provider or Steam host and measure latency.">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="network" controls:EntranceMotion.Delay="0">
       <!-- ===== App DNS ================================================================== -->
       <WrapPanel Margin="0,8,0,12">
         <Border Style="{StaticResource SectionChip}">
@@ -812,7 +794,11 @@
       </Border>
 
           </StackPanel>
-          <StackPanel Tag="general" controls:EntranceMotion.Delay="0">
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
+          <controls:DeferredSettingsSection Tag="general" SearchLabels="Quality of life and security Updates, notifications and logs Automatic updates Check for new versions at startup. Confirm before installing. Notifications Messages, party invites, friend requests and completed downloads. Open the bell to see recent activity. Debug logging Additional diagnostics with automatic secret redaction. Show DepotDownloader logs in Downloads Keep the log panel hidden by default; enable it here when you need technical output. Confirm before deleting Ask once more before a queue entry or local file is removed. Stored credentials Deletes the encrypted Steam API key, Ryuu auth key, Hubcap API key, DepotBox API key and fixes source token from this machine.">
+            <controls:DeferredSettingsSection.SectionTemplate><DataTemplate>
+              <StackPanel Tag="general" controls:EntranceMotion.Delay="0">
       <!-- ===== Quality of life and security ============================================= -->
       <WrapPanel Margin="0,8,0,12">
         <Border Style="{StaticResource SectionChip}">
@@ -845,7 +831,7 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,20,0" VerticalAlignment="Center">
               <TextBlock Text="Notifications" Style="{StaticResource CardTitleStyle}" />
-              <TextBlock Text="Show local download and provider status notifications." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" />
+              <TextBlock Text="Messages, party invites, friend requests and completed downloads. Open the bell to see recent activity." Style="{StaticResource MutedTextStyle}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" />
             </StackPanel>
             <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.Notifications}" />
           </Grid>
@@ -896,6 +882,8 @@
         </Grid>
       </Border>
           </StackPanel>
+            </DataTemplate></controls:DeferredSettingsSection.SectionTemplate>
+          </controls:DeferredSettingsSection>
         </StackPanel>
       </ScrollViewer>
       <StackPanel x:Name="NoSettingsResults" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24">

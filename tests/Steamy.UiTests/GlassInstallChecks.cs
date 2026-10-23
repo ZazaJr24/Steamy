@@ -220,7 +220,7 @@ public sealed partial class PageSmokeTests
             var settings = Descendants<SettingsPage>(window).Single();
             var categories = (ListBox)settings.FindName("CategorySelector");
             Assert.Equal(6, categories.Items.Count);
-            Assert.Equal(TextRenderingMode.Auto, TextOptions.GetTextRenderingMode(settings));
+            Assert.Equal(TextRenderingMode.ClearType, TextOptions.GetTextRenderingMode(settings));
             foreach (ListBoxItem category in categories.Items)
             {
                 categories.SelectedItem = category; window.UpdateLayout();

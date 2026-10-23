@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TraceToolDirectory>../../.cache/diagnostics-trace/.store/dotnet-trace/10.0.750501/dotnet-trace/10.0.750501/tools/net8.0/any</TraceToolDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Diagnostics.Tracing.TraceEvent"><HintPath>$(TraceToolDirectory)/Microsoft.Diagnostics.Tracing.TraceEvent.dll</HintPath></Reference>
+    <Reference Include="Microsoft.Diagnostics.FastSerialization"><HintPath>$(TraceToolDirectory)/Microsoft.Diagnostics.FastSerialization.dll</HintPath></Reference>
+    <Reference Include="Microsoft.Diagnostics.NETCore.Client"><HintPath>$(TraceToolDirectory)/Microsoft.Diagnostics.NETCore.Client.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

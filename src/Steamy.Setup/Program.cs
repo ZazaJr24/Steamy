@@ -224,6 +224,7 @@ namespace Steamy.Setup
             View<TextBlock>("Folder").ToolTip = installFolder;
             View<Button>("FolderButton").Content = Choose("Change", "Ändern");
             View<CheckBox>("Shortcut").Content = Choose("Create a desktop shortcut", "Desktop-Verknüpfung erstellen");
+            View<CheckBox>("ControllerSetup").Content = Choose("Open controller setup after installation", "Controller-Einrichtung nach der Installation öffnen");
             double width = Math.Max(0, (View<Grid>("DownloadPanel").ActualWidth > 0 ? View<Grid>("DownloadPanel").ActualWidth : 532) * percent / 100);
             var fill = View<Border>("ProgressFill");
             fill.BeginAnimation(WidthProperty, null);
@@ -251,7 +252,7 @@ namespace Steamy.Setup
             if (displayOnly) return;
             if (done)
             {
-                try { Process.Start(new ProcessStartInfo(Path.Combine(installFolder, "Steamy.exe")) { UseShellExecute = true, WorkingDirectory = installFolder }); Close(); }
+                try { Process.Start(new ProcessStartInfo(Path.Combine(installFolder, "Steamy.exe")) { UseShellExecute = true, WorkingDirectory = installFolder, Arguments = View<CheckBox>("ControllerSetup").IsChecked == true ? "--controller-setup" : "" }); Close(); }
                 catch (Exception ex) { done = false; error = ex.Message; UpdateUi(); } return;
             }
             if (busy) return;
@@ -319,8 +320,11 @@ namespace Steamy.Setup
                     if (window.View<Border>("OptionsPanel").Visibility != Visibility.Visible || !window.View<Button>("FolderButton").IsVisible) throw new Exception("Folder options must open.");
                     window.View<CheckBox>("Shortcut").IsChecked = true;
                     if (window.View<CheckBox>("Shortcut").IsChecked != true) throw new Exception("Shortcut selection must persist.");
+                    if (window.View<CheckBox>("ControllerSetup").IsChecked == true) throw new Exception("Controller driver setup must be optional.");
+                    window.View<CheckBox>("ControllerSetup").IsChecked = true;
                     Click(window, "LanguageButton"); Click(window, "German");
                     if (!window.german || window.View<Border>("Languages").Visibility != Visibility.Collapsed || !window.View<Button>("Primary").Content.ToString().Contains("installieren")) throw new Exception("Language must update actions and close popup.");
+                    if (window.View<CheckBox>("ControllerSetup").IsChecked != true || !window.View<CheckBox>("ControllerSetup").Content.ToString().Contains("Controller")) throw new Exception("Controller setup choice must survive language changes.");
                     var buttonPeer = UIElementAutomationPeer.CreatePeerForElement(window.View<Button>("Primary"));
                     if (buttonPeer == null || buttonPeer.GetPattern(PatternInterface.Invoke) == null || !window.View<Button>("Primary").Focusable) throw new Exception("Native WPF actions need keyboard and UI Automation support.");
                     var checkboxPeer = UIElementAutomationPeer.CreatePeerForElement(window.View<CheckBox>("Shortcut"));

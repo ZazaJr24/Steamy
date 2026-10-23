@@ -2,7 +2,7 @@
   <!-- Tests for the platform-independent parts of Steamy (sharing, VDF parsing). The sources are
        linked instead of referencing the WPF project, so the tests also run on Linux and macOS. -->
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
@@ -30,6 +30,7 @@
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadStorageGuard.cs" Link="Linked\DownloadStorageGuard.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadFailurePolicy.cs" Link="Linked\DownloadFailurePolicy.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\RyuuSecureDownloadService.cs" Link="Linked\RyuuSecureDownloadService.cs" />
+    <ProjectReference Include="..\..\src\Steamy.RelayClient\Steamy.RelayClient.csproj" />
     <Compile Include="..\..\src\Steamy\Services\Tools\GreenLumaDownloadDiscovery.cs" Link="Linked\GreenLumaDownloadDiscovery.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\BundledModCapabilities.cs" Link="Linked\BundledModCapabilities.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\VdfParser.cs" Link="Linked\VdfParser.cs" />

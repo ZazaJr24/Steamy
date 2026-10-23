@@ -54,7 +54,7 @@ public static class CardMotion
         public int Revision;
         public bool ExpandingTile;
         public double HoverDuration;
-        public EventHandler? PreferencesChanged;
+        public EventHandler<EventArgs>? PreferencesChanged;
     }
 
     private static void OnEnabledChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
@@ -98,7 +98,7 @@ public static class CardMotion
             if (!MotionPreferences.AnimationsEnabled) element.BeginAnimation(UIElement.OpacityProperty, null);
             Update(element);
         };
-        MotionPreferences.Changed += state.PreferencesChanged;
+        MotionPreferences.AddWeakChangedHandler(state.PreferencesChanged);
         element.MouseEnter += Changed;
         element.MouseLeave += Changed;
         element.GotKeyboardFocus += FocusChanged;
@@ -196,7 +196,8 @@ public static class CardMotion
     private static void Reset(FrameworkElement element)
     {
         if (element.GetValue(StateProperty) is not MotionState state) return;
-        MotionPreferences.Changed -= state.PreferencesChanged;
+        if (state.PreferencesChanged is not null)
+            MotionPreferences.RemoveWeakChangedHandler(state.PreferencesChanged);
         state.Revision++;
         state.Scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
         state.Scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);

@@ -7,7 +7,7 @@ on:
         description: 'Version tag (e.g. 0.2.2)'
         required: true
         type: string
-        default: '0.7.1.2'
+        default: '0.8.0'
   push:
     tags:
       - 'v*'
@@ -46,18 +46,31 @@ jobs:
         shell: pwsh
         run: |
           $version = '${{ steps.ver.outputs.v }}'
-          foreach ($path in @('src/Steamy/Steamy.csproj', 'src/PlayTimeTracker/PlayTimeTracker.csproj')) {
+          $expected = if ($version.Split('.').Count -eq 3) { [version]"$version.0" } else { [version]$version }
+          foreach ($path in @('src/Steamy/Steamy.csproj', 'src/PlayTimeTracker/PlayTimeTracker.csproj', 'src/Steamy.RelayClient/Steamy.RelayClient.csproj')) {
             [xml]$project = Get-Content $path
             foreach ($field in @('Version', 'FileVersion', 'AssemblyVersion')) {
-              if ($project.Project.PropertyGroup.$field -ne $version) { throw "Release version must match $path $field" }
+              $value = [string]$project.Project.PropertyGroup.$field
+              $actual = if ($value.Split('.').Count -eq 3) { [version]"$value.0" } else { [version]$value }
+              if ($actual -ne $expected) { throw "Release version must match $path $field" }
             }
           }
+
+      - name: Build the headless ControllerHost for integration tests
+        shell: pwsh
+        run: ./scripts/build-controller-host.ps1 -OutputDirectory tools/ControllerHost/runtime -SourcePackage
 
       - name: Test release commit
         env:
           STEAMY_UI_ARTIFACTS: ${{ github.workspace }}/artifacts/ui
           STEAMY_UI_LIBRARY_INSTALL_OFFSCREEN_ONLY: '1'
         run: |
+          python scripts/check-source-secrets.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pip install -r server/provider-relay/requirements.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m unittest discover -s server/provider-relay -p 'test_relay.py'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m unittest discover -s scripts -p 'test_*.py'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet test Steamy.sln -c Release --logger trx --results-directory artifacts/test-results
@@ -78,6 +91,7 @@ jobs:
         run: |
           ./scripts/package-distribution.ps1 -OutputDirectory distribution
           Copy-Item distribution/Steamy-*.zip, distribution/Steamy-v*-Setup.exe .
+          Copy-Item distribution/portable/Steamy.RelayClient.dll .
           $checks = Join-Path $pwd 'distribution/installer-checks.txt'
           $process = Start-Process -FilePath distribution/Steamy-Setup.exe -ArgumentList @('--self-test', $checks) -WindowStyle Hidden -Wait -PassThru
           Get-Content $checks
@@ -149,6 +163,7 @@ jobs:
             Steamy-v${{ steps.ver.outputs.v }}.zip
             Steamy-v${{ steps.ver.outputs.v }}-app.zip
             Steamy-v${{ steps.ver.outputs.v }}-Setup.exe
+            Steamy.RelayClient.dll
           body_path: release-notes.md
 
       - name: Publish verified update metadata after the release exists

@@ -99,9 +99,9 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
                     if (stagedTarget is null) throw new InvalidDataException($"{tool.TargetExecutableName} not found in the complete tool archive.");
                     cancellationToken.ThrowIfCancellationRequested();
                     RejectLinks(cacheDir);
-                    Directory.Move(cacheDir, backup);
-                    try { Directory.Move(stage, cacheDir); committed = true; }
-                    catch { Directory.Move(backup, cacheDir); throw; }
+                    await MoveCacheDirectoryAsync(cacheDir, backup, cancellationToken).ConfigureAwait(false);
+                    try { await MoveCacheDirectoryAsync(stage, cacheDir, cancellationToken).ConfigureAwait(false); committed = true; }
+                    catch { await MoveCacheDirectoryAsync(backup, cacheDir, CancellationToken.None).ConfigureAwait(false); throw; }
                     return new ToolDownloadResult(true, $"{tool.RepoName} {release.TagName} ready.", GetCachedPath(tool), release.TagName);
                 }
                 finally { CleanStage(stage); if (committed) CleanStage(backup); }
@@ -133,6 +133,30 @@ public sealed class GitHubToolDownloadService : IGitHubToolDownloadService, IDis
             return new ToolDownloadResult(false, $"Download failed: {ex.Message}", GetCachedPath(tool), null);
         }
         finally { gate.Release(); }
+    }
+
+    private Task MoveCacheDirectoryAsync(string source, string destination, CancellationToken token)
+    {
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(_baseCacheDir)) + Path.DirectorySeparatorChar;
+        source = Path.GetFullPath(source); destination = Path.GetFullPath(destination);
+        if (!source.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !destination.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Tool package replacement must stay inside its cache folder.");
+        return RetryDirectoryMoveAsync(() => Directory.Move(source, destination), token);
+    }
+
+    internal static async Task RetryDirectoryMoveAsync(Action move, CancellationToken token)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            token.ThrowIfCancellationRequested();
+            try { move(); return; }
+            // Newly extracted directories can briefly have open handles which
+            // deny rename. Keep the operation atomic and bound the retry to 1.2 s;
+            // persistent denial and unrelated filesystem errors still fail.
+            catch (Exception error) when (attempt < 4 && (error is IOException or UnauthorizedAccessException)
+                && ((error.HResult & 0xffff) is 5 or 32 or 33))
+            { await Task.Delay(75 * (1 << attempt), token).ConfigureAwait(false); }
+        }
     }
 
     private string ResolveCachedExe(GitHubToolDefinition tool)

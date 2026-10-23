@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PlayTimeTracker</AssemblyName>
-    <Version>0.7.1.2</Version>
-    <FileVersion>0.7.1.2</FileVersion>
-    <AssemblyVersion>0.7.1.2</AssemblyVersion>
+    <Version>0.8.0</Version>
+    <FileVersion>0.8.0.0</FileVersion>
+    <AssemblyVersion>0.8.0.0</AssemblyVersion>
     <Product>Steamy PlayTimeTracker</Product>
     <Description>Local background game runtime tracker for Steamy</Description>
     <ApplicationIcon>../Steamy/Resources/Brand/steamy.ico</ApplicationIcon>

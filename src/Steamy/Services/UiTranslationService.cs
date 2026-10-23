@@ -22,16 +22,20 @@ public sealed class UiTranslationService
     private static readonly SemaphoreSlim AnonymousTranslationSlots = new(3, 3);
     private static readonly ConditionalWeakTable<DependencyObject, Dictionary<DependencyProperty, TextState>> Originals = new();
     private static readonly ConditionalWeakTable<DependencyObject, ApplyState> ApplyStates = new();
+    private static bool _hasAppliedNonEnglish;
     private readonly ISettingsService _settings;
     private readonly SemaphoreSlim _cacheGate = new(1, 1);
     private readonly ConcurrentDictionary<string, string> _cache = new(StringComparer.Ordinal);
-    private readonly string _cachePath = Path.Combine(Steamy.Storage.AppDataPaths.Root, "ui-translations.json");
+    private readonly string _cachePath;
     private bool _cacheLoaded;
     private bool _pageHandlerRegistered;
 
     public UiTranslationService(ISettingsService settings)
+        : this(settings, Path.Combine(Steamy.Storage.AppDataPaths.Root, "ui-translations.json")) { }
+
+    internal UiTranslationService(ISettingsService settings, string cachePath)
     {
-        _settings = settings;
+        _settings = settings; _cachePath = cachePath;
     }
 
     public void Observe(Window window)
@@ -68,8 +72,15 @@ public sealed class UiTranslationService
         var applyState = ApplyStates.GetOrCreateValue(root);
         var requestVersion = Interlocked.Increment(ref applyState.Version);
         applyState.Target = target;
+        // Authored labels are already English. Until any tree has been translated,
+        // avoid walking every visual/logical child and reflecting over placeholders
+        // each time a page loads. Keep this process-wide because another service
+        // instance can be asked to restore a tree translated by the first one.
+        var english = string.Equals(target, "en", StringComparison.OrdinalIgnoreCase);
+        if (english && !Volatile.Read(ref _hasAppliedNonEnglish)) return;
+        if (!english) Volatile.Write(ref _hasAppliedNonEnglish, true);
         var values = CollectStaticText(root);
-        if (string.Equals(target, "en", StringComparison.OrdinalIgnoreCase))
+        if (english)
         {
             RestoreEnglish(values);
             return;
@@ -392,6 +403,11 @@ public sealed class UiTranslationService
 
     private static readonly IReadOnlyDictionary<string, string> German = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
+        ["Installed games"] = "Installierte Spiele", ["For you"] = "Für dich", ["Search games"] = "Spiele suchen",
+        ["Filters"] = "Filter", ["All genres"] = "Alle Genres", ["Refresh library"] = "Bibliothek aktualisieren",
+        ["Base games only · DLCs and add-ons are hidden"] = "Nur Basisspiele · DLCs und Erweiterungen sind ausgeblendet",
+        ["No base games found. Try another title or App ID."] = "Kein Basisspiel gefunden. Versuche einen anderen Titel oder eine App-ID.",
+        ["Game details"] = "Spieldetails", ["Preview"] = "Vorschau", ["View in Steam ↗"] = "In Steam ansehen ↗",
         ["Select Language"] = "Sprache auswählen", ["Select Theme"] = "Design auswählen", ["API Keys"] = "API-Schlüssel",
         ["Select Folders"] = "Ordner auswählen", ["Download Settings"] = "Download-Einstellungen", ["Recovery"] = "Wiederherstellung",
         ["Required Files"] = "Benötigte Dateien", ["Continue"] = "Weiter", ["Finish"] = "Fertigstellen", ["Back"] = "Zurück",

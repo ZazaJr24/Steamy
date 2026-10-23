@@ -2,13 +2,15 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                     xmlns:models="clr-namespace:Steamy.Models"
-                    xmlns:controls="clr-namespace:Steamy.Controls">
+                    xmlns:controls="clr-namespace:Steamy.Controls"
+                    xmlns:services="clr-namespace:Steamy.Services">
 
   <ResourceDictionary.MergedDictionaries>
     <ResourceDictionary Source="Brand/Brand.xaml" />
   </ResourceDictionary.MergedDictionaries>
-  <FontFamily x:Key="SteamyFontFamily">/Steamy;component/Resources/Fonts/#Google Sans</FontFamily>
-  <FontFamily x:Key="ContentControlThemeFontFamily">/Steamy;component/Resources/Fonts/#Google Sans</FontFamily>
+  <x:Static x:Key="SteamyFontFamily" Member="services:AppTypography.Text"/>
+  <x:Static x:Key="SteamyDisplayFontFamily" Member="services:AppTypography.Display"/>
+  <x:Static x:Key="ContentControlThemeFontFamily" Member="services:AppTypography.Text"/>
   <Style x:Key="BareInfoButton" TargetType="ui:Button">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
@@ -32,14 +34,18 @@
   <Style TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource SteamyFontFamily}" />
     <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
-    <Setter Property="TextOptions.TextRenderingMode" Value="Auto" />
+    <Setter Property="TextOptions.TextRenderingMode" Value="Grayscale" />
+    <Setter Property="TextOptions.TextHintingMode" Value="Fixed" />
+    <Setter Property="RenderOptions.ClearTypeHint" Value="Auto" />
     <Setter Property="UseLayoutRounding" Value="True" />
     <Setter Property="SnapsToDevicePixels" Value="True" />
   </Style>
   <Style TargetType="Control">
     <Setter Property="FontFamily" Value="{DynamicResource SteamyFontFamily}" />
     <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
-    <Setter Property="TextOptions.TextRenderingMode" Value="Auto" />
+    <Setter Property="TextOptions.TextRenderingMode" Value="Grayscale" />
+    <Setter Property="TextOptions.TextHintingMode" Value="Fixed" />
+    <Setter Property="RenderOptions.ClearTypeHint" Value="Auto" />
     <Setter Property="UseLayoutRounding" Value="True" />
     <Setter Property="SnapsToDevicePixels" Value="True" />
   </Style>
@@ -151,7 +157,7 @@
   <!-- Shared surfaces used by page headers, toolbars, notices and flyouts -->
   <Style x:Key="PageHeaderStyle" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource SurfaceCornerRadius}" />
     <Setter Property="Padding" Value="18,14" />
@@ -159,15 +165,15 @@
   </Style>
   <Style x:Key="FilterBarStyle" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource SurfaceCornerRadius}" />
     <Setter Property="Padding" Value="10" />
     <Setter Property="Margin" Value="0,0,0,14" />
   </Style>
   <Style x:Key="FilterFlyoutStyle" TargetType="Border">
-    <Setter Property="Background" Value="{DynamicResource SolidSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="Background" Value="{DynamicResource DialogSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource SurfaceCornerRadius}" />
     <Setter Property="Padding" Value="16" />
@@ -179,7 +185,7 @@
   </Style>
   <Style x:Key="SubtlePanelStyle" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="14" />
     <Setter Property="Padding" Value="12" />
@@ -219,7 +225,7 @@
        hover accent keeps it cool and smooth. -->
   <Style x:Key="CoverCardStyle" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="14" />
     <Setter Property="Cursor" Value="Hand" />
@@ -238,7 +244,7 @@
   </LinearGradientBrush>
   <Style x:Key="CoverBadgeStyle" TargetType="Border">
     <Setter Property="Background" Value="#AF193553" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="7,3" />
@@ -271,7 +277,7 @@
     <Setter Property="Height" Value="36" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
     <Setter Property="ToolTip" Value="Filters" />
@@ -387,7 +393,7 @@
   <!-- Plain surface card without CardControl's header/icon layout -->
   <Style x:Key="SurfaceCardStyle" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource GlassSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource SurfaceCornerRadius}" />
     <Setter Property="Padding" Value="16" />
@@ -397,7 +403,7 @@
   <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="RowBackground" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="AlternatingRowBackground" Value="{DynamicResource SurfaceElevatedBrush}" />
@@ -439,6 +445,7 @@
     <Setter Property="FocusVisualStyle" Value="{x:Null}" />
   </Style>
   <Style x:Key="PageScrollHostStyle" TargetType="ScrollViewer" BasedOn="{StaticResource {x:Type ScrollViewer}}">
+    <Setter Property="controls:SmoothScroll.Enabled" Value="True"/>
     <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
     <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
     <Setter Property="CanContentScroll" Value="False" />
@@ -476,6 +483,7 @@
   </Style>
 
   <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+    <Setter Property="controls:SmoothScroll.Enabled" Value="True" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
@@ -484,7 +492,7 @@
   <Style TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
     <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="FontSize" Value="12" />
   </Style>
 
@@ -677,7 +685,7 @@
   <!-- Surfaces -->
   <Style x:Key="CardStyle" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource SurfaceCornerRadius}" />
     <Setter Property="Padding" Value="20" />
@@ -848,7 +856,7 @@
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
               <Setter TargetName="Chip" Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
-              <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+              <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
               <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             </Trigger>
             <Trigger Property="IsKeyboardFocused" Value="True">

@@ -17,6 +17,10 @@ public static class PillMotion
     public static readonly DependencyProperty SelectedIndexProperty = DependencyProperty.RegisterAttached("SelectedIndex", typeof(int), typeof(PillMotion), new PropertyMetadata(0, SelectionChanged));
     public static int GetSelectedIndex(DependencyObject value) => (int)value.GetValue(SelectedIndexProperty);
     public static void SetSelectedIndex(DependencyObject value, int index) => value.SetValue(SelectedIndexProperty, index);
+    public static readonly DependencyProperty FollowPointerProperty = DependencyProperty.RegisterAttached(
+        "FollowPointer", typeof(bool), typeof(PillMotion), new PropertyMetadata(true));
+    public static bool GetFollowPointer(DependencyObject value) => (bool)value.GetValue(FollowPointerProperty);
+    public static void SetFollowPointer(DependencyObject value, bool enabled) => value.SetValue(FollowPointerProperty, enabled);
     private static void SelectionChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args) => (sender.GetValue(StateProperty) as State)?.Select();
     private static void Changed(DependencyObject sender, DependencyPropertyChangedEventArgs args)
     {
@@ -59,21 +63,33 @@ public static class PillMotion
             MotionPreferences.Changed += Preferences;
             Select();
         }
-        private void Enter(object sender, MouseEventArgs args) => Move((Button)sender, true);
-        private void Focus(object sender, KeyboardFocusChangedEventArgs args) => Move((Button)sender, true);
-        public void Select() => Move(_buttons[Math.Clamp(GetSelectedIndex(_grid), 0, _buttons.Length - 1)], false);
-        private void Leave(object sender, MouseEventArgs args) => Move(_buttons[Math.Clamp(GetSelectedIndex(_grid), 0, _buttons.Length - 1)], true);
-        private void Resize(object sender, SizeChangedEventArgs args) => Move(_target, false);
-        private void Preferences(object? sender, EventArgs args) => Move(_target, false);
+        private void Enter(object sender, MouseEventArgs args) { if (GetFollowPointer(_grid)) Move((Button)sender, true); }
+        private void Focus(object sender, KeyboardFocusChangedEventArgs args) { if (GetFollowPointer(_grid)) Move((Button)sender, true); }
+        public void Select()
+        {
+            var index = GetSelectedIndex(_grid);
+            for (var i = 0; i < _buttons.Length; i++) ShellNavigation.SetIsSelected(_buttons[i], i == index);
+            Restore(_grid.IsLoaded);
+        }
+        private void Restore(bool animate)
+        {
+            var index = GetSelectedIndex(_grid);
+            if (index < 0) { _highlight.Visibility = Visibility.Collapsed; return; }
+            Move(_buttons[Math.Clamp(index, 0, _buttons.Length - 1)], animate);
+        }
+        private void Leave(object sender, MouseEventArgs args) => Restore(true);
+        private void Resize(object sender, SizeChangedEventArgs args) { if (GetSelectedIndex(_grid) < 0) Restore(false); else Move(_target, false); }
+        private void Preferences(object? sender, EventArgs args) { if (GetSelectedIndex(_grid) < 0) Restore(false); else Move(_target, false); }
         private void Move(Button target, bool animate)
         {
+            _highlight.Visibility = Visibility.Visible;
             _target = target;
             var x = target.TranslatePoint(new Point(), _grid).X;
             var width = Math.Max(1, target.ActualWidth);
             if (animate && MotionPreferences.AnimationsEnabled)
             {
-                var duration = TimeSpan.FromMilliseconds(175);
-                var easing = new BackEase { Amplitude = 0.18, EasingMode = EasingMode.EaseOut };
+                var duration = TimeSpan.FromMilliseconds(140);
+                var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
                 var startX = _position.X;
                 var startWidth = double.IsNaN(_highlight.Width) ? width : _highlight.Width;
                 _position.X = x; _highlight.Width = width;
@@ -89,7 +105,7 @@ public static class PillMotion
         }
         public void Dispose()
         {
-            foreach (var button in _buttons) { button.MouseEnter -= Enter; button.GotKeyboardFocus -= Focus; }
+            foreach (var button in _buttons) { button.MouseEnter -= Enter; button.GotKeyboardFocus -= Focus; button.ClearValue(ShellNavigation.IsSelectedProperty); }
             _grid.MouseLeave -= Leave; _grid.SizeChanged -= Resize;
             MotionPreferences.Changed -= Preferences;
             _position.BeginAnimation(TranslateTransform.XProperty, null);

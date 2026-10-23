@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Text.Json.Serialization;
 using System.Windows.Media.Imaging;
+using Steamy.ControllerProtocol;
 
 namespace Steamy.Models;
 
@@ -39,8 +40,8 @@ public enum GameInstallState
 public sealed class Game : UiObservableObject
 {
     private DownloadJobState? _currentState;
-    private BitmapImage? _artworkImage;
-    private BitmapImage? _headerImage;
+    private WeakReference<BitmapImage>? _artworkImage;
+    private WeakReference<BitmapImage>? _headerImage;
     private bool _isArtworkLoading;
     private bool _selected;
 
@@ -77,19 +78,21 @@ public sealed class Game : UiObservableObject
 
     public BitmapImage? ArtworkImage
     {
-        get => _artworkImage;
+        get => _artworkImage is not null && _artworkImage.TryGetTarget(out var image) ? image : null;
         set
         {
-            if (SetProperty(ref _artworkImage, value)) OnPropertyChanged(nameof(IsArtworkFallback));
+            if (ReferenceEquals(ArtworkImage, value)) return;
+            _artworkImage = value is null ? null : new(value); OnPropertyChanged(nameof(ArtworkImage)); OnPropertyChanged(nameof(IsArtworkFallback));
         }
     }
 
     public BitmapImage? HeaderImage
     {
-        get => _headerImage;
+        get => _headerImage is not null && _headerImage.TryGetTarget(out var image) ? image : null;
         set
         {
-            if (SetProperty(ref _headerImage, value)) OnPropertyChanged(nameof(IsHeaderArtworkFallback));
+            if (ReferenceEquals(HeaderImage, value)) return;
+            _headerImage = value is null ? null : new(value); OnPropertyChanged(nameof(HeaderImage)); OnPropertyChanged(nameof(IsHeaderArtworkFallback));
         }
     }
 
@@ -606,11 +609,11 @@ public sealed class GameFixItem : ObservableObject
 public sealed class AppSettings : ObservableObject
 {
     private string _language = "English";
-    private string _appearance = "System";
+    private string _appearance = "Light";
     private bool _reduceEffects;
     private bool _autoplayTrailers = true;
     private bool _ambientEnabled = true;
-    private string _backgroundColor = "#09090B";
+    private string _backgroundColor = "#FFFFFF";
     private bool _trackPlayTime = true;
     private bool _dashboardSearch;
     private bool _autoUpdate = true;
@@ -623,6 +626,7 @@ public sealed class AppSettings : ObservableObject
     private string _steamLibraryPath = string.Empty;
     private string _depotDownloaderPath = string.Empty;
     private string _steamUsername = string.Empty;
+    private string _discordApplicationId = Services.DiscordConfiguration.DefaultApplicationId;
     private bool _interactiveToolConsole;
     private string _workingDirectory = string.Empty;
     private string _downloadFolder = string.Empty;
@@ -683,8 +687,11 @@ public sealed class AppSettings : ObservableObject
 
     public string Language { get => _language; set => SetProperty(ref _language, value); }
     public string Appearance { get => _appearance; set => SetProperty(ref _appearance, value); }
+    public int AppearanceDesignVersion { get; set; }
     public bool AutoUpdate { get => _autoUpdate; set => SetProperty(ref _autoUpdate, value); }
     public bool Notifications { get => _notifications; set => SetProperty(ref _notifications, value); }
+    private bool _discordAutoConnect = true;
+    public bool DiscordAutoConnect { get => _discordAutoConnect; set => SetProperty(ref _discordAutoConnect, value); }
     public bool AutoRefresh { get => _autoRefresh; set => SetProperty(ref _autoRefresh, value); }
     public bool ConfirmBeforeDelete { get => _confirmBeforeDelete; set => SetProperty(ref _confirmBeforeDelete, value); }
     public string SteamApiUrl { get => _steamApiUrl; set => SetProperty(ref _steamApiUrl, value); }
@@ -709,6 +716,22 @@ public sealed class AppSettings : ObservableObject
 
     /// <summary>Optional Steam account name passed to the tool as <c>-username</c>. Never a password.</summary>
     public string SteamUsername { get => _steamUsername; set => SetProperty(ref _steamUsername, value); }
+
+    /// <summary>Public Discord application ID; tokens are kept in the encrypted credential store.</summary>
+    public string DiscordApplicationId { get => _discordApplicationId; set => SetProperty(ref _discordApplicationId, value); }
+
+    // GIF search keys are public client application keys, never Discord credentials.
+    private string _gifProvider = "KLIPY", _gifApiKey = "";
+    private string[] _gifFavoriteIds = [];
+    public string GifProvider { get => _gifProvider; set => SetProperty(ref _gifProvider, value); }
+    public string GifApiKey { get => _gifApiKey; set => SetProperty(ref _gifApiKey, value); }
+    public string[] GifFavoriteIds { get => _gifFavoriteIds; set => SetProperty(ref _gifFavoriteIds, value ?? []); }
+    public Services.DiscordVoiceOptions VoiceOptions { get; set; } = new();
+    public bool ControllerBackendEnabled { get; set; }
+    public bool ControllerNavigation { get; set; } = true;
+    public ControllerProfile[] ControllerProfiles { get; set; } = [new()];
+    public string ControllerDefaultProfile { get; set; } = "Default";
+    public Dictionary<int, string> ControllerGameProfiles { get; set; } = [];
 
     /// <summary>Lets DepotDownloader keep its own console window so it can ask for a password or Steam Guard code.</summary>
     public bool InteractiveToolConsole { get => _interactiveToolConsole; set => SetProperty(ref _interactiveToolConsole, value); }

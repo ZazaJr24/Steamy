@@ -44,6 +44,7 @@ public partial class FirstRunSetup : UserControl
         Unloaded += (_, _) =>
         {
             _scanCancellation?.Cancel();
+            SetupDiscordConnection.CancelPendingOperation();
             if (_ownerWindow is not null) _ownerWindow.SizeChanged -= OwnerSizeChanged;
             _ownerWindow = null;
         };
@@ -107,17 +108,24 @@ public partial class FirstRunSetup : UserControl
         FoldersStep.Visibility = AdvancedPreferences.Visibility = _step == 3 ? Visibility.Visible : Visibility.Collapsed;
         DownloadsStep.Visibility = RecoveryStep.Visibility = Visibility.Visible;
         ApiKeysStep.Visibility = Visibility.Collapsed;
-        ReadyStep.Visibility = _step == 4 ? Visibility.Visible : Visibility.Collapsed;
+        DiscordStep.Visibility = DiscordIntegration.Enabled && _step == 4 ? Visibility.Visible : Visibility.Collapsed;
+        ControllerStep.Visibility = _step == 5 ? Visibility.Visible : Visibility.Collapsed;
+        ReadyStep.Visibility = _step == 6 ? Visibility.Visible : Visibility.Collapsed;
         BackButton.Visibility = _step == 1 ? Visibility.Collapsed : Visibility.Visible;
-        NextButton.Content = _step == 4 ? "Finish" : "Continue";
-        StepCounter.Text = $"{_step:00}  /  04";
-        WizardProgress.Value = _step;
+        NextButton.Content = _step == 6 ? (_downloaderReady ? "Save & finish" : "Finish") : _step == 5 ? "Continue to finish" : "Continue";
+        var visibleStep = !DiscordIntegration.Enabled && _step > 4 ? _step - 1 : _step;
+        var total = DiscordIntegration.Enabled ? 6 : 5;
+        StepCounter.Text = $"{visibleStep:00}  /  {total:00}";
+        WizardProgress.Maximum = total;
+        WizardProgress.Value = visibleStep;
         (StepTitle.Text, StepDescription.Text) = _step switch
         {
             1 => ("Your games, together", "Your installed games come first. Find more folders now or scan later."),
             2 => ("Make it yours", "Choose your language and appearance. Everything can be changed in Settings."),
             3 => ("A place for your games", "Choose your folders. Download preferences are optional; the defaults are ready to use."),
-            _ => ("One last thing", "Preparing the downloader for your first install. Optional connections live in Settings.")
+            4 => ("Bring your friends", "Connect Discord to chat, create parties and invite your friends. You can also do this later."),
+            5 => ("Ready for your controller", "Follow these steps for PlayStation mapping, or continue with native Xbox support. Driver installation is optional."),
+            _ => ("One last thing", "Preparing the downloader for your first install.")
         };
         SaveErrorText.Visibility = Visibility.Collapsed;
         if (_isLoaded) AnimateStep();
@@ -143,8 +151,11 @@ public partial class FirstRunSetup : UserControl
     private async void Next_Click(object sender, RoutedEventArgs e)
     {
         if (_scanCancellation is not null) return;
-        if (_step < 3) { _step++; UpdateStep(); return; }
-        if (_step == 3) { _step = 4; UpdateStep(); await CheckDownloaderAsync(); return; }
+        if (_step < 5) { if (_step == 4) SetupDiscordConnection.CancelPendingOperation(); _step += !DiscordIntegration.Enabled && _step == 3 ? 2 : 1; UpdateStep(); return; }
+        if (_step == 5)
+        {
+            _step = 6; UpdateStep(); await CheckDownloaderAsync(); return;
+        }
 
         if (!_downloaderReady)
         {
@@ -159,13 +170,15 @@ public partial class FirstRunSetup : UserControl
     {
         if (_scanCancellation is not null) return;
         if (_step <= 1) return;
-        _step--;
+        if (_step == 4) SetupDiscordConnection.CancelPendingOperation();
+        _step -= !DiscordIntegration.Enabled && _step == 5 ? 2 : 1;
         UpdateStep();
     }
 
     private async void Skip_Click(object sender, RoutedEventArgs e)
     {
         _applyChoices = false;
+        SetupDiscordConnection.CancelPendingOperation();
         _scanCancellation?.Cancel();
         await SaveAndFinishAsync(applyChoices: false);
     }

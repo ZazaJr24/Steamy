@@ -33,22 +33,22 @@ public sealed partial class PageSmokeTests
             Assert.All(model.PagedCatalogItems, item => Assert.Contains(item.AppId, ownedIds));
             PumpDispatcher(TimeSpan.FromMilliseconds(100));
             var libraryPage = Descendants<LibraryPage>(window).Single();
-            var libraryScene = (Grid)libraryPage.FindName("LibraryScene");
+            var libraryScene = (Steamy.Controls.ShellBackdropView)libraryPage.FindName("LibraryAmbientBackdrop");
             PumpDispatcher(TimeSpan.FromMilliseconds(160));
-            var persistentGradient = Assert.IsType<System.Windows.Media.DrawingBrush>(libraryScene.Background);
+            var persistentGradient = Assert.IsAssignableFrom<System.Windows.Media.Brush>(libraryScene.BaseBrush);
             Assert.True(persistentGradient.IsFrozen);
             Assert.Same(persistentGradient, window.FindResource("WorkspaceBackgroundBrush"));
             var gameTile = Descendants<Button>(libraryPage).First(button => button.Tag is SteamCatalogItem);
             gameTile.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount) { RoutedEvent = System.Windows.Input.Mouse.MouseEnterEvent });
             PumpDispatcher(TimeSpan.FromMilliseconds(150));
-            Assert.Same(persistentGradient, libraryScene.Background);
+            Assert.Same(persistentGradient, libraryScene.BaseBrush);
             gameTile.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount) { RoutedEvent = System.Windows.Input.Mouse.MouseLeaveEvent });
             PumpDispatcher(TimeSpan.FromMilliseconds(150));
-            Assert.Same(persistentGradient, libraryScene.Background); // Ambient is permanent; hovering cannot change it.
+            Assert.Same(persistentGradient, libraryScene.BaseBrush); // Hovering keeps the requested quiet page background.
             UiThemeService.ApplyGlassPolicy(true);
-            Assert.Same(SystemColors.WindowBrush, libraryScene.Background);
+            Assert.Same(SystemColors.WindowBrush, libraryScene.BaseBrush);
             UiThemeService.ApplyGlassPolicy(false);
-            Assert.IsType<System.Windows.Media.DrawingBrush>(libraryScene.Background);
+            Assert.True(libraryScene.BaseBrush.IsFrozen);
             Assert.Equal("All genres", model.SelectedGenre);
             model.SearchText = "Resident Evil Village";
             PumpUntil(() => !model.IsSearchBusy && model.PagedCatalogItems.Count == 0);

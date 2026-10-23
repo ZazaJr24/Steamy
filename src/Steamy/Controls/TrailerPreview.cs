@@ -35,6 +35,7 @@ public sealed class TrailerPreview : Grid
     private HdrTrailerPlayer? _hdrPlayer;
     private FrameworkElement? _owner;
     private Window? _window;
+    private CancellationTokenSource? _posterSample;
     internal bool IsPlaying => _player is { Opacity: > 0 } || _hdrPlayer?.IsPlaying == true;
     internal MediaElement? Player => _player;
 
@@ -78,11 +79,13 @@ public sealed class TrailerPreview : Grid
     {
         var view = (TrailerPreview)sender;
         view._poster.Source = view.Poster;
+        if(args.Property==PosterProperty) view.WarmPosterColors();
         if (args.Property == AppIdProperty) view.StopPreview();
     }
 
     private void Attach(object sender, RoutedEventArgs args)
     {
+        WarmPosterColors();
         DependencyObject? ancestor = VisualTreeHelper.GetParent(this);
         while (ancestor is not null && ancestor is not Button) ancestor = VisualTreeHelper.GetParent(ancestor);
         _owner = ancestor as FrameworkElement;
@@ -93,12 +96,13 @@ public sealed class TrailerPreview : Grid
         _owner.LostKeyboardFocus += FocusLeft;
         _owner.AddHandler(Button.ClickEvent, new RoutedEventHandler(CardClicked));
         _window = Window.GetWindow(this);
-        if (_window is not null) _window.Deactivated += Deactivated;
+        if (_window is not null) { _window.Deactivated += Deactivated; _window.StateChanged += WindowStateChanged; }
         MotionPreferences.Changed += PreferencesChanged;
     }
 
     private void Detach(object sender, RoutedEventArgs args)
     {
+        CancelPosterSample();
         StopPreview();
         if (_owner is not null)
         {
@@ -108,16 +112,35 @@ public sealed class TrailerPreview : Grid
             _owner.LostKeyboardFocus -= FocusLeft;
             _owner.RemoveHandler(Button.ClickEvent, new RoutedEventHandler(CardClicked));
         }
-        if (_window is not null) _window.Deactivated -= Deactivated;
+        if (_window is not null) { _window.Deactivated -= Deactivated; _window.StateChanged -= WindowStateChanged; }
         MotionPreferences.Changed -= PreferencesChanged;
         _owner = null; _window = null;
     }
 
     private void Enter(object sender, MouseEventArgs args) => BeginPreview();
+    private void CancelPosterSample()
+    { _posterSample?.Cancel(); _posterSample?.Dispose(); _posterSample=null; }
+    private async void WarmPosterColors()
+    {
+        CancelPosterSample();
+        if(!IsLoaded || Poster is not { } source) return;
+        var request=_posterSample=new CancellationTokenSource();
+        var token=request.Token;
+        try
+        {
+            await ArtworkColorSample.ForAsync(source,token);
+            if(ReferenceEquals(_posterSample,request) && !token.IsCancellationRequested && IsLoaded)
+                (Window.GetWindow(this) as MainWindow)?.QueueCaptionAppearance();
+        }
+        catch(OperationCanceledException) { }
+        catch(Exception error) when(error is InvalidOperationException or ArgumentException or NotSupportedException or System.Runtime.InteropServices.ExternalException) { }
+        finally { if(ReferenceEquals(_posterSample,request)) { _posterSample=null; request.Dispose(); } }
+    }
     private void Leave(object sender, MouseEventArgs args) => StopPreview();
     private void FocusEntered(object sender, KeyboardFocusChangedEventArgs args) { if (ReferenceEquals(args.OriginalSource, _owner)) BeginPreview(); }
     private void FocusLeft(object sender, KeyboardFocusChangedEventArgs args) { if (_owner?.IsMouseOver != true && _owner?.IsKeyboardFocusWithin != true) StopPreview(); }
     private void Deactivated(object? sender, EventArgs args) => StopPreview();
+    private void WindowStateChanged(object? sender, EventArgs args) { if (_window?.WindowState == WindowState.Minimized) StopPreview(); }
     private void CardClicked(object sender, RoutedEventArgs args) => StopPreview();
     private static bool PreviewsEnabled => MotionPreferences.TrailerPreviewsEnabled && MotionPreferences.AnimationsEnabled;
     private void PreferencesChanged(object? sender, EventArgs args) { if (!PreviewsEnabled) StopPreview(); }
@@ -125,7 +148,7 @@ public sealed class TrailerPreview : Grid
     internal async void BeginPreview()
     {
         StopPreview();
-        if (!IsLoaded || !PreviewsEnabled || AppId <= 0) return;
+        if (!IsLoaded || !PreviewsEnabled || AppId <= 0 || _window?.WindowState == WindowState.Minimized) return;
         if (_active is not null && _active.TryGetTarget(out var previous) && previous != this) previous.StopPreview();
         _active = new(this);
         var hover = _hover = new CancellationTokenSource();
@@ -136,7 +159,7 @@ public sealed class TrailerPreview : Grid
             var service = App.Services.GetRequiredService<ITrailerPreviewService>();
             var video = await service.GetVideoPreviewAsync(AppId, token);
             token.ThrowIfCancellationRequested();
-            if (video is null || !IsLoaded || !IsVisible || !PreviewsEnabled || _window?.IsActive == false) return;
+            if (video is null || !IsLoaded || !IsVisible || !PreviewsEnabled || _window?.IsActive == false || _window?.WindowState == WindowState.Minimized) return;
             if (video.IsHdr)
             {
                 var hdr = new HdrTrailerPlayer();
@@ -176,7 +199,7 @@ public sealed class TrailerPreview : Grid
         {
             var source = await service.GetPreviewAsync(AppId, token);
             if (source is not null && ReferenceEquals(_hover, hover) && !token.IsCancellationRequested
-                && IsLoaded && IsVisible && PreviewsEnabled && _window?.IsActive != false) StartSdr(source);
+                && IsLoaded && IsVisible && PreviewsEnabled && _window?.IsActive != false && _window?.WindowState != WindowState.Minimized) StartSdr(source);
         }
         catch (OperationCanceledException) { }
         catch { if (ReferenceEquals(_hover, hover)) StopPreview(); }

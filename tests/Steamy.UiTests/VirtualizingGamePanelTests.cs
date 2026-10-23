@@ -2,11 +2,14 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
+using System.Collections.ObjectModel;
+using System.Windows.Input;
+using System.Windows.Threading;
 using Steamy.Controls;
 
 namespace Steamy.UiTests;
 
-public sealed class VirtualizingGamePanelTests
+public sealed partial class VirtualizingGamePanelTests
 {
     [Theory]
     [InlineData(false)]

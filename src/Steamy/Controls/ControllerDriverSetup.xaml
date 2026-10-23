@@ -1,0 +1,39 @@
+<UserControl x:Class="Steamy.Controls.ControllerDriverSetup"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+ <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Steamy;component/Resources/ControllerStyles.xaml" /></ResourceDictionary.MergedDictionaries>
+  <Style x:Key="StepNumber" TargetType="Border"><Setter Property="Width" Value="27" /><Setter Property="Height" Value="27" /><Setter Property="CornerRadius" Value="9" /><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="Margin" Value="0,0,0,10" /></Style>
+  <Style x:Key="StepTitle" TargetType="TextBlock"><Setter Property="FontSize" Value="13" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" /></Style>
+  <Style x:Key="StepCopy" TargetType="TextBlock"><Setter Property="FontSize" Value="11" /><Setter Property="LineHeight" Value="17" /><Setter Property="TextWrapping" Value="Wrap" /><Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /><Setter Property="Margin" Value="0,6,0,12" /></Style>
+ </ResourceDictionary></UserControl.Resources>
+ <StackPanel>
+  <UniformGrid Columns="3" Margin="0,4,0,0">
+   <StackPanel Margin="0,0,16,0"><Border Style="{StaticResource StepNumber}"><TextBlock Text="1" Style="{StaticResource StepTitle}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+    <TextBlock Text="Connect your controller" Style="{StaticResource StepTitle}" />
+    <TextBlock Text="Connect a DualShock 4 or DualSense by USB for the first setup. Xbox controllers work through Windows XInput." Style="{StaticResource StepCopy}" />
+    <TextBlock Text="USB first · Bluetooth later" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" />
+   </StackPanel>
+   <StackPanel Margin="0,0,16,0"><Border Style="{StaticResource StepNumber}"><TextBlock Text="2" Style="{StaticResource StepTitle}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+    <TextBlock Text="Set up PlayStation output" Style="{StaticResource StepTitle}" />
+    <TextBlock Text="ViGEmBus lets a PlayStation controller appear as an Xbox controller in games. Choose Install to open its signed installer." Style="{StaticResource StepCopy}" />
+    <ui:Button Content="Install ViGEmBus" Command="{Binding InstallDriverCommand}" CommandParameter="ViGEmBus" FontSize="11" Padding="10,7" HorizontalAlignment="Left" />
+   </StackPanel>
+   <StackPanel><Border Style="{StaticResource StepNumber}"><TextBlock Text="3" Style="{StaticResource StepTitle}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+    <TextBlock Text="Make it yours" Style="{StaticResource StepTitle}" />
+    <TextBlock Text="Restart Windows if requested, then start the backend. Open Controllers to test input, map buttons and save a profile." Style="{StaticResource StepCopy}" />
+    <ui:Button Content="Check installed drivers" Command="{Binding CheckDriversCommand}" FontSize="11" Padding="10,7" HorizontalAlignment="Left" />
+   </StackPanel>
+  </UniformGrid>
+  <Border Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="9" Padding="12,10" Margin="0,16,0,0"><TextBlock Text="{Binding DriverStatus}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" /></Border>
+  <Expander Style="{StaticResource ControllerExpander}" Header="Optional · avoid double input with HidHide" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,12,0,0">
+   <StackPanel Margin="0,8,0,0">
+    <TextBlock Text="Use HidHide only if a game sees both physical and virtual controllers. After installing and restarting, add the Steamy controller host below in HidHide → Applications. Under Devices, select only your physical gamepad, enable device hiding and reconnect it." Style="{StaticResource StepCopy}" />
+    <TextBox Text="{Binding ControllerHostPath, Mode=OneWay}" IsReadOnly="True" FontSize="10" Padding="8" BorderThickness="0" Background="{DynamicResource SurfaceSubtleBrush}" Foreground="{DynamicResource TextSecondaryBrush}" AutomationProperties.Name="Controller host path for HidHide" />
+    <WrapPanel Margin="0,8,0,0"><ui:Button Content="Install HidHide" Command="{Binding InstallDriverCommand}" CommandParameter="HidHide" FontSize="11" Padding="10,7" Margin="0,0,8,0" /><ui:Button Content="HidHide guide ↗" Command="{Binding OpenHidHideGuideCommand}" FontSize="11" Padding="10,7" /></WrapPanel>
+   </StackPanel>
+  </Expander>
+  <TextBlock Text="ViGEmBus is retired; check compatibility before installing. Close DS4Windows before using Steamy's mapper." Style="{StaticResource StepCopy}" Margin="0,12,0,0" />
+  <ui:Button Content="Driver compatibility ↗" Command="{Binding OpenDriverPageCommand}" FontSize="11" Padding="8,5" Appearance="Transparent" HorizontalAlignment="Left" />
+  <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" />
+ </StackPanel>
+</UserControl>

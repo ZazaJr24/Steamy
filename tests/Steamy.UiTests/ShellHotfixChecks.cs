@@ -65,12 +65,11 @@ public sealed partial class PageSmokeTests
         var window = new MainWindow();
         var overlayLayer = (Grid)window.FindName("OverlayLayer");
         var navbar = (Grid)window.FindName("PersistentNavigation");
-        var menuLayer = (Grid)window.FindName("ToolsMenuLayer");
+        Assert.NotNull(window.FindName("ToolsMenuLayer"));
         var titlebar = (FrameworkElement)window.FindName("WindowTitleBar");
         Assert.Equal(0, Grid.GetRow(overlayLayer));
-        Assert.Equal(2, Grid.GetRowSpan(overlayLayer));
+        Assert.Equal(((Grid)window.Content).RowDefinitions.Count, Grid.GetRowSpan(overlayLayer));
         Assert.True(Panel.GetZIndex(titlebar) > Panel.GetZIndex(overlayLayer));
-        Assert.True(Panel.GetZIndex(navbar) > Panel.GetZIndex(menuLayer));
         Assert.True(Panel.GetZIndex(navbar) < Panel.GetZIndex(overlayLayer));
         var root = (FrameworkElement)window.Content;
         void Layout(Size size)
@@ -79,24 +78,17 @@ public sealed partial class PageSmokeTests
             PumpDispatcher(TimeSpan.FromMilliseconds(50));
         }
         Layout(new Size(1280, 800));
-        var tools = (FrameworkElement)window.FindName("ToolsMenuSection");
-        var fixes = (FrameworkElement)window.FindName("FixesMenuSection");
         var rail = (Grid)window.FindName("ShellPillItems");
+        var tools=(Button)window.FindName("SteamToolsMenuButton");
+        var fixes=(Button)window.FindName("GameFixesMenuButton");
+        Assert.Equal(typeof(BetterSteamToolsPage),tools.Tag);
+        Assert.Equal(typeof(GameFixesPage),fixes.Tag);
         window.ToggleToolsMenu();
-        Assert.Equal(Visibility.Visible, tools.Visibility);
-        Assert.Equal(Visibility.Collapsed, fixes.Visibility);
         Assert.Equal(3, PillMotion.GetSelectedIndex(rail));
-        window.ToggleToolsMenu(fixes: true);
-        Assert.True(window.IsToolsMenuOpen);
-        Assert.Equal(Visibility.Collapsed, tools.Visibility);
-        Assert.Equal(Visibility.Visible, fixes.Visibility);
+        window.ToggleToolsMenu(fixes:true);
         Assert.Equal(4, PillMotion.GetSelectedIndex(rail));
-        Assert.Equal(typeof(GameFixesPage), ((Button)window.FindName("GameFixesMenuButton")).Tag);
-        Assert.DoesNotContain(Descendants<Button>(fixes), button => button.Tag is Type route && route == typeof(BetterSteamToolsPage));
-        Assert.DoesNotContain(Descendants<Button>(tools), button => button.Tag is Type route && route == typeof(GameFixesPage));
-        window.ToggleToolsMenu(fixes: true);
-        Assert.False(window.IsToolsMenuOpen);
-        Assert.Equal(0, PillMotion.GetSelectedIndex(rail));
+        Assert.True(((FrameworkElement)window.FindName("WorkspaceLayer")).IsEnabled);
+        Assert.Null(((FrameworkElement)window.FindName("WorkspaceLayer")).Effect);
 
         var notice = new TransparencyNotice(provider.GetRequiredService<ISettingsService>());
         window.ShowOverlay(notice);

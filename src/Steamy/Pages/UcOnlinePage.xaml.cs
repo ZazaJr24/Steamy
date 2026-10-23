@@ -17,12 +17,19 @@ public partial class UcOnlinePage : Page
     public UcOnlinePage() : this(App.Services.GetRequiredService<UcOnlineViewModel>()) { }
     public UcOnlinePage(UcOnlineViewModel model)
     {
-        InitializeComponent(); DataContext = model; BuildSettings();
-        Loaded += (_, _) => model.PropertyChanged += ModelChanged;
+        InitializeComponent(); DataContext = model;
+        Loaded += (_, _) => {model.PropertyChanged += ModelChanged; EnsureSettings();};
         Unloaded += (_, _) => model.PropertyChanged -= ModelChanged;
     }
     private UcOnlineViewModel Model => (UcOnlineViewModel)DataContext;
-    private void ModelChanged(object? sender, PropertyChangedEventArgs e) { if (e.PropertyName == nameof(UcOnlineViewModel.Options)) BuildSettings(); }
+    private PatchOptions? _builtOptions;
+    private void ModelChanged(object? sender, PropertyChangedEventArgs e) { if (e.PropertyName == nameof(UcOnlineViewModel.Options)) EnsureSettings(); }
+    private void Settings_Expanded(object sender,RoutedEventArgs args)=>EnsureSettings();
+    private void EnsureSettings()
+    {
+        if(!SettingsExpander.IsExpanded || ReferenceEquals(_builtOptions,Model.Options)) return;
+        BuildSettings(); _builtOptions=Model.Options;
+    }
     private void BuildSettings()
     {
         OptionsFields.Children.Clear();

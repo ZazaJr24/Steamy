@@ -125,7 +125,7 @@ public sealed class DemoDataStore : IAppDataStore
 public sealed class AppDataStore : IAppDataStore
 {
     public ObservableCollection<Game> Games { get; } = new();
-    public ObservableCollection<DownloadJob> Downloads { get; } = new();
+    public ObservableCollection<DownloadJob> Downloads { get; } = new RangeObservableCollection<DownloadJob>();
     public ObservableCollection<Depot> Depots { get; } = new();
     public ObservableCollection<Manifest> Manifests { get; } = new();
     public ObservableCollection<Branch> Branches { get; } = new();
@@ -155,8 +155,11 @@ public sealed class JsonSettingsService : ISettingsService
     private readonly object _cacheGate = new();
     private readonly SemaphoreSlim _writeGate = new(1);
     private AppSettings? _cached;
+    private readonly Func<string> _detectToolPath = DetectToolPath;
+    private Task? _toolDetection;
 
     public JsonSettingsService(string? path = null) => _path = path ?? Path.Combine(Steamy.Storage.AppDataPaths.Root, "settings.json");
+    internal JsonSettingsService(string path, Func<string> detectToolPath) : this(path) => _detectToolPath = detectToolPath;
 
     public AppSettings Load()
     {
@@ -175,36 +178,53 @@ public sealed class JsonSettingsService : ISettingsService
             }
             catch { }
             settings ??= new AppSettings();
-
-            // Auto-detect DepotDownloader from application's Tools folder
-            if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath) || !File.Exists(settings.DepotDownloaderPath))
+            // Adopt the requested white design once. Later theme selections remain user-owned.
+            if (settings.AppearanceDesignVersion < 1)
             {
-                var verifiedMod = BundledModCapabilities.SelectExecutable(null);
-                if (!string.IsNullOrWhiteSpace(verifiedMod))
-                    settings.DepotDownloaderPath = verifiedMod;
-
-                var baseTools = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools");
-                var candidate = Path.Combine(baseTools, "DepotDownloader", "DepotDownloader.exe");
-                if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath) && File.Exists(candidate))
-                {
-                    settings.DepotDownloaderPath = candidate;
-                }
-                else if (string.IsNullOrWhiteSpace(settings.DepotDownloaderPath))
-                {
-                    var modCandidate = Directory.Exists(Path.Combine(baseTools, "DepotDownloaderMod"))
-                        ? Directory.GetFiles(Path.Combine(baseTools, "DepotDownloaderMod"), "DepotDownloader*.exe", SearchOption.AllDirectories).FirstOrDefault()
-                        : null;
-                    if (modCandidate is not null && File.Exists(modCandidate))
-                    {
-                        settings.DepotDownloaderPath = modCandidate;
-                    }
-                }
+                settings.Appearance = "Light";
+                settings.BackgroundColor = "#FFFFFF";
+                settings.AppearanceDesignVersion = 1;
             }
 
-            // Read and detect once. Bindings and download ticks must never rescan disk or reset DNS.
+            // Loading appearance must not recursively discover or hash tool files
+            // before the first frame. Discovery is warmed separately after rendering.
             StableDnsHandler.Configure(settings.DnsMode, settings.DnsEndpoint);
             return _cached = settings;
         }
+    }
+
+    internal Task WarmToolPathAsync()
+    {
+        var settings = Load();
+        lock (_cacheGate)
+        {
+            var original = settings.DepotDownloaderPath;
+            return _toolDetection ??= DetectAndPublishToolPathAsync(settings, original);
+        }
+    }
+
+    private async Task DetectAndPublishToolPathAsync(AppSettings settings, string original)
+    {
+        var detected = await Task.Run(() => !string.IsNullOrWhiteSpace(original) && File.Exists(original)
+            ? original : _detectToolPath());
+        // Keep the caller's synchronization context: AppSettings also has direct
+        // subscribers, so its setters must not run on the discovery worker.
+        lock (_cacheGate)
+        {
+            if (ReferenceEquals(_cached, settings) && settings.DepotDownloaderPath == original && !string.IsNullOrWhiteSpace(detected))
+                settings.DepotDownloaderPath = detected;
+        }
+    }
+
+    private static string DetectToolPath()
+    {
+        var verified = BundledModCapabilities.SelectExecutable(null);
+        if (!string.IsNullOrWhiteSpace(verified)) return verified;
+        var tools = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools");
+        var candidate = Path.Combine(tools, "DepotDownloader", "DepotDownloader.exe");
+        if (File.Exists(candidate)) return candidate;
+        var mod = Path.Combine(tools, "DepotDownloaderMod");
+        return Directory.Exists(mod) ? Directory.EnumerateFiles(mod, "DepotDownloader*.exe", SearchOption.AllDirectories).FirstOrDefault() ?? "" : "";
     }
 
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
@@ -238,6 +258,7 @@ public sealed class JsonSettingsService : ISettingsService
             {
                 if (File.Exists(_path)) File.Delete(_path);
                 _cached = null;
+                _toolDetection = null;
             }
         }
         finally { _writeGate.Release(); }

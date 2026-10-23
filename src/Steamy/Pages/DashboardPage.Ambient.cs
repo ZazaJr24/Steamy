@@ -21,9 +21,9 @@ public partial class DashboardPage
         {
             var point = new Point(region.X + region.Width * (column + .5) / 7, region.Y + region.Height * (row + .5) / 3);
             var match = posters.FirstOrDefault(item => item.Bounds.Contains(point));
-            sum += match.Poster is null ? fallback : ArtworkColorSample.Luminance(match.Poster.Poster!,
+            sum += match.Poster is not null && ArtworkColorSample.TryLuminance(match.Poster.Poster!,
                 (point.X - match.Bounds.X) / match.Bounds.Width, (point.Y - match.Bounds.Y) / match.Bounds.Height,
-                match.Bounds.Width / match.Bounds.Height);
+                match.Bounds.Width / match.Bounds.Height,out var luminance) ? luminance : fallback;
         }
         return sum / 21;
     }
@@ -46,6 +46,13 @@ public partial class DashboardPage
     { if (ReferenceEquals(sender, _previewMouseTarget)) _previewMouseTarget = null; RefreshDashboardPreview(); }
     private void DashboardAmbient_Focus(object sender, KeyboardFocusChangedEventArgs args)
     { _previewFocusTarget = (FrameworkElement)sender; RefreshDashboardPreview(); }
+    private void DashboardAmbient_Unloaded(object sender, RoutedEventArgs args)
+    {
+        if (!ReferenceEquals(sender, _previewMouseTarget) && !ReferenceEquals(sender, _previewFocusTarget)) return;
+        if (ReferenceEquals(sender, _previewMouseTarget)) _previewMouseTarget = null;
+        if (ReferenceEquals(sender, _previewFocusTarget)) _previewFocusTarget = null;
+        RefreshDashboardPreview();
+    }
     private void DashboardAmbient_Blur(object sender, KeyboardFocusChangedEventArgs args)
     {
         Dispatcher.BeginInvoke(() =>
@@ -77,6 +84,8 @@ public partial class DashboardPage
             if (game is not null) game.PropertyChanged += PreviewArtworkChanged;
         }
         var previewTop = UpcomingSection.TranslatePoint(new Point(), DashboardBackdrop).Y;
+        if ((_previewMouseTarget ?? _previewFocusTarget) is { IsLoaded: true } target)
+            previewTop = Math.Max(previewTop, target.TranslatePoint(new Point(), DashboardBackdrop).Y - DashboardBackdrop.HeroHeight * .3);
         DashboardBackdrop.SetPreviewArtwork(feature?.HeroArtwork ?? game?.HeaderImage ?? game?.ArtworkImage, previewTop);
     }
     private void ClearDashboardPreview()
@@ -89,9 +98,17 @@ public partial class DashboardPage
     private void UpdateDashboardBodyColors()
     {
         var highContrast = UiThemeService.IsHighContrastActive;
-        var light = !UiThemeService.AmbientEnabled && UiThemeService.StaticBackgroundIsLight;
-        Resources["DashboardBodyForeground"] = highContrast ? SystemColors.WindowTextBrush : light ? Brushes.Black : Brushes.White;
-        Resources["DashboardBodySecondary"] = highContrast ? SystemColors.WindowTextBrush : new SolidColorBrush(light ? Color.FromRgb(40, 40, 40) : Color.FromRgb(190, 190, 190));
-        Resources["DashboardBodyTertiary"] = highContrast ? SystemColors.GrayTextBrush : new SolidColorBrush(light ? Color.FromRgb(60, 60, 60) : Color.FromRgb(150, 150, 150));
+        var light = UiThemeService.AmbientEnabled ? UiThemeService.IsLight : UiThemeService.StaticBackgroundIsLight;
+        BrushResources.Set(Resources, "DashboardBodyForeground", highContrast ? SystemColors.WindowTextBrush : light ? Brushes.Black : Brushes.White);
+        if (highContrast)
+        {
+            BrushResources.Set(Resources, "DashboardBodySecondary", SystemColors.WindowTextBrush);
+            BrushResources.Set(Resources, "DashboardBodyTertiary", SystemColors.GrayTextBrush);
+        }
+        else
+        {
+            BrushResources.SetColor(Resources, "DashboardBodySecondary", light ? Color.FromRgb(40, 40, 40) : Color.FromRgb(214, 214, 214));
+            BrushResources.SetColor(Resources, "DashboardBodyTertiary", light ? Color.FromRgb(60, 60, 60) : Color.FromRgb(184, 184, 184));
+        }
     }
 }
