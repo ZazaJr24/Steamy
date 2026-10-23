@@ -5,80 +5,24 @@ Add a new `## x.y.z` section at the top before tagging.
 
 ## 0.8.0
 
-# 🚀 STEAMY 0.8.0 IST DA!
+Changes since 0.7.1:
 
-Seit 0.7.1 hat sich richtig viel verändert: überarbeitete Seiten, eine neue Bild-Ladepipeline, Verbesserungen bei Performance, Downloads und Tools und ein aufgeräumterer Aufbau. Hier ist der große Überblick! 🔥
+- Design: black base, glass surfaces, ambient artwork, softer banner fades, cleaner spacing and sharper text.
+- Game page: centered header, compact actions, playtime and last launch; Details → Preview → Description; screenshots, reviews, achievements and a Back button that stays accessible while scrolling.
+- Library: collapsible heading, pinned filters, base-game filtering, denser covers, improved artwork fallbacks, Steam logos, search and sorting improvements.
+- Images: shared loading pipeline, bounded caches, fixes for loading stalls, cancellation of obsolete requests and cleanup of unused image references.
+- Performance: fewer unnecessary updates, deferred settings loading, page reuse, improved reference cleanup and smoother scroll timing with less repeated layout work.
+- Downloads: compact queue rows, progress/speed/ETA improvements, resume fixes and clearer step-by-step setup.
+- Controllers and tools: clearer selection, guided setup, controller-backend integration, mapping/profile settings and explicit driver checks and installation actions.
+- Steam-Plus: select a source or import a local ZIP/Lua file.
+- Provider security: shared keys remain on the VPS; server-side request, concurrency and transfer limits constrain usage.
+- Packaging: .NET 10, included portable runtime, automated GitHub builds/tests, and Setup.exe plus Portable.zip downloads. The compiled relay DLL is included in the app and repository.
+- Discord: integration removed from the current build; backup retained. Friends, chat and voice are not available in this release.
+- Hypervisor: marked as planned for 0.8.2, not included in 0.8.0.
 
-## 🎨 Überarbeitetes Design
-• Schwarze Basis, ruhigere Glasflächen und gezieltes Ambient.
-• Weichere Banner-Fades und sauberere Übergänge auf der Spielseite.
-• Überarbeitete Abstände, Schaltflächen und Navigation für mehr Übersicht.
-• Verbesserte Darstellung von Schrift und Bildern.
+Controller hardware validation remains pending.
 
-## 🎮 Neue Anordnung auf der Spielseite
-• Mittiger Spielkopf mit kompakten Aktionen.
-• Spielzeit und letzter Start direkt beim Spiel.
-• Klarer Aufbau: Details → Preview → Beschreibung.
-• Größere Banner, Screenshot-Vorschauen und eine vergrößerte Bildansicht.
-• Steam-Rezensionen, Erfolge und weitere Spielinformationen, wenn Daten verfügbar sind.
-• Der Zurück-Pfeil bleibt auch beim Scrollen erreichbar.
-
-## 📚 Verbesserte Bibliothek
-• Einklappbarer Kopf und erreichbare Filter beim Scrollen.
-• Base-Game-Filter für eine übersichtlichere Spieleauswahl.
-• Dichtere Cover-Ansicht mit verbesserten Fallbacks bei fehlenden Bildern.
-• Steam-Logo auf den Spielkarten.
-• Verbesserungen bei Suche, Sortierung und Filterung.
-
-## 🖼️ Neue Bild-Ladepipeline
-• Gemeinsame Verarbeitung für das Laden und Wiederverwenden von Bildern.
-• Begrenzte Caches für einen kontrollierteren Speicherverbrauch.
-• Behobene Ladeblockaden und weniger doppelte Arbeit.
-• Aufgeräumte Bildreferenzen und Abbruch nicht mehr benötigter Ladevorgänge.
-
-## ⚡ Performance und Bedienung
-• Weniger unnötige Aktualisierungen im Hintergrund.
-• Einstellungen werden bei Bedarf verzögert geladen.
-• Aufgeräumte Seiten- und Bildreferenzen.
-• Gleichmäßigeres Scroll-Timing und weniger wiederholte Layout-Arbeit in der Bibliothek.
-• Überarbeitete Seitenwechsel und Wiederverwendung häufig genutzter Seiten.
-
-## 📥 Downloads und Einrichtung
-• Kompaktere Download-Anzeige mit Fortschritt, Geschwindigkeit und verbleibender Zeit.
-• Verbesserungen an Warteschlange, Fortsetzen und Fortschrittsanzeige.
-• Klarere, schrittweise Einrichtung und Auswahl der Download-Methode.
-
-## 🛠️ Controller und Tools
-• Übersichtlichere Auswahl und geführte Einrichtung.
-• Integrierte Oberfläche für den separaten Controller-Backend-Prozess.
-• Einstellungen für Belegung, Profile und Controller-Verhalten.
-• Treiberprüfung und ausdrücklich auswählbare Installationsschritte.
-
-## ➕ Steam-Plus
-• Auswahl einer Quelle direkt im Ablauf.
-• Alternativ eigene ZIP- oder Lua-Dateien auswählen.
-• Klarere Auswahlmöglichkeiten für den jeweiligen Vorgang.
-
-## 🔐 Provider-Anbindung und Technik
-• Gemeinsame Provider-Keys bleiben auf dem VPS und werden nicht in die EXE eingebaut.
-• Serverseitige Grenzen für Anfragen, parallele Transfers und das tägliche Übertragungsvolumen.
-• Builds und Tests über GitHub; die App basiert jetzt auf .NET 10.
-• Die portable Version bringt ihre benötigte .NET-Laufzeit mit.
-
-## 💬 Discord-Integration entfernt
-Die bisherige Discord-Integration ist aus dem aktuellen Build entfernt. Das Backup bleibt erhalten. Freunde-, Chat- und Voice-Funktionen werden für diese Version deshalb nicht als verfügbare Neuerungen angekündigt.
-
-## 🔭 Ausblick
-Die Hypervisor-Seite nennt jetzt die geplante Version 0.8.2. Diese Funktion ist noch nicht Bestandteil von 0.8.0.
-
-## 📦 Jetzt herunterladen
-**Setup:** https://github.com/ZazaJr24/Steamy/releases/download/v0.8.0/Steamy-v0.8.0-Setup.exe
-
-**Portable:** https://github.com/ZazaJr24/Steamy/releases/download/v0.8.0/Steamy-v0.8.0.zip
-
-Release und Details: https://github.com/ZazaJr24/Steamy/releases/tag/v0.8.0
-
-Testet das Update und gebt Feedback zu Bedienung, Darstellung und den Tools. Controller-Funktionen hängen von Gerät und Treibern ab; eine vollständige Hardware-Abnahme steht noch aus. Danke fürs Testen! ❤️
+[Setup.exe](https://github.com/ZazaJr24/Steamy/releases/download/v0.8.0/Steamy-v0.8.0-Setup.exe) · [Portable.zip](https://github.com/ZazaJr24/Steamy/releases/download/v0.8.0/Steamy-v0.8.0.zip)
 
 
 ## 0.7.1.2
