@@ -31,7 +31,7 @@ public partial class DownloadsPage
     {
         if (open) _deckRestoreFocus = Keyboard.FocusedElement;
         DownloadOptionsLayer.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-        FeaturedPanel.IsEnabled = DownloadQueue.IsEnabled = DeckFooter.IsEnabled = !open;
+        DownloadQueue.IsEnabled = DeckFooter.IsEnabled = !open;
         if (open) DownloadOptionsClose.Focus();
         else if (_deckRestoreFocus is FrameworkElement { IsVisible: true, IsEnabled: true } element) element.Focus();
         else DownloadOptionsButton.Focus();

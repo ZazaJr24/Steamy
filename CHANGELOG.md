@@ -3,6 +3,17 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.8.0.1
+
+### Bug fixes and UI polish
+
+- **Navbar tab selection:** Fixed active pill mapping between Downloads and Settings so the Downloads button is correctly highlighted on the Downloads page.
+- **Button icon centering:** Fixed horizontal offset on icon-only deck buttons, perfectly centering the three-dots options button.
+- **Download options position:** Repositioned the Download-Optionen panel to the top-right below the trigger button, refined background dimming, and preserved header visibility.
+- **Cut-offs resolved:**
+  - Fixed library filter mode pills ("All" / "Installed") bottom border clipping by aligning item height to the container bounds.
+  - Increased game card footer height and title container bounds in the library gallery to prevent multi-line game titles from getting cut off.
+
 ## 0.8.0
 
 ### Free DepotBox access — Ryuu planned for tomorrow

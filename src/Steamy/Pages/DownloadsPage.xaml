@@ -46,11 +46,14 @@
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ui:Button">
         <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="9" Padding="{TemplateBinding Padding}" BorderBrush="#24FFFFFF" BorderThickness="1">
           <Grid><Border CornerRadius="8" Background="#18FFFFFF" Opacity="0" IsHitTestVisible="False" controls:DownloadHoverGlow.IsEnabled="True"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <ContentPresenter Content="{TemplateBinding Icon}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-            <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
+            <ContentPresenter x:Name="PART_IconPresenter" Content="{TemplateBinding Icon}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <ContentPresenter x:Name="PART_ContentPresenter" Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
           </StackPanel></Grid>
         </Border>
         <ControlTemplate.Triggers>
+          <Trigger Property="Content" Value="{x:Null}"><Setter TargetName="PART_IconPresenter" Property="Margin" Value="0"/><Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/></Trigger>
+          <Trigger Property="Content" Value=""><Setter TargetName="PART_IconPresenter" Property="Margin" Value="0"/><Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/></Trigger>
+          <Trigger Property="Icon" Value="{x:Null}"><Setter TargetName="PART_IconPresenter" Property="Visibility" Value="Collapsed"/></Trigger>
           <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#66C0F4"/><Setter Property="Foreground" Value="#0E141B"/></Trigger>
           <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Chrome" Property="Opacity" Value="0.4"/></Trigger>
         </ControlTemplate.Triggers>
@@ -217,8 +220,8 @@
       </Grid>
       <Border Grid.Row="2" x:Name="DeckFooter" Visibility="Collapsed"/>
     <Grid x:Name="DownloadOptionsLayer" Grid.RowSpan="3" Visibility="Collapsed" Panel.ZIndex="4" KeyboardNavigation.TabNavigation="Cycle">
-      <Border Background="#A0000000" MouseLeftButtonDown="DownloadOptionsDismiss_Click"/>
-      <Border x:Name="DownloadOptionsPanel" Width="520" MaxHeight="640" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="24" Background="{DynamicResource DialogSurfaceBrush}" CornerRadius="16" BorderBrush="{DynamicResource DeckLine}" BorderThickness="1" Padding="24">
+      <Border Background="#50000000" MouseLeftButtonDown="DownloadOptionsDismiss_Click"/>
+      <Border x:Name="DownloadOptionsPanel" Width="480" MaxHeight="600" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,52,24,24" Background="{DynamicResource DialogSurfaceBrush}" CornerRadius="16" BorderBrush="{DynamicResource DeckLine}" BorderThickness="1" Padding="20">
         <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
           <DockPanel Margin="0,0,0,20"><ui:Button x:Name="DownloadOptionsClose" Content="✕" DockPanel.Dock="Right" Style="{StaticResource DeckButton}" Click="DownloadOptions_Click"/><TextBlock Text="Download-Optionen" FontSize="24" Foreground="{DynamicResource DeckText}"/></DockPanel>
           <StackPanel x:Name="DownloadFilters"><ui:TextBox x:Name="DownloadSearch" PlaceholderText="Downloads oder App-ID durchsuchen …" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=200}" AutomationProperties.Name="Search downloads"/><ComboBox ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}" Margin="0,12,0,0" AutomationProperties.Name="Filter download status"/><ComboBox ItemsSource="{Binding SourceFilters}" SelectedItem="{Binding SelectedSourceFilter}" Margin="0,12,0,0" AutomationProperties.Name="Filter downloads by source"/></StackPanel>

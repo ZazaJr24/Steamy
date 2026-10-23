@@ -400,8 +400,8 @@ public partial class DownloadsPage : Page
             DownloadNetworkRate.FontSize = compact ? 14 : 16;
             DeckContent.Margin = new Thickness(compact ? 18 : 24, 18, compact ? 18 : 24, 20);
             DeckAutomation.Visibility = e.NewSize.Width < 700 ? Visibility.Collapsed : Visibility.Visible;
-            DownloadOptionsPanel.Width = Math.Min(520, Math.Max(280, e.NewSize.Width - 48));
-            DownloadOptionsPanel.MaxHeight = Math.Max(240, e.NewSize.Height - 48);
+            DownloadOptionsPanel.Width = Math.Min(480, Math.Max(280, e.NewSize.Width - 48));
+            DownloadOptionsPanel.MaxHeight = Math.Max(240, e.NewSize.Height - 76);
             RefreshDownloadAmbientGeometry();
         };
         ApplyDeckAccessibility();

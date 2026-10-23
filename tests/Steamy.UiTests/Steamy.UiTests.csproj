@@ -10,6 +10,7 @@
   <ItemGroup>
     <Content Include="Fixtures/steam-placeholder-*.jpg" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../../src/Steamy/Steamy.csproj" />
+    <Reference Include="Steamy.RelayClient"><HintPath>..\..\lib\Steamy.RelayClient.dll</HintPath></Reference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />

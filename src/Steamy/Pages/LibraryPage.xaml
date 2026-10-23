@@ -93,7 +93,7 @@
     </Style>
     <Style x:Key="ShortcutIconBadge" TargetType="Border">
       <Setter Property="Width" Value="38" />
-      <Setter Property="Height" Value="38" />
+      <Setter Property="Height" Value="34" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
@@ -159,9 +159,9 @@
       <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></Setter.Value></Setter>
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBox"><ItemsPresenter /></ControlTemplate></Setter.Value></Setter>
       <Setter Property="ItemContainerStyle"><Setter.Value><Style TargetType="ListBoxItem">
-        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /><Setter Property="FontSize" Value="13" /><Setter Property="Padding" Value="14,0" /><Setter Property="Height" Value="38" /><Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" /><Setter Property="FontSize" Value="13" /><Setter Property="Padding" Value="14,0" /><Setter Property="Height" Value="34" /><Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
-          <Border x:Name="Pill" CornerRadius="19" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" Padding="{TemplateBinding Padding}"><ContentPresenter VerticalAlignment="Center" /></Border>
+          <Border x:Name="Pill" CornerRadius="17" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" Padding="{TemplateBinding Padding}"><ContentPresenter VerticalAlignment="Center" /></Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsSelected" Value="True"><Setter Property="Foreground" Value="{DynamicResource LibrarySelectedChipForegroundBrush}" /><Setter TargetName="Pill" Property="Background" Value="{DynamicResource LibrarySelectedChipBrush}" /><Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource LibrarySelectedChipBorderBrush}" /></Trigger>
             <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" /></Trigger>
@@ -219,12 +219,12 @@
             <ItemsPresenter />
           </ScrollViewer>
         </ControlTemplate></ItemsControl.Template>
-        <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:VirtualizingGamePanel MinItemWidth="184" MaxColumns="6" Spacing="24" RowSpacing="30" CoverRatio="1.42" FooterHeight="76" LeadingHeight="64" TrailingHeight="100" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:VirtualizingGamePanel MinItemWidth="184" MaxColumns="6" Spacing="24" RowSpacing="30" CoverRatio="1.42" FooterHeight="84" LeadingHeight="64" TrailingHeight="100" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate><DataTemplate>
           <Button x:Name="Card" Style="{StaticResource LibraryCoverButton}" Click="GameCard_Click" Tag="{Binding}" controls:ArtworkLease.Item="{Binding}" ToolTip="{Binding Name}" AutomationProperties.Name="{Binding Name}">
             <Button.ContextMenu><ContextMenu><MenuItem Header="Game details" Click="GameDetailsMenu_Click" Tag="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}" /><MenuItem Header="Install…" Click="InstallGameMenu_Click" Tag="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}" /><MenuItem Header="{Binding PlacementTarget.Tag.AppId, RelativeSource={RelativeSource AncestorType=ContextMenu}, StringFormat='App {0}'}" IsEnabled="False" /></ContextMenu></Button.ContextMenu>
             <Grid>
-              <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="76" /></Grid.RowDefinitions>
+              <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="84" /></Grid.RowDefinitions>
               <Border x:Name="Cover" CornerRadius="14" Background="#141418" BorderBrush="#222634" BorderThickness="1" controls:RoundedClip.Radius="14">
                 <Grid ClipToBounds="True">
                   <Image Source="{Binding ArtworkImage}" RenderOptions.BitmapScalingMode="HighQuality"><Image.Style><Style TargetType="Image"><Setter Property="Stretch" Value="UniformToFill"/><Style.Triggers><DataTrigger Binding="{Binding IsArtworkLandscape}" Value="True"><Setter Property="Stretch" Value="Uniform"/></DataTrigger></Style.Triggers></Style></Image.Style></Image>
@@ -249,7 +249,7 @@
               </Border>
               <StackPanel Grid.Row="1" Margin="2,10,2,0">
                 <TextBlock Text="{Binding GenreLabel}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,4,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="40" ToolTip="{Binding Name}" />
+                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,4,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="48" ToolTip="{Binding Name}" />
               </StackPanel>
             </Grid>
           </Button>
