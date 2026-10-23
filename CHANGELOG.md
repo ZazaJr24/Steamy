@@ -3,7 +3,7 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
-## 0.8.0.1
+## 0.8.1
 
 ### Bug fixes and UI polish
 
