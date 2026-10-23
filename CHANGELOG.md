@@ -5,16 +5,47 @@ Add a new `## x.y.z` section at the top before tagging.
 
 ## 0.8.0
 
-**DepotBox & Ryuu: free in-app integration for everyone, with no personal API key required.** DepotBox is live; Ryuu currently needs a valid server credential before access can resume.
+### Free DepotBox access — Ryuu planned for tomorrow
 
-- Black/glass design, ambient backgrounds and softer banner fades.
-- Centered game page, compact actions, playtime/last launch, Details → Preview → Description and a fixed Back button.
-- Collapsible library, pinned filters, base-game filtering, better cover fallbacks and Steam logos.
-- Shared image pipeline, bounded caches, loading fixes, deferred settings and smoother scrolling.
-- Improved download progress, queue/resume behavior and guided controller/tool setup.
-- Steam-Plus source selection or local ZIP/Lua import.
-- .NET 10, included portable runtime and automated GitHub builds/tests. Provider keys stay on the VPS.
-- Discord integration removed; backup retained. Hypervisor planned for 0.8.2.
+**DepotBox is now available free inside Steamy for all users. No personal API key is required.**
+
+**Free Ryuu access is planned for tomorrow, October 24.** Ryuu is not available through the shared connection yet; it will use the same no-personal-key workflow once enabled.
+
+Shared provider credentials stay on the VPS. Server usage limits apply.
+
+### Changes since 0.7.1
+
+##### Design and game page
+- Black base, glass surfaces, ambient artwork and softer banner fades.
+- Cleaner spacing, sharper text and improved image rendering.
+- Centered game header, compact actions, playtime and last launch.
+- Updated Details → Preview → Description layout, screenshot previews and an expanded image viewer.
+- A Back button that stays accessible while scrolling.
+
+##### Library and images
+- Collapsible heading, pinned filters and base-game filtering.
+- Denser covers, better artwork fallbacks and Steam logos.
+- Improved search, sorting and filtering.
+- Shared image-loading pipeline with bounded caches, fixes for loading stalls and cancellation of obsolete requests.
+
+##### Performance and downloads
+- Fewer unnecessary updates, deferred settings loading and cleanup of page/image references.
+- Page reuse, more consistent scroll timing and less repeated library layout work.
+- Compact download rows with improved progress, speed and ETA reporting.
+- Queue/resume improvements and clearer step-by-step download setup.
+
+##### Controllers, tools and Steam-Plus
+- Clearer selection and guided setup for controllers and tools.
+- Controller-backend integration, mapping/profile settings and explicit driver checks.
+- Steam-Plus source selection or import of a local ZIP/Lua file.
+
+##### Technical changes and availability
+- .NET 10, an included portable runtime and automated GitHub builds/tests.
+- Provider keys remain server-side, with request, concurrency and transfer limits.
+- Discord integration removed from this build; backup retained. Friends, chat and voice are not available in this release.
+- Hypervisor marked as planned for 0.8.2. Controller hardware validation remains pending.
+
+### Downloads
 
 [Setup.exe](https://github.com/ZazaJr24/Steamy/releases/download/v0.8.0/Steamy-v0.8.0-Setup.exe) · [Portable.zip](https://github.com/ZazaJr24/Steamy/releases/download/v0.8.0/Steamy-v0.8.0.zip)
 
