@@ -1,16 +1,16 @@
 # Work from GitHub without exposing provider keys
 
-The public repository contains the application, the relay client DLL's source,
-and the server implementation. It contains no live provider or SSH credentials.
+The public repository contains the application, compiled relay client DLL,
+and server implementation. The DLL implementation source is kept locally. It contains no live provider or SSH credentials.
 
 1. Clone the repository or open a fresh workspace from GitHub.
 2. Install the .NET SDK selected by `global.json` and restore/build `Steamy.sln`.
-   The project reference automatically builds `Steamy.RelayClient.dll`.
+   Project references copy the supplied `lib/Steamy.RelayClient.dll`.
 3. Push application changes. CI checks the source for credentials, builds the
    application and ControllerHost, and runs the app and relay tests using fixtures.
 4. For a release, update project versions and CHANGELOG, then create its `v*` tag
    or run Build & Release. Version 0.8.0 publishes the portable ZIP, app payload,
-   setup installer and separate `Steamy.RelayClient.dll`.
+   setup installer. The DLL is in the repository and app package.
 
 No provider secret is needed to build the app locally or in GitHub Actions.
 The DLL constructs requests to the public HTTPS relay; the VPS attaches its own

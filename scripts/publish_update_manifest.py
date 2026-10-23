@@ -73,5 +73,5 @@ if __name__ == '__main__':
     api = GitHubApi(repository, os.environ['GITHUB_TOKEN'])
     release = api('GET', '/releases/tags/v' + args.version)
     print(publish(api, manifest(release, args.archive, repository)))
-    if args.app_archive:
-        print(publish(api, manifest(release, args.app_archive, repository, app_payload=True), 'updates/installer.json'))
+    installer = manifest(release, args.app_archive, repository, app_payload=True) if args.app_archive else manifest(release, args.archive, repository)
+    print(publish(api, installer, 'updates/installer.json'))

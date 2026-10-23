@@ -5,10 +5,10 @@
   "published_at": "2026-10-23T19:19:12Z",
   "assets": [
     {
-      "name": "Steamy-v0.8.0-app.zip",
-      "browser_download_url": "https://github.com/ZazaJr24/Steamy/releases/download/v0.8.0/Steamy-v0.8.0-app.zip",
-      "size": 136350648,
-      "digest": "sha256:d8e07098a2d1857f9a47c38806f1c2669a31d3fe6c31455b2940e2d66766d974"
+      "name": "Steamy-v0.8.0.zip",
+      "browser_download_url": "https://github.com/ZazaJr24/Steamy/releases/download/v0.8.0/Steamy-v0.8.0.zip",
+      "size": 201441412,
+      "digest": "sha256:9941cfd1d6d3fae7df160c1ba1339e4b666a2a3e2cc402635eb70879180a1307"
     }
   ]
 }

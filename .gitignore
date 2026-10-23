@@ -46,3 +46,6 @@ id_rsa*
 
 # Downloaded optional-tool working cache.
 src/Steamy/Tools/Goldberg/current/
+
+# Private local relay implementation.
+src/Steamy.RelayClient/

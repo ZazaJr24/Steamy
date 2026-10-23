@@ -116,10 +116,10 @@ the user's request. No key or password values are recorded in this document.
 
 ## Public client DLL and abuse limits (0.8.0)
 
-`src/Steamy.RelayClient/` builds `Steamy.RelayClient.dll` automatically through a
-project reference. The DLL constructs the public HTTPS requests and contains no
+The app references `lib/Steamy.RelayClient.dll`; its implementation source is
+maintained locally by the owner. The DLL constructs the public HTTPS requests and contains no
 provider key, SSH credential or shared client secret. It is included in the app
-and published as a separate release asset. Keep its source public; obfuscation
+and repository, not as a separate release download. Obfuscation
 cannot establish that a request came from the original app.
 
 The service intentionally supports all app users without login. Its public

@@ -32,7 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Steamy.RelayClient\Steamy.RelayClient.csproj" />
+    <Reference Include="Steamy.RelayClient"><HintPath>..\..\lib\Steamy.RelayClient.dll</HintPath><Private>true</Private></Reference>
     <InternalsVisibleTo Include="Steamy.UiTests" />
     <AssemblyMetadata Include="DiscordApplicationId" Value="$(DiscordApplicationId)" />
     <AssemblyMetadata Include="DiscordIntegrationEnabled" Value="$(EnableDiscordIntegration)" />

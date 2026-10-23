@@ -139,7 +139,7 @@ Thanks to the authors of the tools and libraries used by Steamy. Their credits, 
 Steamy's original code uses the [MIT License](LICENSE). Third-party components retain their own licenses. Steam and game artwork belong to their respective owners; Steamy is an independent project.
 ## Building from GitHub
 
-The public relay client is built automatically as `Steamy.RelayClient.dll`.
+The app references the supplied `lib/Steamy.RelayClient.dll`; its implementation source is kept locally by the owner.
 Provider keys stay on the VPS and are unnecessary for local or GitHub builds.
 See [the GitHub workflow](docs/github-workflow.md) and [relay security](docs/provider-relay.md).
 

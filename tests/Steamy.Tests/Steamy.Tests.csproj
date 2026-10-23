@@ -30,7 +30,7 @@
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadStorageGuard.cs" Link="Linked\DownloadStorageGuard.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\DownloadFailurePolicy.cs" Link="Linked\DownloadFailurePolicy.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\RyuuSecureDownloadService.cs" Link="Linked\RyuuSecureDownloadService.cs" />
-    <ProjectReference Include="..\..\src\Steamy.RelayClient\Steamy.RelayClient.csproj" />
+    <Reference Include="Steamy.RelayClient"><HintPath>..\..\lib\Steamy.RelayClient.dll</HintPath><Private>true</Private></Reference>
     <Compile Include="..\..\src\Steamy\Services\Tools\GreenLumaDownloadDiscovery.cs" Link="Linked\GreenLumaDownloadDiscovery.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\BundledModCapabilities.cs" Link="Linked\BundledModCapabilities.cs" />
     <Compile Include="..\..\src\Steamy\Services\Steam\VdfParser.cs" Link="Linked\VdfParser.cs" />

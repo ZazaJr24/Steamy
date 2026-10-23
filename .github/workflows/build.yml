@@ -47,7 +47,7 @@ jobs:
         run: |
           $version = '${{ steps.ver.outputs.v }}'
           $expected = if ($version.Split('.').Count -eq 3) { [version]"$version.0" } else { [version]$version }
-          foreach ($path in @('src/Steamy/Steamy.csproj', 'src/PlayTimeTracker/PlayTimeTracker.csproj', 'src/Steamy.RelayClient/Steamy.RelayClient.csproj')) {
+          foreach ($path in @('src/Steamy/Steamy.csproj', 'src/PlayTimeTracker/PlayTimeTracker.csproj')) {
             [xml]$project = Get-Content $path
             foreach ($field in @('Version', 'FileVersion', 'AssemblyVersion')) {
               $value = [string]$project.Project.PropertyGroup.$field
@@ -91,7 +91,6 @@ jobs:
         run: |
           ./scripts/package-distribution.ps1 -OutputDirectory distribution
           Copy-Item distribution/Steamy-*.zip, distribution/Steamy-v*-Setup.exe .
-          Copy-Item distribution/portable/Steamy.RelayClient.dll .
           $checks = Join-Path $pwd 'distribution/installer-checks.txt'
           $process = Start-Process -FilePath distribution/Steamy-Setup.exe -ArgumentList @('--self-test', $checks) -WindowStyle Hidden -Wait -PassThru
           Get-Content $checks
@@ -161,13 +160,11 @@ jobs:
           make_latest: true
           files: |
             Steamy-v${{ steps.ver.outputs.v }}.zip
-            Steamy-v${{ steps.ver.outputs.v }}-app.zip
             Steamy-v${{ steps.ver.outputs.v }}-Setup.exe
-            Steamy.RelayClient.dll
           body_path: release-notes.md
 
       - name: Publish verified update metadata after the release exists
         if: steps.existing.outputs.published != 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python scripts/publish_update_manifest.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip' --app-archive 'Steamy-v${{ steps.ver.outputs.v }}-app.zip'
+        run: python scripts/publish_update_manifest.py --version '${{ steps.ver.outputs.v }}' --archive 'Steamy-v${{ steps.ver.outputs.v }}.zip'
