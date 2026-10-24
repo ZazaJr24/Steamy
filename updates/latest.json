@@ -1,14 +1,14 @@
 {
-  "tag_name": "v0.8.0.2",
+  "tag_name": "v0.8.1.2",
   "draft": false,
   "prerelease": false,
-  "published_at": "2026-10-24T11:26:24Z",
+  "published_at": "2026-10-24T13:28:18Z",
   "assets": [
     {
-      "name": "Steamy-v0.8.0.2.zip",
-      "browser_download_url": "https://github.com/ZazaJr24/Steamy/releases/download/v0.8.0.2/Steamy-v0.8.0.2.zip",
-      "size": 201434345,
-      "digest": "sha256:e8bb4eade03d54ac6237db3a685da1e90f7654bd09e032f91b35e9833190eefe"
+      "name": "Steamy-v0.8.1.2.zip",
+      "browser_download_url": "https://github.com/ZazaJr24/Steamy/releases/download/v0.8.1.2/Steamy-v0.8.1.2.zip",
+      "size": 201475641,
+      "digest": "sha256:3e378ff7e8777c7c42a44ab0930af7305121407ae8503f546dfffff83a014c4b"
     }
   ]
 }
