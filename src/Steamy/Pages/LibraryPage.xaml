@@ -456,7 +456,7 @@
 
                 <Grid ClipToBounds="True">
 
-                  <Image Source="{Binding ArtworkImage}" RenderOptions.BitmapScalingMode="HighQuality"><Image.Style><Style TargetType="Image"><Setter Property="Stretch" Value="UniformToFill"/><Style.Triggers><DataTrigger Binding="{Binding IsArtworkLandscape}" Value="True"><Setter Property="Stretch" Value="Uniform"/></DataTrigger></Style.Triggers></Style></Image.Style></Image>
+                  <Image Source="{Binding ArtworkImage}" RenderOptions.BitmapScalingMode="LowQuality"><Image.Style><Style TargetType="Image"><Setter Property="Stretch" Value="UniformToFill"/><Style.Triggers><DataTrigger Binding="{Binding IsArtworkLandscape}" Value="True"><Setter Property="Stretch" Value="Uniform"/></DataTrigger></Style.Triggers></Style></Image.Style></Image>
 
                   <Border Background="#171920" Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}">
 

@@ -166,7 +166,7 @@ public static class SmoothScroll
             if (_animating && direction != _direction) Stop(); // Reversal responds immediately, without accumulated momentum.
             if (!_animating)
             {
-                var stepSize = Math.Min(36.0, Math.Abs(args.Delta / 120d * distance) * 0.35);
+                var stepSize = Math.Abs(args.Delta / 120d * distance) * 0.70;
                 var initialStep = Math.Clamp(current - Math.Sign(args.Delta) * stepSize, 0, MaximumOffset);
                 CommitOffset(initialStep);
                 current = CurrentOffset;
@@ -200,7 +200,7 @@ public static class SmoothScroll
             _lastTick = now;
             _target = destination;
             _motion.Retarget(destination);
-            _viewer.InvalidateVisual();
+
         }
         private void OnRendering(object? sender, EventArgs args)
         {
@@ -216,7 +216,7 @@ public static class SmoothScroll
             if (_motion.IsResting)
             { CompositionTarget.Rendering -= OnRendering; _animating = false; _lastRenderTime = null; }
             else
-            { _viewer.InvalidateVisual(); }
+            { }
         }
         private void CommitOffset(double offset)
         {

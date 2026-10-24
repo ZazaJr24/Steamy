@@ -3,7 +3,7 @@ namespace Steamy.Controls;
 /// <summary>Frame-rate independent, critically damped motion with no per-step allocations.</summary>
 internal sealed class ScrollMotion
 {
-    private const double Frequency = 22;
+    private const double Frequency = 42;
     internal double Position { get; private set; }
     internal double Velocity { get; private set; }
     internal double Target { get; private set; }

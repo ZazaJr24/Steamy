@@ -156,7 +156,7 @@
                   <!-- Cover matching LibraryPage aesthetic -->
                   <Border x:Name="Cover" CornerRadius="14" Background="#141418" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" controls:RoundedClip.Radius="14">
                     <Grid ClipToBounds="True">
-                      <Image Source="{Binding ArtworkImage}" RenderOptions.BitmapScalingMode="HighQuality" Stretch="UniformToFill" />
+                      <Image Source="{Binding ArtworkImage}" RenderOptions.BitmapScalingMode="LowQuality" Stretch="UniformToFill" />
                       <Border CornerRadius="14" Background="{DynamicResource SurfaceSubtleBrush}"
                               Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel VerticalAlignment="Center">
