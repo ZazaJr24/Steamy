@@ -15,4 +15,16 @@ public sealed class GameClassificationTests
     [InlineData("Content Warning", false)]
     public void DistinguishesSupportPackagesFromGames(string name, bool expected)
         => Assert.Equal(expected, GameClassification.IsRuntime(42, name));
+
+    [Theory]
+    [InlineData("NSFW ~ Not a Simulator For Working", true)]
+    [InlineData("HENTAI MATCH FANTASY STORIES - ARTWORK - 2 - NSFW", true)]
+    [InlineData("Shelter 69 🔞[ADULT NSFW]", true)]
+    [InlineData("3001: A MILF Odyssey - NSFW Sci-Fi Porn", true)]
+    [InlineData("Pocket Waifu Rekindled 🔞[ADULT NSFW]", true)]
+    [InlineData("Call of Duty: Modern Warfare", false)]
+    [InlineData("Grand Theft Auto V", false)]
+    [InlineData("Cyberpunk 2077", false)]
+    public void DistinguishesNsfwGames(string name, bool expected)
+        => Assert.Equal(expected, GameClassification.IsNsfw(name));
 }

@@ -214,6 +214,8 @@ public sealed partial class PageSmokeTests
         Assert.True(((FrameworkElement)page.FindName("MethodStepPanel")).IsVisible);
         page.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(page)!, 0, Key.Escape)
         { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+        page.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(page)!, 0, Key.Escape)
+        { RoutedEvent = Keyboard.PreviewKeyUpEvent });
         PumpUntil(() => overlay.Visibility == Visibility.Collapsed);
         Assert.True(background.IsEnabled);
         Assert.True(background.IsHitTestVisible);
@@ -245,6 +247,8 @@ public sealed partial class PageSmokeTests
         _phase = "Close dialog " + theme;
         page.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(page)!, 0, Key.Escape)
         { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+        page.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(page)!, 0, Key.Escape)
+        { RoutedEvent = Keyboard.PreviewKeyUpEvent });
         PumpUntil(() => overlay.Visibility == Visibility.Collapsed);
         Assert.True(background.IsEnabled);
         Assert.True(background.IsHitTestVisible);

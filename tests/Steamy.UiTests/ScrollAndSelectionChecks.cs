@@ -98,6 +98,11 @@ public sealed partial class PageSmokeTests
             window.Show();
             Application.Current.MainWindow = window;
             PumpDispatcher(TimeSpan.FromMilliseconds(100));
+            foreach (var key in new[] { Key.Home, Key.End, Key.PageUp, Key.PageDown, Key.Up, Key.Down, Key.Left, Key.Right, Key.Tab })
+            {
+                if (Keyboard.IsKeyDown(key))
+                    window.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(window)!, 0, key) { RoutedEvent = Keyboard.PreviewKeyUpEvent });
+            }
             // Earlier shell checks save large window bounds; exercise scrolling in a fixed small viewport.
             window.WindowState = WindowState.Normal;
             window.Width = 1044; window.Height = 600;
@@ -194,12 +199,12 @@ public sealed partial class PageSmokeTests
             PumpUntil(() => Keyboard.Modifiers == ModifierKeys.None && !ScrollNavigation.IsNavigationKeyDown(), TimeSpan.FromSeconds(15));
             var beforeWheel = gallery.VerticalOffset;
             card.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, -120) { RoutedEvent = UIElement.PreviewMouseWheelEvent });
-            PumpDispatcher(TimeSpan.FromMilliseconds(80)); window.UpdateLayout();
+            PumpDispatcher(TimeSpan.FromMilliseconds(120)); window.UpdateLayout();
             Assert.True(gallery.VerticalOffset > beforeWheel, "Native wheel input must move the library immediately without a retained tween.");
             var movedOffset = gallery.VerticalOffset;
             card.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, 120) { RoutedEvent = UIElement.PreviewMouseWheelEvent });
-            PumpDispatcher(TimeSpan.FromMilliseconds(80)); window.UpdateLayout();
-            Assert.True(gallery.VerticalOffset < movedOffset, "Reversing the wheel must take effect immediately.");
+            PumpDispatcher(TimeSpan.FromMilliseconds(120)); window.UpdateLayout();
+            Assert.True(gallery.VerticalOffset < movedOffset, $"Reversing the wheel must take effect immediately. movedOffset={movedOffset}, current={gallery.VerticalOffset}");
             gallery.ScrollToBottom();
             window.UpdateLayout();
             Assert.NotNull(((ItemsControl)library.FindName("LibraryGallery")).ItemContainerGenerator.ContainerFromIndex(model.PagedCatalogItems.Count - 1));
@@ -215,6 +220,8 @@ public sealed partial class PageSmokeTests
             Assert.InRange(gallery.VerticalOffset, 0, gallery.ScrollableHeight);
             library.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(library)!, 0, Key.Escape)
                 { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+            library.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(library)!, 0, Key.Escape)
+                { RoutedEvent = Keyboard.PreviewKeyUpEvent });
             PumpDispatcher(TimeSpan.FromMilliseconds(220));
             Assert.InRange(gallery.VerticalOffset, 0, gallery.ScrollableHeight);
 
@@ -239,6 +246,8 @@ public sealed partial class PageSmokeTests
             PumpUntil(() => ((Grid)fixesPage.FindName("OverlayGrid")).IsKeyboardFocusWithin);
             fixesPage.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(fixesPage)!, 0, Key.Escape)
                 { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+            fixesPage.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(fixesPage)!, 0, Key.Escape)
+                { RoutedEvent = Keyboard.PreviewKeyUpEvent });
             PumpDispatcher(TimeSpan.FromMilliseconds(200));
             Assert.Equal(Visibility.Collapsed, ((Grid)fixesPage.FindName("OverlayGrid")).Visibility);
             Assert.True(((Grid)fixesPage.FindName("MainContentGrid")).IsEnabled);

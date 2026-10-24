@@ -138,8 +138,6 @@ public static class SmoothScroll
         {
             if (!_animating || !ReferenceEquals(args.OriginalSource, _viewer)) return;
             var change = GetHorizontal(_viewer) ? args.HorizontalChange : args.VerticalChange;
-            // Explicit section navigation, BringIntoView, or a native scroll command
-            // owns its new position. Ignore the pixel rounding of our own requests.
             if (change != 0 && Math.Abs(CurrentOffset - _expectedOffset) > 1.5) Stop();
         }
         private void OnWheel(object sender, MouseWheelEventArgs args)
@@ -166,6 +164,12 @@ public static class SmoothScroll
             var distance = lines < 0 ? (GetHorizontal(_viewer) ? _viewer.ViewportWidth : _viewer.ViewportHeight) : Math.Max(1, lines) * 18;
             var direction = Math.Sign(args.Delta);
             if (_animating && direction != _direction) Stop(); // Reversal responds immediately, without accumulated momentum.
+            if (!_animating)
+            {
+                var initialStep = Math.Clamp(current - Math.Sign(args.Delta) * Math.Min(4, Math.Abs(args.Delta / 120d * distance)), 0, MaximumOffset);
+                CommitOffset(initialStep);
+                current = CurrentOffset;
+            }
             _direction = direction;
             _target = Math.Clamp((_animating ? _target : current) - args.Delta / 120d * distance, 0, MaximumOffset);
             if (Math.Abs(_target - current) < 0.5) return;
@@ -195,9 +199,7 @@ public static class SmoothScroll
             _lastTick = now;
             _target = destination;
             _motion.Retarget(destination);
-            // Input only updates the target. Commit once on the next render frame;
-            // a burst of wheel messages must not invent extra animation time or
-            // cause multiple layout passes before a frame can be presented.
+            _viewer.InvalidateVisual();
         }
         private void OnRendering(object? sender, EventArgs args)
         {
@@ -212,6 +214,8 @@ public static class SmoothScroll
             CommitOffset(_motion.Position);
             if (_motion.IsResting)
             { CompositionTarget.Rendering -= OnRendering; _animating = false; _lastRenderTime = null; }
+            else
+            { _viewer.InvalidateVisual(); }
         }
         private void CommitOffset(double offset)
         {

@@ -196,6 +196,8 @@ public sealed partial class PageSmokeTests
             var currentPage = Descendants<GameDetailsPage>(window).Single();
             currentPage.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
                 PresentationSource.FromVisual(window)!, 0, System.Windows.Input.Key.Escape) { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+            currentPage.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
+                PresentationSource.FromVisual(window)!, 0, System.Windows.Input.Key.Escape) { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyUpEvent });
             PumpUntil(() => Descendants<LibraryPage>(window).Any());
             Assert.True(((FrameworkElement)window.FindName("PersistentNavigation")).IsVisible);
             navigation.Navigate<SettingsPage>(); PumpUntil(() => Descendants<SettingsPage>(window).Any());
@@ -242,7 +244,11 @@ public sealed partial class PageSmokeTests
         Task<ChatMedia> WaitForClose(CancellationToken token) { closedToken = token; return pending.Task; }
         var scroll = (ScrollViewer)page.FindName("DetailsScroll"); var offset = scroll.VerticalOffset;
         var viewer = (GameScreenshotViewer)page.FindName("ScreenshotViewer");
-        void Key(System.Windows.Input.Key key) => viewer.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(window)!, 0, key) { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+        void Key(System.Windows.Input.Key key)
+        {
+            viewer.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(window)!, 0, key) { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+            viewer.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(window)!, 0, key) { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyUpEvent });
+        }
         try
         {
             var tile = Descendants<Button>((ItemsControl)page.FindName("ScreenshotGallery")).First(button => button.Tag is GameScreenshot);

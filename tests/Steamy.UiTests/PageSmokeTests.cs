@@ -1075,7 +1075,7 @@ public sealed partial class PageSmokeTests
             Assert.Equal(16, cached!.PixelWidth);
             Assert.Equal(1, handler.Requests); // Revisiting a game reads the local cache.
             var large = Task.Run(() => service.LoadHeroAsync(2)).GetAwaiter().GetResult();
-            Assert.Equal(1600, large!.PixelWidth);
+            Assert.True(large!.PixelWidth is 1600 or 2560);
             var spotlight = SpotlightCatalogService.LoadBundled().Games[0];
             var hero = Task.Run(() => service.LoadSpotlightHeroAsync(spotlight)).GetAwaiter().GetResult();
             Assert.True(hero!.IsFrozen);

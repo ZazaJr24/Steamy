@@ -490,14 +490,23 @@ public sealed class DashboardViewModel : ViewModelBase
         if (next.HeroArtwork is not null && next.Game.HeaderImage is not null) return;
         try
         {
-            if (!_heroLoads.TryGetValue(next.Metadata, out var hero))
+            Task<BitmapImage?>? hero = null;
+            Task<BitmapImage?>? header = null;
+            if (next.HeroArtwork is null && !_heroLoads.TryGetValue(next.Metadata, out hero))
                 _heroLoads[next.Metadata] = hero = Task.Run(() => _artwork.LoadSpotlightHeroAsync(next.Metadata, token), token);
-            if (!_headerLoads.TryGetValue(next.Metadata, out var header))
+            else if (next.HeroArtwork is null)
+                _heroLoads.TryGetValue(next.Metadata, out hero);
+
+            if (next.Game.HeaderImage is null && !_headerLoads.TryGetValue(next.Metadata, out header))
                 _headerLoads[next.Metadata] = header = Task.Run(() => _artwork.LoadSpotlightHeaderAsync(next.Metadata, token), token);
+            else if (next.Game.HeaderImage is null)
+                _headerLoads.TryGetValue(next.Metadata, out header);
+
             _ = LoadLogoAsync(next);
-            await Task.WhenAll(
-                PublishDiscoveryImageAsync(next, hero, image => next.HeroArtwork = image, token),
-                PublishDiscoveryImageAsync(next, header, image => next.Game.HeaderImage = image, token));
+            var tasks = new List<Task>();
+            if (hero is not null) tasks.Add(PublishDiscoveryImageAsync(next, hero, image => next.HeroArtwork = image, token));
+            if (header is not null) tasks.Add(PublishDiscoveryImageAsync(next, header, image => next.Game.HeaderImage = image, token));
+            if (tasks.Count > 0) await Task.WhenAll(tasks);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception exception) { Logging.Add(LogLevel.Debug, "Spotlight", $"Optional next image unavailable: {exception.GetType().Name}."); }

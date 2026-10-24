@@ -62,7 +62,7 @@ public sealed class SteamCatalogItem : UiObservableObject
 
     public bool Nsfw
     {
-        get => _nsfw;
+        get => _nsfw || Steamy.Services.GameClassification.IsNsfw(Name, GenresDisplay);
         set => SetProperty(ref _nsfw, value);
     }
     // Public catalogs contain hundreds of thousands of entries. Generate CDN addresses

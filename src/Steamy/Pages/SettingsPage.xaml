@@ -909,9 +909,8 @@
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
           <ui:ProgressRing Width="18" Height="18" Margin="0,0,12,0" IsIndeterminate="{Binding IsBusy}"
                            Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
-          <ui:Button Content="Reset defaults" Click="ResetDefaults_Click" Appearance="Secondary" Margin="0,0,8,0"
+          <ui:Button Content="Reset defaults" Click="ResetDefaults_Click" Appearance="Secondary" Margin="0,0,0,0"
                      ToolTip="Restore default settings" />
-          <ui:Button Content="Save now" Command="{Binding SaveCommand}" Appearance="Primary" />
         </StackPanel>
       </Grid>
     </Border>

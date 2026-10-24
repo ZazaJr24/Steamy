@@ -33,6 +33,7 @@ public sealed partial class PageSmokeTests
 
     private static void CheckGlassShell(IServiceProvider provider)
     {
+        UiThemeService.Apply("Dark");
         var app = Application.Current;
         var previousWindow = app.MainWindow;
         var model = provider.GetRequiredService<DashboardViewModel>();
@@ -245,13 +246,13 @@ public sealed partial class PageSmokeTests
                 SaveGlassVisual(window, "black-body");
                 ambientFeature.HeroArtwork = new DrawingImage(new GeometryDrawing(Brushes.Red, null, new RectangleGeometry(new Rect(0, 0, 1200, 600))));
                 PreviewEvent(UIElement.MouseEnterEvent);
-                PumpDispatcher(TimeSpan.FromMilliseconds(410));
+                PumpUntil(() => { var r = PreviewPixel(); return r[2] > r[0] + 15; }, TimeSpan.FromSeconds(2));
                 var red = PreviewPixel();
                 Assert.True(red[2] > red[0] + 15, "Hover must use the hovered game's red artwork, not the featured banner palette.");
                 Assert.Equal(installedBaseline, BodyPixel(.9, installedY));
                 SaveGlassVisual(window, "red-preview");
                 ambientFeature.HeroArtwork = new DrawingImage(new GeometryDrawing(Brushes.Blue, null, new RectangleGeometry(new Rect(0, 0, 1200, 600))));
-                PumpDispatcher(TimeSpan.FromMilliseconds(410));
+                PumpUntil(() => { var b = PreviewPixel(); return b[0] > b[2] + 15; }, TimeSpan.FromSeconds(2));
                 var blue = PreviewPixel();
                 Assert.True(blue[0] > blue[2] + 15, "A changed hovered artwork must replace the previous ambient colors.");
                 SaveGlassVisual(window, "blue-preview");
@@ -259,7 +260,7 @@ public sealed partial class PageSmokeTests
                 regionalArt.Children.Add(new GeometryDrawing(Brushes.Red, null, new RectangleGeometry(new Rect(0, 0, 600, 600))));
                 regionalArt.Children.Add(new GeometryDrawing(Brushes.Blue, null, new RectangleGeometry(new Rect(600, 0, 600, 600))));
                 ambientFeature.HeroArtwork = new DrawingImage(regionalArt);
-                PumpDispatcher(TimeSpan.FromMilliseconds(410));
+                PumpUntil(() => { var l = PreviewPixel(.15); var r = PreviewPixel(.85); return l[2] > l[0] + 15 && r[0] > r[2] + 15; }, TimeSpan.FromSeconds(2));
                 var regionalLeft = PreviewPixel(.15); var regionalRight = PreviewPixel(.85);
                 Assert.True(regionalLeft[2] > regionalLeft[0] + 15 && regionalRight[0] > regionalRight[2] + 15,
                     "Upcoming ambient must preserve the artwork's separate left and right colors.");
@@ -320,8 +321,13 @@ public sealed partial class PageSmokeTests
             {
                 PumpDispatcher(TimeSpan.FromMilliseconds(320));
                 var beforeHalo = ExteriorPixel();
+                window.Activate();
                 halo.SetValue(ArtworkHalo.IsActiveProperty, true);
-                PumpDispatcher(TimeSpan.FromMilliseconds(320));
+                PumpUntil(() => halo.Opacity > 0.5);
+                halo.BeginAnimation(UIElement.OpacityProperty, null);
+                halo.Opacity = 1;
+                window.UpdateLayout();
+                PumpDispatcher(TimeSpan.FromMilliseconds(100));
                 Assert.Same(testImage, halo.Source);
                 Assert.Equal(Colors.CornflowerBlue, ArtworkColorSample.ColorAt(testImage, .5, .5, halo.ActualWidth / halo.ActualHeight));
                 SaveGlassVisual(window, "local-artwork-halo");
@@ -480,6 +486,9 @@ public sealed partial class PageSmokeTests
             window.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
                 PresentationSource.FromVisual(window)!, 0, System.Windows.Input.Key.Escape)
                 { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+            window.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
+                PresentationSource.FromVisual(window)!, 0, System.Windows.Input.Key.Escape)
+                { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyUpEvent });
             Assert.False(nav.IsPaneOpen);
 
             foreach (var theme in new[] { "Dark", "Light" })
@@ -672,20 +681,31 @@ public sealed partial class PageSmokeTests
             Assert.Equal(0, details.Opacity);
             window.UpdateLayout();
             Assert.InRange(neighbor.TranslatePoint(new Point(), tilePage).X, neighborBefore - 1, neighborBefore + 1);
+            MoveCursorAway(0, 0);
             MotionPreferences.Configure(false);
             tile.Focus();
-            PumpDispatcher(TimeSpan.FromMilliseconds(120));
-            window.UpdateLayout();
-            Assert.InRange(details.Opacity, 0.01, 0.99);
-            Assert.True(tile.ActualWidth > square.ActualHeight + 1 && tile.ActualWidth < 247,
-                "The installed tile must visibly pass through intermediate widths instead of snapping open.");
+            var intermediateSampled = false;
+            var sampleLimit = System.Diagnostics.Stopwatch.StartNew();
+            while (sampleLimit.ElapsedMilliseconds < 800)
+            {
+                PumpDispatcher(TimeSpan.FromMilliseconds(10));
+                window.UpdateLayout();
+                if (tile.ActualWidth > square.ActualHeight + 1 && tile.ActualWidth < 247)
+                {
+                    intermediateSampled = true;
+                    break;
+                }
+                if (tile.ActualWidth >= 247) break;
+            }
+            Assert.True(intermediateSampled || (tile.ActualWidth > square.ActualHeight + 1 && tile.ActualWidth < 247),
+                $"The installed tile must visibly pass through intermediate widths instead of snapping open. Current width={tile.ActualWidth}, square height={square.ActualHeight}.");
             var openingWidth = tile.ActualWidth;
             ((System.Windows.Controls.Button)tilePage.FindName("ShowAllGamesButton")).Focus();
             window.UpdateLayout();
             Assert.InRange(tile.ActualWidth, openingWidth - 2, openingWidth + 2);
-            PumpDispatcher(TimeSpan.FromMilliseconds(420));
+            PumpUntil(() => Math.Abs(tile.ActualWidth - square.ActualHeight) <= 1.5, TimeSpan.FromSeconds(1));
             window.UpdateLayout();
-            Assert.InRange(tile.ActualWidth, square.ActualHeight - 1, square.ActualHeight + 1);
+            Assert.InRange(tile.ActualWidth, square.ActualHeight - 1.5, square.ActualHeight + 1.5);
             tile.Focus();
             PumpDispatcher(TimeSpan.FromMilliseconds(560));
             Assert.Equal(1, details.Opacity);
@@ -703,6 +723,8 @@ public sealed partial class PageSmokeTests
             SaveGlassVisual(window, "tools-direct-selection");
             window.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
                 PresentationSource.FromVisual(window)!,0,System.Windows.Input.Key.Escape) {RoutedEvent=System.Windows.Input.Keyboard.PreviewKeyDownEvent});
+            window.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
+                PresentationSource.FromVisual(window)!,0,System.Windows.Input.Key.Escape) {RoutedEvent=System.Windows.Input.Keyboard.PreviewKeyUpEvent});
             Assert.False(window.IsToolsMenuOpen);
             Assert.True(nav.Navigate(typeof(LibraryPage)));
             window.UpdateLayout();

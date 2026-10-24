@@ -15,7 +15,20 @@ public sealed class EnumToShowBoolConverter : IValueConverter
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => Binding.DoNothing;
+    {
+        if (value is bool b)
+        {
+            if (targetType == typeof(Steamy.ViewModels.LibraryNsfwScope))
+            {
+                return b ? Steamy.ViewModels.LibraryNsfwScope.Show : Steamy.ViewModels.LibraryNsfwScope.Hide;
+            }
+            if (parameter is string paramStr && Enum.TryParse(targetType, paramStr, out var parsed))
+            {
+                return b ? parsed : Enum.ToObject(targetType, 0);
+            }
+        }
+        return Binding.DoNothing;
+    }
 }
 
 public sealed class GenreNameConverter : IValueConverter

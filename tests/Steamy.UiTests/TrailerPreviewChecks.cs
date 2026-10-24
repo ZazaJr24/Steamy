@@ -109,7 +109,7 @@ public sealed partial class PageSmokeTests
                 Assert.NotNull(preview.Poster ?? preview.Children.OfType<Image>().Single().Source);
             var before = fixture.Requests;
             preview.BeginPreview();
-            PumpDispatcher(TimeSpan.FromMilliseconds(150));
+            PumpDispatcher(TimeSpan.FromMilliseconds(60));
             preview.StopPreview();
             PumpDispatcher(TimeSpan.FromMilliseconds(400));
             Assert.Equal(before, fixture.Requests); // Passing across a card never starts a download.

@@ -7,8 +7,8 @@
                  xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
                  FontFamily="{DynamicResource SteamyFontFamily}"
                  UseLayoutRounding="True" SnapsToDevicePixels="True"
-                 TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="Grayscale" TextOptions.TextHintingMode="Fixed"
-                 RenderOptions.ClearTypeHint="Auto" RenderOptions.BitmapScalingMode="HighQuality"
+                 TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType" TextOptions.TextHintingMode="Fixed"
+                 RenderOptions.ClearTypeHint="Enabled" RenderOptions.BitmapScalingMode="HighQuality"
                  Title="Steamy"
                  Height="900"
                  Width="1440"
@@ -52,7 +52,44 @@
       </ControlTemplate></Setter.Value></Setter>
     </Style>
 
-    <Style x:Key="ToolMenuButton" TargetType="Button" BasedOn="{StaticResource ShellPillButton}">
+        <Style x:Key="NotificationBellButton" TargetType="Button">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="Background" Value="{DynamicResource LauncherBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ShellChromeBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{StaticResource GalleryKeyboardFocus}" />
+      <Setter Property="controls:CardMotion.IsEnabled" Value="True" />
+      <Setter Property="controls:CardMotion.HoverScale" Value="1" />
+      <Setter Property="controls:CardMotion.HoverLift" Value="0" />
+      <Setter Property="controls:CardMotion.HoverDuration" Value="150" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Chrome" CornerRadius="18"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource ControlHoverBrush}" />
+                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource SidebarSelectedBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.5" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+<Style x:Key="ToolMenuButton" TargetType="Button" BasedOn="{StaticResource ShellPillButton}">
       <Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="14,12" /><Setter Property="FontSize" Value="13" /><Setter Property="MinHeight" Value="44" />
       <Setter Property="controls:CardMotion.IsEnabled" Value="False" />
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
@@ -262,8 +299,13 @@
       </Border>
     </Grid>
 
-    <Button x:Name="NotificationBell" Grid.RowSpan="2" Panel.ZIndex="6" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,180,0" Width="36" Height="36" MinHeight="36" Padding="8" Click="Notifications_Click" Style="{StaticResource ShellPillButton}" ToolTip="{Binding Tooltip}" AutomationProperties.Name="Notifications" shell:WindowChrome.IsHitTestVisibleInChrome="True">
-      <Grid><ui:SymbolIcon Symbol="Alert24" FontSize="19" /><Border Background="{DynamicResource SocialActionBrush}" CornerRadius="7" MinWidth="14" Height="14" Padding="3,0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-5,-7,0" Visibility="{Binding BadgeVisibility}"><TextBlock Text="{Binding BadgeLabel}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SocialOwnTextBrush}" TextAlignment="Center" /></Border></Grid>
+    <Button x:Name="NotificationBell" Grid.RowSpan="2" Panel.ZIndex="6" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,180,0" Width="36" Height="36" MinHeight="36" Padding="0" Click="Notifications_Click" Style="{StaticResource NotificationBellButton}" ToolTip="{Binding Tooltip}" AutomationProperties.Name="Notifications" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+      <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+        <ui:SymbolIcon Symbol="Alert24" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        <Border Background="{DynamicResource SocialActionBrush}" CornerRadius="7" MinWidth="14" Height="14" Padding="3,0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,-6,0" Visibility="{Binding BadgeVisibility}">
+          <TextBlock Text="{Binding BadgeLabel}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SocialOwnTextBrush}" TextAlignment="Center" />
+        </Border>
+      </Grid>
     </Button>
     <Popup x:Name="NotificationsPopup" PlacementTarget="{Binding ElementName=NotificationBell}" Placement="Bottom" VerticalOffset="10" StaysOpen="False" AllowsTransparency="True">
       <Border x:Name="NotificationCenterBorder" Width="400" MaxHeight="540" CornerRadius="18" Background="{DynamicResource SocialNotificationBrush}" BorderBrush="{DynamicResource SocialEdgeBrush}" BorderThickness="1" controls:RoundedClip.Radius="18"><controls:NotificationCenterPanel x:Name="NotificationPanel" /></Border>

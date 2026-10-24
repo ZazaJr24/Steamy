@@ -100,10 +100,14 @@ public sealed partial class PageSmokeTests
             var keyboardSource = PresentationSource.FromVisual(window)!;
             window.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, keyboardSource, Environment.TickCount, System.Windows.Input.Key.F10)
                 { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+            window.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, keyboardSource, Environment.TickCount, System.Windows.Input.Key.F10)
+                { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyUpEvent });
             Assert.True(((FrameworkElement)downloadPage.FindName("DownloadOptionsLayer")).IsVisible);
             Assert.False(((FrameworkElement)downloadPage.FindName("DeckFooter")).IsEnabled);
             window.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, keyboardSource, Environment.TickCount, System.Windows.Input.Key.Escape)
                 { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+            window.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, keyboardSource, Environment.TickCount, System.Windows.Input.Key.Escape)
+                { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyUpEvent });
             Assert.False(((FrameworkElement)downloadPage.FindName("DownloadOptionsLayer")).IsVisible);
             Assert.True(((FrameworkElement)downloadPage.FindName("DeckFooter")).IsEnabled);
             Descendants<Button>(downloadPage).Single(button => System.Windows.Automation.AutomationProperties.GetName(button) == "Open app menu")
@@ -111,6 +115,8 @@ public sealed partial class PageSmokeTests
             Assert.True(window.RootNavigationView.IsPaneOpen);
             window.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, keyboardSource, Environment.TickCount, System.Windows.Input.Key.Escape)
                 { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+            window.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, keyboardSource, Environment.TickCount, System.Windows.Input.Key.Escape)
+                { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyUpEvent });
             Assert.False(window.RootNavigationView.IsPaneOpen);
             Assert.Same(downloadPage, Descendants<DownloadsPage>(window).Single());
             window.Width = 980; window.UpdateLayout();

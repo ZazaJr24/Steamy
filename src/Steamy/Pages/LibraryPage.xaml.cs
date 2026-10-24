@@ -356,14 +356,36 @@ public partial class LibraryPage : Page
         if (sender is not ComboBox { IsDropDownOpen: false } combo) return;
         // Wheel input after picking a version should scroll the depot list, not silently
         // change the pinned manifest in the still-focused closed selector.
-        for (DependencyObject? parent = VisualTreeHelper.GetParent(combo); parent is not null; parent = VisualTreeHelper.GetParent(parent))
+        args.Handled = true;
+        ScrollViewer? scroll = null;
+        for (DependencyObject? parent = VisualTreeHelper.GetParent(combo) ?? LogicalTreeHelper.GetParent(combo); parent is not null; parent = VisualTreeHelper.GetParent(parent) ?? LogicalTreeHelper.GetParent(parent))
         {
-            if (parent is not ScrollViewer scroll) continue;
-            args.Handled = true;
+            if (parent is ScrollViewer viewer) { scroll = viewer; break; }
+        }
+        scroll ??= FindDescendantScrollViewer(DepotChoices);
+        if (scroll is not null)
+        {
+            if (args.Delta > 0)
+                scroll.ScrollToVerticalOffset(Math.Max(0, scroll.VerticalOffset - 24));
+            else if (args.Delta < 0)
+                scroll.ScrollToVerticalOffset(Math.Min(scroll.ScrollableHeight, scroll.VerticalOffset + 24));
+
             scroll.RaiseEvent(new MouseWheelEventArgs(args.MouseDevice, args.Timestamp, args.Delta)
                 { RoutedEvent = Mouse.MouseWheelEvent });
-            break;
         }
+    }
+
+    private static ScrollViewer? FindDescendantScrollViewer(DependencyObject root)
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is ScrollViewer viewer) return viewer;
+            var nested = FindDescendantScrollViewer(child);
+            if (nested is not null) return nested;
+        }
+        return null;
     }
 
     private async void AddToSteamTools_Click(object sender, RoutedEventArgs args)

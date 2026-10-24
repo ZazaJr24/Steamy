@@ -323,6 +323,7 @@ public sealed partial class PageSmokeTests
             Assert.True(Descendants<ListBoxItem>(messages).Count() < 80, "Offscreen messages must remain virtualized.");
             Assert.All(Descendants<ChatImagePreview>(messages), preview => Assert.Equal(Visibility.Collapsed, preview.Visibility));
             scroll.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(window), 0, System.Windows.Input.Key.Home) { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+            scroll.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(window), 0, System.Windows.Input.Key.Home) { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyUpEvent });
             scroll.ScrollToTop(); PumpDispatcher(TimeSpan.FromMilliseconds(80));
             model.Messages.Add(new DiscordChatMessage(7000, 1, 1, 0, 8, "A new incoming message", DateTimeOffset.UtcNow, false, false, false));
             PumpDispatcher(TimeSpan.FromMilliseconds(100));
