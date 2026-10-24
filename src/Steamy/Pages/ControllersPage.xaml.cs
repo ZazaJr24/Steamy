@@ -25,7 +25,7 @@ public partial class ControllersPage : Page
             if (polling is null || !IsVisible || Window.GetWindow(this) is { IsActive: false }) return;
             var model = (ControllersViewModel)DataContext;
             await model.RefreshNativeControllersAsync(polling.Token);
-            _timer.Interval = TimeSpan.FromMilliseconds(_step == 1 && model.Devices.Count > 0 ? 25 : 1000);
+            _timer.Interval = TimeSpan.FromMilliseconds(_step == 1 && model.Devices.Count > 0 ? 40 : 1000);
         };
         Loaded += async (_, _) =>
         {
@@ -34,7 +34,7 @@ public partial class ControllersPage : Page
             polling?.Cancel();
             polling?.Dispose();
             polling = new();
-            _timer.Interval = TimeSpan.FromMilliseconds(_step == 1 ? 25 : 1000);
+            _timer.Interval = TimeSpan.FromMilliseconds(_step == 1 ? 40 : 1000);
             _timer.Start();
             await model.RefreshNativeControllersAsync(polling.Token);
         };
@@ -57,7 +57,7 @@ public partial class ControllersPage : Page
         ConnectPanel.Visibility = step == 0 ? Visibility.Visible : Visibility.Collapsed;
         TestPanel.Visibility = step == 1 ? Visibility.Visible : Visibility.Collapsed;
         CustomizePanel.Visibility = step == 2 ? Visibility.Visible : Visibility.Collapsed;
-        _timer.Interval = TimeSpan.FromMilliseconds(_step == 1 ? 25 : 1000);
+        _timer.Interval = TimeSpan.FromMilliseconds(_step == 1 ? 40 : 1000);
         ControllerScroll.ScrollToTop();
     }
 

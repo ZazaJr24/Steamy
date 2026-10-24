@@ -3,6 +3,16 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
+## 0.8.1.3
+
+### Performance, scroll responsiveness, and visual polish
+
+- **Scroll responsiveness:** Eliminated wheel notch throttling and sluggish animation damping in the Games catalog and library galleries. Wheel input responds immediately with natural, smooth scrolling.
+- **Light theme contrast:** Refined surface palettes with calm tinted off-white canvases, crisp control boundaries, and elevated card contrasts.
+- **Downloads page overhaul:** Removed murky dark scrim overlays, reorganized download options with grouped sections and clear filter controls.
+- **Controller diagnostics:** Optimized polling intervals and selective property-change notifications to eliminate UI-thread stutter.
+- **Game fixes view:** Redesigned empty states, package dialogs, and game cards to match the gallery aesthetics.
+
 ## 0.8.1.2
 
 ### Light theme controls, visual polish, and architecture updates

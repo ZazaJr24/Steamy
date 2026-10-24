@@ -20,7 +20,14 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="14" />
       <Setter Property="Padding" Value="16,14" />
-      <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="Margin" Value="0,0,0,10" />
+      <Setter Property="SnapsToDevicePixels" Value="True" />
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+          <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+        </Trigger>
+      </Style.Triggers>
     </Style>
     <Style x:Key="DialogSectionLabel" TargetType="TextBlock">
       <Setter Property="FontSize" Value="10" />
@@ -108,9 +115,9 @@
                      Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
         <!-- Empty state -->
-        <TextBlock Margin="2,12,0,0">
-          <TextBlock.Style>
-            <Style TargetType="TextBlock" BasedOn="{StaticResource MutedTextStyle}">
+        <Border Margin="0,48,0,32" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Border.Style>
+            <Style TargetType="Border">
               <Setter Property="Visibility" Value="Collapsed" />
               <Style.Triggers>
                 <DataTrigger Binding="{Binding HasGames}" Value="False">
@@ -118,9 +125,16 @@
                 </DataTrigger>
               </Style.Triggers>
             </Style>
-          </TextBlock.Style>
-          <Run Text="{Binding EmptyStateMessage, Mode=OneWay}" />
-        </TextBlock>
+          </Border.Style>
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="440">
+            <Border Width="56" Height="56" CornerRadius="28" Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,16">
+              <ui:SymbolIcon Symbol="Wrench24" FontSize="26" Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="No game fixes found" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,8" />
+            <TextBlock Text="{Binding EmptyStateMessage}" Style="{StaticResource MutedTextStyle}" FontSize="13" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,16" />
+            <ui:Button Content="Refresh fixes" Icon="{ui:SymbolIcon ArrowClockwise24}" Command="{Binding FetchCommand}" Appearance="Secondary" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
 
         <!-- Game cards grid -->
         <ItemsControl ItemsSource="{Binding PagedGames}" HorizontalAlignment="Stretch" controls:EntranceMotion.Delay="30">
@@ -131,7 +145,7 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Button Tag="{Binding}" Click="GameCard_Click" ToolTip="{Binding Name}"
+              <Button x:Name="Card" Tag="{Binding}" Click="GameCard_Click" ToolTip="{Binding Name}"
                       Style="{StaticResource GalleryCardButton}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Grid>
                   <Grid.RowDefinitions>
@@ -139,30 +153,45 @@
                     <RowDefinition Height="56" />
                   </Grid.RowDefinitions>
 
-                  <!-- Cover -->
-                  <Grid ClipToBounds="True" Background="Transparent">
-                    <Border CornerRadius="15"><Border.Background><ImageBrush ImageSource="{Binding ArtworkImage}" Stretch="UniformToFill" /></Border.Background></Border>
-                    <Border CornerRadius="15" Background="{DynamicResource SurfaceSubtleBrush}"
-                            Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-                      <StackPanel VerticalAlignment="Center">
-                        <Rectangle Height="10" Margin="34,0,34,12" RadiusX="5" RadiusY="5" Fill="{DynamicResource ControlHoverBrush}" />
-                        <Rectangle Height="10" Margin="24,0,24,0" RadiusX="5" RadiusY="5" Fill="{DynamicResource ControlHoverBrush}" />
-                      </StackPanel>
-                    </Border>
-                    <TextBlock Text="{Binding CoverGlyph}"
-                               Foreground="{DynamicResource TextTertiaryBrush}"
-                               FontSize="32"
-                               FontWeight="Bold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <Border Style="{StaticResource CoverBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
-                      <TextBlock Text="{Binding Summary}" Style="{StaticResource CoverBadgeTextStyle}" />
-                    </Border>
-                  </Grid>
+                  <!-- Cover matching LibraryPage aesthetic -->
+                  <Border x:Name="Cover" CornerRadius="14" Background="#141418" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1" controls:RoundedClip.Radius="14">
+                    <Grid ClipToBounds="True">
+                      <Image Source="{Binding ArtworkImage}" RenderOptions.BitmapScalingMode="HighQuality" Stretch="UniformToFill" />
+                      <Border CornerRadius="14" Background="{DynamicResource SurfaceSubtleBrush}"
+                              Visibility="{Binding IsArtworkLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel VerticalAlignment="Center">
+                          <Rectangle Height="10" Margin="34,0,34,12" RadiusX="5" RadiusY="5" Fill="{DynamicResource ControlHoverBrush}" />
+                          <Rectangle Height="10" Margin="24,0,24,0" RadiusX="5" RadiusY="5" Fill="{DynamicResource ControlHoverBrush}" />
+                        </StackPanel>
+                      </Border>
+                      <Border Background="#171920" Visibility="{Binding IsArtworkFallback, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{Binding CoverGlyph}"
+                                   Foreground="#70FFFFFF"
+                                   FontSize="36"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                      </Border>
+                      <Border Height="56" VerticalAlignment="Bottom" IsHitTestVisible="False">
+                        <Border.Background>
+                          <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="Transparent" Offset="0" />
+                            <GradientStop Color="#90080B10" Offset="1" />
+                          </LinearGradientBrush>
+                        </Border.Background>
+                      </Border>
+                      <!-- Fix count badge pill -->
+                      <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8"
+                              CornerRadius="6" Background="#B80D1016" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="7,3" IsHitTestVisible="False">
+                        <TextBlock Text="{Binding Summary}" Style="{StaticResource CoverBadgeTextStyle}" />
+                      </Border>
+                      <!-- Hover focus ring -->
+                      <Border x:Name="CoverFocusRing" CornerRadius="14" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2" Opacity="0" IsHitTestVisible="False" />
+                    </Grid>
+                  </Border>
 
                   <!-- Footer -->
-                  <StackPanel Grid.Row="1" Margin="3,0" VerticalAlignment="Center">
+                  <StackPanel Grid.Row="1" Margin="3,8,3,0" VerticalAlignment="Top">
                     <TextBlock Text="{Binding Name}"
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                FontSize="12.5"
@@ -176,6 +205,15 @@
                   </StackPanel>
                 </Grid>
               </Button>
+              <DataTemplate.Triggers>
+                <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
+                  <Setter TargetName="CoverFocusRing" Property="Opacity" Value="0.6" />
+                  <Setter TargetName="Cover" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+                </Trigger>
+                <Trigger SourceName="Card" Property="IsKeyboardFocusWithin" Value="True">
+                  <Setter TargetName="CoverFocusRing" Property="Opacity" Value="1" />
+                </Trigger>
+              </DataTemplate.Triggers>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -219,25 +257,25 @@
 
     <!-- Fix dialog overlay -->
     <Grid x:Name="OverlayGrid" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle">
-      <Border Background="#B3000000" MouseLeftButtonUp="Overlay_Close" />
+      <Border Background="#99000000" MouseLeftButtonUp="Overlay_Close" />
       <Border x:Name="DialogPanel"
               HorizontalAlignment="Center"
               VerticalAlignment="Center"
               Background="{DynamicResource DialogSurfaceBrush}"
-              BorderBrush="{DynamicResource BorderSubtleBrush}"
+              BorderBrush="{DynamicResource GlassBorderBrush}"
               BorderThickness="1"
               CornerRadius="20"
-              Width="560"
+              Width="580"
               MaxHeight="720"
               UseLayoutRounding="True"
               SnapsToDevicePixels="True"
               RenderTransformOrigin="0.5,0.5">
         <Border.Effect>
-          <DropShadowEffect BlurRadius="40" ShadowDepth="8" Direction="270" Color="#000000" Opacity="0.5" />
+          <DropShadowEffect BlurRadius="44" ShadowDepth="10" Direction="270" Color="#000000" Opacity="0.5" />
         </Border.Effect>
         <Border.RenderTransform><ScaleTransform x:Name="DialogScale" ScaleX="1" ScaleY="1" /></Border.RenderTransform>
         <Border.Clip>
-          <RectangleGeometry Rect="0,0,560,720" RadiusX="20" RadiusY="20" />
+          <RectangleGeometry Rect="0,0,580,720" RadiusX="20" RadiusY="20" />
         </Border.Clip>
         <Grid>
           <Grid.RowDefinitions>

@@ -13,12 +13,13 @@ namespace Steamy.UiTests;
 public sealed class PaperThemeTests
 {
     [Fact]
-    public void WhitePaletteHasWhiteCanvasesAndReadableBodyText()
+    public void LightPaletteHasCalmTintedCanvasesAndReadableBodyText()
     {
         OnSta(() =>
         {
+            var expected = (Color)ColorConverter.ConvertFromString("#F1F5F9");
             foreach (var key in new[] { "AppBackgroundBrush", "GameDetailsBackgroundBrush", "ApplicationBackgroundBrush", "SolidBackgroundFillColorBaseBrush" })
-                Assert.Equal(Colors.White, Assert.IsType<SolidColorBrush>(PaletteBrush(key)).Color);
+                Assert.Equal(expected, Assert.IsType<SolidColorBrush>(PaletteBrush(key)).Color);
             foreach (var key in new[] { "TextPrimaryBrush", "TextSecondaryBrush", "TextTertiaryBrush" })
                 Assert.True((1.05 / (UiThemeService.Luminance(Assert.IsType<SolidColorBrush>(PaletteBrush(key)).Color) + .05)) >= 4.5, key);
             foreach (var key in new[] { "SidebarBackgroundBrush", "SurfaceBrush", "SurfaceElevatedBrush", "GlassSurfaceBrush", "DialogSurfaceBrush" })

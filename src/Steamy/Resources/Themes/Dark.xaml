@@ -145,6 +145,10 @@
   <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#06FFFFFF" />
   <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#18FFFFFF" />
   <SolidColorBrush x:Key="ControlStrokeColorSecondaryBrush" Color="#20FFFFFF" />
+  <SolidColorBrush x:Key="DownloadOptionsScrimBrush" Color="#60000000" />
+  <SolidColorBrush x:Key="DeckButtonBackground" Color="#20FFFFFF" />
+  <SolidColorBrush x:Key="DeckButtonBorder" Color="#24FFFFFF" />
+  <SolidColorBrush x:Key="DeckButtonHover" Color="#30FFFFFF" />
 
   <!-- Dark labels keep the neutral light primary buttons readable. -->
   <SolidColorBrush x:Key="AccentButtonForeground" Color="#0D0D10" />

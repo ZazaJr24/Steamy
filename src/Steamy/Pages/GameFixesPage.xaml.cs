@@ -180,6 +180,9 @@ public partial class GameFixesPage : Page
                 Appearance = Wpf.Ui.Controls.ControlAppearance.Secondary,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(12, 0, 0, 0),
+                Padding = new Thickness(14, 6, 14, 6),
+                CornerRadius = new CornerRadius(8),
+                ToolTip = $"Apply {fix.Filename}",
                 Tag = fix
             };
             applyBtn.Click += ApplySingleFix_Click;

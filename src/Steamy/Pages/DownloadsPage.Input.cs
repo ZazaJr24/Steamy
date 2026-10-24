@@ -76,14 +76,18 @@ public partial class DownloadsPage
     {
         var highContrast = UiThemeService.IsHighContrastActive || SystemParameters.HighContrast;
         Brush ColorBrush(string color) { var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)); brush.Freeze(); return brush; }
-        BrushResources.Set(Resources, "DeckBackground", highContrast ? SystemColors.WindowBrush : ColorBrush(UiThemeService.IsLight ? "#FFFFFF" : "#202124"));
+        BrushResources.Set(Resources, "DeckBackground", highContrast ? SystemColors.WindowBrush : ColorBrush(UiThemeService.IsLight ? "#F1F5F9" : "#202124"));
         BrushResources.Set(Resources, "DeckHeroBackground", highContrast ? SystemColors.WindowBrush : (Brush)FindResource("GlassSurfaceBrush"));
         foreach (var (key, dark, light) in new[] { ("DeckText", "#F1F2F3", "#20212B"), ("DeckSecondary", "#B8BBC4", "#4F5362"), ("DeckMuted", "#9297A4", "#646A79") })
             BrushResources.Set(Resources, key, highContrast ? SystemColors.WindowTextBrush : ColorBrush(UiThemeService.IsLight ? light : dark));
         BrushResources.Set(Resources, "DeckBlue", highContrast ? SystemColors.HighlightBrush : ColorBrush(UiThemeService.IsLight ? "#2563EB" : "#79BDE8"));
         BrushResources.Set(Resources, "DeckGreen", highContrast ? SystemColors.HighlightBrush : ColorBrush(UiThemeService.IsLight ? "#387510" : "#A4D007"));
         BrushResources.Set(Resources, "DeckLine", highContrast ? SystemColors.GrayTextBrush : ColorBrush(UiThemeService.IsLight ? "#D9DCE5" : "#3A3C42"));
+        BrushResources.Set(Resources, "DeckButtonBackground", highContrast ? SystemColors.ControlBrush : (Brush)FindResource("DeckButtonBackground"));
+        BrushResources.Set(Resources, "DeckButtonBorder", highContrast ? SystemColors.ControlDarkBrush : (Brush)FindResource("DeckButtonBorder"));
+        BrushResources.Set(Resources, "DeckButtonHover", highContrast ? SystemColors.HighlightBrush : (Brush)FindResource("DeckButtonHover"));
+        BrushResources.Set(Resources, "DownloadOptionsScrimBrush", highContrast ? ColorBrush("#80000000") : (Brush)FindResource("DownloadOptionsScrimBrush"));
         DeckFooter.Background = highContrast ? SystemColors.WindowBrush : (Brush)FindResource("GlassSurfaceBrush");
-        DownloadOptionsPanel.Background = highContrast ? SystemColors.WindowBrush : (Brush)FindResource("DialogSurfaceBrush");
+        DownloadOptionsPanel.Background = highContrast ? SystemColors.WindowBrush : (Brush)FindResource("SolidSurfaceBrush");
     }
 }

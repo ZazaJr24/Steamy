@@ -43,7 +43,11 @@ internal static class HostProgram
         using var parent = Process.GetProcessById(parentId);
         parent.EnableRaisingEvents = true; parent.Exited += (_, _) => Lifetime.Cancel();
         if (parent.HasExited) return 2;
-        using var ownedSession = new Mutex(true, "Local\\Steamy.ControllerHost." + Environment.UserName, out var ownsSession);
+        var testData = Environment.GetEnvironmentVariable("STEAMY_CONTROLLER_TEST_DATA");
+        var mutexName = string.IsNullOrEmpty(testData)
+            ? "Local\\Steamy.ControllerHost." + Environment.UserName
+            : "Local\\Steamy.ControllerHost.Test." + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(testData)));
+        using var ownedSession = new Mutex(true, mutexName, out var ownsSession);
         if (!ownsSession) return 3;
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));

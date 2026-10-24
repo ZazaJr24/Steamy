@@ -35,7 +35,8 @@ public sealed class SteamCatalogIndex
         foreach (var entry in _entries)
         {
             token.ThrowIfCancellationRequested();
-            if (text.Length > 0 && entry.AppId != id && !entry.Name.Contains(text, StringComparison.OrdinalIgnoreCase)) continue;
+            if (id is { } selectedId ? entry.AppId != selectedId
+                : text.Length > 0 && !entry.Name.Contains(text, StringComparison.OrdinalIgnoreCase)) continue;
             if (total++ >= offset && items.Count < limit) items.Add(entry);
         }
         return new(items, total);

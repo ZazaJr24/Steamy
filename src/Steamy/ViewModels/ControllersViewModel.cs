@@ -53,7 +53,29 @@ public sealed class ControllersViewModel : ObservableObject, IDisposable
     public string[] Curves { get; } = ["Linear", "Enhanced precision", "Quadratic", "Cubic"];
     public string[] Outputs { get; } = ["A", "B", "X", "Y", "LB", "RB", "LT", "RT", "LS", "RS", "Start", "Back", "DpadUp", "DpadDown", "DpadLeft", "DpadRight", "Guide", "Unbound"];
     public ControllerProfile? SelectedProfile { get => _selected; set { if (SetProperty(ref _selected, value) && value is not null) Edit(value); } }
-    public ControllerDevice? SelectedDevice { get => _device; set { if (SetProperty(ref _device, value)) { _liveDevice = FindLiveDevice(); OnPropertyChanged(nameof(InputText)); OnPropertyChanged(nameof(DeviceInfo)); OnPropertyChanged(nameof(NativeDeviceVisibility)); OnPropertyChanged(nameof(MapperVisibility)); RumbleCommand?.NotifyCanExecuteChanged(); Refresh(stateChanged: true); } } }
+    public ControllerDevice? SelectedDevice
+    {
+        get => _device;
+        set
+        {
+            if (SetProperty(ref _device, value))
+            {
+                _liveDevice = FindLiveDevice();
+                OnPropertyChanged(nameof(InputText));
+                OnPropertyChanged(nameof(DeviceInfo));
+                OnPropertyChanged(nameof(NativeDeviceVisibility));
+                OnPropertyChanged(nameof(MapperVisibility));
+                OnPropertyChanged(nameof(HasDevice));
+                OnPropertyChanged(nameof(DeviceConnectedVisibility));
+                OnPropertyChanged(nameof(NoDeviceVisibility));
+                OnPropertyChanged(nameof(DeviceDisplayName));
+                OnPropertyChanged(nameof(ConnectionBadge));
+                OnPropertyChanged(nameof(BatteryText));
+                OnPropertyChanged(nameof(IsCharging));
+                RumbleCommand?.NotifyCanExecuteChanged();
+            }
+        }
+    }
     private ControllerDevice? FindLiveDevice() => _backend.State.Devices.FirstOrDefault(device => device.Id == _device?.Id) ?? _windowsDevices.FirstOrDefault(device => device.Id == _device?.Id);
     private ControllerDevice? LiveDevice => _liveDevice;
     public Visibility NativeDeviceVisibility => SelectedDevice?.Id.StartsWith("xinput:", StringComparison.Ordinal) == true ? Visibility.Visible : Visibility.Collapsed;

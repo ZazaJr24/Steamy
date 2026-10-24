@@ -54,4 +54,7 @@ TestResults/
 **/TestResults/
 .vscode/
 
+# Native desktop preview remains local until full feature parity is verified.
 src/Steamy.Desktop/
+tests/Steamy.Desktop.Probe/
+Steamy.Desktop.slnx

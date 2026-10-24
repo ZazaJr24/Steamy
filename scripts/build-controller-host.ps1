@@ -30,7 +30,7 @@ if (!$editorText.Contains('using ContextMenu = System.Windows.Controls.ContextMe
     $editorText = "using ContextMenu = System.Windows.Controls.ContextMenu;`r`nusing MenuItem = System.Windows.Controls.MenuItem;`r`n" + $editorText
     [IO.File]::WriteAllText($editorPath, $editorText)
 }
-$outputPath = if ([IO.Path]::IsPathFullyQualified($OutputDirectory)) { $OutputDirectory } else { Join-Path $repoRoot $OutputDirectory }
+$outputPath = if ([IO.Path]::IsPathRooted($OutputDirectory)) { $OutputDirectory } else { Join-Path $repoRoot $OutputDirectory }
 & dotnet publish $projectPath -c Release -p:Platform=x64 -r win-x64 --self-contained true -p:RuntimeFrameworkVersion=10.0.13 -p:PublishSingleFile=false -o $outputPath -v minimal
 if ($LASTEXITCODE -ne 0) { throw 'ControllerHost publish failed.' }
 Copy-Item -LiteralPath (Join-Path $sourceTree 'COPYING'), (Join-Path $sourceTree 'LICENSE.txt'), (Join-Path $sourceTree 'NOTICE.txt') -Destination $outputPath -Force

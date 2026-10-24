@@ -138,7 +138,7 @@ public static class SmoothScroll
         {
             if (!_animating || !ReferenceEquals(args.OriginalSource, _viewer)) return;
             var change = GetHorizontal(_viewer) ? args.HorizontalChange : args.VerticalChange;
-            if (change != 0 && Math.Abs(CurrentOffset - _expectedOffset) > 1.5) Stop();
+            if (change != 0 && Math.Abs(CurrentOffset - _expectedOffset) > 24.0) Stop();
         }
         private void OnWheel(object sender, MouseWheelEventArgs args)
             => OnWheelCore(sender, args, Keyboard.Modifiers);
@@ -161,12 +161,13 @@ public static class SmoothScroll
             var current = CurrentOffset;
             var lines = SystemParameters.WheelScrollLines;
             if (lines == 0) return;
-            var distance = lines < 0 ? (GetHorizontal(_viewer) ? _viewer.ViewportWidth : _viewer.ViewportHeight) : Math.Max(1, lines) * 18;
+            var distance = lines < 0 ? (GetHorizontal(_viewer) ? _viewer.ViewportWidth : _viewer.ViewportHeight) : Math.Max(1, lines) * 44;
             var direction = Math.Sign(args.Delta);
             if (_animating && direction != _direction) Stop(); // Reversal responds immediately, without accumulated momentum.
             if (!_animating)
             {
-                var initialStep = Math.Clamp(current - Math.Sign(args.Delta) * Math.Min(4, Math.Abs(args.Delta / 120d * distance)), 0, MaximumOffset);
+                var stepSize = Math.Min(36.0, Math.Abs(args.Delta / 120d * distance) * 0.35);
+                var initialStep = Math.Clamp(current - Math.Sign(args.Delta) * stepSize, 0, MaximumOffset);
                 CommitOffset(initialStep);
                 current = CurrentOffset;
             }
