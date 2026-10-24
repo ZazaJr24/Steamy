@@ -5,9 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PlayTimeTracker</AssemblyName>
-    <Version>0.8.0.2</Version>
-    <FileVersion>0.8.0.2</FileVersion>
-    <AssemblyVersion>0.8.0.2</AssemblyVersion>
+    <Version>0.8.1.2</Version>
+    <FileVersion>0.8.1.2</FileVersion>
+    <AssemblyVersion>0.8.1.2</AssemblyVersion>
     <Product>Steamy PlayTimeTracker</Product>
     <Description>Local background game runtime tracker for Steamy</Description>
     <ApplicationIcon>../Steamy/Resources/Brand/steamy.ico</ApplicationIcon>
@@ -15,6 +15,6 @@
   <ItemGroup>
     <Compile Include="../Steamy/Storage/AppDataPaths.cs" Link="Storage/AppDataPaths.cs" />
     <Compile Include="../Steamy/Playtime/PlayTimeData.cs" Link="PlayTimeData.cs" />
-    <Compile Include="../Steamy/Services/Steam/VdfParser.cs" Link="VdfParser.cs" />
+    <Compile Include="../Steamy.Core/Steam/VdfParser.cs" Link="VdfParser.cs" />
   </ItemGroup>
 </Project>

@@ -56,6 +56,12 @@ public partial class GameFixesPage : Page
         await ShowOverlayAsync();
     }
 
+    private void ManageLocal_Click(object sender, RoutedEventArgs e)
+    {
+        new LocalCatalogEditorWindow(App.Services.GetRequiredService<LocalGameCatalog>(), "Fix") { Owner = Window.GetWindow(this) }.ShowDialog();
+        ((GameFixesViewModel)DataContext).FetchCommand.Execute(null);
+    }
+
     private async Task LoadHeroImageAsync(GameFixGameCard card)
     {
         OverlayHeroImage.Source = card.ArtworkImage;
@@ -99,6 +105,10 @@ public partial class GameFixesPage : Page
         FixesList.Children.Clear();
         foreach (var fix in game.Fixes)
         {
+            if (!string.IsNullOrWhiteSpace(fix.Instructions))
+                FixesList.Children.Add(new Expander { Header = "Instructions · " + fix.Filename, Margin = new Thickness(0, 4, 0, 14),
+                    Content = new TextBox { Text = fix.Instructions, IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
+                        Foreground = TertiaryText, MaxHeight = 220, VerticalScrollBarVisibility = ScrollBarVisibility.Auto } });
             var row = new Border { Style = (Style)FindResource("FixRow") };
 
             var grid = new Grid();
@@ -232,6 +242,16 @@ public partial class GameFixesPage : Page
     private async Task DownloadAndApplyFixAsync(FixEntry fix)
     {
         var downloadService = App.Services.GetRequiredService<IGameFixDownloadService>();
+        if (!string.IsNullOrEmpty(fix.LocalArchivePath))
+        {
+            if (!File.Exists(fix.LocalArchivePath)) throw new FileNotFoundException("The local fix archive is missing. Update its path in Manage local catalog.");
+            SetStatus($"Applying local archive {fix.Filename}…", StatusKind.Info);
+            var applied = await downloadService.ApplyArchiveAsync(fix.LocalArchivePath, _folderPath,
+                new Progress<string>(message => SetStatus(message, StatusKind.Info)));
+            if (!applied.Succeeded) throw new InvalidOperationException(applied.Message);
+            SetStatus($"Applied local archive {fix.Filename} — {applied.ExtractedSize}", StatusKind.Success);
+            return;
+        }
         var logging = App.Services.GetRequiredService<ILoggingService>();
         var settings = App.Services.GetRequiredService<ISettingsService>().Load();
         var gameName = _selectedCard?.Name ?? "Unknown";

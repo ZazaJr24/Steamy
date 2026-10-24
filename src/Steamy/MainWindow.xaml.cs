@@ -109,7 +109,7 @@ public partial class MainWindow : FluentWindow
             QueueCaptionAppearance();
             Controls.PillMotion.SetSelectedIndex(ShellPillItems, args.Page is Pages.DashboardPage ? 0 : args.Page is Pages.LibraryPage or Pages.GameDetailsPage ? 1
                 : args.Page is Pages.FriendsHubPage or Pages.FriendsPage ? 2 : args.Page is Pages.DownloadsPage ? 7 : args.Page is Pages.FriendsPage or Pages.CommunityPage ? 5 : args.Page is Pages.SettingsPage ? 6
-                : args.Page is Pages.GameFixesPage or Pages.HypervisorFixesPage ? 4 : 3);
+                : args.Page is Pages.GameFixesPage ? 4 : 3);
             RootNavigation.IsPaneOpen = false;
         };
         PreviewKeyDown += (_, args) =>
@@ -206,7 +206,7 @@ public partial class MainWindow : FluentWindow
         if (!DiscordIntegration.Enabled && DiscordIntegration.IsSocialPage(route)) return;
         var revision = ++_routeRevision;
         Controls.PillMotion.SetSelectedIndex(ShellPillItems, route == typeof(Pages.DashboardPage) ? 0 : route == typeof(Pages.LibraryPage) ? 1
-            : route == typeof(Pages.FriendsPage) ? 2 : route == typeof(Pages.DownloadsPage) ? 7 : route == typeof(Pages.FriendsPage) || route == typeof(Pages.CommunityPage) ? 5 : route == typeof(Pages.SettingsPage) ? 6 : route == typeof(Pages.GameFixesPage) || route == typeof(Pages.HypervisorFixesPage) ? 4 : 3);
+            : route == typeof(Pages.FriendsPage) ? 2 : route == typeof(Pages.DownloadsPage) ? 7 : route == typeof(Pages.FriendsPage) || route == typeof(Pages.CommunityPage) ? 5 : route == typeof(Pages.SettingsPage) ? 6 : route == typeof(Pages.GameFixesPage) ? 4 : 3);
         if (PageGlassSurface?.GetType() == route) return;
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() =>
         { if (revision == _routeRevision && IsLoaded) RootNavigation.Navigate(route); }));

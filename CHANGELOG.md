@@ -3,15 +3,17 @@
 Each GitHub release uses the section of its version as its release notes.
 Add a new `## x.y.z` section at the top before tagging.
 
-## 0.8.0.2
+## 0.8.1.2
 
-### Light theme controls, visual polish, and scroll fixes
+### Light theme controls, visual polish, and architecture updates
 
 - **Light theme contrast:** Added dedicated light theme styling for search input fields, filter mode toggle pills, sort dropdowns, and header buttons.
 - **Visual cut-offs:** Fixed clipping on search containers and adjusted control bounds to eliminate seams across all themes.
 - **NSFW filter fix:** Restored automatic content classification and two-way binding for library NSFW display scope.
 - **Scroll responsiveness:** Synchronized immediate wheel direction reversal while preserving spring-damped smooth follow-through.
 - **Rendering stability:** Preserved ClearType text rendering across windows and prevented duplicate artwork warmup requests.
+- **Local catalog management:** Added standalone Local Catalog Editor and automatic retirement for legacy entries.
+- **Platform modularity:** Extracted core Steam interfaces and utilities into standalone Steamy.Core library.
 
 ## 0.8.1
 

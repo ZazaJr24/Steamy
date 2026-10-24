@@ -102,6 +102,8 @@ public sealed partial class PageSmokeTests
         if (Environment.GetEnvironmentVariable("STEAMY_UI_GAME_DETAILS_ONLY") == "1" || Environment.GetEnvironmentVariable("STEAMY_UI_ACCEPTANCE_ONLY") == "1" || Environment.GetEnvironmentVariable("STEAMY_UI_FLOW_OFFSCREEN_ONLY") == "1")
             services.AddSingleton<IPlayTimeService>(detailsFixture);
         TracePhase("Test services registered");
+        if (Environment.GetEnvironmentVariable("STEAMY_UI_LOCAL_CATALOG_ONLY") == "1")
+            services.AddSingleton<LocalGameCatalog>(_ => new LocalGameCatalog(Path.Combine(Environment.GetEnvironmentVariable("STEAMY_UI_ARTIFACTS")!, "local-catalog.json")));
         using var provider = services.BuildServiceProvider();
         typeof(App).GetProperty(nameof(App.Services))!.SetValue(null, provider);
         var bindingLog = new BindingLog();
@@ -442,7 +444,7 @@ public sealed partial class PageSmokeTests
                 UiThemeService.Apply(theme);
                 _phase = "Library dialog " + theme;
                 CheckLibraryDialog(provider, theme);
-                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage(), new HypervisorFixesPage(), new GameFixesPage(), new CreamApiPage(), new BetterSteamToolsPage() })
+                foreach (var page in new Page[] { new DashboardPage(), new DownloadsPage(), new SettingsPage(), new DepotDownloaderPage(), new LibraryPage(), new DenuvoActivationPage(), new GameFixesPage(), new CreamApiPage(), new BetterSteamToolsPage() })
                 {
                     _phase = theme + " " + page.GetType().Name;
                     PumpDispatcher(TimeSpan.FromMilliseconds(100));
@@ -848,9 +850,9 @@ public sealed partial class PageSmokeTests
         SaveVisual(window, "download-location.png");
         page.CloseOverlay();
         PumpDispatcher(TimeSpan.FromMilliseconds(250));
-        Assert.True(window.RootNavigationView.Navigate(typeof(HypervisorFixesPage)));
+        Assert.True(window.RootNavigationView.Navigate(typeof(GameFixesPage)));
         PumpDispatcher(TimeSpan.FromMilliseconds(300));
-        SaveVisual(window, "hypervisor-fixes.png");
+        SaveVisual(window, "game-fixes.png");
         Assert.True(window.RootNavigationView.Navigate(typeof(GameFixesPage)));
         var fixesModel = provider.GetRequiredService<GameFixesViewModel>();
         var fixesFetch = ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)fixesModel.FetchCommand).ExecuteAsync(null);

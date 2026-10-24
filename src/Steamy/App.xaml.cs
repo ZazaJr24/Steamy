@@ -25,6 +25,33 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         StartupTimings.Mark("OnStartup");
+        if (e.Args.Length == 1 && e.Args[0] == "--retire-hypervisor")
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            try { await new LocalGameCatalog().RetireLegacyEntriesAsync(); Shutdown(0); }
+            catch { Shutdown(1); }
+            return;
+        }
+        if (e.Args.Length == 3 && e.Args[0] == "--import-local-catalog")
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            try
+            {
+                var catalog = new LocalGameCatalog();
+                var added = await catalog.ImportFolderAsync(e.Args[2], e.Args[1]);
+                await File.WriteAllTextAsync(catalog.CatalogPath + ".import-result.json", System.Text.Json.JsonSerializer.Serialize(new { Added = added, catalog.CatalogPath }));
+                Shutdown(0);
+            }
+            catch (Exception) { Shutdown(1); }
+            return;
+        }
+        if (e.Args.Contains("--catalog-editor", StringComparer.Ordinal))
+        {
+            UiThemeService.Apply("Dark");
+            MainWindow = new Pages.LocalCatalogEditorWindow(new LocalGameCatalog());
+            MainWindow.Show();
+            return;
+        }
         // A bootstrap preparation process has no window, navigation, game or Steam services.
         if (e.Args.Length == 2 && e.Args[0] == "--prepare-tools")
         {
@@ -120,6 +147,8 @@ public partial class App : Application
         }
 
         ApplySavedCulture();
+        try { await new LocalGameCatalog().RetireLegacyEntriesAsync(); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { Debug.WriteLine("Local catalog migration: " + error.GetType().Name); }
 
         Services = new ServiceCollection().AddSteamyServices().BuildServiceProvider();
         IsLaunched = true;

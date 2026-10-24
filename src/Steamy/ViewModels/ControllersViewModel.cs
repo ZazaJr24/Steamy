@@ -16,7 +16,9 @@ public sealed class ControllersViewModel : ObservableObject, IDisposable
     private readonly IAppDataStore _store;
     private readonly IWindowsControllers? _windowsControllers;
     private IReadOnlyList<ControllerDevice> _windowsDevices = [];
-    private readonly SynchronizationContext? _context = SynchronizationContext.Current;
+    private readonly SynchronizationContext? _context = SynchronizationContext.Current is System.Windows.Threading.DispatcherSynchronizationContext
+        ? new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher, System.Windows.Threading.DispatcherPriority.Background)
+        : SynchronizationContext.Current;
     private readonly CancellationTokenSource _lifetime = new();
     private int _refreshQueued;
     private int _nativeRefreshPending;
@@ -30,6 +32,8 @@ public sealed class ControllersViewModel : ObservableObject, IDisposable
     private string? _publishedInput, _publishedDeviceInfo;
     private float _lastLX, _lastLY, _lastRX, _lastRY, _lastLT, _lastRT;
     private uint _lastButtons;
+    private ControllerDevice? _liveDevice;
+    private ControllerState? _publishedBackend;
     public bool IsTelemetryActive { get; set; }
 
     public string MappingSource { get => _mappingSource; set { if (Mappings.Any(row => row.Source == value) && SetProperty(ref _mappingSource, value)) OnPropertyChanged(nameof(SelectedMapping)); } }
@@ -49,8 +53,9 @@ public sealed class ControllersViewModel : ObservableObject, IDisposable
     public string[] Curves { get; } = ["Linear", "Enhanced precision", "Quadratic", "Cubic"];
     public string[] Outputs { get; } = ["A", "B", "X", "Y", "LB", "RB", "LT", "RT", "LS", "RS", "Start", "Back", "DpadUp", "DpadDown", "DpadLeft", "DpadRight", "Guide", "Unbound"];
     public ControllerProfile? SelectedProfile { get => _selected; set { if (SetProperty(ref _selected, value) && value is not null) Edit(value); } }
-    public ControllerDevice? SelectedDevice { get => _device; set { if (SetProperty(ref _device, value)) { OnPropertyChanged(nameof(InputText)); OnPropertyChanged(nameof(DeviceInfo)); OnPropertyChanged(nameof(NativeDeviceVisibility)); OnPropertyChanged(nameof(MapperVisibility)); RumbleCommand?.NotifyCanExecuteChanged(); Refresh(stateChanged: true); } } }
-    private ControllerDevice? LiveDevice => _backend.State.Devices.Concat(_windowsDevices).FirstOrDefault(device => device.Id == _device?.Id);
+    public ControllerDevice? SelectedDevice { get => _device; set { if (SetProperty(ref _device, value)) { _liveDevice = FindLiveDevice(); OnPropertyChanged(nameof(InputText)); OnPropertyChanged(nameof(DeviceInfo)); OnPropertyChanged(nameof(NativeDeviceVisibility)); OnPropertyChanged(nameof(MapperVisibility)); RumbleCommand?.NotifyCanExecuteChanged(); Refresh(stateChanged: true); } } }
+    private ControllerDevice? FindLiveDevice() => _backend.State.Devices.FirstOrDefault(device => device.Id == _device?.Id) ?? _windowsDevices.FirstOrDefault(device => device.Id == _device?.Id);
+    private ControllerDevice? LiveDevice => _liveDevice;
     public Visibility NativeDeviceVisibility => SelectedDevice?.Id.StartsWith("xinput:", StringComparison.Ordinal) == true ? Visibility.Visible : Visibility.Collapsed;
     public Visibility MapperVisibility => NativeDeviceVisibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
     public string DeviceInfo => LiveDevice is { } device ? device.Connection + (device.Battery < 0 ? "" : $" · Battery {device.Battery}%") + (device.Charging ? " · Charging" : "") : "No device connected";
@@ -201,15 +206,22 @@ public sealed class ControllersViewModel : ObservableObject, IDisposable
     private void BackendChanged(object? sender, EventArgs args)
     {
         if (_context is not null && SynchronizationContext.Current != _context)
-        { if (Interlocked.Exchange(ref _refreshQueued, 1) == 0) _context.Post(_ => { Interlocked.Exchange(ref _refreshQueued, 0); if (!_lifetime.IsCancellationRequested) Refresh(); }, null); }
-        else Refresh();
+        { if (Interlocked.Exchange(ref _refreshQueued, 1) == 0) _context.Post(_ => { Interlocked.Exchange(ref _refreshQueued, 0); if (!_lifetime.IsCancellationRequested) Refresh(stateChanged: false); }, null); }
+        else Refresh(stateChanged: false);
     }
     private void Refresh(bool stateChanged = true)
     {
+        var state = _backend.State;
+        stateChanged |= _publishedBackend is null || _publishedBackend.Running != state.Running
+            || _publishedBackend.Status != state.Status || _publishedBackend.DriverVersion != state.DriverVersion
+            || _publishedBackend.HidHideInstalled != state.HidHideInstalled;
+        _publishedBackend = state;
+        var previousDevice = _liveDevice;
         var devices = _backend.State.Devices.Concat(_windowsDevices).ToArray(); var id = SelectedDevice?.Id;
         var devicesChanged = !Devices.Select(device => (device.Id, device.Name)).SequenceEqual(devices.Select(device => (device.Id, device.Name)));
         if (devicesChanged) { Devices.Clear(); foreach (var d in devices) Devices.Add(d); }
         SelectedDevice = Devices.FirstOrDefault(device => device.Id == id) ?? Devices.FirstOrDefault();
+        _liveDevice = FindLiveDevice();
         var input = InputText;
         if (_publishedInput != input) { _publishedInput = input; OnPropertyChanged(nameof(InputText)); }
         var info = DeviceInfo;
@@ -246,43 +258,49 @@ public sealed class ControllersViewModel : ObservableObject, IDisposable
             }
             if (_lastLT != lt)
             {
+                var pressedChanged = (_lastLT > 0.15f) != (lt > 0.15f);
                 _lastLT = lt;
                 OnPropertyChanged(nameof(LeftTrigger));
                 OnPropertyChanged(nameof(LeftTriggerPercent));
                 OnPropertyChanged(nameof(LeftTriggerText));
-                OnPropertyChanged(nameof(IsL2Down));
+                if (pressedChanged) OnPropertyChanged(nameof(IsL2Down));
             }
             if (_lastRT != rt)
             {
+                var pressedChanged = (_lastRT > 0.15f) != (rt > 0.15f);
                 _lastRT = rt;
                 OnPropertyChanged(nameof(RightTrigger));
                 OnPropertyChanged(nameof(RightTriggerPercent));
                 OnPropertyChanged(nameof(RightTriggerText));
-                OnPropertyChanged(nameof(IsR2Down));
+                if (pressedChanged) OnPropertyChanged(nameof(IsR2Down));
             }
             if (_lastButtons != buttons)
             {
+                var changed = _lastButtons ^ buttons;
                 _lastButtons = buttons;
                 OnPropertyChanged(nameof(Buttons));
-                OnPropertyChanged(nameof(IsCrossDown));
-                OnPropertyChanged(nameof(IsCircleDown));
-                OnPropertyChanged(nameof(IsSquareDown));
-                OnPropertyChanged(nameof(IsTriangleDown));
-                OnPropertyChanged(nameof(IsL1Down));
-                OnPropertyChanged(nameof(IsR1Down));
-                OnPropertyChanged(nameof(IsL3Down));
-                OnPropertyChanged(nameof(IsR3Down));
-                OnPropertyChanged(nameof(IsDpadUpDown));
-                OnPropertyChanged(nameof(IsDpadDownDown));
-                OnPropertyChanged(nameof(IsDpadLeftDown));
-                OnPropertyChanged(nameof(IsDpadRightDown));
-                OnPropertyChanged(nameof(IsStartDown));
-                OnPropertyChanged(nameof(IsBackDown));
-                OnPropertyChanged(nameof(IsGuideDown));
+                if ((changed & 0x1000) != 0) OnPropertyChanged(nameof(IsCrossDown));
+                if ((changed & 0x2000) != 0) OnPropertyChanged(nameof(IsCircleDown));
+                if ((changed & 0x4000) != 0) OnPropertyChanged(nameof(IsSquareDown));
+                if ((changed & 0x8000) != 0) OnPropertyChanged(nameof(IsTriangleDown));
+                if ((changed & 0x0100) != 0) OnPropertyChanged(nameof(IsL1Down));
+                if ((changed & 0x0200) != 0) OnPropertyChanged(nameof(IsR1Down));
+                if ((changed & 0x0040) != 0) OnPropertyChanged(nameof(IsL3Down));
+                if ((changed & 0x0080) != 0) OnPropertyChanged(nameof(IsR3Down));
+                if ((changed & 0x0001) != 0) OnPropertyChanged(nameof(IsDpadUpDown));
+                if ((changed & 0x0002) != 0) OnPropertyChanged(nameof(IsDpadDownDown));
+                if ((changed & 0x0004) != 0) OnPropertyChanged(nameof(IsDpadLeftDown));
+                if ((changed & 0x0008) != 0) OnPropertyChanged(nameof(IsDpadRightDown));
+                if ((changed & 0x0010) != 0) OnPropertyChanged(nameof(IsStartDown));
+                if ((changed & 0x0020) != 0) OnPropertyChanged(nameof(IsBackDown));
+                if ((changed & 0x0400) != 0) OnPropertyChanged(nameof(IsGuideDown));
             }
         }
 
-        if (devicesChanged || stateChanged)
+        var metadataChanged = previousDevice?.Id != _liveDevice?.Id || previousDevice?.Name != _liveDevice?.Name
+            || previousDevice?.Connection != _liveDevice?.Connection || previousDevice?.Battery != _liveDevice?.Battery
+            || previousDevice?.Charging != _liveDevice?.Charging;
+        if (devicesChanged || stateChanged || metadataChanged)
         {
             OnPropertyChanged(nameof(HasDevice));
             OnPropertyChanged(nameof(DeviceConnectedVisibility));

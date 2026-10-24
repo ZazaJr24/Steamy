@@ -49,3 +49,9 @@ src/Steamy/Tools/Goldberg/current/
 
 # Private local relay implementation.
 src/Steamy.RelayClient/
+
+TestResults/
+**/TestResults/
+.vscode/
+
+src/Steamy.Desktop/

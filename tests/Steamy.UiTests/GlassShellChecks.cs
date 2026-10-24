@@ -541,7 +541,7 @@ public sealed partial class PageSmokeTests
                 foreach (var scale in new[] { 1d, 1.25, 1.5, 2d }) SaveGlassVisual(window, $"{theme}-dashboard-maximized-{scale:0.##}x", scale);
                 window.WindowState = WindowState.Normal;
                 window.Width = 1280; window.Height = 800;
-                foreach (var route in new[] { typeof(LibraryPage), typeof(DownloadsPage), typeof(SettingsPage), typeof(BetterSteamToolsPage), typeof(SteamlessPage), typeof(DenuvoActivationPage), typeof(CreamApiPage), typeof(FamilySharePage), typeof(GoldbergPage), typeof(GameFixesPage), typeof(HypervisorFixesPage), typeof(DepotDownloaderPage) })
+                foreach (var route in new[] { typeof(LibraryPage), typeof(DownloadsPage), typeof(SettingsPage), typeof(BetterSteamToolsPage), typeof(SteamlessPage), typeof(DenuvoActivationPage), typeof(CreamApiPage), typeof(FamilySharePage), typeof(GoldbergPage), typeof(GameFixesPage), typeof(DepotDownloaderPage) })
                 {
                     Assert.True(nav.Navigate(route));
                     Assert.False(nav.IsPaneOpen);

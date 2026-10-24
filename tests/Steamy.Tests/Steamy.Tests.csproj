@@ -33,7 +33,7 @@
     <Reference Include="Steamy.RelayClient"><HintPath>..\..\lib\Steamy.RelayClient.dll</HintPath><Private>true</Private></Reference>
     <Compile Include="..\..\src\Steamy\Services\Tools\GreenLumaDownloadDiscovery.cs" Link="Linked\GreenLumaDownloadDiscovery.cs" />
     <Compile Include="..\..\src\Steamy\Services\Download\BundledModCapabilities.cs" Link="Linked\BundledModCapabilities.cs" />
-    <Compile Include="..\..\src\Steamy\Services\Steam\VdfParser.cs" Link="Linked\VdfParser.cs" />
+    <Compile Include="..\..\src\Steamy.Core\Steam\VdfParser.cs" Link="Linked\VdfParser.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ShareModels.cs" Link="Linked\ShareModels.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\ManifestLibraryScanner.cs" Link="Linked\ManifestLibraryScanner.cs" />
     <Compile Include="..\..\src\Steamy\Services\Sharing\AppListIndex.cs" Link="Linked\AppListIndex.cs" />

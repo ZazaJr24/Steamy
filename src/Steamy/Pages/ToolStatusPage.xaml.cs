@@ -25,11 +25,6 @@ public sealed class DenuvoFixesPage : ToolStatusPage
     }
 }
 
-public sealed class HvFixesPage : ToolRunnerPage
-{
-    public HvFixesPage() : base(App.Services.GetRequiredService<HvFixesViewModel>()) { }
-}
-
 public sealed class ScreamApiPage : ToolRunnerPage
 {
     public ScreamApiPage() : base(App.Services.GetRequiredService<ScreamApiViewModel>()) { }

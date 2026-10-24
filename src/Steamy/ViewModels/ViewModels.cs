@@ -693,6 +693,7 @@ public sealed class GameFixesViewModel : ViewModelBase
 
     private readonly IFixCatalogService _fixesService;
     private readonly IArtworkService _artwork;
+    private readonly LocalGameCatalog? _localCatalog;
     private readonly List<GameFixGameCard> _allCards = new();
     private string _searchText = string.Empty;
     private string _lastFetchSummary = "Not loaded yet.";
@@ -703,10 +704,11 @@ public sealed class GameFixesViewModel : ViewModelBase
         IAppDataStore store,
         INavigationService navigation,
         ILoggingService logging,
-        IFixCatalogService fixesService, IArtworkService artwork) : base(store, navigation, logging)
+        IFixCatalogService fixesService, IArtworkService artwork, LocalGameCatalog? localCatalog = null) : base(store, navigation, logging)
     {
         _fixesService = fixesService;
         _artwork = artwork;
+        _localCatalog = localCatalog;
     }
 
     public ObservableCollection<GameFixGameCard> PagedGames { get; } = new();
@@ -755,21 +757,20 @@ public sealed class GameFixesViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            var snapshot = await _fixesService.GetFixesAsync(forceRefresh: true, cancellationToken: CancellationToken.None);
-            _allCards.Clear();
-            foreach (var game in snapshot.Games)
-            {
-                _allCards.Add(new GameFixGameCard
-                {
-                    AppId = game.AppId,
-                    Name = game.Name,
-                    FixCount = game.Fixes.Count,
-                    CoverGlyph = PickGlyph(game.AppId),
-                    Game = game
-                });
-            }
-
-            _lastFetchSummary = snapshot.Message;
+            IReadOnlyList<FixGame> local = Array.Empty<FixGame>();
+            var localWarning = "";
+            try { if (_localCatalog is not null) local = await _localCatalog.ReadFixesAsync(); }
+            catch (Exception error) { localWarning = " · Local catalog unavailable: " + error.Message; }
+            // Make local entries visible before waiting for the remote source.
+            SetCards(local);
+            RefreshPage();
+            FixFeedSnapshot snapshot;
+            try { snapshot = await _fixesService.GetFixesAsync(forceRefresh: true, cancellationToken: CancellationToken.None); }
+            catch (Exception error) { snapshot = FixFeedSnapshot.Failure("Remote source unavailable: " + error.GetType().Name); }
+            var games = snapshot.Games.Concat(local).GroupBy(game => game.AppId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new FixGame { AppId = group.Key, Name = group.Last().Name, Fixes = group.SelectMany(game => game.Fixes).ToArray() });
+            SetCards(games);
+            _lastFetchSummary = snapshot.Message + (local.Count > 0 ? $" · {local.Count} local games" : "") + localWarning;
             _page = 1;
             RefreshPage();
         }
@@ -782,6 +783,23 @@ public sealed class GameFixesViewModel : ViewModelBase
             IsLoading = false;
             OnPropertyChanged(string.Empty);
         }
+    }
+
+    private void SetCards(IEnumerable<FixGame> games)
+    {
+            _allCards.Clear();
+            foreach (var game in games)
+            {
+                _allCards.Add(new GameFixGameCard
+                {
+                    AppId = game.AppId,
+                    Name = game.Name,
+                    FixCount = game.Fixes.Count,
+                    CoverGlyph = PickGlyph(game.AppId),
+                    Game = game
+                });
+            }
+
     }
 
     private IEnumerable<GameFixGameCard> FilteredCards()

@@ -101,6 +101,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<IDepotDownloaderCheckService>()
             ));
         services.AddSingleton<ModFixesViewModel>();
+        services.AddSingleton<LocalGameCatalog>(_ => new LocalGameCatalog());
         services.AddSingleton<LogsViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<DepotDownloaderViewModel>();
@@ -148,7 +149,6 @@ public static class ServiceRegistration
         services.AddSingleton<UcOnlineService>();
         services.AddSingleton<UcOnlineViewModel>();
         services.AddSingleton<ScreamApiViewModel>();
-        services.AddSingleton<HvFixesViewModel>();
 
         return services;
     }

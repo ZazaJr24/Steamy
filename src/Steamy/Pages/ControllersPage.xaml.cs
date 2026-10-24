@@ -30,7 +30,7 @@ public partial class ControllersPage : Page
         Loaded += async (_, _) =>
         {
             var model = (ControllersViewModel)DataContext;
-            model.IsTelemetryActive = true;
+            model.IsTelemetryActive = _step == 1;
             polling?.Cancel();
             polling?.Dispose();
             polling = new();
@@ -53,6 +53,7 @@ public partial class ControllersPage : Page
     {
         if (!_ready || sender is not RadioButton { Tag: string value } || !int.TryParse(value, out var step)) return;
         _step = step;
+        ((ControllersViewModel)DataContext).IsTelemetryActive = IsLoaded && step == 1;
         ConnectPanel.Visibility = step == 0 ? Visibility.Visible : Visibility.Collapsed;
         TestPanel.Visibility = step == 1 ? Visibility.Visible : Visibility.Collapsed;
         CustomizePanel.Visibility = step == 2 ? Visibility.Visible : Visibility.Collapsed;

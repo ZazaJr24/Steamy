@@ -8,9 +8,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Steamy</RootNamespace>
     <AssemblyName>Steamy</AssemblyName>
-    <Version>0.8.0.2</Version>
-    <FileVersion>0.8.0.2</FileVersion>
-    <AssemblyVersion>0.8.0.2</AssemblyVersion>
+    <Version>0.8.1.2</Version>
+    <FileVersion>0.8.1.2</FileVersion>
+    <AssemblyVersion>0.8.1.2</AssemblyVersion>
     <Product>Steamy</Product>
     <Company>ZazaJr24</Company>
     <Authors>ZazaJr24</Authors>
@@ -37,6 +37,7 @@
     <AssemblyMetadata Include="DiscordApplicationId" Value="$(DiscordApplicationId)" />
     <AssemblyMetadata Include="DiscordIntegrationEnabled" Value="$(EnableDiscordIntegration)" />
     <ProjectReference Include="..\PlayTimeTracker\PlayTimeTracker.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Steamy.Core\Steamy.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(EnableDiscordIntegration)' == 'true' and Exists('$(MSBuildProjectDirectory)\..\..\tools\DiscordSocialSdk\runtime\Discord.Sdk.dll')">

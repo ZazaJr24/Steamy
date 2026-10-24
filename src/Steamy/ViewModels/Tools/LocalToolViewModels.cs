@@ -19,19 +19,3 @@ public sealed class ScreamApiViewModel : ToolRunnerViewModel
     { }
 }
 
-public sealed class HvFixesViewModel : ToolRunnerViewModel
-{
-    public HvFixesViewModel(ILocalToolRunner runner, ISettingsService settings)
-        : base(
-            runner, settings,
-            pageKey: "hvfixes",
-            title: "HV Fixes",
-            subtitle: "Hardware virtualization fixes for Denuvo-protected games.",
-            expectedFileNameHint: "HVFixes.exe",
-            infoText: "HV Fixes applies compatibility patches for games with Hyper-V/VBS/WSL2 issues.",
-            downloadUrl: "https://github.com",
-            readPath: s => s.HvFixesPath,
-            writePath: (s, v) => s.HvFixesPath = v)
-    { }
-}
-

@@ -47,6 +47,55 @@ public sealed class ControllerLifecycleTests
         public Task RumbleAsync(int slot, CancellationToken token) { Rumbled = slot; return Task.CompletedTask; }
     }
     [Fact]
+    public void LiveNativeInputOnlyNotifiesChangedButtonsAndKeepsMetadataCurrent()
+    {
+        var native = new WindowsFixture { Devices = [Pad(8, "xinput:0")] };
+        using var backend = new ControllerBackendService(new Settings(), (request, _) => Task.FromResult(Reply(request, false)));
+        using var model = new ControllersViewModel(backend, new Settings(), new AppDataStore(), windowsControllers: native) { IsTelemetryActive = true };
+        var changes = new List<string?>();
+        model.PropertyChanged += (_, args) => changes.Add(args.PropertyName);
+        native.Devices = [native.Devices[0] with { Input = new(.5f, 0, 0, 0, .5f, 0, 0x1000) }];
+        model.RefreshNativeControllers();
+        Assert.Equal(.5f, model.LeftStickX); Assert.True(model.IsCrossDown); Assert.True(model.IsL2Down);
+        Assert.Contains(nameof(model.IsCrossDown), changes); Assert.DoesNotContain(nameof(model.IsCircleDown), changes);
+        Assert.DoesNotContain(nameof(model.DriverStatus), changes);
+        changes.Clear();
+        native.Devices = [native.Devices[0] with { Battery = 75, Input = new(.6f, 0, 0, 0, .6f, 0, 0x1000) }];
+        model.RefreshNativeControllers();
+        Assert.Equal("75%", model.BatteryText); Assert.Contains(nameof(model.BatteryText), changes);
+        Assert.DoesNotContain(nameof(model.IsL2Down), changes);
+    }
+    [Fact]
+    public void XInputKeepsLiveSamplesButThrottlesDisconnectedSlotsAndBatteryQueries()
+    {
+        long now = 0; var reads = new int[4]; var batteryReads = 0; var connected = true; uint packet = 1;
+        var input = new ControllerInput(0, 0, 0, 0, 0, 0, 0);
+        var native = new WindowsControllers(index => { reads[index]++; return index == 0 && connected ? (packet, input) : null; },
+            _ => { batteryReads++; return ("Wireless", 100); }, () => now);
+        var first = Assert.Single(native.Read());
+        for (var i = 1; i < 40; i++) { now = i * 25; Assert.Same(first, Assert.Single(native.Read())); }
+        Assert.Equal(40, reads[0]); Assert.Equal(1, reads[1]); Assert.Equal(1, batteryReads);
+        now = 1000; packet++; input = input with { LX = .5f };
+        Assert.Equal(.5f, Assert.Single(native.Read()).Input.LX); Assert.Equal(2, reads[1]);
+        connected = false; now = 1025; Assert.Empty(native.Read());
+        connected = true; now = 2025; Assert.Single(native.Read()); Assert.Equal(2, batteryReads);
+    }
+    [Fact]
+    public async Task BackendTelemetryDoesNotInvalidateTheSettingsFormOrCommands()
+    {
+        var input = new ControllerInput(0, 0, 0, 0, 0, 0, 0);
+        using var backend = new ControllerBackendService(new Settings(), (request, _) => Task.FromResult(new ControllerResponse(1, request.Id, true, "",
+            new(false, "Ready", "fixture", false, [Pad(0, "sony:0") with { Battery = 50, Input = input }]))));
+        await backend.CheckDriversAsync();
+        using var model = new ControllersViewModel(backend, new Settings(), new AppDataStore()) { IsTelemetryActive = true };
+        var formChanges = 0; var commandChanges = 0;
+        model.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(model.DriverStatus)) formChanges++; };
+        model.RumbleCommand.CanExecuteChanged += (_, _) => commandChanges++;
+        for (var i = 0; i < 100; i++) { input = input with { LX = i / 100f }; await backend.CheckDriversAsync(); }
+        Assert.Equal(0, formChanges); Assert.Equal(0, commandChanges);
+        Assert.Equal(.99f, model.LeftStickX);
+    }
+    [Fact]
     public async Task StopCancelsDelayedRecoveryAndKeepsTheSavedBackendDisabled()
     {
         var settings = new Settings(); var commands = new List<string>(); var running = false;

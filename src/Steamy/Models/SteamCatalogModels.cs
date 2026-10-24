@@ -469,6 +469,8 @@ public sealed class FixGame
 
 public sealed class FixEntry
 {
+    public string LocalArchivePath { get; init; } = string.Empty;
+    public string Instructions { get; init; } = string.Empty;
     /// <summary>Archive location relative to the source root, e.g. <c>fixes/449800/1.zip</c>.</summary>
     public string Path { get; init; } = string.Empty;
     public string Filename { get; init; } = string.Empty;

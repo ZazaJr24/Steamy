@@ -1,0 +1,59 @@
+<Window x:Class="Steamy.Pages.LocalCatalogEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Steamy — Local Catalog Editor" Width="1060" Height="820" MinWidth="820" MinHeight="600"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource PageBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}">
+  <Grid Margin="24" TextElement.Foreground="{DynamicResource TextPrimaryBrush}">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <StackPanel Margin="0,0,0,20">
+      <TextBlock Text="Local Catalog Editor" FontSize="25" FontWeight="SemiBold"/>
+      <TextBlock Text="Add and edit game-fix packages. Changes stay on this PC." Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,5,0,0"/>
+      <TextBlock x:Name="CatalogLocation" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
+    </StackPanel>
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top">
+          <ui:TextBox x:Name="Search" PlaceholderText="Search packages…" TextChanged="Search_Changed" Margin="0,0,0,10"/>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <ui:Button x:Name="NewButton" Content="New" Click="New_Click" Margin="0,0,8,0"/>
+            <ui:Button x:Name="ImportButton" Content="Import folder" Click="Import_Click"/>
+          </StackPanel>
+        </StackPanel>
+        <ListBox x:Name="PackageList" SelectionChanged="Selection_Changed" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" TextWrapping="Wrap" Margin="3,7"/></DataTemplate></ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+      <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="EditorForm" Margin="0,0,12,0">
+          <TextBlock Text="Category" Margin="0,0,0,6"/>
+          <ComboBox x:Name="Kind" SelectedIndex="0"><ComboBoxItem Content="Fix"/></ComboBox>
+          <TextBlock Text="Game name" Margin="0,14,0,6"/>
+          <ui:TextBox x:Name="GameName" PlaceholderText="Game title" MaxLength="250"/>
+          <Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <StackPanel><TextBlock Text="Steam App ID (optional)" Margin="0,0,0,6"/><ui:TextBox x:Name="AppId" PlaceholderText="Enables Steam artwork" MaxLength="10"/></StackPanel>
+            <StackPanel Grid.Column="2"><TextBlock Text="Build / version" Margin="0,0,0,6"/><ui:TextBox x:Name="Version" PlaceholderText="e.g. Build 12345" MaxLength="250"/></StackPanel>
+          </Grid>
+          <TextBlock Text="Local archive" Margin="0,14,0,6"/>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <ui:TextBox x:Name="ArchivePath" PlaceholderText="Full path to ZIP, 7z or RAR"/>
+            <ui:Button Grid.Column="1" Content="Browse" Click="Browse_Click" Margin="8,0,0,0"/>
+          </Grid>
+          <TextBlock Text="Steps — one step per line" Margin="0,14,0,6"/>
+          <TextBox x:Name="Steps" AcceptsReturn="True" TextWrapping="Wrap" Height="145" VerticalScrollBarVisibility="Auto"/>
+          <TextBlock Text="Package notes / original instructions" Margin="0,14,0,6"/>
+          <TextBox x:Name="Notes" AcceptsReturn="True" TextWrapping="Wrap" Height="180" MaxLength="60000" VerticalScrollBarVisibility="Auto"/>
+          <TextBlock Text="Archives stay where they are. Importing reads filenames and small text files only; it never runs archive contents." TextWrapping="Wrap" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,14,0,10"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+    <Grid Grid.Row="2" Margin="0,18,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <TextBlock x:Name="Status" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,18,0"/>
+      <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <ui:Button x:Name="DeleteButton" Content="Remove entry" Click="Delete_Click" Margin="0,0,10,0"/>
+        <ui:Button x:Name="SaveButton" Content="Save locally" Click="Save_Click" Appearance="Primary"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

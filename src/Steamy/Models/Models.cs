@@ -662,7 +662,6 @@ public sealed class AppSettings : ObservableObject
     private string _denuvoSteamApiHint = string.Empty;
     private string _unsteamPath = string.Empty;
     private string _screamApiPath = string.Empty;
-    private string _hvFixesPath = string.Empty;
     private string _creamApiProxy = string.Empty;
     private string _backdropStyle = "Mica";
     private string _hubcapBaseUrl = "https://hubcapmanifest.com";
@@ -712,7 +711,6 @@ public sealed class AppSettings : ObservableObject
     public string DenuvoSteamApiHint { get => _denuvoSteamApiHint; set => SetProperty(ref _denuvoSteamApiHint, value); }
     public string UnsteamPath { get => _unsteamPath; set => SetProperty(ref _unsteamPath, value); }
     public string ScreamApiPath { get => _screamApiPath; set => SetProperty(ref _screamApiPath, value); }
-    public string HvFixesPath { get => _hvFixesPath; set => SetProperty(ref _hvFixesPath, value); }
 
     /// <summary>Optional Steam account name passed to the tool as <c>-username</c>. Never a password.</summary>
     public string SteamUsername { get => _steamUsername; set => SetProperty(ref _steamUsername, value); }

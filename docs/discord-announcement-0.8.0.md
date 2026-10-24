@@ -48,7 +48,6 @@ The shared provider keys stay on the VPS. Server usage limits apply.
 
 ### Removed and coming next
 - Discord integration has been removed from this build; the backup is retained. Friends, chat and voice are not available in 0.8.0.
-- Hypervisor is marked as planned for 0.8.2.
 - Full controller hardware validation remains pending.
 
 ## Download
